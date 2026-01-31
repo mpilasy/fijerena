@@ -1,2 +1,2 @@
-com.example.firstvideoplayer.core.player
+org.njarasoa.fijerena.core.player
 xml network_security_config
