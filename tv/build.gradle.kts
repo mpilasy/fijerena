@@ -43,10 +43,11 @@ dependencies {
 
     // Compose & UI
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.bundles.compose)
-    implementation(libs.androidx.material3)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
 
-    // TV
+    // TV (uses androidx.tv.material instead of material3)
     implementation(libs.androidx.tv.foundation)
     implementation(libs.androidx.tv.material)
 
