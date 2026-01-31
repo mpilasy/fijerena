@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "first video player"
 include(":mobile")
 include(":tv")
+include(":core:player")

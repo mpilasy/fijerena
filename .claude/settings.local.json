@@ -3,7 +3,11 @@
     "allow": [
       "Bash(du:*)",
       "Bash(wc:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(./gradlew:*)",
+      "Bash(apt-cache search:*)",
+      "Bash(javac:*)",
+      "Bash(git add:*)"
     ]
   }
 }

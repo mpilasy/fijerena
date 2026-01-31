@@ -1,19 +1,16 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
-    namespace = "com.example.firstvideoplayer"
+    namespace = "com.example.firstvideoplayer.core.player"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.example.firstvideoplayer"
         minSdk = 21
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,14 +31,30 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:player"))
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.activity)
-    implementation(libs.androidx.constraintlayout)
+    // Media3 (ExoPlayer)
+    api(libs.media3.exoplayer)
+    api(libs.media3.exoplayer.hls)
+    api(libs.media3.session)
+    api(libs.media3.ui)
+
+    // Kotlinx Coroutines
+    api(libs.kotlinx.coroutines.core)
+    api(libs.kotlinx.coroutines.android)
+
+    // Ktor Client
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+
+    // Kotlinx Serialization
+    implementation(libs.kotlinx.serialization.json)
+
+    // Lifecycle
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.core.ktx)
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
