@@ -21,28 +21,29 @@ object PlayerConfigFactory {
 
     fun createTrackSelector(context: Context): DefaultTrackSelector {
         val capabilities = DeviceDetector.detect()
-        val parameters = DefaultTrackSelector.Parameters.Builder(context)
 
-        // Set preferred MIME types based on device
-        val preferredAudioMimeTypes = arrayOf("audio/mp4a-latm", "audio/mp3", "audio/aac")
-        val preferredVideoMimeTypes = capabilities.preferredCodecs.toTypedArray()
+        // Use the non-deprecated constructor (Media3 1.9+)
+        val parameters = DefaultTrackSelector.Parameters.Builder()
+            .setPreferredAudioLanguage("en")
+            .apply {
+                // Set max resolution based on device
+                val (maxWidth, maxHeight) = capabilities.maxResolution
+                setMaxVideoSize(maxWidth, maxHeight)
 
-        parameters.setPreferredAudioLanguage("en")
+                // Set bitrate constraints
+                val maxBitrate = when (capabilities.deviceType) {
+                    DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                    DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                    DeviceType.CHROMECAST_TV -> 5_000_000
+                    DeviceType.GENERIC_TV -> 10_000_000
+                    DeviceType.GENERIC_MOBILE -> 5_000_000
+                }
+                setMaxVideoBitrate(maxBitrate)
+            }
+            .build()
 
-        // Set max resolution based on device
-        val (maxWidth, maxHeight) = capabilities.maxResolution
-        parameters.setMaxVideoSize(maxWidth, maxHeight)
-
-        // Set bitrate constraints
-        val maxBitrate = when (capabilities.deviceType) {
-            DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-            DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-            DeviceType.CHROMECAST_TV -> 5_000_000
-            DeviceType.GENERIC_TV -> 10_000_000
-            DeviceType.GENERIC_MOBILE -> 5_000_000
+        return DefaultTrackSelector(context).apply {
+            setParameters(parameters)
         }
-        parameters.setMaxVideoBitrate(maxBitrate)
-
-        return DefaultTrackSelector(context, parameters.build())
     }
 }
