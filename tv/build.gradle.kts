@@ -4,12 +4,12 @@ plugins {
 }
 
 android {
-    namespace = "com.example.firstvideoplayer"
+    namespace = "org.njarasoa.fijerena"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.firstvideoplayer"
-        minSdk = 21
+        applicationId = "org.njarasoa.fijerena"
+        minSdk = 23
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -26,8 +26,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.firstvideoplayer.core.player"
+    namespace = "org.njarasoa.fijerena.core.player"
     compileSdk = 36
 
     defaultConfig {
@@ -23,8 +23,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+    lint {
+        disable.add("UnsafeOptInUsageError")
     }
 }
 

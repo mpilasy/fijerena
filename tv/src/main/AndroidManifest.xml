@@ -35,7 +35,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name="com.example.firstvideoplayer.core.player.service.StreamingPlaybackService"
+            android:name="org.njarasoa.fijerena.core.player.service.StreamingPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback">
             <intent-filter>

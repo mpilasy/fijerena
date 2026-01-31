@@ -20,10 +20,10 @@ lifecycleViewmodelKtx = "2.8.7"
 lifecycleViewmodelCompose = "2.8.7"
 
 # UI & Compose
-composeBom = "2026.01.28"
+composeBom = "2024.12.01"
 composeMaterial3 = "1.4.0"
-tvFoundation = "1.0.0"
-tvMaterial = "1.0.0"
+tvFoundation = "1.0.0-alpha10"
+tvMaterial = "1.0.0-alpha10"
 
 # Networking & Serialization
 ktor = "3.4.0"

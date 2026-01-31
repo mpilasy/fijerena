@@ -123,7 +123,7 @@ Once JDK is installed:
 ./gradlew :mobile:installDebug
 
 # Launch the app
-adb shell am start -n com.example.firstvideoplayer/.MainActivity
+adb shell am start -n org.njarasoa.fijerena/.MainActivity
 ```
 
 ## Useful Commands
@@ -147,16 +147,16 @@ adb shell am start -n com.example.firstvideoplayer/.MainActivity
 
 # Uninstall app
 ./gradlew :mobile:uninstallDebug
-# Or: adb uninstall com.example.firstvideoplayer
+# Or: adb uninstall org.njarasoa.fijerena
 
 # Install and run
-./gradlew :mobile:installDebug && adb shell am start -n com.example.firstvideoplayer/.MainActivity
+./gradlew :mobile:installDebug && adb shell am start -n org.njarasoa.fijerena/.MainActivity
 ```
 
 ### Debugging Commands
 ```bash
 # View logcat (app logs)
-adb logcat | grep "firstvideoplayer"
+adb logcat | grep "fijerena"
 
 # View crash logs
 adb logcat *:E
@@ -165,14 +165,14 @@ adb logcat *:E
 adb logcat -c
 
 # View app info
-adb shell dumpsys package com.example.firstvideoplayer
+adb shell dumpsys package org.njarasoa.fijerena
 ```
 
 ## Mobile Module Configuration
 
 ### Current Setup
 ```kotlin
-applicationId: com.example.firstvideoplayer
+applicationId: org.njarasoa.fijerena
 minSdk: 21  (Android 5.0 Lollipop and above)
 targetSdk: 36  (Latest Android)
 versionCode: 1
@@ -236,10 +236,10 @@ emulator -avd Pixel_5_API_34
 adb devices
 
 # Clear app data
-adb shell pm clear com.example.firstvideoplayer
+adb shell pm clear org.njarasoa.fijerena
 
 # Reinstall
-adb uninstall com.example.firstvideoplayer
+adb uninstall org.njarasoa.fijerena
 ./gradlew :mobile:installDebug
 ```
 
@@ -287,10 +287,10 @@ if [ $? -eq 0 ]; then
         echo "✅ Installation successful!"
 
         echo "🚀 Launching app..."
-        adb shell am start -n com.example.firstvideoplayer/.MainActivity
+        adb shell am start -n org.njarasoa.fijerena/.MainActivity
 
         echo "📊 Showing logs..."
-        adb logcat | grep "firstvideoplayer"
+        adb logcat | grep "fijerena"
     else
         echo "❌ Installation failed. Check device connection."
     fi

@@ -21,7 +21,7 @@ All code has been implemented according to the plan. The Kotlin code compiles su
 2. **settings.gradle.kts** - Added `include(":core:player")` module
 
 3. **core/player/build.gradle.kts** - Created library module with:
-   - Android library configuration (namespace: com.example.firstvideoplayer.core.player)
+   - Android library configuration (namespace: org.njarasoa.fijerena.core.player)
    - Proper API/implementation dependency configuration
    - Media3 and coroutines exposed via api() for consumers
 
@@ -170,7 +170,7 @@ core/player/
 ├── build.gradle.kts
 ├── proguard-rules.pro
 └── src/main/
-    ├── java/com/example/firstvideoplayer/core/player/
+    ├── java/org/njarasoa/fijerena/core/player/
     │   ├── model/
     │   │   └── PlaybackState.kt
     │   ├── device/
@@ -187,7 +187,7 @@ core/player/
     └── res/xml/
         └── network_security_config.xml
 
-tv/src/main/java/com/example/firstvideoplayer/ui/player/
+tv/src/main/java/org/njarasoa/fijerena/ui/player/
 └── PlayerScreen.kt
 ```
 

@@ -17,4 +17,4 @@
 -keep class kotlinx.coroutines.** { *; }
 
 # Keep service class
--keep class com.example.firstvideoplayer.core.player.service.** { *; }
+-keep class org.njarasoa.fijerena.core.player.service.** { *; }
