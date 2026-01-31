@@ -31,26 +31,17 @@ android {
 }
 
 dependencies {
-    // Media3 (ExoPlayer)
-    api(libs.media3.exoplayer)
-    api(libs.media3.exoplayer.hls)
-    api(libs.media3.session)
-    api(libs.media3.ui)
+    // Media3 (ExoPlayer) - Latest stable 1.9.1
+    api(libs.bundles.media)
 
     // Kotlinx Coroutines
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.coroutines.android)
 
-    // Ktor Client
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.android)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    // Networking & Serialization
+    implementation(libs.bundles.networking)
 
-    // Kotlinx Serialization
-    implementation(libs.kotlinx.serialization.json)
-
-    // Lifecycle
+    // Lifecycle & ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.core.ktx)
 
