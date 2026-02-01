@@ -46,8 +46,6 @@ fun CategoryGridScreen(
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onBack: () -> Unit = {},
     onLogout: () -> Unit,
-    onEditProvider: () -> Unit = {},
-    onSettings: () -> Unit = {},
     viewModel: CategoryViewModel = viewModel(
         factory = CategoryViewModelFactory(
             context = LocalContext.current.applicationContext,
@@ -87,9 +85,7 @@ fun CategoryGridScreen(
                         onStreamSelected(streamId, streamName, categoryId)
                     },
                     onBack = onBack,
-                    onLogout = onLogout,
-                    onEditProvider = onEditProvider,
-                    onSettings = onSettings
+                    onLogout = onLogout
                 )
             }
             is CategoryViewModel.UiState.Error -> {
@@ -115,9 +111,7 @@ private fun TwoColumnLayout(
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onBack: () -> Unit,
-    onLogout: () -> Unit,
-    onEditProvider: () -> Unit,
-    onSettings: () -> Unit
+    onLogout: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
@@ -156,24 +150,14 @@ private fun TwoColumnLayout(
                 }
             }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Button(
+                onClick = onLogout,
+                colors = ButtonDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
             ) {
-                Button(onClick = onSettings) {
-                    Text("Settings")
-                }
-                Button(onClick = onEditProvider) {
-                    Text("Edit Provider")
-                }
-                Button(
-                    onClick = onLogout,
-                    colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Text("Logout")
-                }
+                Text("Logout")
             }
         }
 

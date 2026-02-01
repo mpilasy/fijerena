@@ -63,12 +63,10 @@ fun TvNavHost(
     // Check authentication status on startup
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
-    // Auto-navigate to last content type if already authenticated
+    // Auto-navigate to content type selection if already authenticated
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated != null && authViewModel.isAuthenticated()) {
-            // Restore last content type or default to Live TV
-            val lastContentType = repository.getLastContentType() ?: "LIVE_TV"
-            navController.navigate(Screen.CategoryList(lastContentType)) {
+            navController.navigate(Screen.ContentTypeSelection) {
                 popUpTo(Screen.Login) { inclusive = true }
             }
         }
@@ -104,6 +102,9 @@ fun TvNavHost(
                         navController.navigate(Screen.Login) {
                             popUpTo(Screen.ContentTypeSelection) { inclusive = true }
                         }
+                    },
+                    onSettings = {
+                        navController.navigate(Screen.Settings)
                     }
                 )
             }
@@ -172,12 +173,6 @@ fun TvNavHost(
                         navController.navigate(Screen.Login) {
                             popUpTo(Screen.Login) { inclusive = true }
                         }
-                    },
-                    onEditProvider = {
-                        navController.navigate(Screen.EditProvider)
-                    },
-                    onSettings = {
-                        navController.navigate(Screen.Settings)
                     }
                 )
             }

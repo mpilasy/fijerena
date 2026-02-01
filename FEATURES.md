@@ -100,7 +100,7 @@ The application uses type-safe navigation with Jetpack Navigation Compose:
 ```
 Login Screen
     ↓
-Content Type Selection
+Content Type Selection (with Settings gear icon at bottom left)
     ├─→ Live TV Categories
     │     ├─→ Live TV Stream Player
     │     └─→ Category Grid (side-by-side layout)
@@ -116,13 +116,12 @@ Content Type Selection
 
 #### Navigation Destinations
 - **Login:** Initial authentication screen
-- **ContentTypeSelection:** Choose between Live TV, Movies, or TV Shows
+- **ContentTypeSelection:** Choose between Live TV, Movies, or TV Shows (main landing page)
 - **CategoryList:** Browse categories for selected content type
 - **MovieDetails:** View movie information and play options
 - **EpisodeSelection:** Browse TV show seasons and episodes
 - **Player:** Video playback screen with playback controls
-- **Settings:** App configuration and preferences
-- **EditProvider:** Change provider URL (alternative settings flow)
+- **Settings:** App configuration and preferences (accessible from ContentTypeSelection)
 
 #### Navigation Features
 - **Type-Safe Navigation:** kotlinx.serialization for compile-time safety
@@ -137,7 +136,7 @@ When enabled via Settings, Developer Mode provides:
 #### Payload Size Tracking
 - **API Response Monitoring:** Tracks size of network responses in bytes
 - **Performance Metrics:** Monitor bandwidth usage
-- **Debug Display:** Payload sizes shown in category grid
+- **Debug Display:** Payload sizes shown in category grid and when loading from cache
 - **Network Analysis:** Identify bandwidth-heavy operations
 
 #### Debug Information
@@ -244,7 +243,7 @@ When enabled via Settings, Developer Mode provides:
 5. Watch history automatically updated with episode info
 
 ### Settings Access
-- From CategoryGrid: Press menu/settings button
+- From ContentTypeSelection: Press gear icon button (bottom left)
 - Settings Screen options:
   - Provider URL: Change provider without re-login
   - Watch History Size: Configure queue length

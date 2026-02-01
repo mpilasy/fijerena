@@ -52,15 +52,24 @@ Always use `StreamingMediaSourceFactory.createMediaSource()` for stream playback
 - **Install on Shield/Sony:** `adb connect [TV_IP] && ./gradlew installDebug`
 - **Lint Check:** `./gradlew ktlintCheck`
 
-## 📱 App Features
+## 📱 App Navigation & Features
 
-### Settings Screen (`AppSettings`)
-The Settings screen provides user configuration options:
+### Navigation Flow
+The app follows this primary navigation structure:
+1. **Login Screen** - User authentication
+2. **Content Type Selection** (main landing page) - Choose Live TV, Movies, or TV Shows
+3. **Category Grid** - Browse categories and streams/episodes
+4. **Player Screen** - Video playback
+5. **Settings** - Accessible only from Content Type Selection via gear icon
+
+### Settings Screen
+Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
 - **Provider URL Management:** Change the Xtream provider URL without re-entering credentials
 - **Last Watched Queue Size:** Configure the number of items to keep in the "Last Watched" virtual category (range: 1-100, default: 25)
 - **Developer Mode:** Enable debug features including:
   - Stats for nerds (payload size tracking for API responses)
   - Payload size metrics displayed in category grid
+  - Payload size tracking works even when loading from cache
   - Debug information for troubleshooting
 
 ### Watch History Tracking
@@ -72,7 +81,7 @@ Content-type specific watch history system:
 
 ### Developer Mode Features
 When enabled, provides debugging and performance insights:
-- **Payload Size Tracking:** Monitor API response sizes in bytes
+- **Payload Size Tracking:** Monitor API response sizes in bytes (works with both network and cache)
 - **Network Statistics:** View request/response metrics
 - **Debug Info:** Additional diagnostics for network operations
 

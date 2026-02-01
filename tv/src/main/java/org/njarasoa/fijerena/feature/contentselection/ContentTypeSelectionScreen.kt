@@ -3,6 +3,9 @@
 package org.njarasoa.fijerena.feature.contentselection
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,7 +20,8 @@ import org.njarasoa.fijerena.core.navigation.ContentType
 @Composable
 fun ContentTypeSelectionScreen(
     onContentTypeSelected: (ContentType) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onSettings: () -> Unit
 ) {
     val configuration = LocalConfiguration.current
 
@@ -89,6 +93,20 @@ fun ContentTypeSelectionScreen(
                     )
                 }
             }
+        }
+
+        // Settings gear icon at bottom left
+        IconButton(
+            onClick = onSettings,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

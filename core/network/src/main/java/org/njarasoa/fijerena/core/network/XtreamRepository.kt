@@ -279,7 +279,10 @@ class XtreamRepository(
 
         val cached = cache.getString(KEY_CATEGORIES, null) ?: return null
         return try {
-            json.decodeFromString<List<XtreamCategory>>(cached)
+            val categories = json.decodeFromString<List<XtreamCategory>>(cached)
+            // Track payload size when loading from cache (for dev mode)
+            trackPayloadSize("live_categories", categories)
+            categories
         } catch (e: Exception) {
             null
         }
@@ -300,7 +303,9 @@ class XtreamRepository(
         }
         val cached = cache.getString(KEY_VOD_CATEGORIES, null) ?: return null
         return try {
-            json.decodeFromString<List<XtreamCategory>>(cached)
+            val categories = json.decodeFromString<List<XtreamCategory>>(cached)
+            trackPayloadSize("vod_categories", categories)
+            categories
         } catch (e: Exception) {
             null
         }
@@ -321,7 +326,9 @@ class XtreamRepository(
         }
         val cached = cache.getString(KEY_SERIES_CATEGORIES, null) ?: return null
         return try {
-            json.decodeFromString<List<XtreamCategory>>(cached)
+            val categories = json.decodeFromString<List<XtreamCategory>>(cached)
+            trackPayloadSize("series_categories", categories)
+            categories
         } catch (e: Exception) {
             null
         }
@@ -448,7 +455,9 @@ class XtreamRepository(
 
         val cached = cache.getString(KEY_STREAMS_PREFIX + categoryId, null) ?: return null
         return try {
-            json.decodeFromString<List<XtreamStream>>(cached)
+            val streams = json.decodeFromString<List<XtreamStream>>(cached)
+            trackPayloadSize("category_$categoryId", streams)
+            streams
         } catch (e: Exception) {
             null
         }
