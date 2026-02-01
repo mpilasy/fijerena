@@ -58,6 +58,21 @@ sealed interface Screen {
     ) : Screen
 
     /**
+     * Movie details screen destination for VOD movies.
+     * Shows movie information and play button.
+     *
+     * @param movieId The Xtream movie ID
+     * @param movieName The display name of the movie
+     * @param categoryId The category ID this movie belongs to
+     */
+    @Serializable
+    data class MovieDetails(
+        val movieId: Int,
+        val movieName: String,
+        val categoryId: String
+    ) : Screen
+
+    /**
      * Player screen destination with stream parameters.
      *
      * @param streamId The Xtream stream ID to play (or episode ID for TV shows as string converted to int hash)

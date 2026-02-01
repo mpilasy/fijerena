@@ -132,9 +132,12 @@ class CategoryViewModel(
                 else -> repository.getStreams(categoryId)
             }
 
+            println("CategoryViewModel: loadStreams result for $contentType, categoryId=$categoryId: ${if (result is Result.Success) "Success with ${result.data.size} items" else "Error: ${(result as? Result.Error)?.message}"}")
+
             when (result) {
                 is Result.Success -> {
                     currentStreams = result.data
+                    println("CategoryViewModel: Loaded ${currentStreams.size} streams for category $categoryId")
                     _uiState.value = UiState.Success(
                         categories = categories,
                         selectedCategoryId = categoryId,
@@ -145,6 +148,7 @@ class CategoryViewModel(
                 }
                 is Result.Error -> {
                     // Show error but keep UI usable
+                    println("CategoryViewModel: ERROR loading streams: ${result.message}")
                     currentStreams = emptyList()
                     _uiState.value = UiState.Success(
                         categories = categories,

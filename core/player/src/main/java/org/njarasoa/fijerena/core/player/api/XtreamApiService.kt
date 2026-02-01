@@ -1,8 +1,10 @@
 package org.njarasoa.fijerena.core.player.api
 
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
+import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
+import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -13,6 +15,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import java.util.concurrent.TimeUnit
 
 /**
  * Xtream IPTV API service for fetching categories and streams.
@@ -46,6 +49,10 @@ class XtreamApiService(
                 // OkHttp-specific configuration for Android TV
                 followRedirects(true)
                 followSslRedirects(true)
+                // Increase timeouts for large VOD/Series category responses
+                connectTimeout(30, TimeUnit.SECONDS)
+                readTimeout(60, TimeUnit.SECONDS)
+                writeTimeout(30, TimeUnit.SECONDS)
             }
         }
     }
@@ -144,7 +151,7 @@ class XtreamApiService(
      * @return List of series in the category
      * @throws Exception if the request fails
      */
-    suspend fun getSeries(categoryId: String): List<XtreamStream> {
+    suspend fun getSeries(categoryId: String): List<XtreamSeries> {
         return client.get("player_api.php") {
             parameter("username", username)
             parameter("password", password)
@@ -170,6 +177,22 @@ class XtreamApiService(
     }
 
     /**
+     * Fetches detailed information about a specific VOD movie.
+     *
+     * @param vodId The VOD movie ID to fetch info for
+     * @return VOD info with movie details
+     * @throws Exception if the request fails
+     */
+    suspend fun getVodInfo(vodId: Int): VodInfo {
+        return client.get("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_vod_info")
+            parameter("vod_id", vodId)
+        }.body()
+    }
+
+    /**
      * Builds a playable stream URL for a given stream ID.
      *
      * Format: http://url:port/live/username/password/streamId.m3u8
@@ -185,15 +208,16 @@ class XtreamApiService(
     /**
      * Builds a playable VOD (movie) stream URL for a given stream ID.
      *
-     * Format: http://url:port/movie/username/password/streamId.ext
+     * Format: http://url:port/movie/username/password/streamId
+     * Trying without extension to see if CDN handles it differently
      *
      * @param streamId The VOD stream ID to build the URL for
-     * @param extension The file extension (e.g., "mp4", "mkv")
+     * @param extension The file extension (ignored)
      * @return The formatted VOD stream URL
      */
     fun buildVodStreamUrl(streamId: Int, extension: String = "mp4"): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
-        return "$normalizedUrl/movie/$username/$password/$streamId.$extension"
+        return "$normalizedUrl/movie/$username/$password/$streamId"
     }
 
     /**
@@ -213,15 +237,16 @@ class XtreamApiService(
     /**
      * Builds a playable episode stream URL for a specific episode.
      *
-     * Format: http://url:port/series/username/password/episodeId.ext
+     * Format: http://url:port/series/username/password/episodeId
+     * Trying without extension to see if CDN handles it differently
      *
      * @param episodeId The episode ID to build the URL for
-     * @param extension The file extension (e.g., "mp4", "mkv")
+     * @param extension The file extension (ignored)
      * @return The formatted episode stream URL
      */
     fun buildEpisodeStreamUrl(episodeId: String, extension: String): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
-        return "$normalizedUrl/series/$username/$password/$episodeId.$extension"
+        return "$normalizedUrl/series/$username/$password/$episodeId"
     }
 
     /**

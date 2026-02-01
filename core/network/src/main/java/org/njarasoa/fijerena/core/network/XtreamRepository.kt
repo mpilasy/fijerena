@@ -10,8 +10,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
+import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
+import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 
 class XtreamRepository(
@@ -317,8 +319,9 @@ class XtreamRepository(
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        val fresh = service.getSeries(categoryId)
-                        cacheStreams("series_$categoryId", fresh)
+                        val seriesList = service.getSeries(categoryId)
+                        val streams = convertSeriesToStreams(seriesList)
+                        cacheStreams("series_$categoryId", streams)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
                     }
@@ -327,9 +330,32 @@ class XtreamRepository(
             }
 
             // No cache available, fetch from network
-            val streams = service.getSeries(categoryId)
+            val seriesList = service.getSeries(categoryId)
+            val streams = convertSeriesToStreams(seriesList)
             cacheStreams("series_$categoryId", streams)
             streams
+        }
+    }
+
+    /**
+     * Converts XtreamSeries list to XtreamStream list for UI compatibility
+     */
+    private fun convertSeriesToStreams(seriesList: List<XtreamSeries>): List<XtreamStream> {
+        return seriesList.map { series ->
+            XtreamStream(
+                num = series.num ?: 0,
+                name = series.name,
+                streamType = "series",
+                streamId = series.seriesId,
+                streamIcon = series.cover,
+                epgChannelId = null,
+                added = series.lastModified,
+                categoryId = series.categoryId,
+                customSid = null,
+                tvArchive = 0,
+                directSource = null,
+                tvArchiveDuration = 0
+            )
         }
     }
 
@@ -376,6 +402,14 @@ class XtreamRepository(
             val service = apiService
                 ?: throw Exception("Not authenticated. Please login first.")
             service.getSeriesInfo(seriesId)
+        }
+    }
+
+    suspend fun getVodInfo(vodId: Int): Result<VodInfo> = withContext(Dispatchers.IO) {
+        suspendResultOf {
+            val service = apiService
+                ?: throw Exception("Not authenticated. Please login first.")
+            service.getVodInfo(vodId)
         }
     }
 

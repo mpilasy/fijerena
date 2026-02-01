@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.feature.category.CategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.login.LoginScreenTv
+import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
 
 /**
@@ -99,25 +100,38 @@ fun TvNavHost(
                 CategoryGridScreen(
                     contentType = categoryListScreen.contentType,
                     onStreamSelected = { streamId, streamName, categoryId ->
-                        // For TV shows, navigate to episode selection first
-                        if (categoryListScreen.contentType == "TV_SHOWS") {
-                            navController.navigate(
-                                Screen.EpisodeSelection(
-                                    seriesId = streamId,
-                                    seriesName = streamName,
-                                    categoryId = categoryId
+                        when (categoryListScreen.contentType) {
+                            "TV_SHOWS" -> {
+                                // For TV shows, navigate to episode selection
+                                navController.navigate(
+                                    Screen.EpisodeSelection(
+                                        seriesId = streamId,
+                                        seriesName = streamName,
+                                        categoryId = categoryId
+                                    )
                                 )
-                            )
-                        } else {
-                            // For Live TV and Movies, go directly to player
-                            navController.navigate(
-                                Screen.Player(
-                                    streamId = streamId,
-                                    streamName = streamName,
-                                    categoryId = categoryId,
-                                    contentType = categoryListScreen.contentType
+                            }
+                            "MOVIES" -> {
+                                // For movies, navigate to movie details
+                                navController.navigate(
+                                    Screen.MovieDetails(
+                                        movieId = streamId,
+                                        movieName = streamName,
+                                        categoryId = categoryId
+                                    )
                                 )
-                            )
+                            }
+                            else -> {
+                                // For Live TV, go directly to player
+                                navController.navigate(
+                                    Screen.Player(
+                                        streamId = streamId,
+                                        streamName = streamName,
+                                        categoryId = categoryId,
+                                        contentType = categoryListScreen.contentType
+                                    )
+                                )
+                            }
                         }
                     },
                     onBack = {
@@ -128,6 +142,29 @@ fun TvNavHost(
                         navController.navigate(Screen.Login) {
                             popUpTo(Screen.Login) { inclusive = true }
                         }
+                    }
+                )
+            }
+
+            // Movie Details Screen (for VOD Movies)
+            composable<Screen.MovieDetails> { backStackEntry ->
+                val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
+                MovieDetailsScreen(
+                    movieId = movieDetailsScreen.movieId,
+                    movieName = movieDetailsScreen.movieName,
+                    categoryId = movieDetailsScreen.categoryId,
+                    onPlayMovie = { movieId, movieName, extension ->
+                        navController.navigate(
+                            Screen.Player(
+                                streamId = movieId,
+                                streamName = movieName,
+                                categoryId = movieDetailsScreen.categoryId,
+                                contentType = "MOVIES"
+                            )
+                        )
+                    },
+                    onBack = {
+                        navController.navigateUp()
                     }
                 )
             }

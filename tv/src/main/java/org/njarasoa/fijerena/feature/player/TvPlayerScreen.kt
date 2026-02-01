@@ -140,25 +140,30 @@ fun TvPlayerScreen(
     LaunchedEffect(currentStreamId, episodeId) {
         isLoading = true
         error = null
+        println("TvPlayerScreen: Building URL for contentType=$contentType, streamId=$currentStreamId, episodeId=$episodeId, extension=$episodeExtension")
         // First restore the session to initialize the API service
         when (val sessionResult = repository.restoreSession()) {
             is Result.Success -> {
                 // Session restored, now build stream URL
                 val urlResult = if (episodeId != null && episodeExtension != null) {
                     // For TV show episodes, use episode-specific URL builder
+                    println("TvPlayerScreen: Using buildEpisodeStreamUrl with episodeId=$episodeId, extension=$episodeExtension")
                     repository.buildEpisodeStreamUrl(episodeId, episodeExtension)
                 } else {
                     // For live TV and movies, use standard URL builder
+                    println("TvPlayerScreen: Using buildStreamUrl with streamId=$currentStreamId, contentType=$contentType")
                     repository.buildStreamUrl(currentStreamId, contentType)
                 }
 
                 when (urlResult) {
                     is Result.Success -> {
                         streamUrl = urlResult.data
+                        println("TvPlayerScreen: Stream URL built successfully: $streamUrl")
                         isLoading = false
                     }
                     is Result.Error -> {
                         error = urlResult.message ?: "Failed to load stream"
+                        println("TvPlayerScreen: Error building stream URL: $error")
                         isLoading = false
                     }
                 }
@@ -176,12 +181,20 @@ fun TvPlayerScreen(
             // Save last played stream
             repository.saveLastPlayedStream(categoryId, currentStreamId)
 
+            // Use minimal headers like popular IPTV players (FFmpeg-based)
+            val headers = mapOf(
+                "User-Agent" to "Lavf/58.76.100"
+            )
+
+            println("TvPlayerScreen: Playing stream with headers: $headers")
+            println("TvPlayerScreen: Stream URL: $url")
+
             val metadata = PlayerMetadata(
                 title = currentStreamName,
                 channelName = "IPTV.atr",
                 streamUrl = url,
                 isLive = contentType == "LIVE_TV", // Only live TV is live, movies/shows are VOD
-                headers = emptyMap()
+                headers = headers
             )
             viewModel.playStream(metadata)
         }

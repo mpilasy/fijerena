@@ -19,13 +19,13 @@ object StreamingMediaSourceFactory {
             .build()
 
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setConnectTimeoutMs(8000)
-            .setReadTimeoutMs(8000)
+            .setConnectTimeoutMs(30000)
+            .setReadTimeoutMs(60000)
             .setAllowCrossProtocolRedirects(true)
 
-        // Add custom headers
-        headers.forEach { (key, value) ->
-            httpDataSourceFactory.setDefaultRequestProperties(mapOf(key to value))
+        // Add all custom headers at once
+        if (headers.isNotEmpty()) {
+            httpDataSourceFactory.setDefaultRequestProperties(headers)
         }
 
         return when {
@@ -36,11 +36,17 @@ object StreamingMediaSourceFactory {
                 DashMediaSource.Factory(httpDataSourceFactory).createMediaSource(mediaItem)
             }
             streamUrl.endsWith(".ts", ignoreCase = true) ||
-            streamUrl.endsWith(".mpeg", ignoreCase = true) -> {
+            streamUrl.endsWith(".mpeg", ignoreCase = true) ||
+            streamUrl.endsWith(".mp4", ignoreCase = true) ||
+            streamUrl.endsWith(".mkv", ignoreCase = true) ||
+            streamUrl.endsWith(".avi", ignoreCase = true) ||
+            streamUrl.endsWith(".mov", ignoreCase = true) ||
+            streamUrl.endsWith(".flv", ignoreCase = true) ||
+            streamUrl.endsWith(".webm", ignoreCase = true) -> {
                 ProgressiveMediaSource.Factory(httpDataSourceFactory).createMediaSource(mediaItem)
             }
             else -> {
-                // Default to HLS for unknown formats
+                // Default to HLS for live streams without extension
                 HlsMediaSource.Factory(httpDataSourceFactory).createMediaSource(mediaItem)
             }
         }

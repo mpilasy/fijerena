@@ -61,6 +61,61 @@ data class XtreamStream(
 )
 
 /**
+ * Represents a series (TV show) listing from Xtream API
+ * Note: Series use series_id instead of stream_id
+ */
+@Serializable
+data class XtreamSeries(
+    @SerialName("num")
+    val num: Int? = null,
+
+    @SerialName("name")
+    val name: String,
+
+    @SerialName("series_id")
+    val seriesId: Int,
+
+    @SerialName("cover")
+    val cover: String? = null,
+
+    @SerialName("plot")
+    val plot: String? = null,
+
+    @SerialName("cast")
+    val cast: String? = null,
+
+    @SerialName("director")
+    val director: String? = null,
+
+    @SerialName("genre")
+    val genre: String? = null,
+
+    @SerialName("releaseDate")
+    val releaseDate: String? = null,
+
+    @SerialName("last_modified")
+    val lastModified: String? = null,
+
+    @SerialName("rating")
+    val rating: String? = null,
+
+    @SerialName("rating_5based")
+    val rating5based: Double? = null,
+
+    @SerialName("backdrop_path")
+    val backdropPath: List<String>? = null,
+
+    @SerialName("youtube_trailer")
+    val youtubeTrailer: String? = null,
+
+    @SerialName("episode_run_time")
+    val episodeRunTime: String? = null,
+
+    @SerialName("category_id")
+    val categoryId: String
+)
+
+/**
  * Represents authentication response from Xtream API
  */
 @Serializable
@@ -250,4 +305,100 @@ data class EpisodeInfo(
 
     @SerialName("rating")
     val rating: String? = null
+)
+
+/**
+ * Represents detailed information about a VOD movie
+ */
+@Serializable
+data class VodInfo(
+    @SerialName("info")
+    val info: MovieInfo? = null,
+
+    @SerialName("movie_data")
+    val movieData: MovieData? = null
+)
+
+/**
+ * Detailed information about a movie
+ */
+@Serializable
+data class MovieInfo(
+    @SerialName("name")
+    val name: String? = null,
+
+    @SerialName("cover_big")
+    val coverBig: String? = null,
+
+    @SerialName("movie_image")
+    val movieImage: String? = null,
+
+    @SerialName("plot")
+    val plot: String? = null,
+
+    @SerialName("cast")
+    val cast: String? = null,
+
+    @SerialName("director")
+    val director: String? = null,
+
+    @SerialName("genre")
+    val genre: String? = null,
+
+    @SerialName("release_date")
+    val releaseDate: String? = null,
+
+    @SerialName("rating")
+    val rating: String? = null,
+
+    @SerialName("duration")
+    val duration: String? = null,
+
+    @SerialName("video")
+    val video: VideoInfo? = null,
+
+    @SerialName("audio")
+    val audio: AudioInfo? = null
+)
+
+/**
+ * Movie stream data
+ */
+@Serializable
+data class MovieData(
+    @SerialName("stream_id")
+    val streamId: Int? = null,
+
+    @SerialName("name")
+    val name: String? = null,
+
+    @SerialName("container_extension")
+    val containerExtension: String? = null
+)
+
+/**
+ * Video technical information
+ */
+@Serializable
+data class VideoInfo(
+    @SerialName("width")
+    val width: Int? = null,
+
+    @SerialName("height")
+    val height: Int? = null,
+
+    @SerialName("codec_name")
+    val codecName: String? = null
+)
+
+/**
+ * Audio technical information
+ */
+@Serializable
+data class AudioInfo(
+    @SerialName("codec_name")
+    val codecName: String? = null,
+
+    @SerialName("language")
+    val language: String? = null
 )
