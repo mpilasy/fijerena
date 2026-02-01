@@ -52,6 +52,43 @@ Always use `StreamingMediaSourceFactory.createMediaSource()` for stream playback
 - **Install on Shield/Sony:** `adb connect [TV_IP] && ./gradlew installDebug`
 - **Lint Check:** `./gradlew ktlintCheck`
 
+## 📱 App Features
+
+### Settings Screen (`AppSettings`)
+The Settings screen provides user configuration options:
+- **Provider URL Management:** Change the Xtream provider URL without re-entering credentials
+- **Last Watched Queue Size:** Configure the number of items to keep in the "Last Watched" virtual category (range: 1-100, default: 25)
+- **Developer Mode:** Enable debug features including:
+  - Stats for nerds (payload size tracking for API responses)
+  - Payload size metrics displayed in category grid
+  - Debug information for troubleshooting
+
+### Watch History Tracking
+Content-type specific watch history system:
+- Tracks recently watched streams across all content types (Live TV, Movies, TV Shows)
+- Configurable queue size via Settings (1-100 items)
+- Maintains watch history per content type (separate tracking for each type)
+- Enables "Last Watched" virtual category for quick access to recently viewed content
+
+### Developer Mode Features
+When enabled, provides debugging and performance insights:
+- **Payload Size Tracking:** Monitor API response sizes in bytes
+- **Network Statistics:** View request/response metrics
+- **Debug Info:** Additional diagnostics for network operations
+
+### Content Types
+The app supports three primary content types:
+- **Live TV:** Live television channels and streams
+- **Movies (VOD):** On-demand movie content
+- **TV Shows:** Series and episodes with episode selection support
+
+### Last Watched Virtual Category
+A dynamically generated category that displays:
+- Most recently watched streams across all content types
+- Ordered chronologically (newest first)
+- Automatically updated when streams are played
+- Size configurable via Settings (default: 25 items)
+
 ## ⚠️ Workflow Rules
 - Read this file at the start of every session.
 - Before coding a UI feature, ask: "Is this D-pad friendly?"
