@@ -40,6 +40,7 @@ dependencies {
     implementation(project(":core:player"))
     implementation(project(":core:navigation"))
     implementation(project(":core:data"))
+    implementation(project(":core:network"))
 
     // Core Android
     implementation(libs.androidx.core.ktx)

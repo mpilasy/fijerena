@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.player.source
 import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
@@ -30,6 +31,9 @@ object StreamingMediaSourceFactory {
         return when {
             streamUrl.endsWith(".m3u8", ignoreCase = true) -> {
                 HlsMediaSource.Factory(httpDataSourceFactory).createMediaSource(mediaItem)
+            }
+            streamUrl.endsWith(".mpd", ignoreCase = true) -> {
+                DashMediaSource.Factory(httpDataSourceFactory).createMediaSource(mediaItem)
             }
             streamUrl.endsWith(".ts", ignoreCase = true) ||
             streamUrl.endsWith(".mpeg", ignoreCase = true) -> {

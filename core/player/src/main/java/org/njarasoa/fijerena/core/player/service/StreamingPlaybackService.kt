@@ -55,26 +55,24 @@ class StreamingPlaybackService : MediaSessionService() {
             },
             onWakeLockRequired = {
                 acquireWakeLock()
-            }
+            },
+            player = player
         )
         player.addListener(playerListener!!)
     }
 
     fun playStream(metadata: PlayerMetadata) {
-        val player = mediaSession?.player ?: return
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         _currentMetadata.value = metadata
 
-        val mediaItem = androidx.media3.common.MediaItem.Builder()
-            .setUri(metadata.streamUrl)
-            .setMediaMetadata(
-                androidx.media3.common.MediaMetadata.Builder()
-                    .setTitle(metadata.title)
-                    .setDisplayTitle(metadata.channelName)
-                    .build()
-            )
-            .build()
+        // Use StreamingMediaSourceFactory for proper HLS/DASH/MPEG-TS detection
+        val mediaSource = StreamingMediaSourceFactory.createMediaSource(
+            context = this,
+            streamUrl = metadata.streamUrl,
+            headers = metadata.headers
+        )
 
-        player.setMediaItem(mediaItem)
+        player.setMediaSource(mediaSource)
         player.playWhenReady = true
         player.prepare()
         _playbackState.value = PlaybackState.Buffering
@@ -137,23 +135,11 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private class PlayerListener(
         private val onStateChanged: (PlaybackState) -> Unit,
-        private val onWakeLockRequired: () -> Unit
+        private val onWakeLockRequired: () -> Unit,
+        private val player: Player
     ) : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
-            val state = when (playbackState) {
-                Player.STATE_IDLE -> PlaybackState.Idle
-                Player.STATE_BUFFERING -> PlaybackState.Buffering
-                Player.STATE_READY -> PlaybackState.Idle
-                Player.STATE_ENDED -> PlaybackState.Ended
-                else -> PlaybackState.Idle
-            }
-            onStateChanged(state)
-        }
-
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            if (isPlaying) {
-                onWakeLockRequired()
-            }
+            updatePlaybackState()
         }
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -161,6 +147,37 @@ class StreamingPlaybackService : MediaSessionService() {
             if (playWhenReady) {
                 onWakeLockRequired()
             }
+            updatePlaybackState()
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying) {
+                onWakeLockRequired()
+            }
+            updatePlaybackState()
+        }
+
+        private fun updatePlaybackState() {
+            val state = when (player.playbackState) {
+                Player.STATE_IDLE -> PlaybackState.Idle
+                Player.STATE_BUFFERING -> PlaybackState.Buffering
+                Player.STATE_READY -> {
+                    if (player.playWhenReady) {
+                        PlaybackState.Playing(
+                            position = player.currentPosition,
+                            duration = player.duration.coerceAtLeast(0L)
+                        )
+                    } else {
+                        PlaybackState.Paused(
+                            position = player.currentPosition,
+                            duration = player.duration.coerceAtLeast(0L)
+                        )
+                    }
+                }
+                Player.STATE_ENDED -> PlaybackState.Ended
+                else -> PlaybackState.Idle
+            }
+            onStateChanged(state)
         }
     }
 

@@ -14,10 +14,14 @@ object PlayerConfigFactory {
     fun createLoadControl(): DefaultLoadControl {
         return DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
-                500,  // bufferForPlaybackMs - fast startup
-                1000  // bufferForPlaybackAfterRebufferMs
+                2000,  // minBufferMs - minimal buffering for live streams
+                5000,  // maxBufferMs - don't over-buffer for live content
+                250,   // bufferForPlaybackMs - faster zapping/channel switching
+                500    // bufferForPlaybackAfterRebufferMs - faster recovery
+            )
+            .setBackBuffer(
+                0,     // backBufferDurationMs - no back buffer for live streams
+                false  // retainBackBufferFromKeyframe
             )
             .build()
     }
@@ -42,6 +46,12 @@ object PlayerConfigFactory {
                     DeviceType.GENERIC_MOBILE -> 5_000_000
                 }
                 setMaxVideoBitrate(maxBitrate)
+
+                // Prioritize hardware-accelerated codecs based on device capabilities
+                // Media3 will select the first available codec from the preferredMimeTypes list
+                if (capabilities.preferredCodecs.isNotEmpty()) {
+                    setPreferredVideoMimeTypes(*capabilities.preferredCodecs.toTypedArray())
+                }
             }
             .build()
 
