@@ -16,6 +16,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
+import org.njarasoa.fijerena.feature.category.CategoryGridScreen
 import org.njarasoa.fijerena.feature.login.LoginScreenTv
 
 /**
@@ -73,10 +74,10 @@ fun TvNavHost(
 
             // Category List Screen
             composable<Screen.CategoryList> {
-                TvCategoryListScreen(
-                    authViewModel = authViewModel,
-                    onStreamSelected = { streamId ->
-                        navController.navigate(Screen.Player(streamId))
+                CategoryGridScreen(
+                    onCategorySelected = { categoryId ->
+                        // TODO: Navigate to streams screen for this category
+                        // navController.navigate(Screen.Streams(categoryId))
                     },
                     onLogout = {
                         authViewModel.clearAuthSession()
