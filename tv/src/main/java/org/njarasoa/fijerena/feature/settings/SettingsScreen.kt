@@ -12,9 +12,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -30,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -50,7 +57,8 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onProviderChanged: () -> Unit
+    onProviderChanged: () -> Unit,
+    onLogout: () -> Unit
 ) {
     val context = LocalContext.current
     val repository = remember {
@@ -67,6 +75,7 @@ fun SettingsScreen(
     var isChangingUrl by remember { mutableStateOf(false) }
     var urlChangeError by remember { mutableStateOf<String?>(null) }
     var urlChangeSuccess by remember { mutableStateOf(false) }
+    var isEditingUrl by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -105,62 +114,103 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Current: $currentUrl",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextField(
-                            value = newUrl,
-                            onValueChange = {
-                                newUrl = it
-                                urlChangeError = null
-                                urlChangeSuccess = false
-                            },
-                            label = { Text("New URL") },
-                            placeholder = { Text("http://example.com:8080") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Button(
-                            onClick = {
-                                if (newUrl.isNotBlank()) {
-                                    isChangingUrl = true
+                    if (!isEditingUrl) {
+                        // Display mode - show URL with edit button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = currentUrl,
+                                onValueChange = {},
+                                readOnly = true,
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(
+                                onClick = {
+                                    isEditingUrl = true
+                                    newUrl = currentUrl
                                     urlChangeError = null
                                     urlChangeSuccess = false
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit URL",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    } else {
+                        // Edit mode - allow URL editing
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextField(
+                                value = newUrl,
+                                onValueChange = {
+                                    newUrl = it
+                                    urlChangeError = null
+                                    urlChangeSuccess = false
+                                },
+                                label = { Text("New URL") },
+                                placeholder = { Text("http://example.com:8080") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Button(
+                                onClick = {
+                                    isEditingUrl = false
+                                    newUrl = ""
+                                    urlChangeError = null
+                                    urlChangeSuccess = false
+                                }
+                            ) {
+                                Text("Cancel")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    if (newUrl.isNotBlank()) {
+                                        isChangingUrl = true
+                                        urlChangeError = null
+                                        urlChangeSuccess = false
 
-                                    coroutineScope.launch {
-                                        when (val result = repository.updateProviderUrl(newUrl)) {
-                                            is Result.Success -> {
-                                                currentUrl = newUrl
-                                                newUrl = ""
-                                                urlChangeSuccess = true
-                                                isChangingUrl = false
-                                                // Notify parent that provider changed
-                                                onProviderChanged()
-                                            }
-                                            is Result.Error -> {
-                                                urlChangeError = result.message ?: "Failed to update URL"
-                                                isChangingUrl = false
+                                        coroutineScope.launch {
+                                            when (val result = repository.updateProviderUrl(newUrl)) {
+                                                is Result.Success -> {
+                                                    currentUrl = newUrl
+                                                    newUrl = ""
+                                                    urlChangeSuccess = true
+                                                    isChangingUrl = false
+                                                    isEditingUrl = false
+                                                    // Notify parent that provider changed
+                                                    onProviderChanged()
+                                                }
+                                                is Result.Error -> {
+                                                    urlChangeError = result.message ?: "Failed to update URL"
+                                                    isChangingUrl = false
+                                                }
                                             }
                                         }
                                     }
+                                },
+                                enabled = newUrl.isNotBlank() && !isChangingUrl
+                            ) {
+                                if (isChangingUrl) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                } else {
+                                    Text("Save")
                                 }
-                            },
-                            enabled = newUrl.isNotBlank() && !isChangingUrl
-                        ) {
-                            if (isChangingUrl) {
-                                CircularProgressIndicator(modifier = Modifier.padding(4.dp))
-                            } else {
-                                Text("Change")
                             }
                         }
                     }
@@ -266,6 +316,21 @@ fun SettingsScreen(
                             color = if (isDevMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                     }
+                }
+            }
+
+            // Logout Button
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = onLogout,
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Logout", style = MaterialTheme.typography.titleMedium)
                 }
             }
         }

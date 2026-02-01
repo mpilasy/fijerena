@@ -45,7 +45,6 @@ fun CategoryGridScreen(
     contentType: String,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onBack: () -> Unit = {},
-    onLogout: () -> Unit,
     viewModel: CategoryViewModel = viewModel(
         factory = CategoryViewModelFactory(
             context = LocalContext.current.applicationContext,
@@ -84,15 +83,13 @@ fun CategoryGridScreen(
                     onStreamSelected = { streamId, streamName, categoryId ->
                         onStreamSelected(streamId, streamName, categoryId)
                     },
-                    onBack = onBack,
-                    onLogout = onLogout
+                    onBack = onBack
                 )
             }
             is CategoryViewModel.UiState.Error -> {
                 ErrorScreen(
                     message = state.message,
-                    onRetry = { viewModel.retry() },
-                    onLogout = onLogout
+                    onRetry = { viewModel.retry() }
                 )
             }
         }
@@ -110,8 +107,7 @@ private fun TwoColumnLayout(
     contentType: String,
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
-    onBack: () -> Unit,
-    onLogout: () -> Unit
+    onBack: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
@@ -119,45 +115,30 @@ private fun TwoColumnLayout(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(onClick = onBack) {
-                    Text("← Back")
-                }
-                Column {
-                    Text(
-                        text = "IPTV.atr",
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = contentType.replace("_", " "),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    payloadSize?.let { size ->
-                        Text(
-                            text = "Payload: $size",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                        )
-                    }
-                }
+            Button(onClick = onBack) {
+                Text("← Back")
             }
-
-            Button(
-                onClick = onLogout,
-                colors = ButtonDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
+            Column {
+                Text(
+                    text = "IPTV.atr",
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-            ) {
-                Text("Logout")
+                Text(
+                    text = contentType.replace("_", " "),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                payloadSize?.let { size ->
+                    Text(
+                        text = "Payload: $size",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
             }
         }
 
@@ -519,18 +500,8 @@ private fun LoadingScreen() {
 @Composable
 private fun ErrorScreen(
     message: String,
-    onRetry: () -> Unit,
-    onLogout: () -> Unit
+    onRetry: () -> Unit
 ) {
-    val isSessionExpired = message.contains("Session expired", ignoreCase = true) ||
-                          message.contains("login again", ignoreCase = true)
-
-    LaunchedEffect(isSessionExpired) {
-        if (isSessionExpired) {
-            onLogout()
-        }
-    }
-
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -541,43 +512,24 @@ private fun ErrorScreen(
             modifier = Modifier.padding(32.dp)
         ) {
             Text(
-                text = if (isSessionExpired) "Session Expired" else "Error",
+                text = "Error",
                 style = MaterialTheme.typography.displayMedium,
                 color = MaterialTheme.colorScheme.error
             )
 
             Text(
-                text = if (isSessionExpired) {
-                    "Your session has expired. Redirecting to login..."
-                } else {
-                    message
-                },
+                text = message,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            if (!isSessionExpired) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Button(
-                        onClick = onRetry,
-                        colors = ButtonDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Text("Retry")
-                    }
-
-                    Button(
-                        onClick = onLogout,
-                        colors = ButtonDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Logout")
-                    }
-                }
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Retry")
             }
         }
     }

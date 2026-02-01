@@ -20,7 +20,6 @@ import org.njarasoa.fijerena.core.navigation.ContentType
 @Composable
 fun ContentTypeSelectionScreen(
     onContentTypeSelected: (ContentType) -> Unit,
-    onLogout: () -> Unit,
     onSettings: () -> Unit
 ) {
     val configuration = LocalConfiguration.current
@@ -36,29 +35,12 @@ fun ContentTypeSelectionScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 48.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "IPTV.atr",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Button(
-                    onClick = onLogout,
-                    colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Text("Logout")
-                }
-            }
+            Text(
+                text = "IPTV.atr",
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 48.dp)
+            )
 
             // Content type selection
             Column(

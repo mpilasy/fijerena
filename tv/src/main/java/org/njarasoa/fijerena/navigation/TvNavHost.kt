@@ -97,12 +97,6 @@ fun TvNavHost(
                             popUpTo(Screen.ContentTypeSelection) { inclusive = false }
                         }
                     },
-                    onLogout = {
-                        authViewModel.clearAuthSession()
-                        navController.navigate(Screen.Login) {
-                            popUpTo(Screen.ContentTypeSelection) { inclusive = true }
-                        }
-                    },
                     onSettings = {
                         navController.navigate(Screen.Settings)
                     }
@@ -166,12 +160,6 @@ fun TvNavHost(
                         // Go back to content type selection to access Movies/TV Shows
                         navController.navigate(Screen.ContentTypeSelection) {
                             popUpTo(Screen.CategoryList("LIVE_TV")) { inclusive = true }
-                        }
-                    },
-                    onLogout = {
-                        authViewModel.clearAuthSession()
-                        navController.navigate(Screen.Login) {
-                            popUpTo(Screen.Login) { inclusive = true }
                         }
                     }
                 )
@@ -254,6 +242,12 @@ fun TvNavHost(
                     },
                     onProviderChanged = {
                         // Clear navigation stack and go back to login
+                        navController.navigate(Screen.Login) {
+                            popUpTo(Screen.Login) { inclusive = true }
+                        }
+                    },
+                    onLogout = {
+                        authViewModel.clearAuthSession()
                         navController.navigate(Screen.Login) {
                             popUpTo(Screen.Login) { inclusive = true }
                         }
