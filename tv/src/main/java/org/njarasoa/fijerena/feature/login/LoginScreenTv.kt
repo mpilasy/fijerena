@@ -66,6 +66,11 @@ fun LoginScreenTv(
         buttonFocusRequester.requestFocus()
     }
 
+    // Attempt to restore session from encrypted credentials on startup
+    LaunchedEffect(Unit) {
+        viewModel.restoreSession()
+    }
+
     // Handle success state and update AuthViewModel
     LaunchedEffect(uiState) {
         if (uiState is LoginViewModel.UiState.Success) {
@@ -87,7 +92,7 @@ fun LoginScreenTv(
         ) {
             // Title
             Text(
-                text = "Xtream IPTV Login",
+                text = "Fijerena Xtream IPTV Login",
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 48.dp)
@@ -168,7 +173,7 @@ fun LoginScreenTv(
             // Login button with highly visible focus state
             Button(
                 onClick = {
-                    viewModel.login(serverUrl, username, password)
+                    viewModel.login(serverUrl, username, password, rememberMe = true)
                 },
                 modifier = Modifier
                     .width(600.dp)

@@ -47,6 +47,11 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
 
+    // Attempt to restore session from encrypted credentials on startup
+    LaunchedEffect(Unit) {
+        viewModel.restoreSession()
+    }
+
     // Handle success state and update AuthViewModel
     LaunchedEffect(uiState) {
         if (uiState is LoginViewModel.UiState.Success) {
@@ -70,7 +75,7 @@ fun LoginScreen(
         ) {
             // Title
             Text(
-                text = "Xtream IPTV",
+                text = "Fijerena IPTV",
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp)
