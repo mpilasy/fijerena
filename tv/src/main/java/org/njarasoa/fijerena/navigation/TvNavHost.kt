@@ -135,10 +135,9 @@ fun TvNavHost(
                         }
                     },
                     onBack = {
-                        // Since we're skipping content type selection, back from Live TV goes to login
-                        authViewModel.clearAuthSession()
-                        navController.navigate(Screen.Login) {
-                            popUpTo(Screen.Login) { inclusive = true }
+                        // Go back to content type selection to access Movies/TV Shows
+                        navController.navigate(Screen.ContentTypeSelection) {
+                            popUpTo(Screen.CategoryList("LIVE_TV")) { inclusive = true }
                         }
                     },
                     onLogout = {

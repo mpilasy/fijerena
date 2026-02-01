@@ -12,9 +12,14 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import okhttp3.Cookie
+import okhttp3.CookieJar
+import okhttp3.HttpUrl
 import java.util.concurrent.TimeUnit
 
 /**
@@ -30,6 +35,8 @@ class XtreamApiService(
     private val username: String,
     private val password: String
 ) {
+    private val cookieStore = mutableMapOf<String, MutableList<Cookie>>()
+
     private val client: HttpClient = HttpClient(OkHttp) {
         install(ContentNegotiation) {
             json(Json {
@@ -42,6 +49,11 @@ class XtreamApiService(
 
         defaultRequest {
             url(normalizeBaseUrl(baseUrl))
+            // Stealth User-Agent: Chrome on Linux
+            header(HttpHeaders.UserAgent, "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            header(HttpHeaders.Accept, "*/*")
+            header(HttpHeaders.AcceptLanguage, "en-US,en;q=0.9")
+            header(HttpHeaders.Connection, "keep-alive")
         }
 
         engine {
@@ -53,6 +65,17 @@ class XtreamApiService(
                 connectTimeout(30, TimeUnit.SECONDS)
                 readTimeout(60, TimeUnit.SECONDS)
                 writeTimeout(30, TimeUnit.SECONDS)
+
+                // Cookie handling for Cloudflare challenge cookies
+                cookieJar(object : CookieJar {
+                    override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+                        cookieStore[url.host] = cookies.toMutableList()
+                    }
+
+                    override fun loadForRequest(url: HttpUrl): List<Cookie> {
+                        return cookieStore[url.host] ?: emptyList()
+                    }
+                })
             }
         }
     }

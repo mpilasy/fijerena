@@ -18,15 +18,32 @@ object StreamingMediaSourceFactory {
             .setUri(streamUrl)
             .build()
 
+        // Extract base URL for Referer header
+        val baseUrl = try {
+            val uri = java.net.URL(streamUrl)
+            "${uri.protocol}://${uri.host}"
+        } catch (e: Exception) {
+            ""
+        }
+
+        // Stealth headers to bypass Cloudflare
+        val stealthHeaders = mutableMapOf<String, String>()
+        stealthHeaders["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        stealthHeaders["Accept"] = "*/*"
+        stealthHeaders["Accept-Language"] = "en-US,en;q=0.9"
+        stealthHeaders["Connection"] = "keep-alive"
+        if (baseUrl.isNotEmpty()) {
+            stealthHeaders["Referer"] = baseUrl
+            stealthHeaders["Origin"] = baseUrl
+        }
+        // Merge with any custom headers (custom headers take precedence)
+        stealthHeaders.putAll(headers)
+
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setConnectTimeoutMs(30000)
             .setReadTimeoutMs(60000)
             .setAllowCrossProtocolRedirects(true)
-
-        // Add all custom headers at once
-        if (headers.isNotEmpty()) {
-            httpDataSourceFactory.setDefaultRequestProperties(headers)
-        }
+            .setDefaultRequestProperties(stealthHeaders)
 
         return when {
             streamUrl.endsWith(".m3u8", ignoreCase = true) -> {

@@ -181,12 +181,8 @@ fun TvPlayerScreen(
             // Save last played stream
             repository.saveLastPlayedStream(categoryId, currentStreamId)
 
-            // Use minimal headers like popular IPTV players (FFmpeg-based)
-            val headers = mapOf(
-                "User-Agent" to "Lavf/58.76.100"
-            )
-
-            println("TvPlayerScreen: Playing stream with headers: $headers")
+            // Headers are now handled in StreamingMediaSourceFactory with stealth config
+            println("TvPlayerScreen: Playing stream with stealth headers")
             println("TvPlayerScreen: Stream URL: $url")
 
             val metadata = PlayerMetadata(
@@ -194,7 +190,7 @@ fun TvPlayerScreen(
                 channelName = "IPTV.atr",
                 streamUrl = url,
                 isLive = contentType == "LIVE_TV", // Only live TV is live, movies/shows are VOD
-                headers = headers
+                headers = emptyMap() // Use default stealth headers from MediaSourceFactory
             )
             viewModel.playStream(metadata)
         }
