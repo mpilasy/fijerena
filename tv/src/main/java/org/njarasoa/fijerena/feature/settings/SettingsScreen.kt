@@ -17,12 +17,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.material3.Button
@@ -68,14 +74,23 @@ fun SettingsScreen(
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
+    var providerName by remember { mutableStateOf(appSettings.providerName) }
     var currentUrl by remember { mutableStateOf(repository.getCurrentUrl() ?: "") }
-    var newUrl by remember { mutableStateOf("") }
+    var currentUsername by remember { mutableStateOf(repository.getCurrentUsername() ?: "") }
     var watchHistorySize by remember { mutableStateOf(appSettings.watchHistorySize.toString()) }
+    var newWatchHistorySize by remember { mutableStateOf("") }
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
-    var isChangingUrl by remember { mutableStateOf(false) }
-    var urlChangeError by remember { mutableStateOf<String?>(null) }
-    var urlChangeSuccess by remember { mutableStateOf(false) }
-    var isEditingUrl by remember { mutableStateOf(false) }
+
+    // Provider dialog state
+    var showProviderDialog by remember { mutableStateOf(false) }
+    var dialogProviderName by remember { mutableStateOf("") }
+    var dialogUrl by remember { mutableStateOf("") }
+    var dialogUsername by remember { mutableStateOf("") }
+    var dialogPassword by remember { mutableStateOf("") }
+    var isChangingProvider by remember { mutableStateOf(false) }
+    var providerChangeError by remember { mutableStateOf<String?>(null) }
+
+    var isEditingQueueSize by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -106,131 +121,50 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            // Provider URL Setting
+            // Provider Details Setting
             item {
                 Column {
                     Text(
-                        text = "Provider URL",
+                        text = "Provider Details",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    if (!isEditingUrl) {
-                        // Display mode - show URL with edit button
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedTextField(
-                                value = currentUrl,
-                                onValueChange = {},
-                                readOnly = true,
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            IconButton(
-                                onClick = {
-                                    isEditingUrl = true
-                                    newUrl = currentUrl
-                                    urlChangeError = null
-                                    urlChangeSuccess = false
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit URL",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    } else {
-                        // Edit mode - allow URL editing
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextField(
-                                value = newUrl,
-                                onValueChange = {
-                                    newUrl = it
-                                    urlChangeError = null
-                                    urlChangeSuccess = false
-                                },
-                                label = { Text("New URL") },
-                                placeholder = { Text("http://example.com:8080") },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Button(
-                                onClick = {
-                                    isEditingUrl = false
-                                    newUrl = ""
-                                    urlChangeError = null
-                                    urlChangeSuccess = false
-                                }
-                            ) {
-                                Text("Cancel")
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    if (newUrl.isNotBlank()) {
-                                        isChangingUrl = true
-                                        urlChangeError = null
-                                        urlChangeSuccess = false
-
-                                        coroutineScope.launch {
-                                            when (val result = repository.updateProviderUrl(newUrl)) {
-                                                is Result.Success -> {
-                                                    currentUrl = newUrl
-                                                    newUrl = ""
-                                                    urlChangeSuccess = true
-                                                    isChangingUrl = false
-                                                    isEditingUrl = false
-                                                    // Notify parent that provider changed
-                                                    onProviderChanged()
-                                                }
-                                                is Result.Error -> {
-                                                    urlChangeError = result.message ?: "Failed to update URL"
-                                                    isChangingUrl = false
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                                enabled = newUrl.isNotBlank() && !isChangingUrl
-                            ) {
-                                if (isChangingUrl) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        color = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                } else {
-                                    Text("Save")
-                                }
-                            }
-                        }
-                    }
-
-                    if (urlChangeError != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = urlChangeError!!,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                    // Display mode - show provider name with edit button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = providerName,
+                            onValueChange = {},
+                            readOnly = true,
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            ),
+                            enabled = false
                         )
-                    }
-
-                    if (urlChangeSuccess) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Provider URL updated successfully!",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(
+                            onClick = {
+                                dialogProviderName = providerName
+                                dialogUrl = currentUrl
+                                dialogUsername = currentUsername
+                                dialogPassword = repository.getCurrentPassword() ?: ""
+                                providerChangeError = null
+                                showProviderDialog = true
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Provider",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
@@ -251,33 +185,80 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextField(
-                            value = watchHistorySize,
-                            onValueChange = { newValue ->
-                                if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
-                                    watchHistorySize = newValue
-                                }
-                            },
-                            label = { Text("Queue Size") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.width(200.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Button(
-                            onClick = {
-                                val size = watchHistorySize.toIntOrNull()
-                                if (size != null && size in 1..100) {
-                                    appSettings.watchHistorySize = size
-                                }
-                            },
-                            enabled = watchHistorySize.toIntOrNull()?.let { it in 1..100 } == true
+                    if (!isEditingQueueSize) {
+                        // Display mode - show size with edit button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Save")
+                            OutlinedTextField(
+                                value = watchHistorySize,
+                                onValueChange = {},
+                                readOnly = true,
+                                singleLine = true,
+                                modifier = Modifier.width(200.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                    disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                ),
+                                enabled = false
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(
+                                onClick = {
+                                    isEditingQueueSize = true
+                                    newWatchHistorySize = watchHistorySize
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Queue Size",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    } else {
+                        // Edit mode - allow size editing
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextField(
+                                value = newWatchHistorySize,
+                                onValueChange = { newValue ->
+                                    if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
+                                        newWatchHistorySize = newValue
+                                    }
+                                },
+                                label = { Text("Queue Size") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.width(200.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Button(
+                                onClick = {
+                                    isEditingQueueSize = false
+                                    newWatchHistorySize = ""
+                                }
+                            ) {
+                                Text("Cancel")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    val size = newWatchHistorySize.toIntOrNull()
+                                    if (size != null && size in 1..100) {
+                                        appSettings.watchHistorySize = size
+                                        watchHistorySize = size.toString()
+                                        isEditingQueueSize = false
+                                        newWatchHistorySize = ""
+                                    }
+                                },
+                                enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true
+                            ) {
+                                Text("Save")
+                            }
                         }
                     }
                 }
@@ -334,5 +315,161 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    // Provider Details Dialog
+    if (showProviderDialog) {
+        AlertDialog(
+            onDismissRequest = { showProviderDialog = false },
+            title = {
+                Text(
+                    "Edit Provider Details",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedTextField(
+                        value = dialogProviderName,
+                        onValueChange = { dialogProviderName = it },
+                        label = { Text("Provider Name") },
+                        placeholder = { Text("My Provider") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    )
+                    OutlinedTextField(
+                        value = dialogUrl,
+                        onValueChange = { dialogUrl = it },
+                        label = { Text("URL") },
+                        placeholder = { Text("http://example.com:8080") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    )
+                    OutlinedTextField(
+                        value = dialogUsername,
+                        onValueChange = { dialogUsername = it },
+                        label = { Text("Username") },
+                        placeholder = { Text("username") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    )
+                    OutlinedTextField(
+                        value = dialogPassword,
+                        onValueChange = { dialogPassword = it },
+                        label = { Text("Password") },
+                        placeholder = { Text("••••••••") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    )
+
+                    if (providerChangeError != null) {
+                        Text(
+                            text = providerChangeError!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (dialogUrl.isNotBlank() && dialogUsername.isNotBlank() && dialogPassword.isNotBlank()) {
+                            isChangingProvider = true
+                            providerChangeError = null
+
+                            coroutineScope.launch {
+                                // Try to login with new credentials
+                                when (val result = repository.login(
+                                    dialogUrl,
+                                    dialogUsername,
+                                    dialogPassword,
+                                    rememberMe = true
+                                )) {
+                                    is Result.Success -> {
+                                        providerName = dialogProviderName.ifBlank { "My Provider" }
+                                        appSettings.providerName = providerName
+                                        currentUrl = dialogUrl
+                                        currentUsername = dialogUsername
+                                        isChangingProvider = false
+                                        showProviderDialog = false
+                                        // Notify parent that provider changed
+                                        onProviderChanged()
+                                    }
+                                    is Result.Error -> {
+                                        providerChangeError = result.message ?: "Failed to update provider"
+                                        isChangingProvider = false
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    enabled = dialogUrl.isNotBlank() && dialogUsername.isNotBlank() && dialogPassword.isNotBlank() && !isChangingProvider,
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    if (isChangingProvider) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Save")
+                    }
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showProviderDialog = false },
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        )
     }
 }

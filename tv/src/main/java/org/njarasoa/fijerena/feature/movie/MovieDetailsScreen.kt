@@ -13,7 +13,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.rotate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,6 +38,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.VodInfo
@@ -60,9 +69,15 @@ fun MovieDetailsScreen(
     var vodInfo by remember { mutableStateOf<VodInfo?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var payloadSize by remember { mutableStateOf<String?>(null) }
+    var refreshTrigger by remember { mutableStateOf(0) }
+
+    fun refresh() {
+        refreshTrigger++
+    }
 
     // Load movie info on launch
-    LaunchedEffect(movieId) {
+    LaunchedEffect(movieId, refreshTrigger) {
         isLoading = true
         error = null
 
@@ -72,9 +87,11 @@ fun MovieDetailsScreen(
                 when (val infoResult = repository.getVodInfo(movieId)) {
                     is Result.Success -> {
                         vodInfo = infoResult.data
+                        payloadSize = repository.getPayloadSize("vod_$movieId")
                         println("MovieDetailsScreen: Got VOD info: ${infoResult.data}")
                         println("MovieDetailsScreen: Movie data: ${infoResult.data.movieData}")
                         println("MovieDetailsScreen: Container extension: ${infoResult.data.movieData?.containerExtension}")
+                        println("MovieDetailsScreen: Payload size: $payloadSize")
                         isLoading = false
                     }
                     is Result.Error -> {
@@ -101,11 +118,15 @@ fun MovieDetailsScreen(
             )
         }
         vodInfo != null -> {
+            val fetchTime = repository.getFetchTimeFormatted("vod_$movieId")
             MovieDetailsContent(
                 vodInfo = vodInfo!!,
                 movieId = movieId,
                 movieName = movieName,
+                payloadSize = payloadSize,
+                fetchTime = fetchTime,
                 onPlayMovie = onPlayMovie,
+                onRefresh = { refresh() },
                 onBack = onBack
             )
         }
@@ -117,11 +138,36 @@ private fun MovieDetailsContent(
     vodInfo: VodInfo,
     movieId: Int,
     movieName: String,
+    payloadSize: String?,
+    fetchTime: String?,
     onPlayMovie: (movieId: Int, movieName: String, extension: String) -> Unit,
+    onRefresh: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val providerName by remember { mutableStateOf(appSettings.providerName) }
     val movieInfo = vodInfo.info
     val extension = vodInfo.movieData?.containerExtension ?: "mp4"
+
+    // Track refresh state for animation
+    var isRefreshing by remember { mutableStateOf(false) }
+    var targetRotation by remember { mutableStateOf(0f) }
+
+    val rotation by animateFloatAsState(
+        targetValue = targetRotation,
+        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        label = "refresh_rotation"
+    )
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            while (isRefreshing) {
+                targetRotation += 360f
+                kotlinx.coroutines.delay(600)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -132,17 +178,67 @@ private fun MovieDetailsContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
-            Text(
-                text = movieInfo?.name ?: movieName,
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = movieInfo?.name ?: movieName,
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    // Always show refresh button
+                    IconButton(
+                        onClick = {
+                            isRefreshing = true
+                            onRefresh()
+                            isRefreshing = false
+                        },
+                        enabled = !isRefreshing,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh movie info",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .size(24.dp)
+                                .rotate(rotation)
+                        )
+                    }
+                }
+                // Optionally show payload size and fetch time
+                val infoText = buildString {
+                    if (payloadSize != null) {
+                        append(payloadSize)
+                    }
+                    if (fetchTime != null) {
+                        if (payloadSize != null) append(" • ")
+                        append(fetchTime)
+                    }
+                }
+                if (infoText.isNotBlank()) {
+                    Text(
+                        text = infoText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
             Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = onBack) {
-                Text("Back")
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = providerName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onBack) {
+                    Text("Back")
+                }
             }
         }
 

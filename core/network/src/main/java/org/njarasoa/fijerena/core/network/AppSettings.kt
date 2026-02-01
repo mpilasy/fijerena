@@ -15,6 +15,7 @@ class AppSettings(context: Context) {
     companion object {
         private const val KEY_DEV_MODE = "dev_mode"
         private const val KEY_WATCH_HISTORY_SIZE = "watch_history_size"
+        private const val KEY_PROVIDER_NAME = "provider_name"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
     }
 
@@ -34,4 +35,11 @@ class AppSettings(context: Context) {
             val clampedValue = value.coerceIn(1, 100)
             prefs.edit().putInt(KEY_WATCH_HISTORY_SIZE, clampedValue).apply()
         }
+
+    /**
+     * Get or set the provider name.
+     */
+    var providerName: String
+        get() = prefs.getString(KEY_PROVIDER_NAME, "My Provider") ?: "My Provider"
+        set(value) = prefs.edit().putString(KEY_PROVIDER_NAME, value).apply()
 }

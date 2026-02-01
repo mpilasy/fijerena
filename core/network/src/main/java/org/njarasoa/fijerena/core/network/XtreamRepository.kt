@@ -47,6 +47,8 @@ class XtreamRepository(
 
     // Payload size tracking for dev mode
     private val payloadSizes = ConcurrentHashMap<String, Long>()
+    // Fetch time tracking (in milliseconds)
+    private val fetchTimes = ConcurrentHashMap<String, Long>()
 
     companion object {
         private const val CACHE_EXPIRY_MS = 6 * 60 * 60 * 1000L // 6 hours
@@ -201,7 +203,10 @@ class XtreamRepository(
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        val startTime = System.currentTimeMillis()
                         val fresh = service.getCategories()
+                        val fetchTime = System.currentTimeMillis() - startTime
+                        fetchTimes["live_categories"] = fetchTime
                         cacheCategories(fresh)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
@@ -211,7 +216,10 @@ class XtreamRepository(
             }
 
             // No cache available, fetch from network
+            val startTime = System.currentTimeMillis()
             val categories = service.getCategories()
+            val fetchTime = System.currentTimeMillis() - startTime
+            fetchTimes["live_categories"] = fetchTime
             cacheCategories(categories)
             categories
         }
@@ -228,7 +236,10 @@ class XtreamRepository(
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        val startTime = System.currentTimeMillis()
                         val fresh = service.getVodCategories()
+                        val fetchTime = System.currentTimeMillis() - startTime
+                        fetchTimes["vod_categories"] = fetchTime
                         cacheVodCategories(fresh)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
@@ -238,7 +249,10 @@ class XtreamRepository(
             }
 
             // No cache available, fetch from network
+            val startTime = System.currentTimeMillis()
             val categories = service.getVodCategories()
+            val fetchTime = System.currentTimeMillis() - startTime
+            fetchTimes["vod_categories"] = fetchTime
             cacheVodCategories(categories)
             categories
         }
@@ -255,7 +269,10 @@ class XtreamRepository(
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        val startTime = System.currentTimeMillis()
                         val fresh = service.getSeriesCategories()
+                        val fetchTime = System.currentTimeMillis() - startTime
+                        fetchTimes["series_categories"] = fetchTime
                         cacheSeriesCategories(fresh)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
@@ -265,7 +282,10 @@ class XtreamRepository(
             }
 
             // No cache available, fetch from network
+            val startTime = System.currentTimeMillis()
             val categories = service.getSeriesCategories()
+            val fetchTime = System.currentTimeMillis() - startTime
+            fetchTimes["series_categories"] = fetchTime
             cacheSeriesCategories(categories)
             categories
         }
@@ -353,7 +373,10 @@ class XtreamRepository(
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        val startTime = System.currentTimeMillis()
                         val fresh = service.getStreams(categoryId)
+                        val fetchTime = System.currentTimeMillis() - startTime
+                        fetchTimes["category_$categoryId"] = fetchTime
                         cacheStreams(categoryId, fresh)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
@@ -363,7 +386,10 @@ class XtreamRepository(
             }
 
             // No cache available, fetch from network
+            val startTime = System.currentTimeMillis()
             val streams = service.getStreams(categoryId)
+            val fetchTime = System.currentTimeMillis() - startTime
+            fetchTimes["category_$categoryId"] = fetchTime
             cacheStreams(categoryId, streams)
             streams
         }
@@ -380,7 +406,10 @@ class XtreamRepository(
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        val startTime = System.currentTimeMillis()
                         val fresh = service.getVodStreams(categoryId)
+                        val fetchTime = System.currentTimeMillis() - startTime
+                        fetchTimes["category_vod_$categoryId"] = fetchTime
                         cacheStreams("vod_$categoryId", fresh)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
@@ -390,7 +419,10 @@ class XtreamRepository(
             }
 
             // No cache available, fetch from network
+            val startTime = System.currentTimeMillis()
             val streams = service.getVodStreams(categoryId)
+            val fetchTime = System.currentTimeMillis() - startTime
+            fetchTimes["category_vod_$categoryId"] = fetchTime
             cacheStreams("vod_$categoryId", streams)
             streams
         }
@@ -407,8 +439,11 @@ class XtreamRepository(
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        val startTime = System.currentTimeMillis()
                         val seriesList = service.getSeries(categoryId)
                         val streams = convertSeriesToStreams(seriesList)
+                        val fetchTime = System.currentTimeMillis() - startTime
+                        fetchTimes["category_series_$categoryId"] = fetchTime
                         cacheStreams("series_$categoryId", streams)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
@@ -418,8 +453,11 @@ class XtreamRepository(
             }
 
             // No cache available, fetch from network
+            val startTime = System.currentTimeMillis()
             val seriesList = service.getSeries(categoryId)
             val streams = convertSeriesToStreams(seriesList)
+            val fetchTime = System.currentTimeMillis() - startTime
+            fetchTimes["category_series_$categoryId"] = fetchTime
             cacheStreams("series_$categoryId", streams)
             streams
         }
@@ -492,7 +530,10 @@ class XtreamRepository(
         suspendResultOf {
             val service = apiService
                 ?: throw Exception("Not authenticated. Please login first.")
+            val startTime = System.currentTimeMillis()
             val seriesInfo = service.getSeriesInfo(seriesId)
+            val fetchTime = System.currentTimeMillis() - startTime
+            fetchTimes["series_$seriesId"] = fetchTime
             trackPayloadSize("series_$seriesId", seriesInfo)
             seriesInfo
         }
@@ -502,7 +543,10 @@ class XtreamRepository(
         suspendResultOf {
             val service = apiService
                 ?: throw Exception("Not authenticated. Please login first.")
+            val startTime = System.currentTimeMillis()
             val vodInfo = service.getVodInfo(vodId)
+            val fetchTime = System.currentTimeMillis() - startTime
+            fetchTimes["vod_$vodId"] = fetchTime
             trackPayloadSize("vod_$vodId", vodInfo)
             vodInfo
         }
@@ -530,6 +574,10 @@ class XtreamRepository(
 
     fun getCurrentUsername(): String? {
         return accountManager.getCredentials()?.username
+    }
+
+    fun getCurrentPassword(): String? {
+        return accountManager.getCredentials()?.password
     }
 
     /**
@@ -637,14 +685,15 @@ class XtreamRepository(
     /**
      * Track payload size for dev mode
      */
-    private fun trackPayloadSize(key: String, data: Any) {
+    private inline fun <reified T> trackPayloadSize(key: String, data: T) {
         if (appSettings.isDevMode) {
             try {
                 val jsonString = json.encodeToString(data)
                 val sizeInBytes = jsonString.toByteArray(Charsets.UTF_8).size.toLong()
                 payloadSizes[key] = sizeInBytes
+                println("XtreamRepository: Tracked payload size for $key: ${formatBytes(sizeInBytes)}")
             } catch (e: Exception) {
-                // Ignore serialization errors
+                println("XtreamRepository: Failed to track payload size for $key: ${e.message}")
             }
         }
     }
@@ -656,6 +705,70 @@ class XtreamRepository(
         if (!appSettings.isDevMode) return null
         val sizeInBytes = payloadSizes[key] ?: return null
         return formatBytes(sizeInBytes)
+    }
+
+    /**
+     * Get fetch time for a specific key in milliseconds
+     */
+    fun getFetchTime(key: String): Long? {
+        return fetchTimes[key]
+    }
+
+    /**
+     * Get fetch time for a specific key in human-readable format
+     */
+    fun getFetchTimeFormatted(key: String): String? {
+        if (!appSettings.isDevMode) return null
+        val timeMs = fetchTimes[key] ?: return null
+        return "${timeMs} ms"
+    }
+
+    /**
+     * Clear categories cache for a specific content type
+     */
+    fun clearCategoriesCache(contentType: String) {
+        when (contentType) {
+            "LIVE_TV" -> {
+                cache.edit()
+                    .remove(KEY_CATEGORIES)
+                    .remove(KEY_CATEGORIES_TIMESTAMP)
+                    .apply()
+                payloadSizes.remove("live_categories")
+                fetchTimes.remove("live_categories")
+            }
+            "MOVIES" -> {
+                cache.edit()
+                    .remove(KEY_VOD_CATEGORIES)
+                    .remove(KEY_VOD_CATEGORIES_TIMESTAMP)
+                    .apply()
+                payloadSizes.remove("vod_categories")
+                fetchTimes.remove("vod_categories")
+            }
+            "TV_SHOWS" -> {
+                cache.edit()
+                    .remove(KEY_SERIES_CATEGORIES)
+                    .remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
+                    .apply()
+                payloadSizes.remove("series_categories")
+                fetchTimes.remove("series_categories")
+            }
+        }
+    }
+
+    /**
+     * Clear streams cache for a specific category
+     */
+    fun clearStreamsCache(categoryId: String) {
+        cache.edit()
+            .remove(KEY_STREAMS_PREFIX + categoryId)
+            .remove(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId)
+            .apply()
+        payloadSizes.remove("category_$categoryId")
+        payloadSizes.remove("category_vod_$categoryId")
+        payloadSizes.remove("category_series_$categoryId")
+        fetchTimes.remove("category_$categoryId")
+        fetchTimes.remove("category_vod_$categoryId")
+        fetchTimes.remove("category_series_$categoryId")
     }
 
     /**

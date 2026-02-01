@@ -8,7 +8,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.rotate
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -26,6 +35,7 @@ import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.*
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 
@@ -74,14 +84,24 @@ fun CategoryGridScreen(
                     selectedCategoryId = state.selectedCategoryId,
                     streams = state.streams,
                     streamsLoading = state.streamsLoading,
+                    categoriesRefreshing = state.categoriesRefreshing,
                     lastPlayedStreamId = state.lastPlayedStreamId,
-                    payloadSize = state.payloadSize,
+                    categoriesPayloadSize = state.categoriesPayloadSize,
+                    streamsPayloadSize = state.streamsPayloadSize,
+                    categoriesFetchTime = viewModel.getCategoriesFetchTime(),
+                    streamsFetchTime = state.selectedCategoryId?.let { viewModel.getFetchTime(it) },
                     contentType = contentType,
                     onCategorySelected = { categoryId ->
                         viewModel.loadStreams(categoryId)
                     },
                     onStreamSelected = { streamId, streamName, categoryId ->
                         onStreamSelected(streamId, streamName, categoryId)
+                    },
+                    onRefreshCategories = {
+                        viewModel.refreshCategories()
+                    },
+                    onRefreshStreams = { categoryId ->
+                        viewModel.refreshStreams(categoryId)
                     },
                     onBack = onBack
                 )
@@ -102,44 +122,74 @@ private fun TwoColumnLayout(
     selectedCategoryId: String?,
     streams: List<XtreamStream>?,
     streamsLoading: Boolean,
+    categoriesRefreshing: Boolean,
     lastPlayedStreamId: Int?,
-    payloadSize: String?,
+    categoriesPayloadSize: String?,
+    streamsPayloadSize: String?,
+    categoriesFetchTime: String?,
+    streamsFetchTime: String?,
     contentType: String,
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    onRefreshCategories: () -> Unit,
+    onRefreshStreams: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val providerName by remember { mutableStateOf(appSettings.providerName) }
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(onClick = onBack) {
-                Text("← Back")
-            }
-            Column {
-                Text(
-                    text = "IPTV.atr",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = contentType.replace("_", " "),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                payloadSize?.let { size ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = onBack) {
+                    Text("← Back")
+                }
+                Column {
                     Text(
-                        text = "Payload: $size",
+                        text = "IPTV.atr",
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = contentType.replace("_", " "),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    // Always show item count, optionally show payload size and fetch time
+                    val infoText = buildString {
+                        if (categoriesPayloadSize != null) {
+                            append(categoriesPayloadSize)
+                            append(" • ")
+                        }
+                        if (categoriesFetchTime != null) {
+                            append(categoriesFetchTime)
+                            append(" • ")
+                        }
+                        append("${categories.size} items")
+                    }
+                    Text(
+                        text = infoText,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 }
             }
+            Text(
+                text = providerName,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         }
 
         // Two-column content
@@ -151,7 +201,9 @@ private fun TwoColumnLayout(
             CategoryList(
                 categories = categories,
                 selectedCategoryId = selectedCategoryId,
+                categoriesRefreshing = categoriesRefreshing,
                 onCategorySelected = onCategorySelected,
+                onRefreshCategories = onRefreshCategories,
                 modifier = Modifier
                     .weight(0.3f)
                     .fillMaxHeight()
@@ -161,9 +213,13 @@ private fun TwoColumnLayout(
             StreamList(
                 streams = streams,
                 streamsLoading = streamsLoading,
+                selectedCategoryId = selectedCategoryId,
                 selectedCategoryName = categories.find { it.categoryId == selectedCategoryId }?.categoryName,
+                streamsPayloadSize = streamsPayloadSize,
+                streamsFetchTime = streamsFetchTime,
                 lastPlayedStreamId = lastPlayedStreamId,
                 onStreamSelected = onStreamSelected,
+                onRefreshStreams = onRefreshStreams,
                 modifier = Modifier
                     .weight(0.7f)
                     .fillMaxHeight()
@@ -176,7 +232,9 @@ private fun TwoColumnLayout(
 private fun CategoryList(
     categories: List<XtreamCategory>,
     selectedCategoryId: String?,
+    categoriesRefreshing: Boolean,
     onCategorySelected: (String) -> Unit,
+    onRefreshCategories: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberTvLazyListState()
@@ -196,13 +254,50 @@ private fun CategoryList(
         }
     }
 
+    // Animate rotation when refreshing
+    var targetRotation by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(categoriesRefreshing) {
+        if (categoriesRefreshing) {
+            while (categoriesRefreshing) {
+                targetRotation += 360f
+                kotlinx.coroutines.delay(600)
+            }
+        }
+    }
+
+    val rotation by animateFloatAsState(
+        targetValue = targetRotation,
+        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        label = "refresh_rotation"
+    )
+
     Column(modifier = modifier) {
-        Text(
-            text = "Categories",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Row(
+            modifier = Modifier.padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Categories",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            IconButton(
+                onClick = onRefreshCategories,
+                enabled = !categoriesRefreshing,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh categories",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(rotation)
+                )
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -306,11 +401,32 @@ private fun CategoryItem(
 private fun StreamList(
     streams: List<XtreamStream>?,
     streamsLoading: Boolean,
+    selectedCategoryId: String?,
     selectedCategoryName: String?,
+    streamsPayloadSize: String?,
+    streamsFetchTime: String?,
     lastPlayedStreamId: Int?,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Animate rotation when refreshing
+    var targetRotation by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(streamsLoading) {
+        if (streamsLoading) {
+            while (streamsLoading) {
+                targetRotation += 360f
+                kotlinx.coroutines.delay(600)
+            }
+        }
+    }
+
+    val rotation by animateFloatAsState(
+        targetValue = targetRotation,
+        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        label = "refresh_rotation"
+    )
     val listState = rememberTvLazyListState()
     val focusRequesters = remember(streams) {
         streams?.associate { it.streamId to FocusRequester() } ?: emptyMap()
@@ -329,12 +445,55 @@ private fun StreamList(
     }
 
     Column(modifier = modifier) {
-        Text(
-            text = selectedCategoryName ?: "Select a category",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = selectedCategoryName ?: "Select a category",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                // Always show refresh button when a category is selected
+                selectedCategoryId?.let { categoryId ->
+                    IconButton(
+                        onClick = { onRefreshStreams(categoryId) },
+                        enabled = !streamsLoading,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh streams",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .rotate(rotation)
+                        )
+                    }
+                }
+            }
+            // Always show item count, optionally show payload size and fetch time
+            if (streams != null) {
+                val streamCount = streams.size
+                val infoText = buildString {
+                    if (streamsPayloadSize != null) {
+                        append(streamsPayloadSize)
+                        append(" • ")
+                    }
+                    if (streamsFetchTime != null) {
+                        append(streamsFetchTime)
+                        append(" • ")
+                    }
+                    append("$streamCount items")
+                }
+                Text(
+                    text = infoText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+            }
+        }
 
         Box(
             modifier = Modifier

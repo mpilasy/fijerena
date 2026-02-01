@@ -45,10 +45,10 @@ fun MobileNavHost(
     // Check authentication status on startup
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
-    // Auto-navigate to CategoryList if already authenticated
+    // Auto-navigate to ContentTypeSelection if already authenticated
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated != null && authViewModel.isAuthenticated()) {
-            navController.navigate(Screen.CategoryList) {
+            navController.navigate(Screen.ContentTypeSelection) {
                 popUpTo(Screen.Login) { inclusive = true }
             }
         }
@@ -88,33 +88,41 @@ fun MobileNavHost(
                 LoginScreen(
                     authViewModel = authViewModel,
                     onLoginSuccess = {
-                        navController.navigate(Screen.CategoryList) {
+                        navController.navigate(Screen.ContentTypeSelection) {
                             popUpTo(Screen.Login) { inclusive = true }
                         }
                     }
                 )
             }
 
-            // Category List Screen
-            composable<Screen.CategoryList> {
-                // TODO: Implement MobileCategoryListScreen
-                // For now, just show login screen
-                LoginScreen(
-                    authViewModel = authViewModel,
-                    onLoginSuccess = {}
-                )
-                /* MobileCategoryListScreen(
-                    authViewModel = authViewModel,
-                    onStreamSelected = { streamId, streamName, categoryId ->
-                        navController.navigate(Screen.Player(streamId, streamName, categoryId))
+            // Content Type Selection Screen
+            composable<Screen.ContentTypeSelection> {
+                MobileContentTypeSelectionScreen(
+                    onContentTypeSelected = { contentType ->
+                        navController.navigate(Screen.CategoryList(contentType))
                     },
-                    onLogout = {
+                    onBack = {
                         authViewModel.clearAuthSession()
                         navController.navigate(Screen.Login) {
-                            popUpTo(Screen.CategoryList) { inclusive = true }
+                            popUpTo(Screen.ContentTypeSelection) { inclusive = true }
                         }
                     }
-                ) */
+                )
+            }
+
+            // Category List Screen
+            composable<Screen.CategoryList> { backStackEntry ->
+                val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
+                MobileCategoryListScreen(
+                    contentType = categoryListScreen.contentType,
+                    authViewModel = authViewModel,
+                    onStreamSelected = { streamId, streamName, categoryId, contentType ->
+                        navController.navigate(Screen.Player(streamId, streamName, categoryId, contentType))
+                    },
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
             }
 
             // Player Screen
@@ -135,18 +143,39 @@ fun MobileNavHost(
 }
 
 /**
+ * Placeholder Content Type Selection screen for Mobile.
+ * TODO: Implement full content type selection with touch UI.
+ */
+@Composable
+fun MobileContentTypeSelectionScreen(
+    onContentTypeSelected: (contentType: String) -> Unit,
+    onBack: () -> Unit
+) {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        androidx.compose.material3.Text(
+            text = "Content Type Selection (Mobile)\nTODO: Implement Live TV / Movies / TV Shows selection",
+            modifier = Modifier.fillMaxSize()
+        )
+        // TODO: Implement content type selection UI
+        // - Show three buttons: Live TV, Movies, TV Shows
+        // - Add logout button
+    }
+}
+
+/**
  * Placeholder Category List screen for Mobile.
  * TODO: Implement full category list with touch UI.
  */
 @Composable
 fun MobileCategoryListScreen(
+    contentType: String,
     authViewModel: AuthViewModel,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
-    onLogout: () -> Unit
+    onStreamSelected: (streamId: Int, streamName: String, categoryId: String, contentType: String) -> Unit,
+    onBack: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         androidx.compose.material3.Text(
-            text = "Category List Screen (Mobile)\nTODO: Implement category grid with touch navigation",
+            text = "Category List Screen (Mobile)\nContent Type: $contentType\nTODO: Implement category grid with touch navigation",
             modifier = Modifier.fillMaxSize()
         )
         // TODO: Implement category list UI

@@ -10,9 +10,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import org.njarasoa.fijerena.core.navigation.ContentType
+import org.njarasoa.fijerena.core.network.AppSettings
 
 /**
  * Content type selection screen - allows users to choose between Live TV, Movies, or TV Shows.
@@ -23,6 +25,9 @@ fun ContentTypeSelectionScreen(
     onSettings: () -> Unit
 ) {
     val configuration = LocalConfiguration.current
+    val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val providerName by remember { mutableStateOf(appSettings.providerName) }
 
     // 5% padding for TV overscan safety
     Box(
@@ -34,13 +39,25 @@ fun ContentTypeSelectionScreen(
             )
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header
-            Text(
-                text = "IPTV.atr",
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 48.dp)
-            )
+            // Header with provider name
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 48.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = "IPTV.atr",
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = providerName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
 
             // Content type selection
             Column(

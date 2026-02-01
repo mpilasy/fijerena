@@ -19,7 +19,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.rotate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +48,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.Episode
@@ -71,9 +80,15 @@ fun EpisodeSelectionScreen(
     var seriesInfo by remember { mutableStateOf<SeriesInfo?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var payloadSize by remember { mutableStateOf<String?>(null) }
+    var refreshTrigger by remember { mutableStateOf(0) }
+
+    fun refresh() {
+        refreshTrigger++
+    }
 
     // Load series info on launch
-    LaunchedEffect(seriesId) {
+    LaunchedEffect(seriesId, refreshTrigger) {
         isLoading = true
         error = null
 
@@ -83,6 +98,8 @@ fun EpisodeSelectionScreen(
                 when (val infoResult = repository.getSeriesInfo(seriesId)) {
                     is Result.Success -> {
                         seriesInfo = infoResult.data
+                        payloadSize = repository.getPayloadSize("series_$seriesId")
+                        println("EpisodeSelectionScreen: Payload size: $payloadSize")
                         isLoading = false
                     }
                     is Result.Error -> {
@@ -109,10 +126,14 @@ fun EpisodeSelectionScreen(
             )
         }
         seriesInfo != null -> {
+            val fetchTime = repository.getFetchTimeFormatted("series_$seriesId")
             EpisodeListContent(
                 seriesInfo = seriesInfo!!,
                 seriesName = seriesName,
+                payloadSize = payloadSize,
+                fetchTime = fetchTime,
                 onEpisodeSelected = onEpisodeSelected,
+                onRefresh = { refresh() },
                 onBack = onBack
             )
         }
@@ -123,10 +144,35 @@ fun EpisodeSelectionScreen(
 private fun EpisodeListContent(
     seriesInfo: SeriesInfo,
     seriesName: String,
+    payloadSize: String?,
+    fetchTime: String?,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String) -> Unit,
+    onRefresh: () -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val providerName by remember { mutableStateOf(appSettings.providerName) }
     val listState = rememberLazyListState()
+
+    // Track refresh state for animation
+    var isRefreshing by remember { mutableStateOf(false) }
+    var targetRotation by remember { mutableStateOf(0f) }
+
+    val rotation by animateFloatAsState(
+        targetValue = targetRotation,
+        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        label = "refresh_rotation"
+    )
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            while (isRefreshing) {
+                targetRotation += 360f
+                kotlinx.coroutines.delay(600)
+            }
+        }
+    }
 
     // Flatten episodes from all seasons into a single list
     val allEpisodes = remember(seriesInfo) {
@@ -152,13 +198,55 @@ private fun EpisodeListContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = seriesName,
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    // Always show refresh button
+                    IconButton(
+                        onClick = {
+                            isRefreshing = true
+                            onRefresh()
+                            isRefreshing = false
+                        },
+                        enabled = !isRefreshing,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh series info",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .size(24.dp)
+                                .rotate(rotation)
+                        )
+                    }
+                }
+                // Always show episode count, optionally show payload size and fetch time
+                val totalEpisodes = allEpisodes.size
+                val infoText = buildString {
+                    if (payloadSize != null) {
+                        append(payloadSize)
+                        append(" • ")
+                    }
+                    if (fetchTime != null) {
+                        append(fetchTime)
+                        append(" • ")
+                    }
+                    append("$totalEpisodes episodes")
+                }
                 Text(
-                    text = seriesName,
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = infoText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
                 seriesInfo.info?.plot?.let { plot ->
                     Spacer(modifier = Modifier.height(8.dp))
@@ -172,8 +260,16 @@ private fun EpisodeListContent(
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = onBack) {
-                Text("Back")
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = providerName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onBack) {
+                    Text("Back")
+                }
             }
         }
 

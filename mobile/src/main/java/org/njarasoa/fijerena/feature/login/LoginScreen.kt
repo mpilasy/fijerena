@@ -84,7 +84,7 @@ fun LoginScreen(
             Text(
                 text = "Sign in to continue",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
@@ -234,7 +234,7 @@ fun LoginScreen(
             Text(
                 text = "Contact your IPTV provider for credentials",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }
