@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.player.api
 
+import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 import io.ktor.client.HttpClient
@@ -46,6 +47,19 @@ class XtreamApiService(
                 followSslRedirects(true)
             }
         }
+    }
+
+    /**
+     * Authenticates with the Xtream API and retrieves user/server information.
+     *
+     * @return Authentication response containing user and server info
+     * @throws Exception if authentication fails or the request fails
+     */
+    suspend fun authenticate(): XtreamAuthResponse {
+        return client.get("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+        }.body()
     }
 
     /**

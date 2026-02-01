@@ -19,7 +19,9 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "first video player"
+rootProject.name = "fijerena"
 include(":mobile")
 include(":tv")
 include(":core:player")
+include(":core:navigation")
+include(":core:data")

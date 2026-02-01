@@ -36,6 +36,8 @@ android {
 
 dependencies {
     implementation(project(":core:player"))
+    implementation(project(":core:navigation"))
+    implementation(project(":core:data"))
 
     // Core Android
     implementation(libs.androidx.core.ktx)
@@ -51,6 +53,10 @@ dependencies {
     implementation(libs.androidx.tv.foundation)
     implementation(libs.androidx.tv.material)
 
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
+
     // Lifecycle & ViewModel
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -64,4 +70,53 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+/**
+ * Gradle task to deploy TV app to Shield/Sony TV via ADB.
+ *
+ * Usage:
+ *   1. Set TV IP in gradle.properties: tv.ip.address=192.168.1.100
+ *   2. Run: ./gradlew deployToShield
+ *
+ * This task will:
+ *   - Connect to your TV via ADB
+ *   - Build and install the TV app
+ */
+tasks.register("deployToShield") {
+    group = "deployment"
+    description = "Connect to Shield/Sony TV via ADB and install the TV app"
+
+    dependsOn("assembleDebug")
+
+    doLast {
+        val tvIpAddress = project.findProperty("tv.ip.address") as? String
+            ?: throw org.gradle.api.GradleException(
+                "TV IP address not set. Add 'tv.ip.address=YOUR_TV_IP' to gradle.properties"
+            )
+
+        println("🔌 Connecting to TV at $tvIpAddress...")
+
+        // Connect to TV via ADB
+        val connectProcess = ProcessBuilder("adb", "connect", "$tvIpAddress:5555")
+            .redirectErrorStream(true)
+            .start()
+        connectProcess.waitFor()
+
+        println("✅ Connected to TV")
+        println("📦 Installing TV app...")
+
+        // Install the built APK
+        val installProcess = ProcessBuilder(
+            "adb", "install", "-r", "build/outputs/apk/debug/tv-debug.apk"
+        ).redirectErrorStream(true)
+            .start()
+
+        val exitCode = installProcess.waitFor()
+        if (exitCode == 0) {
+            println("🎉 TV app deployed successfully!")
+        } else {
+            throw org.gradle.api.GradleException("Failed to install APK. Exit code: $exitCode")
+        }
+    }
 }
