@@ -51,10 +51,10 @@ fun TvNavHost(
     // Check authentication status on startup
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
-    // Auto-navigate to ContentTypeSelection if already authenticated
+    // Auto-navigate to Live TV categories if already authenticated
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated != null && authViewModel.isAuthenticated()) {
-            navController.navigate(Screen.ContentTypeSelection) {
+            navController.navigate(Screen.CategoryList("LIVE_TV")) {
                 popUpTo(Screen.Login) { inclusive = true }
             }
         }
@@ -70,7 +70,7 @@ fun TvNavHost(
                 LoginScreenTv(
                     authViewModel = authViewModel,
                     onLoginSuccess = {
-                        navController.navigate(Screen.ContentTypeSelection) {
+                        navController.navigate(Screen.CategoryList("LIVE_TV")) {
                             popUpTo(Screen.Login) { inclusive = true }
                         }
                     }
@@ -135,7 +135,11 @@ fun TvNavHost(
                         }
                     },
                     onBack = {
-                        navController.navigateUp()
+                        // Since we're skipping content type selection, back from Live TV goes to login
+                        authViewModel.clearAuthSession()
+                        navController.navigate(Screen.Login) {
+                            popUpTo(Screen.Login) { inclusive = true }
+                        }
                     },
                     onLogout = {
                         authViewModel.clearAuthSession()
