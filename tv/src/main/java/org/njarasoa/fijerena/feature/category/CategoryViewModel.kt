@@ -9,12 +9,14 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
+import org.njarasoa.fijerena.core.player.model.XtreamStream
 
 /**
- * ViewModel for managing category data from Xtream API.
+ * ViewModel for managing category and stream data from Xtream API.
  *
  * Handles:
  * - Loading categories from XtreamRepository
+ * - Loading streams for selected category
  * - Loading, Success, and Error states
  * - Category selection tracking
  */
@@ -24,15 +26,21 @@ class CategoryViewModel(
 
     sealed class UiState {
         data object Loading : UiState()
-        data class Success(val categories: List<XtreamCategory>) : UiState()
+        data class Success(
+            val categories: List<XtreamCategory>,
+            val selectedCategoryId: String?,
+            val streams: List<XtreamStream>?,
+            val streamsLoading: Boolean
+        ) : UiState()
         data class Error(val message: String) : UiState()
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val _selectedCategoryId = MutableStateFlow<String?>(null)
-    val selectedCategoryId: StateFlow<String?> = _selectedCategoryId.asStateFlow()
+    private var categories: List<XtreamCategory> = emptyList()
+    private var currentStreams: List<XtreamStream> = emptyList()
+    private var currentCategoryId: String? = null
 
     init {
         loadCategories()
@@ -59,7 +67,18 @@ class CategoryViewModel(
             // Now fetch categories
             when (val result = repository.getCategories()) {
                 is Result.Success -> {
-                    _uiState.value = UiState.Success(result.data)
+                    categories = result.data
+                    _uiState.value = UiState.Success(
+                        categories = categories,
+                        selectedCategoryId = null,
+                        streams = null,
+                        streamsLoading = false
+                    )
+
+                    // Auto-select first category
+                    if (categories.isNotEmpty()) {
+                        loadStreams(categories.first().categoryId)
+                    }
                 }
                 is Result.Error -> {
                     val errorMessage = result.message ?: "Failed to load categories"
@@ -69,8 +88,40 @@ class CategoryViewModel(
         }
     }
 
-    fun onCategorySelected(categoryId: String) {
-        _selectedCategoryId.value = categoryId
+    fun loadStreams(categoryId: String) {
+        viewModelScope.launch {
+            currentCategoryId = categoryId
+
+            // Update state to show loading for streams
+            _uiState.value = UiState.Success(
+                categories = categories,
+                selectedCategoryId = categoryId,
+                streams = currentStreams,
+                streamsLoading = true
+            )
+
+            when (val result = repository.getStreams(categoryId)) {
+                is Result.Success -> {
+                    currentStreams = result.data
+                    _uiState.value = UiState.Success(
+                        categories = categories,
+                        selectedCategoryId = categoryId,
+                        streams = currentStreams,
+                        streamsLoading = false
+                    )
+                }
+                is Result.Error -> {
+                    // Show error but keep UI usable
+                    currentStreams = emptyList()
+                    _uiState.value = UiState.Success(
+                        categories = categories,
+                        selectedCategoryId = categoryId,
+                        streams = emptyList(),
+                        streamsLoading = false
+                    )
+                }
+            }
+        }
     }
 
     fun retry() {

@@ -92,7 +92,7 @@ fun LoginScreenTv(
         ) {
             // Title
             Text(
-                text = "Fijerena Xtream IPTV Login",
+                text = "Xtream IPTV.atr Login",
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 48.dp)
