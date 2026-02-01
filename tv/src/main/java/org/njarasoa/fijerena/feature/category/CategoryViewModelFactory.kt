@@ -10,15 +10,16 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
  * Factory for creating CategoryViewModel with XtreamRepository dependency.
  */
 class CategoryViewModelFactory(
-    private val context: Context
+    private val context: Context,
+    private val contentType: String
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CategoryViewModel::class.java)) {
             val accountManager = AccountManager(context.applicationContext)
-            val repository = XtreamRepository(accountManager)
-            return CategoryViewModel(repository) as T
+            val repository = XtreamRepository(accountManager, context.applicationContext)
+            return CategoryViewModel(repository, contentType) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

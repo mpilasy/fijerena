@@ -21,7 +21,7 @@ class LoginViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
             val accountManager = AccountManager(context.applicationContext)
-            val repository = XtreamRepository(accountManager)
+            val repository = XtreamRepository(accountManager, context.applicationContext)
             return LoginViewModel(repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

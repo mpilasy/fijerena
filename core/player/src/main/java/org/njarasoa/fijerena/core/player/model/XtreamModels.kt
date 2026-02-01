@@ -140,3 +140,114 @@ data class XtreamServerInfo(
     @SerialName("time_now")
     val timeNow: String? = null
 )
+
+/**
+ * Represents detailed information about a series including seasons and episodes
+ */
+@Serializable
+data class SeriesInfo(
+    @SerialName("info")
+    val info: SeriesDetails? = null,
+
+    @SerialName("seasons")
+    val seasons: List<Season> = emptyList(),
+
+    @SerialName("episodes")
+    val episodes: Map<String, List<Episode>> = emptyMap()
+)
+
+/**
+ * Details about a series
+ */
+@Serializable
+data class SeriesDetails(
+    @SerialName("name")
+    val name: String,
+
+    @SerialName("cover")
+    val cover: String? = null,
+
+    @SerialName("plot")
+    val plot: String? = null,
+
+    @SerialName("cast")
+    val cast: String? = null,
+
+    @SerialName("director")
+    val director: String? = null,
+
+    @SerialName("genre")
+    val genre: String? = null,
+
+    @SerialName("release_date")
+    val releaseDate: String? = null,
+
+    @SerialName("rating")
+    val rating: String? = null,
+
+    @SerialName("category_id")
+    val categoryId: String? = null
+)
+
+/**
+ * Represents a season in a series
+ */
+@Serializable
+data class Season(
+    @SerialName("season_number")
+    val seasonNumber: Int,
+
+    @SerialName("name")
+    val name: String,
+
+    @SerialName("episode_count")
+    val episodeCount: Int? = null,
+
+    @SerialName("cover")
+    val cover: String? = null
+)
+
+/**
+ * Represents an episode in a series
+ */
+@Serializable
+data class Episode(
+    @SerialName("id")
+    val id: String,
+
+    @SerialName("episode_num")
+    val episodeNum: Int,
+
+    @SerialName("title")
+    val title: String,
+
+    @SerialName("container_extension")
+    val containerExtension: String,
+
+    @SerialName("info")
+    val info: EpisodeInfo? = null,
+
+    @SerialName("season")
+    val season: Int? = null
+)
+
+/**
+ * Additional information about an episode
+ */
+@Serializable
+data class EpisodeInfo(
+    @SerialName("name")
+    val name: String? = null,
+
+    @SerialName("overview")
+    val overview: String? = null,
+
+    @SerialName("movie_image")
+    val movieImage: String? = null,
+
+    @SerialName("duration")
+    val duration: String? = null,
+
+    @SerialName("rating")
+    val rating: String? = null
+)

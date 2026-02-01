@@ -97,10 +97,16 @@ fun MobileNavHost(
 
             // Category List Screen
             composable<Screen.CategoryList> {
-                MobileCategoryListScreen(
+                // TODO: Implement MobileCategoryListScreen
+                // For now, just show login screen
+                LoginScreen(
                     authViewModel = authViewModel,
-                    onStreamSelected = { streamId ->
-                        navController.navigate(Screen.Player(streamId))
+                    onLoginSuccess = {}
+                )
+                /* MobileCategoryListScreen(
+                    authViewModel = authViewModel,
+                    onStreamSelected = { streamId, streamName, categoryId ->
+                        navController.navigate(Screen.Player(streamId, streamName, categoryId))
                     },
                     onLogout = {
                         authViewModel.clearAuthSession()
@@ -108,7 +114,7 @@ fun MobileNavHost(
                             popUpTo(Screen.CategoryList) { inclusive = true }
                         }
                     }
-                )
+                ) */
             }
 
             // Player Screen
@@ -116,6 +122,8 @@ fun MobileNavHost(
                 val playerScreen = backStackEntry.toRoute<Screen.Player>()
                 MobilePlayerScreen(
                     streamId = playerScreen.streamId,
+                    streamName = playerScreen.streamName,
+                    categoryId = playerScreen.categoryId,
                     authViewModel = authViewModel,
                     onBack = {
                         navController.navigateUp()
@@ -133,7 +141,7 @@ fun MobileNavHost(
 @Composable
 fun MobileCategoryListScreen(
     authViewModel: AuthViewModel,
-    onStreamSelected: (Int) -> Unit,
+    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onLogout: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -156,12 +164,14 @@ fun MobileCategoryListScreen(
 @Composable
 fun MobilePlayerScreen(
     streamId: Int,
+    streamName: String,
+    categoryId: String,
     authViewModel: AuthViewModel,
     onBack: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         androidx.compose.material3.Text(
-            text = "Player Screen (Mobile)\nStream ID: $streamId\nTODO: Implement ExoPlayer integration",
+            text = "Player Screen (Mobile)\nStream: $streamName (ID: $streamId)\nCategory: $categoryId\nTODO: Implement ExoPlayer integration",
             modifier = Modifier.fillMaxSize()
         )
         // TODO: Implement player UI

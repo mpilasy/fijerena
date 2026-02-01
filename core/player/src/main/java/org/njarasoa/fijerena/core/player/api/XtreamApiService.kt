@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.player.api
 
+import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
@@ -77,6 +78,34 @@ class XtreamApiService(
     }
 
     /**
+     * Fetches all VOD (movie) categories from the Xtream API.
+     *
+     * @return List of VOD categories
+     * @throws Exception if the request fails
+     */
+    suspend fun getVodCategories(): List<XtreamCategory> {
+        return client.get("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_vod_categories")
+        }.body()
+    }
+
+    /**
+     * Fetches all Series (TV show) categories from the Xtream API.
+     *
+     * @return List of series categories
+     * @throws Exception if the request fails
+     */
+    suspend fun getSeriesCategories(): List<XtreamCategory> {
+        return client.get("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_series_categories")
+        }.body()
+    }
+
+    /**
      * Fetches all live streams for a specific category.
      *
      * @param categoryId The category ID to fetch streams for
@@ -93,6 +122,54 @@ class XtreamApiService(
     }
 
     /**
+     * Fetches all VOD streams (movies) for a specific category.
+     *
+     * @param categoryId The category ID to fetch VOD streams for
+     * @return List of VOD streams in the category
+     * @throws Exception if the request fails
+     */
+    suspend fun getVodStreams(categoryId: String): List<XtreamStream> {
+        return client.get("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_vod_streams")
+            parameter("category_id", categoryId)
+        }.body()
+    }
+
+    /**
+     * Fetches all series (TV shows) for a specific category.
+     *
+     * @param categoryId The category ID to fetch series for
+     * @return List of series in the category
+     * @throws Exception if the request fails
+     */
+    suspend fun getSeries(categoryId: String): List<XtreamStream> {
+        return client.get("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_series")
+            parameter("category_id", categoryId)
+        }.body()
+    }
+
+    /**
+     * Fetches detailed information about a specific series including seasons and episodes.
+     *
+     * @param seriesId The series ID to fetch info for
+     * @return Series info with seasons and episodes
+     * @throws Exception if the request fails
+     */
+    suspend fun getSeriesInfo(seriesId: Int): SeriesInfo {
+        return client.get("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_series_info")
+            parameter("series_id", seriesId)
+        }.body()
+    }
+
+    /**
      * Builds a playable stream URL for a given stream ID.
      *
      * Format: http://url:port/live/username/password/streamId.m3u8
@@ -103,6 +180,48 @@ class XtreamApiService(
     fun buildStreamUrl(streamId: Int): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
         return "$normalizedUrl/live/$username/$password/$streamId.m3u8"
+    }
+
+    /**
+     * Builds a playable VOD (movie) stream URL for a given stream ID.
+     *
+     * Format: http://url:port/movie/username/password/streamId.ext
+     *
+     * @param streamId The VOD stream ID to build the URL for
+     * @param extension The file extension (e.g., "mp4", "mkv")
+     * @return The formatted VOD stream URL
+     */
+    fun buildVodStreamUrl(streamId: Int, extension: String = "mp4"): String {
+        val normalizedUrl = normalizeBaseUrl(baseUrl)
+        return "$normalizedUrl/movie/$username/$password/$streamId.$extension"
+    }
+
+    /**
+     * Builds a playable Series (TV show) stream URL for a given stream ID.
+     *
+     * Format: http://url:port/series/username/password/streamId.ext
+     *
+     * @param streamId The series stream ID to build the URL for
+     * @param extension The file extension (e.g., "mp4", "mkv")
+     * @return The formatted series stream URL
+     */
+    fun buildSeriesStreamUrl(streamId: Int, extension: String = "mp4"): String {
+        val normalizedUrl = normalizeBaseUrl(baseUrl)
+        return "$normalizedUrl/series/$username/$password/$streamId.$extension"
+    }
+
+    /**
+     * Builds a playable episode stream URL for a specific episode.
+     *
+     * Format: http://url:port/series/username/password/episodeId.ext
+     *
+     * @param episodeId The episode ID to build the URL for
+     * @param extension The file extension (e.g., "mp4", "mkv")
+     * @return The formatted episode stream URL
+     */
+    fun buildEpisodeStreamUrl(episodeId: String, extension: String): String {
+        val normalizedUrl = normalizeBaseUrl(baseUrl)
+        return "$normalizedUrl/series/$username/$password/$episodeId.$extension"
     }
 
     /**

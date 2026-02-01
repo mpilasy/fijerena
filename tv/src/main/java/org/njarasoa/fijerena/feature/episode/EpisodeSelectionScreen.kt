@@ -1,0 +1,345 @@
+@file:OptIn(ExperimentalTvMaterial3Api::class)
+
+package org.njarasoa.fijerena.feature.episode
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Border
+import androidx.tv.material3.Button
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.Result
+import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.player.model.Episode
+import org.njarasoa.fijerena.core.player.model.SeriesInfo
+
+/**
+ * Episode selection screen for TV shows.
+ *
+ * Features:
+ * - Displays series information (title, plot)
+ * - Lists all episodes grouped by season
+ * - D-pad friendly navigation
+ * - Loads episode data from XtreamRepository
+ */
+@Composable
+fun EpisodeSelectionScreen(
+    seriesId: Int,
+    seriesName: String,
+    categoryId: String,
+    onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String) -> Unit,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val repository = remember {
+        val accountManager = AccountManager(context.applicationContext)
+        XtreamRepository(accountManager, context.applicationContext)
+    }
+
+    var seriesInfo by remember { mutableStateOf<SeriesInfo?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    // Load series info on launch
+    LaunchedEffect(seriesId) {
+        isLoading = true
+        error = null
+
+        // Ensure session is restored first
+        when (val sessionResult = repository.restoreSession()) {
+            is Result.Success -> {
+                when (val infoResult = repository.getSeriesInfo(seriesId)) {
+                    is Result.Success -> {
+                        seriesInfo = infoResult.data
+                        isLoading = false
+                    }
+                    is Result.Error -> {
+                        error = infoResult.message ?: "Failed to load series info"
+                        isLoading = false
+                    }
+                }
+            }
+            is Result.Error -> {
+                error = sessionResult.message ?: "Session expired. Please login again."
+                isLoading = false
+            }
+        }
+    }
+
+    when {
+        isLoading -> {
+            LoadingScreen()
+        }
+        error != null -> {
+            ErrorScreen(
+                message = error ?: "Unknown error",
+                onBack = onBack
+            )
+        }
+        seriesInfo != null -> {
+            EpisodeListContent(
+                seriesInfo = seriesInfo!!,
+                seriesName = seriesName,
+                onEpisodeSelected = onEpisodeSelected,
+                onBack = onBack
+            )
+        }
+    }
+}
+
+@Composable
+private fun EpisodeListContent(
+    seriesInfo: SeriesInfo,
+    seriesName: String,
+    onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String) -> Unit,
+    onBack: () -> Unit
+) {
+    val listState = rememberLazyListState()
+
+    // Flatten episodes from all seasons into a single list
+    val allEpisodes = remember(seriesInfo) {
+        seriesInfo.episodes.flatMap { (seasonNumber, episodes) ->
+            episodes.map { episode ->
+                EpisodeItem(
+                    seasonNumber = seasonNumber,
+                    episode = episode
+                )
+            }
+        }.sortedWith(
+            compareBy<EpisodeItem> { it.seasonNumber.toIntOrNull() ?: 0 }
+                .thenBy { it.episode.episodeNum }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 48.dp, vertical = 32.dp)
+    ) {
+        // Header with series info and back button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = seriesName,
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                seriesInfo.info?.plot?.let { plot ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = plot,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Button(onClick = onBack) {
+                Text("Back")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Episodes list
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(allEpisodes, key = { it.episode.id }) { episodeItem ->
+                EpisodeCard(
+                    seasonNumber = episodeItem.seasonNumber,
+                    episode = episodeItem.episode,
+                    onClick = {
+                        onEpisodeSelected(
+                            episodeItem.episode.id,
+                            episodeItem.episode.title,
+                            episodeItem.episode.containerExtension
+                        )
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeCard(
+    seasonNumber: String,
+    episode: Episode,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
+            )
+        ),
+        colors = CardDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Season and episode number
+            Column(
+                modifier = Modifier.width(120.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "Season $seasonNumber",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Text(
+                    text = "Episode ${episode.episodeNum}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Spacer(modifier = Modifier.width(24.dp))
+
+            // Episode title
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = episode.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                episode.info?.overview?.let { overview ->
+                    Text(
+                        text = overview,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Duration
+            episode.info?.duration?.let { duration ->
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = duration,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(64.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.padding(16.dp))
+            Text(
+                text = "Loading episodes...",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun ErrorScreen(
+    message: String,
+    onBack: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Text(
+                text = "Error Loading Episodes",
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+            Spacer(modifier = Modifier.padding(16.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.padding(24.dp))
+            Button(onClick = onBack) {
+                Text("Back to Series List")
+            }
+        }
+    }
+}
+
+private data class EpisodeItem(
+    val seasonNumber: String,
+    val episode: Episode
+)

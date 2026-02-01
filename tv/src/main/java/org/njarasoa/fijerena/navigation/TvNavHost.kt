@@ -15,8 +15,11 @@ import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.data.AuthViewModel
+import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.feature.category.CategoryGridScreen
+import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
+import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.login.LoginScreenTv
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
 
@@ -47,10 +50,10 @@ fun TvNavHost(
     // Check authentication status on startup
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
-    // Auto-navigate to CategoryList if already authenticated
+    // Auto-navigate to ContentTypeSelection if already authenticated
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated != null && authViewModel.isAuthenticated()) {
-            navController.navigate(Screen.CategoryList) {
+            navController.navigate(Screen.ContentTypeSelection) {
                 popUpTo(Screen.Login) { inclusive = true }
             }
         }
@@ -66,24 +69,90 @@ fun TvNavHost(
                 LoginScreenTv(
                     authViewModel = authViewModel,
                     onLoginSuccess = {
-                        navController.navigate(Screen.CategoryList) {
+                        navController.navigate(Screen.ContentTypeSelection) {
                             popUpTo(Screen.Login) { inclusive = true }
                         }
                     }
                 )
             }
 
-            // Category List Screen
-            composable<Screen.CategoryList> {
-                CategoryGridScreen(
-                    onStreamSelected = { streamId ->
-                        navController.navigate(Screen.Player(streamId))
+            // Content Type Selection Screen
+            composable<Screen.ContentTypeSelection> {
+                ContentTypeSelectionScreen(
+                    onContentTypeSelected = { contentType ->
+                        navController.navigate(Screen.CategoryList(contentType.name)) {
+                            popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                        }
                     },
                     onLogout = {
                         authViewModel.clearAuthSession()
                         navController.navigate(Screen.Login) {
-                            popUpTo(Screen.CategoryList) { inclusive = true }
+                            popUpTo(Screen.ContentTypeSelection) { inclusive = true }
                         }
+                    }
+                )
+            }
+
+            // Category List Screen
+            composable<Screen.CategoryList> { backStackEntry ->
+                val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
+                CategoryGridScreen(
+                    contentType = categoryListScreen.contentType,
+                    onStreamSelected = { streamId, streamName, categoryId ->
+                        // For TV shows, navigate to episode selection first
+                        if (categoryListScreen.contentType == "TV_SHOWS") {
+                            navController.navigate(
+                                Screen.EpisodeSelection(
+                                    seriesId = streamId,
+                                    seriesName = streamName,
+                                    categoryId = categoryId
+                                )
+                            )
+                        } else {
+                            // For Live TV and Movies, go directly to player
+                            navController.navigate(
+                                Screen.Player(
+                                    streamId = streamId,
+                                    streamName = streamName,
+                                    categoryId = categoryId,
+                                    contentType = categoryListScreen.contentType
+                                )
+                            )
+                        }
+                    },
+                    onBack = {
+                        navController.navigateUp()
+                    },
+                    onLogout = {
+                        authViewModel.clearAuthSession()
+                        navController.navigate(Screen.Login) {
+                            popUpTo(Screen.Login) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            // Episode Selection Screen (for TV Shows)
+            composable<Screen.EpisodeSelection> { backStackEntry ->
+                val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
+                EpisodeSelectionScreen(
+                    seriesId = episodeSelectionScreen.seriesId,
+                    seriesName = episodeSelectionScreen.seriesName,
+                    categoryId = episodeSelectionScreen.categoryId,
+                    onEpisodeSelected = { episodeId, episodeTitle, extension ->
+                        navController.navigate(
+                            Screen.Player(
+                                streamId = episodeId.hashCode(), // Use hash for navigation ID
+                                streamName = episodeTitle,
+                                categoryId = episodeSelectionScreen.categoryId,
+                                contentType = "TV_SHOWS",
+                                episodeId = episodeId,
+                                episodeExtension = extension
+                            )
+                        )
+                    },
+                    onBack = {
+                        navController.navigateUp()
                     }
                 )
             }
@@ -93,6 +162,11 @@ fun TvNavHost(
                 val playerScreen = backStackEntry.toRoute<Screen.Player>()
                 TvPlayerScreen(
                     streamId = playerScreen.streamId,
+                    streamName = playerScreen.streamName,
+                    categoryId = playerScreen.categoryId,
+                    contentType = playerScreen.contentType,
+                    episodeId = playerScreen.episodeId,
+                    episodeExtension = playerScreen.episodeExtension,
                     onBack = {
                         navController.navigateUp()
                     }

@@ -19,9 +19,11 @@ import org.njarasoa.fijerena.core.player.model.XtreamStream
  * - Loading streams for selected category
  * - Loading, Success, and Error states
  * - Category selection tracking
+ * - Content type selection (Live TV, Movies, TV Shows)
  */
 class CategoryViewModel(
-    private val repository: XtreamRepository
+    private val repository: XtreamRepository,
+    private val contentType: String
 ) : ViewModel() {
 
     sealed class UiState {
@@ -30,7 +32,8 @@ class CategoryViewModel(
             val categories: List<XtreamCategory>,
             val selectedCategoryId: String?,
             val streams: List<XtreamStream>?,
-            val streamsLoading: Boolean
+            val streamsLoading: Boolean,
+            val lastPlayedStreamId: Int? = null
         ) : UiState()
         data class Error(val message: String) : UiState()
     }
@@ -64,20 +67,36 @@ class CategoryViewModel(
                 }
             }
 
-            // Now fetch categories
-            when (val result = repository.getCategories()) {
+            // Now fetch categories based on content type
+            val result = when (contentType) {
+                "LIVE_TV" -> repository.getCategories()
+                "MOVIES" -> repository.getVodCategories()
+                "TV_SHOWS" -> repository.getSeriesCategories()
+                else -> repository.getCategories()
+            }
+
+            when (result) {
                 is Result.Success -> {
                     categories = result.data
+                    val lastStreamId = repository.getLastStreamId()
                     _uiState.value = UiState.Success(
                         categories = categories,
                         selectedCategoryId = null,
                         streams = null,
-                        streamsLoading = false
+                        streamsLoading = false,
+                        lastPlayedStreamId = lastStreamId
                     )
 
-                    // Auto-select first category
+                    // Restore last selected category, or auto-select first category
                     if (categories.isNotEmpty()) {
-                        loadStreams(categories.first().categoryId)
+                        val lastCategoryId = repository.getLastCategoryId()
+                        val categoryToLoad = if (lastCategoryId != null &&
+                            categories.any { it.categoryId == lastCategoryId }) {
+                            lastCategoryId
+                        } else {
+                            categories.first().categoryId
+                        }
+                        loadStreams(categoryToLoad)
                     }
                 }
                 is Result.Error -> {
@@ -92,22 +111,36 @@ class CategoryViewModel(
         viewModelScope.launch {
             currentCategoryId = categoryId
 
+            // Save the selected category
+            repository.saveLastCategory(categoryId)
+
+            val lastStreamId = repository.getLastStreamId()
+
             // Update state to show loading for streams
             _uiState.value = UiState.Success(
                 categories = categories,
                 selectedCategoryId = categoryId,
                 streams = currentStreams,
-                streamsLoading = true
+                streamsLoading = true,
+                lastPlayedStreamId = lastStreamId
             )
 
-            when (val result = repository.getStreams(categoryId)) {
+            val result = when (contentType) {
+                "LIVE_TV" -> repository.getStreams(categoryId)
+                "MOVIES" -> repository.getVodStreams(categoryId)
+                "TV_SHOWS" -> repository.getSeries(categoryId)
+                else -> repository.getStreams(categoryId)
+            }
+
+            when (result) {
                 is Result.Success -> {
                     currentStreams = result.data
                     _uiState.value = UiState.Success(
                         categories = categories,
                         selectedCategoryId = categoryId,
                         streams = currentStreams,
-                        streamsLoading = false
+                        streamsLoading = false,
+                        lastPlayedStreamId = lastStreamId
                     )
                 }
                 is Result.Error -> {
@@ -117,7 +150,8 @@ class CategoryViewModel(
                         categories = categories,
                         selectedCategoryId = categoryId,
                         streams = emptyList(),
-                        streamsLoading = false
+                        streamsLoading = false,
+                        lastPlayedStreamId = lastStreamId
                     )
                 }
             }

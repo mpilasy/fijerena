@@ -14,6 +14,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -40,10 +42,15 @@ import org.njarasoa.fijerena.core.player.model.XtreamStream
  */
 @Composable
 fun CategoryGridScreen(
-    onStreamSelected: (Int) -> Unit,
+    contentType: String,
+    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    onBack: () -> Unit = {},
     onLogout: () -> Unit,
     viewModel: CategoryViewModel = viewModel(
-        factory = CategoryViewModelFactory(LocalContext.current.applicationContext)
+        factory = CategoryViewModelFactory(
+            context = LocalContext.current.applicationContext,
+            contentType = contentType
+        )
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -68,12 +75,17 @@ fun CategoryGridScreen(
                     selectedCategoryId = state.selectedCategoryId,
                     streams = state.streams,
                     streamsLoading = state.streamsLoading,
+                    lastPlayedStreamId = state.lastPlayedStreamId,
+                    contentType = contentType,
                     onCategorySelected = { categoryId ->
                         viewModel.loadStreams(categoryId)
                     },
-                    onStreamSelected = { streamId ->
-                        onStreamSelected(streamId)
+                    onStreamSelected = { streamId, streamName ->
+                        state.selectedCategoryId?.let { categoryId ->
+                            onStreamSelected(streamId, streamName, categoryId)
+                        }
                     },
+                    onBack = onBack,
                     onLogout = onLogout
                 )
             }
@@ -94,8 +106,11 @@ private fun TwoColumnLayout(
     selectedCategoryId: String?,
     streams: List<XtreamStream>?,
     streamsLoading: Boolean,
+    lastPlayedStreamId: Int?,
+    contentType: String,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (Int) -> Unit,
+    onStreamSelected: (streamId: Int, streamName: String) -> Unit,
+    onBack: () -> Unit,
     onLogout: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -107,11 +122,26 @@ private fun TwoColumnLayout(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "IPTV.atr",
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = onBack) {
+                    Text("← Back")
+                }
+                Column {
+                    Text(
+                        text = "IPTV.atr",
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = contentType.replace("_", " "),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
 
             Button(
                 onClick = onLogout,
@@ -144,6 +174,7 @@ private fun TwoColumnLayout(
                 streams = streams,
                 streamsLoading = streamsLoading,
                 selectedCategoryName = categories.find { it.categoryId == selectedCategoryId }?.categoryName,
+                lastPlayedStreamId = lastPlayedStreamId,
                 onStreamSelected = onStreamSelected,
                 modifier = Modifier
                     .weight(0.7f)
@@ -161,6 +192,21 @@ private fun CategoryList(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberTvLazyListState()
+    val focusRequesters = remember(categories) {
+        categories.associate { it.categoryId to FocusRequester() }
+    }
+
+    // Auto-scroll and focus on selected category
+    LaunchedEffect(categories, selectedCategoryId) {
+        if (categories.isNotEmpty() && selectedCategoryId != null) {
+            val selectedIndex = categories.indexOfFirst { it.categoryId == selectedCategoryId }
+            if (selectedIndex != -1) {
+                listState.animateScrollToItem(selectedIndex)
+                // Request focus on the selected category
+                focusRequesters[selectedCategoryId]?.requestFocus()
+            }
+        }
+    }
 
     Column(modifier = modifier) {
         Text(
@@ -190,7 +236,8 @@ private fun CategoryList(
                     CategoryItem(
                         category = category,
                         isSelected = category.categoryId == selectedCategoryId,
-                        onClick = { onCategorySelected(category.categoryId) }
+                        onClick = { onCategorySelected(category.categoryId) },
+                        focusRequester = focusRequesters[category.categoryId]
                     )
                 }
             }
@@ -202,7 +249,8 @@ private fun CategoryList(
 private fun CategoryItem(
     category: XtreamCategory,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -215,6 +263,13 @@ private fun CategoryItem(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (focusRequester != null) {
+                    Modifier.focusRequester(focusRequester)
+                } else {
+                    Modifier
+                }
+            )
             .scale(scale)
             .onFocusChanged { focusState ->
                 isFocused = focusState.isFocused
@@ -264,10 +319,26 @@ private fun StreamList(
     streams: List<XtreamStream>?,
     streamsLoading: Boolean,
     selectedCategoryName: String?,
-    onStreamSelected: (Int) -> Unit,
+    lastPlayedStreamId: Int?,
+    onStreamSelected: (streamId: Int, streamName: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberTvLazyListState()
+    val focusRequesters = remember(streams) {
+        streams?.associate { it.streamId to FocusRequester() } ?: emptyMap()
+    }
+
+    // Auto-scroll and focus on last played stream
+    LaunchedEffect(streams, lastPlayedStreamId) {
+        if (!streams.isNullOrEmpty() && lastPlayedStreamId != null) {
+            val lastPlayedIndex = streams.indexOfFirst { it.streamId == lastPlayedStreamId }
+            if (lastPlayedIndex != -1) {
+                listState.animateScrollToItem(lastPlayedIndex)
+                // Request focus on the last played stream
+                focusRequesters[lastPlayedStreamId]?.requestFocus()
+            }
+        }
+    }
 
     Column(modifier = modifier) {
         Text(
@@ -325,7 +396,8 @@ private fun StreamList(
                         ) { stream ->
                             StreamItem(
                                 stream = stream,
-                                onClick = { onStreamSelected(stream.streamId) }
+                                onClick = { onStreamSelected(stream.streamId, stream.name) },
+                                focusRequester = focusRequesters[stream.streamId]
                             )
                         }
                     }
@@ -338,7 +410,8 @@ private fun StreamList(
 @Composable
 private fun StreamItem(
     stream: XtreamStream,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -351,6 +424,13 @@ private fun StreamItem(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (focusRequester != null) {
+                    Modifier.focusRequester(focusRequester)
+                } else {
+                    Modifier
+                }
+            )
             .scale(scale)
             .onFocusChanged { focusState ->
                 isFocused = focusState.isFocused

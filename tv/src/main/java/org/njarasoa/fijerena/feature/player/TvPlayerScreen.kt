@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,6 +30,7 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.XtreamStream
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 
@@ -44,26 +46,113 @@ import org.njarasoa.fijerena.ui.player.PlayerScreen
 @Composable
 fun TvPlayerScreen(
     streamId: Int,
+    streamName: String,
+    categoryId: String,
+    contentType: String,
     onBack: () -> Unit,
+    episodeId: String? = null,
+    episodeExtension: String? = null,
     viewModel: PlaybackViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val repository = remember {
         val accountManager = AccountManager(context.applicationContext)
-        XtreamRepository(accountManager)
+        XtreamRepository(accountManager, context.applicationContext)
     }
 
     var streamUrl by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
+    var streamList by remember { mutableStateOf<List<XtreamStream>>(emptyList()) }
+    var currentStreamIndex by remember { mutableIntStateOf(0) }
+    var currentStreamId by remember { mutableIntStateOf(streamId) }
+    var currentStreamName by remember { mutableStateOf(streamName) }
+
+    // Load stream list for channel switching
+    LaunchedEffect(categoryId) {
+        println("TvPlayerScreen: Loading stream list for category=$categoryId, contentType=$contentType")
+        // Ensure session is restored first
+        when (val sessionResult = repository.restoreSession()) {
+            is Result.Success -> {
+                println("TvPlayerScreen: Session restored, fetching streams")
+                val result = when (contentType) {
+                    "LIVE_TV" -> repository.getStreams(categoryId)
+                    "MOVIES" -> repository.getVodStreams(categoryId)
+                    "TV_SHOWS" -> repository.getSeries(categoryId)
+                    else -> repository.getStreams(categoryId)
+                }
+                when (result) {
+                    is Result.Success -> {
+                        streamList = result.data
+                        println("TvPlayerScreen: Loaded ${streamList.size} streams")
+                        // Find current stream index
+                        currentStreamIndex = streamList.indexOfFirst { it.streamId == streamId }
+                        if (currentStreamIndex == -1) currentStreamIndex = 0
+                        println("TvPlayerScreen: Current stream index=$currentStreamIndex")
+                    }
+                    is Result.Error -> {
+                        println("TvPlayerScreen: Error loading streams: ${result.message}")
+                        // Keep empty list, disable navigation
+                    }
+                }
+            }
+            is Result.Error -> {
+                println("TvPlayerScreen: Session restore failed: ${sessionResult.message}")
+            }
+        }
+    }
+
+    // Channel switching functions
+    fun switchToNextChannel() {
+        println("TvPlayerScreen: switchToNextChannel called, streamList size=${streamList.size}")
+        if (streamList.isEmpty()) {
+            println("TvPlayerScreen: streamList is empty, ignoring")
+            return
+        }
+        val nextIndex = (currentStreamIndex + 1) % streamList.size
+        val nextStream = streamList[nextIndex]
+        println("TvPlayerScreen: Switching from index $currentStreamIndex to $nextIndex (${nextStream.name})")
+        currentStreamIndex = nextIndex
+        currentStreamId = nextStream.streamId
+        currentStreamName = nextStream.name
+    }
+
+    fun switchToPreviousChannel() {
+        println("TvPlayerScreen: switchToPreviousChannel called, streamList size=${streamList.size}")
+        if (streamList.isEmpty()) {
+            println("TvPlayerScreen: streamList is empty, ignoring")
+            return
+        }
+        val prevIndex = if (currentStreamIndex == 0) {
+            streamList.size - 1
+        } else {
+            currentStreamIndex - 1
+        }
+        val prevStream = streamList[prevIndex]
+        println("TvPlayerScreen: Switching from index $currentStreamIndex to $prevIndex (${prevStream.name})")
+        currentStreamIndex = prevIndex
+        currentStreamId = prevStream.streamId
+        currentStreamName = prevStream.name
+    }
+
     // Restore session and fetch stream URL on launch
-    LaunchedEffect(streamId) {
+    LaunchedEffect(currentStreamId, episodeId) {
+        isLoading = true
+        error = null
         // First restore the session to initialize the API service
         when (val sessionResult = repository.restoreSession()) {
             is Result.Success -> {
                 // Session restored, now build stream URL
-                when (val urlResult = repository.buildStreamUrl(streamId)) {
+                val urlResult = if (episodeId != null && episodeExtension != null) {
+                    // For TV show episodes, use episode-specific URL builder
+                    repository.buildEpisodeStreamUrl(episodeId, episodeExtension)
+                } else {
+                    // For live TV and movies, use standard URL builder
+                    repository.buildStreamUrl(currentStreamId, contentType)
+                }
+
+                when (urlResult) {
                     is Result.Success -> {
                         streamUrl = urlResult.data
                         isLoading = false
@@ -84,11 +173,14 @@ fun TvPlayerScreen(
     // Start playback when URL is ready
     LaunchedEffect(streamUrl) {
         streamUrl?.let { url ->
+            // Save last played stream
+            repository.saveLastPlayedStream(categoryId, currentStreamId)
+
             val metadata = PlayerMetadata(
-                title = "Stream $streamId",
+                title = currentStreamName,
                 channelName = "IPTV.atr",
                 streamUrl = url,
-                isLive = true,
+                isLive = contentType == "LIVE_TV", // Only live TV is live, movies/shows are VOD
                 headers = emptyMap()
             )
             viewModel.playStream(metadata)
@@ -111,7 +203,9 @@ fun TvPlayerScreen(
                 onBack = {
                     viewModel.stop()
                     onBack()
-                }
+                },
+                onNextChannel = { switchToNextChannel() },
+                onPreviousChannel = { switchToPreviousChannel() }
             )
         }
     }
