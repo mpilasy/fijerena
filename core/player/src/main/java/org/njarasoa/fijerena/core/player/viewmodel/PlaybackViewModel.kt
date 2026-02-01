@@ -4,11 +4,14 @@ import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,10 +30,75 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
+    private val playerListener = object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            updatePlaybackState()
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            updatePlaybackState()
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            updatePlaybackState()
+        }
+
+        private fun updatePlaybackState() {
+            val controller = _controller.value ?: return
+            val state = when (controller.playbackState) {
+                Player.STATE_IDLE -> PlaybackState.Idle
+                Player.STATE_BUFFERING -> PlaybackState.Buffering
+                Player.STATE_READY -> {
+                    if (controller.playWhenReady) {
+                        PlaybackState.Playing(
+                            position = controller.currentPosition,
+                            duration = controller.duration.coerceAtLeast(0L)
+                        )
+                    } else {
+                        PlaybackState.Paused(
+                            position = controller.currentPosition,
+                            duration = controller.duration.coerceAtLeast(0L)
+                        )
+                    }
+                }
+                Player.STATE_ENDED -> PlaybackState.Ended
+                else -> PlaybackState.Idle
+            }
+            _playbackState.value = state
+        }
+    }
+
     init {
         viewModelScope.launch {
             startService()
             connectToService()
+            observeServiceState()
+        }
+    }
+
+    private suspend fun observeServiceState() {
+        // Wait for service to start
+        var attempts = 0
+        while (attempts < 10) {
+            val service = StreamingPlaybackService.getInstance()
+            if (service != null) {
+                // Observe service's playback state
+                viewModelScope.launch {
+                    service.playbackState.collect { state ->
+                        _playbackState.value = state
+                    }
+                }
+
+                // Observe service's current metadata
+                viewModelScope.launch {
+                    service.currentMetadata.collect { metadata ->
+                        _currentMetadata.value = metadata
+                    }
+                }
+                break
+            }
+            kotlinx.coroutines.delay(100)
+            attempts++
         }
     }
 
@@ -41,59 +109,56 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private suspend fun connectToService() {
         serviceConnection.connect().collect { controller ->
+            // Remove listener from old controller
+            _controller.value?.removeListener(playerListener)
+
+            // Add listener to new controller
+            controller?.addListener(playerListener)
+
             _controller.value = controller
         }
     }
 
     fun playStream(metadata: PlayerMetadata) {
         _currentMetadata.value = metadata
+        _playbackState.value = PlaybackState.Buffering
+
         viewModelScope.launch {
-            val controller = _controller.value
-            if (controller != null) {
-                // Load and play the media
-                val mediaItem = androidx.media3.common.MediaItem.Builder()
-                    .setUri(metadata.streamUrl)
-                    .setMediaMetadata(
-                        androidx.media3.common.MediaMetadata.Builder()
-                            .setTitle(metadata.title)
-                            .setDisplayTitle(metadata.channelName)
-                            .build()
-                    )
-                    .build()
-                controller.setMediaItem(mediaItem)
-                controller.playWhenReady = true
-                controller.prepare()
+            val service = StreamingPlaybackService.getInstance()
+            if (service != null) {
+                // Use service's playStream method which uses StreamingMediaSourceFactory
+                service.playStream(metadata)
             }
         }
     }
 
     fun pause() {
         viewModelScope.launch {
-            _controller.value?.pause()
+            StreamingPlaybackService.getInstance()?.pause()
         }
     }
 
     fun resume() {
         viewModelScope.launch {
-            _controller.value?.play()
+            StreamingPlaybackService.getInstance()?.resume()
         }
     }
 
     fun stop() {
         viewModelScope.launch {
-            _controller.value?.stop()
-            _playbackState.value = PlaybackState.Idle
+            StreamingPlaybackService.getInstance()?.stop()
         }
     }
 
     fun seekTo(position: Long) {
         viewModelScope.launch {
-            _controller.value?.seekTo(position)
+            StreamingPlaybackService.getInstance()?.seekTo(position)
         }
     }
 
     override fun onCleared() {
         super.onCleared()
+        _controller.value?.removeListener(playerListener)
         serviceConnection.disconnect()
         viewModelScope.launch {
             _controller.value?.stop()

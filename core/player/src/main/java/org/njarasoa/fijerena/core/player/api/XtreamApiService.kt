@@ -95,14 +95,14 @@ class XtreamApiService(
     /**
      * Builds a playable stream URL for a given stream ID.
      *
-     * Format: http://url:port/live/username/password/streamId.ts
+     * Format: http://url:port/live/username/password/streamId.m3u8
      *
      * @param streamId The stream ID to build the URL for
-     * @return The formatted stream URL
+     * @return The formatted stream URL in HLS format
      */
     fun buildStreamUrl(streamId: Int): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
-        return "$normalizedUrl/live/$username/$password/$streamId.ts"
+        return "$normalizedUrl/live/$username/$password/$streamId.m3u8"
     }
 
     /**

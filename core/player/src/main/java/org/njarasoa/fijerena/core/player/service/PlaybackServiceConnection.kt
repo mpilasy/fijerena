@@ -59,4 +59,6 @@ class PlaybackServiceConnection(private val context: Context) {
     }
 
     fun getController(): MediaController? = controller
+
+    fun getService(): StreamingPlaybackService? = StreamingPlaybackService.getInstance()
 }

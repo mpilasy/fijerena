@@ -12,19 +12,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 
 @Composable
@@ -34,34 +40,63 @@ fun PlayerScreen(
 ) {
     val playbackState = viewModel.playbackState.collectAsState().value
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
+    val context = LocalContext.current
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
-        contentAlignment = Center
+            .background(Color.Black)
     ) {
-        when (playbackState) {
-            PlaybackState.Idle -> IdleContent(onBack)
-            PlaybackState.Buffering -> BufferingContent()
-            is PlaybackState.Playing -> PlayingContent(
-                playbackState = playbackState,
-                metadata = currentMetadata,
-                onPause = { viewModel.pause() },
-                onBack = onBack
-            )
-            is PlaybackState.Paused -> PausedContent(
-                playbackState = playbackState,
-                metadata = currentMetadata,
-                onResume = { viewModel.resume() },
-                onBack = onBack
-            )
-            PlaybackState.Ended -> EndedContent(onBack)
-            is PlaybackState.Error -> ErrorContent(
-                error = playbackState,
-                onRetry = { viewModel.playStream(currentMetadata) },
-                onBack = onBack
-            )
+        // Video surface
+        val playerView = remember {
+            PlayerView(context).apply {
+                useController = false // We'll use custom controls
+                keepScreenOn = true
+            }
+        }
+
+        AndroidView(
+            factory = { playerView },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Bind player to view when service is available
+        DisposableEffect(Unit) {
+            val service = StreamingPlaybackService.getInstance()
+            playerView.player = service?.getPlayer()
+
+            onDispose {
+                playerView.player = null
+            }
+        }
+
+        // UI overlays
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Center
+        ) {
+            when (playbackState) {
+                PlaybackState.Idle -> IdleContent(onBack)
+                PlaybackState.Buffering -> BufferingContent()
+                is PlaybackState.Playing -> PlayingContent(
+                    playbackState = playbackState,
+                    metadata = currentMetadata,
+                    onPause = { viewModel.pause() },
+                    onBack = onBack
+                )
+                is PlaybackState.Paused -> PausedContent(
+                    playbackState = playbackState,
+                    metadata = currentMetadata,
+                    onResume = { viewModel.resume() },
+                    onBack = onBack
+                )
+                PlaybackState.Ended -> EndedContent(onBack)
+                is PlaybackState.Error -> ErrorContent(
+                    error = playbackState,
+                    onRetry = { viewModel.playStream(currentMetadata) },
+                    onBack = onBack
+                )
+            }
         }
     }
 }

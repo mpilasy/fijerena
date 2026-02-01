@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.feature.category.CategoryGridScreen
 import org.njarasoa.fijerena.feature.login.LoginScreenTv
+import org.njarasoa.fijerena.feature.player.TvPlayerScreen
 
 /**
  * TV-optimized navigation host with D-pad focus management.
@@ -75,9 +76,8 @@ fun TvNavHost(
             // Category List Screen
             composable<Screen.CategoryList> {
                 CategoryGridScreen(
-                    onCategorySelected = { categoryId ->
-                        // TODO: Navigate to streams screen for this category
-                        // navController.navigate(Screen.Streams(categoryId))
+                    onStreamSelected = { streamId ->
+                        navController.navigate(Screen.Player(streamId))
                     },
                     onLogout = {
                         authViewModel.clearAuthSession()
@@ -93,7 +93,6 @@ fun TvNavHost(
                 val playerScreen = backStackEntry.toRoute<Screen.Player>()
                 TvPlayerScreen(
                     streamId = playerScreen.streamId,
-                    authViewModel = authViewModel,
                     onBack = {
                         navController.navigateUp()
                     }
@@ -103,48 +102,3 @@ fun TvNavHost(
     }
 }
 
-/**
- * Placeholder Category List screen for TV.
- * TODO: Implement full category list with D-pad navigation.
- */
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun TvCategoryListScreen(
-    authViewModel: AuthViewModel,
-    onStreamSelected: (Int) -> Unit,
-    onLogout: () -> Unit
-) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        androidx.tv.material3.Text(
-            text = "Category List Screen (TV)\nTODO: Implement category grid with D-pad focus",
-            modifier = Modifier.fillMaxSize()
-        )
-        // TODO: Implement category list UI
-        // - Use TvLazyVerticalGrid with focusable items
-        // - Add FocusRestorer for returning focus
-        // - Show categories from XtreamApiService
-    }
-}
-
-/**
- * Placeholder Player screen for TV.
- * TODO: Implement full player with playback controls.
- */
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun TvPlayerScreen(
-    streamId: Int,
-    authViewModel: AuthViewModel,
-    onBack: () -> Unit
-) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        androidx.tv.material3.Text(
-            text = "Player Screen (TV)\nStream ID: $streamId\nTODO: Implement ExoPlayer integration",
-            modifier = Modifier.fillMaxSize()
-        )
-        // TODO: Implement player UI
-        // - Integrate StreamingPlaybackService
-        // - Show playback controls with D-pad focus
-        // - Handle back button to return to categories
-    }
-}

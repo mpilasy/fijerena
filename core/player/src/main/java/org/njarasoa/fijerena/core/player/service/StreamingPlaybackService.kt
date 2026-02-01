@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.core.player.service
 
 import android.content.Intent
+import android.os.Binder
+import android.os.IBinder
 import android.os.PowerManager
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -27,8 +29,10 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _currentMetadata = MutableStateFlow(PlayerMetadata())
     val currentMetadata: StateFlow<PlayerMetadata> = _currentMetadata.asStateFlow()
 
+
     override fun onCreate() {
         super.onCreate()
+        instance = this
         initializePlayer()
         acquireWakeLock()
     }
@@ -96,6 +100,10 @@ class StreamingPlaybackService : MediaSessionService() {
         mediaSession?.player?.seekTo(position)
     }
 
+    fun getPlayer(): androidx.media3.common.Player? {
+        return mediaSession?.player
+    }
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         return mediaSession
     }
@@ -130,6 +138,7 @@ class StreamingPlaybackService : MediaSessionService() {
         }
         mediaSession = null
         releaseWakeLock()
+        instance = null
         super.onDestroy()
     }
 
@@ -182,6 +191,11 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     companion object {
+        @Volatile
+        private var instance: StreamingPlaybackService? = null
+
+        fun getInstance(): StreamingPlaybackService? = instance
+
         fun getPlaybackState(service: StreamingPlaybackService): StateFlow<PlaybackState> {
             return service.playbackState
         }
