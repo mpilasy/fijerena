@@ -46,6 +46,8 @@ fun CategoryGridScreen(
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onBack: () -> Unit = {},
     onLogout: () -> Unit,
+    onEditProvider: () -> Unit = {},
+    onSettings: () -> Unit = {},
     viewModel: CategoryViewModel = viewModel(
         factory = CategoryViewModelFactory(
             context = LocalContext.current.applicationContext,
@@ -76,17 +78,18 @@ fun CategoryGridScreen(
                     streams = state.streams,
                     streamsLoading = state.streamsLoading,
                     lastPlayedStreamId = state.lastPlayedStreamId,
+                    payloadSize = state.payloadSize,
                     contentType = contentType,
                     onCategorySelected = { categoryId ->
                         viewModel.loadStreams(categoryId)
                     },
-                    onStreamSelected = { streamId, streamName ->
-                        state.selectedCategoryId?.let { categoryId ->
-                            onStreamSelected(streamId, streamName, categoryId)
-                        }
+                    onStreamSelected = { streamId, streamName, categoryId ->
+                        onStreamSelected(streamId, streamName, categoryId)
                     },
                     onBack = onBack,
-                    onLogout = onLogout
+                    onLogout = onLogout,
+                    onEditProvider = onEditProvider,
+                    onSettings = onSettings
                 )
             }
             is CategoryViewModel.UiState.Error -> {
@@ -107,11 +110,14 @@ private fun TwoColumnLayout(
     streams: List<XtreamStream>?,
     streamsLoading: Boolean,
     lastPlayedStreamId: Int?,
+    payloadSize: String?,
     contentType: String,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: Int, streamName: String) -> Unit,
+    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onBack: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onEditProvider: () -> Unit,
+    onSettings: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
@@ -140,17 +146,34 @@ private fun TwoColumnLayout(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    payloadSize?.let { size ->
+                        Text(
+                            text = "Payload: $size",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
                 }
             }
 
-            Button(
-                onClick = onLogout,
-                colors = ButtonDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
-                )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Logout")
+                Button(onClick = onSettings) {
+                    Text("Settings")
+                }
+                Button(onClick = onEditProvider) {
+                    Text("Edit Provider")
+                }
+                Button(
+                    onClick = onLogout,
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Logout")
+                }
             }
         }
 
@@ -320,7 +343,7 @@ private fun StreamList(
     streamsLoading: Boolean,
     selectedCategoryName: String?,
     lastPlayedStreamId: Int?,
-    onStreamSelected: (streamId: Int, streamName: String) -> Unit,
+    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberTvLazyListState()
@@ -396,7 +419,7 @@ private fun StreamList(
                         ) { stream ->
                             StreamItem(
                                 stream = stream,
-                                onClick = { onStreamSelected(stream.streamId, stream.name) },
+                                onClick = { onStreamSelected(stream.streamId, stream.name, stream.categoryId) },
                                 focusRequester = focusRequesters[stream.streamId]
                             )
                         }

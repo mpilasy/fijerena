@@ -101,4 +101,16 @@ class AccountManager(context: Context) {
     fun clearAuthResponse() {
         prefs.edit().remove(KEY_AUTH_RESPONSE).apply()
     }
+
+    /**
+     * Updates only the provider URL while keeping username/password unchanged.
+     * Clears auth response as it will be invalid with the new URL.
+     */
+    fun updateUrl(newUrl: String) {
+        prefs.edit().apply {
+            putString(KEY_URL, newUrl)
+            remove(KEY_AUTH_RESPONSE) // Clear cached auth, will re-authenticate on next request
+            apply()
+        }
+    }
 }

@@ -52,6 +52,8 @@ fun TvPlayerScreen(
     onBack: () -> Unit,
     episodeId: String? = null,
     episodeExtension: String? = null,
+    seriesId: Int? = null,
+    seriesName: String? = null,
     viewModel: PlaybackViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -151,8 +153,8 @@ fun TvPlayerScreen(
                     repository.buildEpisodeStreamUrl(episodeId, episodeExtension)
                 } else {
                     // For live TV and movies, use standard URL builder
-                    println("TvPlayerScreen: Using buildStreamUrl with streamId=$currentStreamId, contentType=$contentType")
-                    repository.buildStreamUrl(currentStreamId, contentType)
+                    println("TvPlayerScreen: Using buildStreamUrl with streamId=$currentStreamId, contentType=$contentType, extension=$episodeExtension")
+                    repository.buildStreamUrl(currentStreamId, contentType, episodeExtension)
                 }
 
                 when (urlResult) {
@@ -179,10 +181,12 @@ fun TvPlayerScreen(
     LaunchedEffect(streamUrl) {
         streamUrl?.let { url ->
             // Save last played stream
-            repository.saveLastPlayedStream(categoryId, currentStreamId)
+            // For TV shows, save the series info (not episode) so "Last Watched" works correctly
+            val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
+            val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
+            repository.saveLastPlayedStream(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
 
-            // Headers are now handled in StreamingMediaSourceFactory with stealth config
-            println("TvPlayerScreen: Playing stream with stealth headers")
+            println("TvPlayerScreen: Playing stream")
             println("TvPlayerScreen: Stream URL: $url")
 
             val metadata = PlayerMetadata(
@@ -190,7 +194,7 @@ fun TvPlayerScreen(
                 channelName = "IPTV.atr",
                 streamUrl = url,
                 isLive = contentType == "LIVE_TV", // Only live TV is live, movies/shows are VOD
-                headers = emptyMap() // Use default stealth headers from MediaSourceFactory
+                headers = emptyMap()
             )
             viewModel.playStream(metadata)
         }

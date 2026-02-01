@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.Result
+import org.njarasoa.fijerena.core.network.WatchedStream
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
@@ -26,6 +27,10 @@ class CategoryViewModel(
     private val contentType: String
 ) : ViewModel() {
 
+    companion object {
+        const val LAST_WATCHED_CATEGORY_ID = "last_watched"
+    }
+
     sealed class UiState {
         data object Loading : UiState()
         data class Success(
@@ -33,9 +38,23 @@ class CategoryViewModel(
             val selectedCategoryId: String?,
             val streams: List<XtreamStream>?,
             val streamsLoading: Boolean,
-            val lastPlayedStreamId: Int? = null
+            val lastPlayedStreamId: Int? = null,
+            val payloadSize: String? = null
         ) : UiState()
         data class Error(val message: String) : UiState()
+    }
+
+    fun getPayloadSize(categoryId: String): String? {
+        return repository.getPayloadSize("category_$categoryId")
+    }
+
+    fun getCategoriesPayloadSize(): String? {
+        return when (contentType) {
+            "LIVE_TV" -> repository.getPayloadSize("live_categories")
+            "MOVIES" -> repository.getPayloadSize("vod_categories")
+            "TV_SHOWS" -> repository.getPayloadSize("series_categories")
+            else -> null
+        }
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
@@ -77,19 +96,27 @@ class CategoryViewModel(
 
             when (result) {
                 is Result.Success -> {
-                    categories = result.data
-                    val lastStreamId = repository.getLastStreamId()
+                    // Add "Last Watched" virtual category at the top
+                    val lastWatchedCategory = XtreamCategory(
+                        categoryId = LAST_WATCHED_CATEGORY_ID,
+                        categoryName = "Last Watched",
+                        parentId = 0
+                    )
+                    categories = listOf(lastWatchedCategory) + result.data
+
+                    val lastStreamId = repository.getLastStreamId(contentType)
                     _uiState.value = UiState.Success(
                         categories = categories,
                         selectedCategoryId = null,
                         streams = null,
                         streamsLoading = false,
-                        lastPlayedStreamId = lastStreamId
+                        lastPlayedStreamId = lastStreamId,
+                        payloadSize = getCategoriesPayloadSize()
                     )
 
                     // Restore last selected category, or auto-select first category
                     if (categories.isNotEmpty()) {
-                        val lastCategoryId = repository.getLastCategoryId()
+                        val lastCategoryId = repository.getLastCategoryId(contentType)
                         val categoryToLoad = if (lastCategoryId != null &&
                             categories.any { it.categoryId == lastCategoryId }) {
                             lastCategoryId
@@ -111,10 +138,7 @@ class CategoryViewModel(
         viewModelScope.launch {
             currentCategoryId = categoryId
 
-            // Save the selected category
-            repository.saveLastCategory(categoryId)
-
-            val lastStreamId = repository.getLastStreamId()
+            val lastStreamId = repository.getLastStreamId(contentType)
 
             // Update state to show loading for streams
             _uiState.value = UiState.Success(
@@ -122,8 +146,40 @@ class CategoryViewModel(
                 selectedCategoryId = categoryId,
                 streams = currentStreams,
                 streamsLoading = true,
-                lastPlayedStreamId = lastStreamId
+                lastPlayedStreamId = lastStreamId,
+                payloadSize = getPayloadSize(categoryId)
             )
+
+            // Handle "Last Watched" virtual category
+            if (categoryId == LAST_WATCHED_CATEGORY_ID) {
+                val watchHistory = repository.getWatchHistory()
+                    .filter { it.contentType == contentType } // Only show history for current content type
+                currentStreams = watchHistory.map { watched ->
+                    XtreamStream(
+                        num = 0,
+                        name = watched.streamName,
+                        streamType = contentType.lowercase(),
+                        streamId = watched.streamId,
+                        streamIcon = null,
+                        epgChannelId = null,
+                        added = null,
+                        categoryId = watched.categoryId,
+                        customSid = null,
+                        tvArchive = 0,
+                        directSource = null,
+                        tvArchiveDuration = 0
+                    )
+                }
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    lastPlayedStreamId = lastStreamId,
+                    payloadSize = getPayloadSize(categoryId)
+                )
+                return@launch
+            }
 
             val result = when (contentType) {
                 "LIVE_TV" -> repository.getStreams(categoryId)
@@ -143,7 +199,8 @@ class CategoryViewModel(
                         selectedCategoryId = categoryId,
                         streams = currentStreams,
                         streamsLoading = false,
-                        lastPlayedStreamId = lastStreamId
+                        lastPlayedStreamId = lastStreamId,
+                        payloadSize = getPayloadSize(categoryId)
                     )
                 }
                 is Result.Error -> {
@@ -155,7 +212,8 @@ class CategoryViewModel(
                         selectedCategoryId = categoryId,
                         streams = emptyList(),
                         streamsLoading = false,
-                        lastPlayedStreamId = lastStreamId
+                        lastPlayedStreamId = lastStreamId,
+                        payloadSize = getPayloadSize(categoryId)
                     )
                 }
             }

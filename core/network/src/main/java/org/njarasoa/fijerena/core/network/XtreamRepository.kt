@@ -6,15 +6,29 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
+import java.util.concurrent.ConcurrentHashMap
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+
+/**
+ * Represents a watched stream in the history
+ */
+@Serializable
+data class WatchedStream(
+    val streamId: Int,
+    val streamName: String,
+    val categoryId: String,
+    val contentType: String,
+    val timestamp: Long = System.currentTimeMillis()
+)
 
 class XtreamRepository(
     private val accountManager: AccountManager,
@@ -25,10 +39,14 @@ class XtreamRepository(
         "xtream_cache",
         Context.MODE_PRIVATE
     )
+    private val appSettings = AppSettings(context)
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
+
+    // Payload size tracking for dev mode
+    private val payloadSizes = ConcurrentHashMap<String, Long>()
 
     companion object {
         private const val CACHE_EXPIRY_MS = 6 * 60 * 60 * 1000L // 6 hours
@@ -40,9 +58,22 @@ class XtreamRepository(
         private const val KEY_SERIES_CATEGORIES_TIMESTAMP = "series_categories_timestamp"
         private const val KEY_STREAMS_PREFIX = "streams_"
         private const val KEY_STREAMS_TIMESTAMP_PREFIX = "streams_timestamp_"
+
+        // Legacy keys (kept for backwards compatibility but not used)
         private const val KEY_LAST_CATEGORY_ID = "last_category_id"
         private const val KEY_LAST_STREAM_ID = "last_stream_id"
         private const val KEY_LAST_CONTENT_TYPE = "last_content_type"
+
+        // Content-type specific last played tracking
+        private const val KEY_LAST_LIVE_CATEGORY = "last_live_category"
+        private const val KEY_LAST_LIVE_STREAM = "last_live_stream"
+        private const val KEY_LAST_MOVIES_CATEGORY = "last_movies_category"
+        private const val KEY_LAST_MOVIES_STREAM = "last_movies_stream"
+        private const val KEY_LAST_TVSHOWS_CATEGORY = "last_tvshows_category"
+        private const val KEY_LAST_TVSHOWS_STREAM = "last_tvshows_stream"
+
+        // Watch history tracking
+        private const val KEY_WATCH_HISTORY = "watch_history"
     }
 
     suspend fun login(
@@ -106,6 +137,53 @@ class XtreamRepository(
             )
 
             // Store the API service for future use
+            apiService = service
+
+            authResponse
+        }
+    }
+
+    /**
+     * Updates the provider URL without changing username/password.
+     * Re-authenticates with the new URL and clears cached data.
+     */
+    suspend fun updateProviderUrl(newUrl: String): Result<XtreamAuthResponse> = withContext(Dispatchers.IO) {
+        suspendResultOf {
+            val credentials = accountManager.getCredentials()
+                ?: throw Exception("No stored credentials found")
+
+            val password = credentials.password
+                ?: throw Exception("Password not stored. Please login again.")
+
+            // Update URL in storage
+            accountManager.updateUrl(newUrl)
+
+            // Create new API service with updated URL
+            val service = XtreamApiService(newUrl, credentials.username, password)
+            val authResponse = service.authenticate()
+
+            // Validate authentication response
+            if (authResponse.userInfo?.auth != 1) {
+                throw Exception("Authentication failed with new URL")
+            }
+
+            if (authResponse.userInfo?.status != "Active") {
+                throw Exception("Account is not active: ${authResponse.userInfo?.status}")
+            }
+
+            // Save updated credentials with new URL
+            accountManager.saveCredentials(
+                newUrl,
+                credentials.username,
+                password,
+                authResponse,
+                rememberMe = true
+            )
+
+            // Clear all cached data since it's from the old provider
+            clearCache()
+
+            // Update the API service
             apiService = service
 
             authResponse
@@ -208,6 +286,7 @@ class XtreamRepository(
     }
 
     private fun cacheCategories(categories: List<XtreamCategory>) {
+        trackPayloadSize("live_categories", categories)
         cache.edit()
             .putString(KEY_CATEGORIES, json.encodeToString(categories))
             .putLong(KEY_CATEGORIES_TIMESTAMP, System.currentTimeMillis())
@@ -228,6 +307,7 @@ class XtreamRepository(
     }
 
     private fun cacheVodCategories(categories: List<XtreamCategory>) {
+        trackPayloadSize("vod_categories", categories)
         cache.edit()
             .putString(KEY_VOD_CATEGORIES, json.encodeToString(categories))
             .putLong(KEY_VOD_CATEGORIES_TIMESTAMP, System.currentTimeMillis())
@@ -248,6 +328,7 @@ class XtreamRepository(
     }
 
     private fun cacheSeriesCategories(categories: List<XtreamCategory>) {
+        trackPayloadSize("series_categories", categories)
         cache.edit()
             .putString(KEY_SERIES_CATEGORIES, json.encodeToString(categories))
             .putLong(KEY_SERIES_CATEGORIES_TIMESTAMP, System.currentTimeMillis())
@@ -374,19 +455,20 @@ class XtreamRepository(
     }
 
     private fun cacheStreams(categoryId: String, streams: List<XtreamStream>) {
+        trackPayloadSize("category_$categoryId", streams)
         cache.edit()
             .putString(KEY_STREAMS_PREFIX + categoryId, json.encodeToString(streams))
             .putLong(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId, System.currentTimeMillis())
             .apply()
     }
 
-    fun buildStreamUrl(streamId: Int, contentType: String = "LIVE_TV"): Result<String> = resultOf {
+    fun buildStreamUrl(streamId: Int, contentType: String = "LIVE_TV", extension: String? = null): Result<String> = resultOf {
         val service = apiService
             ?: throw Exception("Not authenticated. Please login first.")
         when (contentType) {
             "LIVE_TV" -> service.buildStreamUrl(streamId)
-            "MOVIES" -> service.buildVodStreamUrl(streamId)
-            "TV_SHOWS" -> service.buildSeriesStreamUrl(streamId)
+            "MOVIES" -> service.buildVodStreamUrl(streamId, extension ?: "mp4")
+            "TV_SHOWS" -> service.buildSeriesStreamUrl(streamId, extension ?: "mp4")
             else -> service.buildStreamUrl(streamId)
         }
     }
@@ -401,7 +483,9 @@ class XtreamRepository(
         suspendResultOf {
             val service = apiService
                 ?: throw Exception("Not authenticated. Please login first.")
-            service.getSeriesInfo(seriesId)
+            val seriesInfo = service.getSeriesInfo(seriesId)
+            trackPayloadSize("series_$seriesId", seriesInfo)
+            seriesInfo
         }
     }
 
@@ -409,7 +493,9 @@ class XtreamRepository(
         suspendResultOf {
             val service = apiService
                 ?: throw Exception("Not authenticated. Please login first.")
-            service.getVodInfo(vodId)
+            val vodInfo = service.getVodInfo(vodId)
+            trackPayloadSize("vod_$vodId", vodInfo)
+            vodInfo
         }
     }
 
@@ -437,35 +523,146 @@ class XtreamRepository(
         return accountManager.getCredentials()?.username
     }
 
-    fun saveLastCategory(categoryId: String) {
-        cache.edit()
-            .putString(KEY_LAST_CATEGORY_ID, categoryId)
-            .apply()
+    /**
+     * Save last played stream with content-type specific tracking
+     */
+    fun saveLastPlayedStream(categoryId: String, streamId: Int, streamName: String, contentType: String) {
+        val editor = cache.edit()
+
+        // Save content-type specific last played
+        when (contentType) {
+            "LIVE_TV" -> {
+                editor.putString(KEY_LAST_LIVE_CATEGORY, categoryId)
+                editor.putInt(KEY_LAST_LIVE_STREAM, streamId)
+            }
+            "MOVIES" -> {
+                editor.putString(KEY_LAST_MOVIES_CATEGORY, categoryId)
+                editor.putInt(KEY_LAST_MOVIES_STREAM, streamId)
+            }
+            "TV_SHOWS" -> {
+                editor.putString(KEY_LAST_TVSHOWS_CATEGORY, categoryId)
+                editor.putInt(KEY_LAST_TVSHOWS_STREAM, streamId)
+            }
+        }
+
+        // Save global last content type
+        editor.putString(KEY_LAST_CONTENT_TYPE, contentType)
+
+        editor.apply()
+
+        // Add to watch history
+        addToWatchHistory(streamId, streamName, categoryId, contentType)
     }
 
-    fun saveLastPlayedStream(categoryId: String, streamId: Int) {
-        cache.edit()
-            .putString(KEY_LAST_CATEGORY_ID, categoryId)
-            .putInt(KEY_LAST_STREAM_ID, streamId)
-            .apply()
+    /**
+     * Get last played category for a specific content type
+     */
+    fun getLastCategoryId(contentType: String): String? {
+        return when (contentType) {
+            "LIVE_TV" -> cache.getString(KEY_LAST_LIVE_CATEGORY, null)
+            "MOVIES" -> cache.getString(KEY_LAST_MOVIES_CATEGORY, null)
+            "TV_SHOWS" -> cache.getString(KEY_LAST_TVSHOWS_CATEGORY, null)
+            else -> null
+        }
     }
 
-    fun getLastCategoryId(): String? {
-        return cache.getString(KEY_LAST_CATEGORY_ID, null)
-    }
-
-    fun getLastStreamId(): Int? {
-        val streamId = cache.getInt(KEY_LAST_STREAM_ID, -1)
+    /**
+     * Get last played stream for a specific content type
+     */
+    fun getLastStreamId(contentType: String): Int? {
+        val streamId = when (contentType) {
+            "LIVE_TV" -> cache.getInt(KEY_LAST_LIVE_STREAM, -1)
+            "MOVIES" -> cache.getInt(KEY_LAST_MOVIES_STREAM, -1)
+            "TV_SHOWS" -> cache.getInt(KEY_LAST_TVSHOWS_STREAM, -1)
+            else -> -1
+        }
         return if (streamId != -1) streamId else null
     }
 
-    fun saveLastContentType(contentType: String) {
-        cache.edit()
-            .putString(KEY_LAST_CONTENT_TYPE, contentType)
-            .apply()
-    }
-
+    /**
+     * Get the last content type that was played
+     */
     fun getLastContentType(): String? {
         return cache.getString(KEY_LAST_CONTENT_TYPE, null)
     }
+
+    /**
+     * Add a stream to watch history (max 25 most recent)
+     */
+    private fun addToWatchHistory(streamId: Int, streamName: String, categoryId: String, contentType: String) {
+        val history = getWatchHistory().toMutableList()
+
+        // Remove existing entry if present (to update timestamp)
+        history.removeAll { it.streamId == streamId && it.contentType == contentType }
+
+        // Add new entry at the beginning
+        history.add(0, WatchedStream(streamId, streamName, categoryId, contentType))
+
+        // Keep only last N items based on settings
+        val trimmedHistory = history.take(appSettings.watchHistorySize)
+
+        // Save to cache
+        val historyJson = json.encodeToString(trimmedHistory)
+        cache.edit().putString(KEY_WATCH_HISTORY, historyJson).apply()
+    }
+
+    /**
+     * Get watch history (last 25 watched streams)
+     */
+    fun getWatchHistory(): List<WatchedStream> {
+        val historyJson = cache.getString(KEY_WATCH_HISTORY, null) ?: return emptyList()
+        return try {
+            json.decodeFromString<List<WatchedStream>>(historyJson)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * Clear watch history
+     */
+    fun clearWatchHistory() {
+        cache.edit().remove(KEY_WATCH_HISTORY).apply()
+    }
+
+    /**
+     * Track payload size for dev mode
+     */
+    private fun trackPayloadSize(key: String, data: Any) {
+        if (appSettings.isDevMode) {
+            try {
+                val jsonString = json.encodeToString(data)
+                val sizeInBytes = jsonString.toByteArray(Charsets.UTF_8).size.toLong()
+                payloadSizes[key] = sizeInBytes
+            } catch (e: Exception) {
+                // Ignore serialization errors
+            }
+        }
+    }
+
+    /**
+     * Get payload size for a specific key in human-readable format
+     */
+    fun getPayloadSize(key: String): String? {
+        if (!appSettings.isDevMode) return null
+        val sizeInBytes = payloadSizes[key] ?: return null
+        return formatBytes(sizeInBytes)
+    }
+
+    /**
+     * Format bytes to human-readable string (KB/MB/GB)
+     */
+    private fun formatBytes(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> String.format("%.2f KB", bytes / 1024.0)
+            bytes < 1024 * 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
+            else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+        }
+    }
+
+    /**
+     * Get app settings instance
+     */
+    fun getAppSettings(): AppSettings = appSettings
 }

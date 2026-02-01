@@ -14,14 +14,14 @@ object PlayerConfigFactory {
     fun createLoadControl(): DefaultLoadControl {
         return DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                2000,  // minBufferMs - minimal buffering for live streams
-                5000,  // maxBufferMs - don't over-buffer for live content
-                250,   // bufferForPlaybackMs - faster zapping/channel switching
-                500    // bufferForPlaybackAfterRebufferMs - faster recovery
+                15000,  // minBufferMs - 15s buffer for smooth playback
+                50000,  // maxBufferMs - 50s max buffer for network fluctuations
+                2500,   // bufferForPlaybackMs - 2.5s before starting playback
+                5000    // bufferForPlaybackAfterRebufferMs - 5s to recover from buffering
             )
             .setBackBuffer(
-                0,     // backBufferDurationMs - no back buffer for live streams
-                false  // retainBackBufferFromKeyframe
+                10000,  // backBufferDurationMs - 10s back buffer for seeking
+                true    // retainBackBufferFromKeyframe
             )
             .build()
     }

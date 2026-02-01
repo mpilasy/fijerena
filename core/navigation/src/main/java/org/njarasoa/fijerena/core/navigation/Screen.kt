@@ -32,6 +32,20 @@ sealed interface Screen {
     data object ContentTypeSelection : Screen
 
     /**
+     * Edit provider URL screen destination.
+     * Allows users to change the provider URL without re-entering credentials.
+     */
+    @Serializable
+    data object EditProvider : Screen
+
+    /**
+     * Settings screen destination.
+     * Allows users to configure app settings like dev mode, watch history size, etc.
+     */
+    @Serializable
+    data object Settings : Screen
+
+    /**
      * Category list screen destination.
      * Shows available categories for the selected content type.
      *
@@ -81,6 +95,8 @@ sealed interface Screen {
      * @param contentType The type of content being played (LIVE_TV, MOVIES, TV_SHOWS)
      * @param episodeId Optional episode ID for TV shows (actual string ID from API)
      * @param episodeExtension Optional container extension for episode playback (e.g., "mp4", "mkv")
+     * @param seriesId Optional series ID for TV shows (used for watch history tracking)
+     * @param seriesName Optional series name for TV shows (used for watch history tracking)
      */
     @Serializable
     data class Player(
@@ -89,6 +105,8 @@ sealed interface Screen {
         val categoryId: String,
         val contentType: String,
         val episodeId: String? = null,
-        val episodeExtension: String? = null
+        val episodeExtension: String? = null,
+        val seriesId: Int? = null,
+        val seriesName: String? = null
     ) : Screen
 }

@@ -5,7 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -15,6 +17,8 @@ import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.data.AuthViewModel
+import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.feature.category.CategoryGridScreen
@@ -23,6 +27,8 @@ import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.login.LoginScreenTv
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
+import org.njarasoa.fijerena.feature.settings.EditProviderScreen
+import org.njarasoa.fijerena.feature.settings.SettingsScreen
 
 /**
  * TV-optimized navigation host with D-pad focus management.
@@ -48,13 +54,21 @@ fun TvNavHost(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val repository = remember {
+        val accountManager = AccountManager(context.applicationContext)
+        XtreamRepository(accountManager, context.applicationContext)
+    }
+
     // Check authentication status on startup
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
-    // Auto-navigate to Live TV categories if already authenticated
+    // Auto-navigate to last content type if already authenticated
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated != null && authViewModel.isAuthenticated()) {
-            navController.navigate(Screen.CategoryList("LIVE_TV")) {
+            // Restore last content type or default to Live TV
+            val lastContentType = repository.getLastContentType() ?: "LIVE_TV"
+            navController.navigate(Screen.CategoryList(lastContentType)) {
                 popUpTo(Screen.Login) { inclusive = true }
             }
         }
@@ -90,6 +104,19 @@ fun TvNavHost(
                         navController.navigate(Screen.Login) {
                             popUpTo(Screen.ContentTypeSelection) { inclusive = true }
                         }
+                    }
+                )
+            }
+
+            // Edit Provider Screen
+            composable<Screen.EditProvider> {
+                EditProviderScreen(
+                    onBack = {
+                        navController.navigateUp()
+                    },
+                    onSuccess = {
+                        // After successful update, navigate back to category list
+                        navController.navigateUp()
                     }
                 )
             }
@@ -145,6 +172,12 @@ fun TvNavHost(
                         navController.navigate(Screen.Login) {
                             popUpTo(Screen.Login) { inclusive = true }
                         }
+                    },
+                    onEditProvider = {
+                        navController.navigate(Screen.EditProvider)
+                    },
+                    onSettings = {
+                        navController.navigate(Screen.Settings)
                     }
                 )
             }
@@ -162,7 +195,8 @@ fun TvNavHost(
                                 streamId = movieId,
                                 streamName = movieName,
                                 categoryId = movieDetailsScreen.categoryId,
-                                contentType = "MOVIES"
+                                contentType = "MOVIES",
+                                episodeExtension = extension // Pass extension for VOD playback
                             )
                         )
                     },
@@ -187,7 +221,9 @@ fun TvNavHost(
                                 categoryId = episodeSelectionScreen.categoryId,
                                 contentType = "TV_SHOWS",
                                 episodeId = episodeId,
-                                episodeExtension = extension
+                                episodeExtension = extension,
+                                seriesId = episodeSelectionScreen.seriesId,
+                                seriesName = episodeSelectionScreen.seriesName
                             )
                         )
                     },
@@ -207,8 +243,25 @@ fun TvNavHost(
                     contentType = playerScreen.contentType,
                     episodeId = playerScreen.episodeId,
                     episodeExtension = playerScreen.episodeExtension,
+                    seriesId = playerScreen.seriesId,
+                    seriesName = playerScreen.seriesName,
                     onBack = {
                         navController.navigateUp()
+                    }
+                )
+            }
+
+            // Settings Screen
+            composable<Screen.Settings> {
+                SettingsScreen(
+                    onBack = {
+                        navController.navigateUp()
+                    },
+                    onProviderChanged = {
+                        // Clear navigation stack and go back to login
+                        navController.navigate(Screen.Login) {
+                            popUpTo(Screen.Login) { inclusive = true }
+                        }
                     }
                 )
             }
