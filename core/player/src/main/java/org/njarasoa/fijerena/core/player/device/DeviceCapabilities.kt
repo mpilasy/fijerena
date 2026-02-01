@@ -30,7 +30,7 @@ object DeviceDetector {
         val maxResolution = when (deviceType) {
             DeviceType.NVIDIA_SHIELD -> if (supports4K) 3840 to 2160 else 1920 to 1080
             DeviceType.SONY_BRAVIA -> if (supports4K) 3840 to 2160 else 1920 to 1080
-            DeviceType.CHROMECAST_TV -> 1280 to 720
+            DeviceType.CHROMECAST_TV -> if (supports4K) 3840 to 2160 else 1920 to 1080
             DeviceType.GENERIC_TV -> 1920 to 1080
             DeviceType.GENERIC_MOBILE -> 1920 to 1080
         }
@@ -42,6 +42,11 @@ object DeviceDetector {
                 "video/avc"
             )
             DeviceType.SONY_BRAVIA -> listOfNotNull(
+                if (supportsHevc) "video/hevc" else null,
+                "video/avc"
+            )
+            DeviceType.CHROMECAST_TV -> listOfNotNull(
+                if (supportsAv1) "video/av01" else null,
                 if (supportsHevc) "video/hevc" else null,
                 "video/avc"
             )

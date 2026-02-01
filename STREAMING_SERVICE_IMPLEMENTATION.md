@@ -257,9 +257,10 @@ viewModel.stop()
 - Respects overscan safe areas (configured in UI)
 
 ### Chromecast with Google TV
-- Constrained to 720p streams
-- Bitrate limited to 5 Mbps for smooth playback
-- Falls back to H.264 if HEVC unavailable
+- Supports up to 4K (3840x2160) on 4K models, 1080p on HD models
+- Hardware-accelerated AV1, HEVC, and H.264 decoding
+- Bitrate up to 20 Mbps for 4K streams, 10 Mbps for 1080p
+- Codec priority: AV1 → HEVC → H.264
 
 ### Generic Mobile
 - Limited to 1080p resolution
