@@ -8,6 +8,34 @@ Targeting: Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Br
 - **Video Player:** Media3 (ExoPlayer). Optimize for 4K/HDR hardware acceleration.
 - **Navigation:** Adaptive Navigation Suite (handles Mobile and TV D-Pad logic).
 
+## 🎬 Media3 Player Configuration
+
+### Supported Stream Formats
+- **HLS** (`.m3u8`) - HTTP Live Streaming
+- **DASH** (`.mpd`) - Dynamic Adaptive Streaming over HTTP
+- **MPEG-TS** (`.ts`, `.mpeg`) - MPEG Transport Stream
+
+### LoadControl Optimization for IPTV Live Streaming
+Configured for fast channel switching (zapping speed) and minimal latency:
+- `minBufferMs: 2000ms` - Minimal buffering for live streams
+- `maxBufferMs: 5000ms` - Avoid over-buffering live content
+- `bufferForPlaybackMs: 250ms` - Fast startup/channel switching
+- `bufferForPlaybackAfterRebufferMs: 500ms` - Quick recovery from rebuffering
+- `backBufferDurationMs: 0ms` - No back buffer for live streams
+
+### Codec Prioritization Strategy
+Hardware-accelerated codec selection based on device capabilities:
+- **NVIDIA Shield:** AV1 → HEVC → AVC (prioritizes AV1/HEVC for 4K/HDR)
+- **Sony Bravia:** HEVC → AVC (prioritizes HEVC for 4K)
+- **Generic devices:** AVC (fallback to H.264)
+
+### StreamingMediaSourceFactory Usage
+Always use `StreamingMediaSourceFactory.createMediaSource()` for stream playback:
+- Automatically detects stream type (HLS/DASH/MPEG-TS)
+- Configures HTTP timeouts (8s connect/read)
+- Supports custom headers for authentication
+- Enables cross-protocol redirects
+
 ## 📋 Coding Standards
 - **Focus Management:** Every @Composable must be D-pad (remote) navigable. Use `Modifier.focusRestorer()` and `Modifier.focusable()`.
 - **Safe Areas:** Respect "Overscan." UI must remain 5% away from screen edges for Sony/Shield TVs.
