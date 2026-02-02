@@ -89,6 +89,18 @@ fun PlayerScreen(
     val focusRequester = remember { FocusRequester() }
     var channelSwitchNotification by remember { mutableStateOf<String?>(null) }
 
+    // Control hints for first-time users
+    val prefs = remember { context.getSharedPreferences("player_prefs", android.content.Context.MODE_PRIVATE) }
+    var showControlHints by remember { mutableStateOf(!prefs.getBoolean("hints_dismissed", false)) }
+
+    // Auto-dismiss hints after 7 seconds
+    LaunchedEffect(showControlHints) {
+        if (showControlHints) {
+            delay(7.seconds)
+            showControlHints = false
+        }
+    }
+
     // Auto-hide controls after 10 seconds
     LaunchedEffect(showControls) {
         if (showControls && !showStats) {
@@ -334,6 +346,19 @@ fun PlayerScreen(
                 ChannelSwitchNotification(channelName = channelName)
             }
         }
+
+        // Control hints for first-time users
+        if (showControlHints && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)) {
+            ControlHintsOverlay(
+                onDismiss = {
+                    showControlHints = false
+                },
+                onDontShowAgain = {
+                    prefs.edit().putBoolean("hints_dismissed", true).apply()
+                    showControlHints = false
+                }
+            )
+        }
     }
 }
 
@@ -380,6 +405,120 @@ private fun ChannelSwitchNotification(channelName: String) {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ControlHintsOverlay(
+    onDismiss: () -> Unit,
+    onDontShowAgain: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f)),
+        contentAlignment = Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .width(700.dp)
+                .padding(32.dp),
+            color = Color(0xFF1E1E1E),
+            shape = RoundedCornerShape(16.dp),
+            border = androidx.compose.foundation.BorderStroke(
+                2.dp,
+                MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(32.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // Header
+                Text(
+                    text = "🎮 Player Controls",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Control hints
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ControlHint("OK Button", "Show/hide controls")
+                    ControlHint("Double-tap OK", "Toggle stats overlay")
+                    ControlHint("BACK Button", "Exit player")
+                    ControlHint("D-pad Up/Down", "Change channel (Live TV)")
+                    ControlHint("Pause/Resume", "Control playback")
+                    ControlHint("Audio Button", "Select audio track")
+                    ControlHint("Subtitle Button", "Enable/disable subtitles")
+                    ControlHint("Quality Button", "Select video quality")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Got it!")
+                    }
+                    Button(
+                        onClick = onDontShowAgain,
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                            containerColor = Color(0xFF2A2A2A)
+                        )
+                    ) {
+                        Text("Don't show again")
+                    }
+                }
+
+                // Auto-dismiss info
+                Text(
+                    text = "This message will auto-dismiss in 7 seconds",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.5f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ControlHint(control: String, description: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = control,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.width(140.dp)
+        )
+        Text(
+            text = "→",
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.White.copy(alpha = 0.5f)
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.White
+        )
     }
 }
 
