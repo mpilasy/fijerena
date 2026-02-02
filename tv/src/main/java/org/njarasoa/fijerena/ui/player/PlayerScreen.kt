@@ -84,6 +84,7 @@ fun PlayerScreen(
     var showStats by remember { mutableStateOf(false) }
     var showAudioTrackSelector by remember { mutableStateOf(false) }
     var showSubtitleSelector by remember { mutableStateOf(false) }
+    var showQualitySelector by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableStateOf(0L) }
     val focusRequester = remember { FocusRequester() }
     var channelSwitchNotification by remember { mutableStateOf<String?>(null) }
@@ -288,6 +289,7 @@ fun PlayerScreen(
                 onResume = if (isPaused) ({ viewModel.resume() }) else null,
                 onAudioTrack = { showAudioTrackSelector = true },
                 onSubtitle = { showSubtitleSelector = true },
+                onQuality = { showQualitySelector = true },
                 onBack = {
                     viewModel.stop()
                     onBack()
@@ -308,6 +310,14 @@ fun PlayerScreen(
             SubtitleSelectorDialog(
                 viewModel = viewModel,
                 onDismiss = { showSubtitleSelector = false }
+            )
+        }
+
+        // Quality selector dialog
+        if (showQualitySelector) {
+            QualitySelectorDialog(
+                viewModel = viewModel,
+                onDismiss = { showQualitySelector = false }
             )
         }
 
@@ -743,6 +753,221 @@ private fun SubtitleSelectorDialog(
     }
 }
 
+@Composable
+private fun QualitySelectorDialog(
+    viewModel: PlaybackViewModel,
+    onDismiss: () -> Unit
+) {
+    val videoQualities = remember { viewModel.getVideoQualities() }
+    var selectedIndex by remember { mutableStateOf(videoQualities.indexOfFirst { it.isSelected }.coerceAtLeast(-1)) }
+    val focusRequesters = remember { List(videoQualities.size + 1) { FocusRequester() } } // +1 for "Auto" option
+    val context = LocalContext.current
+
+    // Request focus on selected item or "Auto" option
+    LaunchedEffect(Unit) {
+        val focusIndex = if (selectedIndex >= 0) selectedIndex + 1 else 0 // +1 because "Auto" is first
+        if (focusIndex in focusRequesters.indices) {
+            focusRequesters[focusIndex].requestFocus()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.85f)),
+        contentAlignment = Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .width(600.dp)
+                .padding(32.dp),
+            color = Color(0xFF1E1E1E),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(32.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header
+                Text(
+                    text = "⚙️ Select Quality",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // "Auto" option
+                val isAutoSelected = selectedIndex == -1
+                Button(
+                    onClick = {
+                        selectedIndex = -1
+                        viewModel.enableAutoQuality()
+                        onDismiss()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequesters[0])
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                selectedIndex = -1
+                            }
+                        }
+                        .then(
+                            if (isAutoSelected) Modifier.border(
+                                2.dp,
+                                MaterialTheme.colorScheme.primary,
+                                RoundedCornerShape(8.dp)
+                            ) else Modifier
+                        ),
+                    colors = androidx.tv.material3.ButtonDefaults.colors(
+                        containerColor = if (isAutoSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        else Color(0xFF2A2A2A),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Auto (Adaptive)",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isAutoSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                            Text(
+                                text = "Automatically adjust quality based on network",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+                        if (isAutoSelected) {
+                            Text(
+                                text = "✓ Active",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                if (videoQualities.isEmpty()) {
+                    Text(
+                        text = "No quality options available",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                } else {
+                    // Quality list
+                    videoQualities.forEachIndexed { index, quality ->
+                        val isSelected = index == selectedIndex
+                        Button(
+                            onClick = {
+                                selectedIndex = index
+                                viewModel.selectVideoQuality(quality.groupIndex, quality.trackIndex)
+                                onDismiss()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequesters[index + 1]) // +1 because "Auto" is first
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused) {
+                                        selectedIndex = index
+                                    }
+                                }
+                                .then(
+                                    if (isSelected) Modifier.border(
+                                        2.dp,
+                                        MaterialTheme.colorScheme.primary,
+                                        RoundedCornerShape(8.dp)
+                                    ) else Modifier
+                                ),
+                            colors = androidx.tv.material3.ButtonDefaults.colors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                else Color(0xFF2A2A2A),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = quality.label,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                    if (quality.isSelected) {
+                                        Text(
+                                            text = "✓ Active",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "${quality.width}×${quality.height} • ${quality.frameRate.toInt()}fps",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Close button
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(CenterHorizontally)
+                        .width(200.dp)
+                ) {
+                    Text("Cancel")
+                }
+
+                // Hint text
+                Text(
+                    text = "Use D-pad to navigate • OK to select • BACK to cancel",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.5f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+
+    // Handle back button
+    DisposableEffect(Unit) {
+        val callback = object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                onDismiss()
+            }
+        }
+        val activity = context as? androidx.activity.ComponentActivity
+        activity?.onBackPressedDispatcher?.addCallback(callback)
+
+        onDispose {
+            callback.remove()
+        }
+    }
+}
+
 enum class QuadrantPosition {
     TOP_LEFT,
     TOP_RIGHT,
@@ -1110,6 +1335,7 @@ private fun MetadataOverlay(
     onResume: (() -> Unit)? = null,
     onAudioTrack: (() -> Unit)? = null,
     onSubtitle: (() -> Unit)? = null,
+    onQuality: (() -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val position = when (playbackState) {
@@ -1218,6 +1444,10 @@ private fun MetadataOverlay(
 
                 Button(onClick = { onSubtitle?.invoke() }) {
                     Text("💬 Subtitle")
+                }
+
+                Button(onClick = { onQuality?.invoke() }) {
+                    Text("⚙️ Quality")
                 }
 
                 Button(onClick = onBack) {

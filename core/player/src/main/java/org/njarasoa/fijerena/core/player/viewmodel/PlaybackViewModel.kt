@@ -12,6 +12,7 @@ import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
+import org.njarasoa.fijerena.core.player.model.VideoQualityInfo
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
@@ -286,6 +287,77 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance()
             service?.disableSubtitles()
+        }
+    }
+
+    /**
+     * Get available video quality levels from the player.
+     * Returns a list sorted by resolution (highest first).
+     */
+    fun getVideoQualities(): List<VideoQualityInfo> {
+        val controller = _controller.value ?: return emptyList()
+        val tracks = controller.currentTracks
+        val qualities = mutableListOf<VideoQualityInfo>()
+
+        for (groupIndex in 0 until tracks.groups.size) {
+            val group = tracks.groups[groupIndex]
+            if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
+                for (trackIndex in 0 until group.length) {
+                    val format = group.getTrackFormat(trackIndex)
+                    val isSelected = group.isTrackSelected(trackIndex)
+
+                    val resolutionLabel = when {
+                        format.height >= 2160 -> "4K"
+                        format.height >= 1440 -> "1440p"
+                        format.height >= 1080 -> "1080p"
+                        format.height >= 720 -> "720p"
+                        format.height >= 480 -> "480p"
+                        else -> "${format.height}p"
+                    }
+
+                    val bitrateLabel = if (format.bitrate > 0) {
+                        String.format("%.1f Mbps", format.bitrate / 1_000_000f)
+                    } else {
+                        "Unknown"
+                    }
+
+                    qualities.add(
+                        VideoQualityInfo(
+                            groupIndex = groupIndex,
+                            trackIndex = trackIndex,
+                            width = format.width,
+                            height = format.height,
+                            bitrate = format.bitrate,
+                            frameRate = format.frameRate,
+                            label = "$resolutionLabel ($bitrateLabel)",
+                            isSelected = isSelected
+                        )
+                    )
+                }
+            }
+        }
+
+        // Sort by resolution (highest first)
+        return qualities.sortedByDescending { it.height }
+    }
+
+    /**
+     * Select a specific video quality.
+     */
+    fun selectVideoQuality(groupIndex: Int, trackIndex: Int) {
+        viewModelScope.launch {
+            val service = StreamingPlaybackService.getInstance()
+            service?.selectVideoQuality(groupIndex, trackIndex)
+        }
+    }
+
+    /**
+     * Enable automatic quality selection (adaptive bitrate).
+     */
+    fun enableAutoQuality() {
+        viewModelScope.launch {
+            val service = StreamingPlaybackService.getInstance()
+            service?.enableAutoQuality()
         }
     }
 

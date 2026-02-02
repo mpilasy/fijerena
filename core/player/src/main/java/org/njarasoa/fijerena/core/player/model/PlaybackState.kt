@@ -47,3 +47,14 @@ data class SubtitleTrackInfo(
     val mimeType: String, // e.g., "text/vtt", "application/x-subrip"
     val isSelected: Boolean
 )
+
+data class VideoQualityInfo(
+    val groupIndex: Int,
+    val trackIndex: Int,
+    val width: Int,
+    val height: Int,
+    val bitrate: Int,
+    val frameRate: Float,
+    val label: String, // e.g., "1080p (5.2 Mbps)"
+    val isSelected: Boolean
+)

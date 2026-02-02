@@ -180,6 +180,43 @@ class StreamingPlaybackService : MediaSessionService() {
         trackSelector.parameters = parameters
     }
 
+    fun selectVideoQuality(groupIndex: Int, trackIndex: Int) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+
+        val currentTracks = player.currentTracks
+        if (groupIndex < 0 || groupIndex >= currentTracks.groups.size) return
+
+        val trackGroup = currentTracks.groups[groupIndex]
+        if (trackIndex < 0 || trackIndex >= trackGroup.length) return
+
+        // Build track selection parameters to override the video quality
+        val trackSelectionOverride = androidx.media3.common.TrackSelectionOverride(
+            trackGroup.mediaTrackGroup,
+            listOf(trackIndex)
+        )
+
+        val parameters = trackSelector.parameters
+            .buildUpon()
+            .setOverrideForType(trackSelectionOverride)
+            .build()
+
+        trackSelector.parameters = parameters
+    }
+
+    fun enableAutoQuality() {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+
+        // Clear all video overrides to enable adaptive bitrate
+        val parameters = trackSelector.parameters
+            .buildUpon()
+            .clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO)
+            .build()
+
+        trackSelector.parameters = parameters
+    }
+
     fun getPlayer(): androidx.media3.common.Player? {
         return mediaSession?.player
     }
