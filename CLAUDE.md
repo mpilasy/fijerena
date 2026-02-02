@@ -172,7 +172,11 @@ A dynamically generated category that displays:
 - **Video:** Codec, resolution, frame rate, bitrate
 - **Audio:** Codec, sample rate, channels, bitrate
 - **Network:** Speed, buffer health, buffered position
-- **Playback:** Current position, duration, dropped frames
+- **Performance:** Dropped frames, drop rate (color-coded)
+  - Green (< 0.5%): Excellent
+  - Yellow (0.5-2%): Acceptable
+  - Red (> 2%): Poor
+- **Playback:** Current position, duration
 - **Stream:** Type (Live/VOD), URL preview
 - **Device:** Model, Android API level
 
@@ -182,12 +186,71 @@ A dynamically generated category that displays:
 - 3dp primary color border when focused
 - Repositionable with D-pad (4 corner positions)
 - Default position: bottom-right
+- Real-time performance monitoring
 - Double-tap OK to hide
+
+#### Subtitle/Caption Support
+**Feature:** Accessibility and multi-language subtitle selection.
+
+**Access:** Press OK → Navigate to "💬 Subtitle" button
+
+**Capabilities:**
+- Detect available subtitle tracks
+- "Off" option to disable all subtitles
+- Display language and format (SRT, VTT, CEA-608/708, TTML)
+- Instant subtitle switching
+- Visual indication of active subtitle
+
+**Supported Formats:**
+- SRT (SubRip)
+- VTT (WebVTT)
+- TTML (Timed Text Markup Language)
+- CEA-608/708 (Closed Captions)
+
+#### Quality/Bitrate Selection
+**Feature:** Manual video quality control for adaptive streams.
+
+**Access:** Press OK → Navigate to "⚙️ Quality" button
+
+**Capabilities:**
+- "Auto (Adaptive)" mode (recommended)
+- Manual quality selection (4K, 1440p, 1080p, 720p, 480p)
+- Display resolution, bitrate, frame rate
+- Instant quality switching
+- Visual indication of active quality
+
+**Use Cases:**
+- Bandwidth control
+- Data usage management
+- Device capability matching
+- Troubleshooting playback
+
+#### Control Discoverability Hints
+**Feature:** First-time user guidance overlay.
+
+**Behavior:**
+- Appears automatically on first playback
+- Lists all available controls with descriptions
+- Auto-dismisses after 7 seconds
+- "Got it!" to dismiss immediately
+- "Don't show again" to disable permanently
+
+**Controls Explained:**
+- OK Button → Show/hide controls
+- Double-tap OK → Toggle stats overlay
+- BACK Button → Exit player
+- D-pad Up/Down → Change channel (Live TV)
+- Pause/Resume → Control playback
+- Audio Button → Select audio track
+- Subtitle Button → Enable/disable subtitles
+- Quality Button → Select video quality
 
 #### Player Controls
 **Available Controls:**
 - **Pause/Resume:** Toggle playback
 - **Audio Track:** Open audio track selector
+- **Subtitle:** Enable/disable subtitles
+- **Quality:** Select video quality
 - **Back:** Exit to category grid
 - **D-pad Up/Down:** Previous/Next channel (Live TV only)
 - **Double-tap OK:** Toggle stats overlay

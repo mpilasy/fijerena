@@ -1,13 +1,13 @@
-# Release Notes - Phase 1 & 2 Player Enhancements
+# Release Notes - Complete Player Enhancement Suite
 
-## Version: Post-bb61f76 (Phase 1 & 2 Complete)
+## Version: Post-3f069ce (Phase 1, 2 & 3 Complete)
 **Release Date:** 2026-02-01
 
 ---
 
 ## 🎯 Overview
 
-This release focuses on fundamental player improvements and high-value features that significantly enhance the IPTV streaming experience. Key improvements include dramatic performance gains for Live TV, comprehensive audio/visual enhancements, and critical bug fixes.
+This comprehensive release delivers fundamental player improvements, high-value features, and nice-to-have enhancements that transform the IPTV streaming experience. Includes dramatic performance gains for Live TV, comprehensive audio/visual controls, accessibility features, and advanced performance monitoring.
 
 ---
 
@@ -228,6 +228,120 @@ data class AudioTrackInfo(
 )
 ```
 
+---
+
+## 🎁 Phase 3: Nice-to-Have Features
+
+### Subtitle/Caption Support
+**New Feature: Accessibility and multi-language subtitles**
+
+**Key Features:**
+- Detect available subtitle tracks from stream
+- "Off" option to disable all subtitles
+- D-pad navigable subtitle selector
+- Display language, label, and format (SRT, VTT, CEA-608/708)
+- Visual indication of active subtitle
+- Instant subtitle switching
+- Accessible via "💬 Subtitle" button
+
+**Use Cases:**
+- Accessibility for hearing-impaired users
+- Multi-language content support
+- Language learning (watch with subtitles)
+- Noisy environments (read dialogue)
+- IPTV streams with embedded captions
+
+**Supported Formats:**
+- SRT (SubRip)
+- VTT (WebVTT)
+- TTML (Timed Text Markup Language)
+- CEA-608/708 (Closed Captions)
+
+### Manual Quality/Bitrate Selection
+**New Feature: Video quality control for adaptive streams**
+
+**Key Features:**
+- "Auto (Adaptive)" mode for automatic quality selection
+- Manual quality options (4K, 1440p, 1080p, 720p, 480p)
+- Display resolution, bitrate, and frame rate
+- Sorted by resolution (highest first)
+- Visual indication of active quality
+- Instant quality switching
+- Accessible via "⚙️ Quality" button
+
+**Use Cases:**
+- Network bandwidth control
+- Data usage management
+- Device capability matching
+- Troubleshooting playback issues
+- Quality preference (smoothness vs clarity)
+
+**Quality Labels:**
+- 4K (2160p+) - Ultra HD
+- 1440p - Quad HD
+- 1080p - Full HD
+- 720p - HD
+- 480p - SD
+- Custom resolutions
+
+### Control Discoverability Hints
+**New Feature: First-time user guidance**
+
+**Key Features:**
+- Appears automatically on first playback
+- Lists all available player controls
+- "Got it!" button to dismiss
+- "Don't show again" option
+- Auto-dismisses after 7 seconds
+- Stored in SharedPreferences
+
+**Controls Explained:**
+- OK Button → Show/hide controls
+- Double-tap OK → Toggle stats overlay
+- BACK Button → Exit player
+- D-pad Up/Down → Change channel (Live TV)
+- Pause/Resume → Control playback
+- Audio Button → Select audio track
+- Subtitle Button → Enable/disable subtitles
+- Quality Button → Select video quality
+
+**User Experience:**
+- Non-intrusive appearance
+- Clear, concise descriptions
+- Easy to dismiss or disable permanently
+- Helpful for TV remote navigation beginners
+
+### Performance Monitoring Enhancement
+**Improved: Real-time performance analytics**
+
+**Key Features:**
+- Dropped frames tracking via AnalyticsListener
+- Total frames processed counter
+- Drop rate calculation (percentage)
+- Color-coded metrics for quick assessment:
+  - **Green** (< 0.5%): Excellent performance
+  - **Yellow** (0.5-2%): Acceptable
+  - **Red** (> 2%): Poor, needs troubleshooting
+
+**Displayed Metrics:**
+- Dropped: X / Y (dropped / total frames)
+- Drop Rate: N.NN% (color-coded)
+- Updated in real-time in stats overlay
+
+**Use Cases:**
+- Troubleshoot playback issues
+- Identify device performance limits
+- Monitor streaming quality
+- Debug codec compatibility
+- Verify hardware acceleration
+
+**Performance Impact:**
+- Minimal overhead (native ExoPlayer metrics)
+- No additional processing required
+- Automatic cleanup
+
+---
+
 ### Files Modified
 
 **Core Player Module:**
@@ -336,6 +450,18 @@ val metadata = PlayerMetadata(
 - ✅ Wake lock supports 2+ hour playback
 - ✅ Wake lock releases on pause
 
+**Phase 3:**
+- ✅ Subtitle tracks detected and switchable
+- ✅ Subtitle "Off" option works correctly
+- ✅ Quality selector shows available resolutions
+- ✅ Auto quality mode enables adaptive streaming
+- ✅ Control hints appear on first playback
+- ✅ "Don't show again" persists preference
+- ✅ Dropped frames tracked accurately
+- ✅ Performance metrics color-coded correctly
+- ✅ Wake lock supports 2+ hour playback
+- ✅ Wake lock releases on pause
+
 ### Device Compatibility
 
 **Tested Platforms:**
@@ -350,22 +476,27 @@ val metadata = PlayerMetadata(
 ## 📝 Known Limitations
 
 1. **Audio Track Selection**: Only available if stream provides multiple tracks
-2. **Channel Switching**: Requires streams in same category
-3. **Stats Overlay**: Some metrics require active playback
-4. **Wake Lock**: Screen wake lock handled by ExoPlayer's WAKE_MODE_NETWORK
+2. **Subtitle Support**: Only available if stream provides subtitle tracks
+3. **Quality Selection**: Only available for adaptive streams (HLS/DASH)
+4. **Channel Switching**: Requires streams in same category
+5. **Stats Overlay**: Some metrics require active playback
+6. **Wake Lock**: Screen wake lock handled by ExoPlayer's WAKE_MODE_NETWORK
+7. **Control Hints**: One-time display per device (stored in SharedPreferences)
 
 ---
 
-## 🔮 Future Enhancements (Phase 3+)
+## 🔮 Future Enhancements (Phase 4+)
 
 ### Planned Features:
-- **Subtitle/Caption Support** - Multiple subtitle tracks
-- **Manual Quality Selection** - Choose bitrate/resolution
-- **Playback Speed Control** - For VOD content
-- **Picture-in-Picture** - Mobile only
-- **Audio Track Persistence** - Remember preferred language
-- **Keyboard Shortcuts** - Fast forward, rewind
-- **Network Statistics** - Detailed throughput monitoring
+- **Playback Speed Control** - Variable speed for VOD content (0.5x, 1.25x, 1.5x, 2x)
+- **Picture-in-Picture** - Mobile only, watch while using other apps
+- **Audio Track Persistence** - Remember preferred language per stream
+- **Subtitle Persistence** - Remember subtitle preferences
+- **Keyboard Shortcuts** - Fast forward, rewind for Android TV keyboards
+- **Network Throughput Graph** - Visual bandwidth monitoring
+- **A/V Sync Adjustment** - Manual audio/video synchronization
+- **Bookmarks/Resume** - Remember playback position for VOD
+- **Screenshot Capture** - Save current frame as image
 
 ---
 
