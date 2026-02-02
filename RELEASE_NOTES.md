@@ -1,13 +1,13 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Version: Post-3f069ce (Phase 1, 2 & 3 Complete)
-**Release Date:** 2026-02-01
+## Version: Post-Phase 4 (All Phases Complete + UX Improvements)
+**Release Date:** 2026-02-02
 
 ---
 
 ## 🎯 Overview
 
-This comprehensive release delivers fundamental player improvements, high-value features, and nice-to-have enhancements that transform the IPTV streaming experience. Includes dramatic performance gains for Live TV, comprehensive audio/visual controls, accessibility features, and advanced performance monitoring.
+This comprehensive release delivers fundamental player improvements, high-value features, nice-to-have enhancements, and critical UX improvements that transform the IPTV streaming experience. Includes dramatic performance gains for Live TV, comprehensive audio/visual controls, accessibility features, advanced performance monitoring, and streamlined navigation with removed login screen.
 
 ---
 
@@ -485,7 +485,76 @@ val metadata = PlayerMetadata(
 
 ---
 
-## 🔮 Future Enhancements (Phase 4+)
+## 🎨 Phase 4: UX & Navigation Improvements
+
+### Streamlined Authentication Flow
+**Impact: Eliminated login screen flash, simplified first-time setup**
+
+**Key Changes:**
+- **Removed Login Screen Completely**
+  - No more login page flashing on app startup
+  - Direct navigation to Settings if no provider configured
+  - Direct navigation to ContentTypeSelection if provider exists
+
+- **Auto-Session Restore**
+  - Automatically restores session from stored credentials on startup
+  - Seamless experience for returning users
+  - Silently handles authentication in background
+
+- **Settings as Entry Point**
+  - Settings screen now serves as configuration hub
+  - Users enter provider URL and credentials directly in Settings
+  - Automatic authentication after provider configuration
+  - Logout clears session but stays on Settings screen
+
+**User Flow:**
+- **First Launch**: App → Settings → Enter provider → Auto-authenticate → ContentTypeSelection
+- **Subsequent Launches**: App → Auto-restore session → ContentTypeSelection
+- **No More Login Screen**: Completely removed from navigation flow
+
+### VOD Channel Switching Disabled
+**Impact: Prevents accidental stream switching during movie/TV show playback**
+
+**Key Features:**
+- **Live TV Only**: D-pad up/down channel switching only works for Live TV
+- **VOD Protection**: D-pad up/down does nothing during Movies/TV Shows playback
+- **Content-Type Aware**: Automatically detects content type (Live TV vs VOD)
+- **Intentional Design**: VOD playback requires explicit stream selection
+
+**Technical Details:**
+- Checks `currentMetadata.isLive` before allowing channel switching
+- PlayerScreen.kt lines 173-196 updated with content type check
+- Prevents accidental exits from movies/episodes
+
+### Stats Overlay Improvements
+**Impact: Non-intrusive developer metrics on category screens**
+
+**Key Features:**
+- **Non-Focusable on Category Screens**: Stats overlay cannot receive focus or be navigated to
+- **Interactive on Player Screen**: Full D-pad movement and focus management during playback
+- **Separate Implementations**:
+  - **Category Screens**: Plain Box, no onClick, completely non-interactive
+  - **Player Screens**: Surface with onClick, focusable, movable with D-pad
+- **Visual Distinction**: Gray border on category screens, green border when focused on player
+
+**Technical Details:**
+- `StatsOverlay` component now has `interactive` parameter
+- Uses `Box` instead of `Surface` when `interactive = false`
+- CategoryGridScreen passes `interactive = false`
+- PlayerScreen uses default `interactive = true`
+
+### Files Modified
+
+**Phase 4 Changes:**
+- `TvNavHost.kt` - Removed Login screen, added auto-session restore
+- `AuthViewModel.kt` - Kept minimal, session management only
+- `PlayerScreen.kt` - Added content type check for channel switching
+- `StatsOverlay.kt` - Added interactive parameter, dual implementation
+- `CategoryGridScreen.kt` - Pass interactive = false to stats overlay
+
+---
+
+## 🔮 Future Enhancements (Phase 5+)
 
 ### Planned Features:
 - **Playback Speed Control** - Variable speed for VOD content (0.5x, 1.25x, 1.5x, 2x)

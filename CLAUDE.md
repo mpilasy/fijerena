@@ -109,16 +109,21 @@ viewModel.selectAudioTrack(groupIndex, trackIndex)
 ## 📱 App Navigation & Features
 
 ### Navigation Flow
-The app follows this primary navigation structure:
-1. **Login Screen** - User authentication
+The app follows this streamlined navigation structure:
+1. **App Startup:**
+   - **No Provider Configured:** Opens directly to Settings screen
+   - **Provider Configured:** Auto-restores session → Content Type Selection
 2. **Content Type Selection** (main landing page) - Choose Live TV, Movies, or TV Shows
 3. **Category Grid** - Browse categories and streams/episodes
 4. **Player Screen** - Video playback
-5. **Settings** - Accessible only from Content Type Selection via gear icon
+5. **Settings** - Accessible from Content Type Selection via gear icon
+
+**Note:** The login screen has been removed. Authentication happens automatically on startup or after configuring provider URL in Settings.
 
 ### Settings Screen
 Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
-- **Provider URL Management:** Change the Xtream provider URL without re-entering credentials
+- **Provider URL Management:** Enter or change the Xtream provider URL with automatic authentication
+- **Credentials Entry:** Username and password stored securely (encrypted SharedPreferences)
 - **Last Watched Queue Size:** Configure the number of items to keep in the "Last Watched" virtual category (range: 1-100, default: 25)
 - **Developer Mode:** Enable debug features including:
   - Stats for nerds (payload size tracking for API responses)
@@ -162,6 +167,8 @@ A dynamically generated category that displays:
 - Smooth slide-in/fade animations
 - Doesn't obstruct video content
 - Triggered automatically on D-pad up/down during Live TV
+
+**Important:** Channel switching (D-pad up/down) only works for **Live TV content**. For VOD (Movies/TV Shows), D-pad up/down does nothing to prevent accidental stream switching during playback. This is intentional design to protect the viewing experience.
 
 #### Stats Overlay ("Stats for Nerds")
 **Advanced Metrics:** Comprehensive playback statistics for power users.

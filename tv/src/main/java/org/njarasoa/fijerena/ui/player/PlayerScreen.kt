@@ -171,27 +171,27 @@ fun PlayerScreen(
                             true
                         }
                         Key.DirectionUp -> {
-                            // Only change channel if stats are not visible
-                            if (!showStats) {
+                            // Only change channel if stats are not visible AND content is Live TV
+                            if (!showStats && currentMetadata.isLive) {
                                 println("PlayerScreen: UP button pressed")
                                 onPreviousChannel()
                                 showControls = true
                                 println("PlayerScreen: showControls set to true, metadata title=${currentMetadata.title}")
                                 true
                             } else {
-                                false // Let stats overlay handle it
+                                false // Let stats overlay handle it or ignore for VOD
                             }
                         }
                         Key.DirectionDown -> {
-                            // Only change channel if stats are not visible
-                            if (!showStats) {
+                            // Only change channel if stats are not visible AND content is Live TV
+                            if (!showStats && currentMetadata.isLive) {
                                 println("PlayerScreen: DOWN button pressed")
                                 onNextChannel()
                                 showControls = true
                                 println("PlayerScreen: showControls set to true, metadata title=${currentMetadata.title}")
                                 true
                             } else {
-                                false // Let stats overlay handle it
+                                false // Let stats overlay handle it or ignore for VOD
                             }
                         }
                         Key.DirectionLeft, Key.DirectionRight -> {

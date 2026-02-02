@@ -37,12 +37,14 @@ enum class QuadrantPosition {
  * @param visible Whether the overlay is visible
  * @param stats Map of stat labels to values
  * @param modifier Modifier for the overlay
+ * @param interactive Whether the overlay can be focused and moved (default true for player, false for other screens)
  */
 @Composable
 fun StatsOverlay(
     visible: Boolean,
     stats: Map<String, String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    interactive: Boolean = true
 ) {
     if (!visible || stats.isEmpty()) return
 
@@ -58,111 +60,163 @@ fun StatsOverlay(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        Surface(
-            modifier = Modifier
-                .width(overlayWidth)
-                .height(overlayHeight)
-                .align(getAlignment(position))
-                .focusRequester(focusRequester)
-                .onFocusChanged { isFocused = it.isFocused }
-                .onKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown) {
-                        when (keyEvent.key) {
-                            Key.DirectionUp -> {
-                                position = when (position) {
-                                    QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.TOP_LEFT
-                                    QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.TOP_RIGHT
-                                    else -> position
-                                }
-                                true
-                            }
-                            Key.DirectionDown -> {
-                                position = when (position) {
-                                    QuadrantPosition.TOP_LEFT -> QuadrantPosition.BOTTOM_LEFT
-                                    QuadrantPosition.TOP_RIGHT -> QuadrantPosition.BOTTOM_RIGHT
-                                    else -> position
-                                }
-                                true
-                            }
-                            Key.DirectionLeft -> {
-                                position = when (position) {
-                                    QuadrantPosition.TOP_RIGHT -> QuadrantPosition.TOP_LEFT
-                                    QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.BOTTOM_LEFT
-                                    else -> position
-                                }
-                                true
-                            }
-                            Key.DirectionRight -> {
-                                position = when (position) {
-                                    QuadrantPosition.TOP_LEFT -> QuadrantPosition.TOP_RIGHT
-                                    QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.BOTTOM_RIGHT
-                                    else -> position
-                                }
-                                true
-                            }
-                            else -> false
-                        }
-                    } else {
-                        false
-                    }
-                }
-                .border(
-                    width = if (isFocused) 3.dp else 2.dp,
-                    color = if (isFocused) Color(0xFF00FF00) else Color(0xFF666666),
-                    shape = MaterialTheme.shapes.medium
-                )
-                .background(
-                    color = Color.Black.copy(alpha = 0.85f),
-                    shape = MaterialTheme.shapes.medium
-                ),
-            onClick = { /* Click to focus */ }
-        ) {
-            Column(
+        // Use Surface for interactive overlay, Box for non-interactive
+        if (interactive) {
+            Surface(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    .width(overlayWidth)
+                    .height(overlayHeight)
+                    .align(getAlignment(position))
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { isFocused = it.isFocused }
+                    .onKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown) {
+                            when (keyEvent.key) {
+                                Key.DirectionUp -> {
+                                    position = when (position) {
+                                        QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.TOP_LEFT
+                                        QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.TOP_RIGHT
+                                        else -> position
+                                    }
+                                    true
+                                }
+                                Key.DirectionDown -> {
+                                    position = when (position) {
+                                        QuadrantPosition.TOP_LEFT -> QuadrantPosition.BOTTOM_LEFT
+                                        QuadrantPosition.TOP_RIGHT -> QuadrantPosition.BOTTOM_RIGHT
+                                        else -> position
+                                    }
+                                    true
+                                }
+                                Key.DirectionLeft -> {
+                                    position = when (position) {
+                                        QuadrantPosition.TOP_RIGHT -> QuadrantPosition.TOP_LEFT
+                                        QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.BOTTOM_LEFT
+                                        else -> position
+                                    }
+                                    true
+                                }
+                                Key.DirectionRight -> {
+                                    position = when (position) {
+                                        QuadrantPosition.TOP_LEFT -> QuadrantPosition.TOP_RIGHT
+                                        QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.BOTTOM_RIGHT
+                                        else -> position
+                                    }
+                                    true
+                                }
+                                else -> false
+                            }
+                        } else {
+                            false
+                        }
+                    }
+                    .border(
+                        width = if (isFocused) 3.dp else 1.dp,
+                        color = if (isFocused) Color(0xFF00FF00) else Color(0xFF444444),
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    .background(
+                        color = Color.Black.copy(alpha = 0.85f),
+                        shape = MaterialTheme.shapes.medium
+                    ),
+                onClick = { /* Click to focus */ }
             ) {
-                Text(
-                    text = "Stats for Nerds",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color(0xFF00FF00)
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Stats for Nerds",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color(0xFF00FF00)
+                    )
 
-                stats.forEach { (label, value) ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    stats.forEach { (label, value) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "$label:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = value,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    if (isFocused) {
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "$label:",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = value,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                            text = "Use D-pad to move",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF00FF00).copy(alpha = 0.7f)
                         )
                     }
                 }
-
-                if (isFocused) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Use D-pad to move",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF00FF00).copy(alpha = 0.7f)
+            }
+        } else {
+            // Non-interactive: plain Box, not focusable
+            Box(
+                modifier = Modifier
+                    .width(overlayWidth)
+                    .height(overlayHeight)
+                    .align(getAlignment(position))
+                    .border(
+                        width = 1.dp,
+                        color = Color(0xFF444444),
+                        shape = MaterialTheme.shapes.medium
                     )
+                    .background(
+                        color = Color.Black.copy(alpha = 0.85f),
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    .padding(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Stats for Nerds",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color(0xFF00FF00)
+                    )
+
+                    stats.forEach { (label, value) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "$label:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = value,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 
-    // Auto-request focus when overlay becomes visible
-    LaunchedEffect(visible) {
-        if (visible) {
-            focusRequester.requestFocus()
+    // Auto-request focus when overlay becomes visible (only if interactive)
+    if (interactive) {
+        LaunchedEffect(visible) {
+            if (visible) {
+                focusRequester.requestFocus()
+            }
         }
     }
 }

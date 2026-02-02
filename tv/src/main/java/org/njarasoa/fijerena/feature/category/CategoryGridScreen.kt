@@ -137,7 +137,8 @@ fun CategoryGridScreen(
 
                 StatsOverlay(
                     visible = isDevMode,
-                    stats = stats
+                    stats = stats,
+                    interactive = false  // Non-interactive on category screen
                 )
             }
             else -> { /* No stats in loading/error states */ }

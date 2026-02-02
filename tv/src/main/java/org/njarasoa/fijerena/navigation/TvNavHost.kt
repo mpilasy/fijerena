@@ -6,6 +6,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -16,15 +17,16 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.feature.category.CategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
-import org.njarasoa.fijerena.feature.login.LoginScreenTv
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
@@ -56,19 +58,37 @@ fun TvNavHost(
     authViewModel: AuthViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val accountManager = remember { AccountManager(context.applicationContext) }
     val repository = remember {
-        val accountManager = AccountManager(context.applicationContext)
         XtreamRepository(accountManager, context.applicationContext)
     }
+    val coroutineScope = rememberCoroutineScope()
 
-    // Check authentication status on startup
+    // Check if provider is configured on startup
+    val hasProvider = remember { accountManager.hasStoredCredentials() }
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
-    // Determine initial destination based on auth status
-    val startDestination = if (isAuthenticated != null && authViewModel.isAuthenticated()) {
+    // Determine initial destination based on provider configuration
+    val startDestination = if (hasProvider) {
         Screen.ContentTypeSelection
     } else {
-        Screen.Login
+        Screen.Settings
+    }
+
+    // Auto-restore session if credentials are stored but not authenticated
+    LaunchedEffect(hasProvider, isAuthenticated) {
+        if (hasProvider && isAuthenticated == null) {
+            // Try to restore session from stored credentials
+            when (val result = repository.restoreSession()) {
+                is Result.Success -> {
+                    val url = repository.getCurrentUrl() ?: ""
+                    authViewModel.setAuthSession(result.data, url)
+                }
+                is Result.Error -> {
+                    // Silently fail - user will stay on Settings screen
+                }
+            }
+        }
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -76,18 +96,6 @@ fun TvNavHost(
             navController = navController,
             startDestination = startDestination
         ) {
-            // Login Screen
-            composable<Screen.Login> {
-                LoginScreenTv(
-                    authViewModel = authViewModel,
-                    onLoginSuccess = {
-                        navController.navigate(Screen.CategoryList("LIVE_TV")) {
-                            popUpTo(Screen.Login) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
             // Content Type Selection Screen
             composable<Screen.ContentTypeSelection> {
                 ContentTypeSelectionScreen(
@@ -279,16 +287,26 @@ fun TvNavHost(
                         navController.navigateUp()
                     },
                     onProviderChanged = {
-                        // Clear navigation stack and go back to login
-                        navController.navigate(Screen.Login) {
-                            popUpTo(Screen.Login) { inclusive = true }
+                        // Provider changed, try to re-authenticate and go to content selection
+                        coroutineScope.launch {
+                            when (val result = repository.restoreSession()) {
+                                is Result.Success -> {
+                                    val url = repository.getCurrentUrl() ?: ""
+                                    authViewModel.setAuthSession(result.data, url)
+                                    navController.navigate(Screen.ContentTypeSelection) {
+                                        popUpTo(Screen.Settings) { inclusive = false }
+                                    }
+                                }
+                                is Result.Error -> {
+                                    // Stay on settings if restore failed
+                                }
+                            }
                         }
                     },
                     onLogout = {
+                        // Clear auth session and stay on settings
                         authViewModel.clearAuthSession()
-                        navController.navigate(Screen.Login) {
-                            popUpTo(Screen.Login) { inclusive = true }
-                        }
+                        // Don't navigate anywhere, stay on settings screen
                     }
                 )
             }
