@@ -31,6 +31,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
+    private var isInErrorState = false
+
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             updatePlaybackState()
@@ -45,6 +47,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            // Set error flag to prevent state from being overwritten
+            isInErrorState = true
             // Error handling is done in the service, but we also update state here
             // to ensure the error is displayed even if service flow isn't collected yet
             val errorMessage = when (error.errorCode) {
@@ -66,6 +70,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
 
         private fun updatePlaybackState() {
+            // Don't overwrite error state
+            if (isInErrorState) return
+
             val controller = _controller.value ?: return
             val state = when (controller.playbackState) {
                 Player.STATE_IDLE -> PlaybackState.Idle
@@ -142,6 +149,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun playStream(metadata: PlayerMetadata) {
+        // Reset error state on new stream
+        isInErrorState = false
         _currentMetadata.value = metadata
         _playbackState.value = PlaybackState.Buffering
 
@@ -167,6 +176,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun stop() {
+        // Reset error state when user goes back
+        isInErrorState = false
         viewModelScope.launch {
             StreamingPlaybackService.getInstance()?.stop()
         }

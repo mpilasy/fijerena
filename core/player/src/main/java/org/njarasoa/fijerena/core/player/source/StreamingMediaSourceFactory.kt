@@ -22,6 +22,7 @@ object StreamingMediaSourceFactory {
             .setConnectTimeoutMs(30000)
             .setReadTimeoutMs(60000)
             .setAllowCrossProtocolRedirects(true)
+            .setDefaultRequestProperties(headers)
 
         return when {
             streamUrl.endsWith(".m3u8", ignoreCase = true) -> {

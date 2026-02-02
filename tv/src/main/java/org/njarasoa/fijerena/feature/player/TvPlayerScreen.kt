@@ -29,8 +29,10 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 
@@ -70,6 +72,17 @@ fun TvPlayerScreen(
     var currentStreamIndex by remember { mutableIntStateOf(0) }
     var currentStreamId by remember { mutableIntStateOf(streamId) }
     var currentStreamName by remember { mutableStateOf(streamName) }
+
+    // Configure player buffer profile based on content type
+    LaunchedEffect(contentType) {
+        val playerContentType = when (contentType) {
+            "LIVE_TV" -> PlayerConfigFactory.ContentType.LIVE_TV
+            "MOVIES", "TV_SHOWS" -> PlayerConfigFactory.ContentType.VOD
+            else -> PlayerConfigFactory.ContentType.VOD
+        }
+        println("TvPlayerScreen: Configuring player for $playerContentType")
+        StreamingPlaybackService.getInstance()?.setContentType(playerContentType)
+    }
 
     // Load stream list for channel switching
     LaunchedEffect(categoryId) {

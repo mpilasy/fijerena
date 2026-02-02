@@ -38,9 +38,9 @@ class StreamingPlaybackService : MediaSessionService() {
         acquireWakeLock()
     }
 
-    private fun initializePlayer() {
+    private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {
         val player = androidx.media3.exoplayer.ExoPlayer.Builder(this)
-            .setLoadControl(PlayerConfigFactory.createLoadControl())
+            .setLoadControl(PlayerConfigFactory.createLoadControl(contentType))
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -66,8 +66,21 @@ class StreamingPlaybackService : MediaSessionService() {
         player.addListener(playerListener!!)
     }
 
+    fun setContentType(contentType: PlayerConfigFactory.ContentType) {
+        // Release old player and create new one with different LoadControl
+        mediaSession?.run {
+            player.removeListener(playerListener!!)
+            player.release()
+            release()
+        }
+        mediaSession = null
+        initializePlayer(contentType)
+    }
+
     fun playStream(metadata: PlayerMetadata) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        // Reset error state on new stream
+        playerListener?.resetErrorState()
         _currentMetadata.value = metadata
 
         // Use StreamingMediaSourceFactory for proper HLS/DASH/MPEG-TS detection
@@ -148,6 +161,11 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onWakeLockRequired: () -> Unit,
         private val player: Player
     ) : Player.Listener {
+        private var isInErrorState = false
+
+        fun resetErrorState() {
+            isInErrorState = false
+        }
         override fun onPlaybackStateChanged(playbackState: Int) {
             updatePlaybackState()
         }
@@ -168,6 +186,7 @@ class StreamingPlaybackService : MediaSessionService() {
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            isInErrorState = true
             val errorMessage = parsePlaybackError(error)
             onStateChanged(PlaybackState.Error(errorMessage, error))
         }
@@ -218,6 +237,9 @@ class StreamingPlaybackService : MediaSessionService() {
         }
 
         private fun updatePlaybackState() {
+            // Don't overwrite error state
+            if (isInErrorState) return
+
             val state = when (player.playbackState) {
                 Player.STATE_IDLE -> PlaybackState.Idle
                 Player.STATE_BUFFERING -> PlaybackState.Buffering
