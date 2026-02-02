@@ -551,7 +551,7 @@ private fun StatsOverlay(
     val player = StreamingPlaybackService.getInstance()?.getPlayer()
     val configuration = LocalConfiguration.current
 
-    var quadrantPosition by remember { mutableStateOf(QuadrantPosition.TOP_RIGHT) }
+    var quadrantPosition by remember { mutableStateOf(QuadrantPosition.BOTTOM_RIGHT) }
     var isFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     var lastClickTime by remember { mutableStateOf(0L) }
@@ -645,7 +645,14 @@ private fun StatsOverlay(
                 .width(overlayWidth)
                 .height(overlayHeight)
                 .align(getQuadrantAlignment(quadrantPosition))
-                .background(Color.Black.copy(alpha = 0.15f), shape = RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = 0.75f), shape = RoundedCornerShape(12.dp))
+                .then(
+                    if (isFocused) Modifier.border(
+                        3.dp,
+                        MaterialTheme.colorScheme.primary,
+                        RoundedCornerShape(12.dp)
+                    ) else Modifier
+                )
                 .focusRequester(focusRequester)
                 .onFocusChanged { isFocused = it.isFocused }
                 .focusable()
@@ -706,18 +713,18 @@ private fun StatsOverlay(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
+                    .padding(20.dp)
             ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Header
                 Text(
-                    text = "📊 Stats",
-                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
+                    text = "📊 Stats for Nerds",
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
@@ -795,8 +802,9 @@ private fun StatsOverlay(
                 if (isFocused) {
                     Text(
                         text = "D-pad to move • Double-tap center to hide",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -834,19 +842,19 @@ private fun StatRow(label: String, value: String) {
 private fun CompactStatRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-            color = Color.White.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            color = Color.White.copy(alpha = 0.7f),
             modifier = Modifier.weight(1f, fill = false)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
             color = Color.White,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -855,10 +863,10 @@ private fun CompactStatRow(label: String, value: String) {
 private fun SectionHeader(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+        color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 4.dp)
+        modifier = Modifier.padding(top = 6.dp)
     )
 }
 
