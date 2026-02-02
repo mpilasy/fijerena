@@ -17,6 +17,7 @@ class AppSettings(context: Context) {
         private const val KEY_WATCH_HISTORY_SIZE = "watch_history_size"
         private const val KEY_PROVIDER_NAME = "provider_name"
         private const val KEY_FAVORITES_MAX_SIZE = "favorites_max_size"
+        private const val KEY_AUTO_RESUME = "auto_resume_enabled"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
     }
@@ -54,4 +55,11 @@ class AppSettings(context: Context) {
             val clampedValue = value.coerceIn(10, 500)
             prefs.edit().putInt(KEY_FAVORITES_MAX_SIZE, clampedValue).apply()
         }
+
+    /**
+     * Get or set auto-resume playback setting.
+     */
+    var autoResumeEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_RESUME, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_RESUME, value).apply()
 }

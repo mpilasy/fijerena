@@ -29,6 +29,7 @@ class CategoryViewModel(
 ) : ViewModel() {
 
     companion object {
+        const val CONTINUE_WATCHING_CATEGORY_ID = "continue_watching"
         const val FAVORITES_CATEGORY_ID = "favorites"
         const val LAST_WATCHED_CATEGORY_ID = "last_watched"
     }
@@ -129,13 +130,30 @@ class CategoryViewModel(
 
             when (result) {
                 is Result.Success -> {
-                    // Add "Last Watched" virtual category at the top
-                    val lastWatchedCategory = XtreamCategory(
+                    // Add virtual categories (only Continue Watching for VOD content types)
+                    val virtualCategories = mutableListOf<XtreamCategory>()
+
+                    if (contentType != "LIVE_TV") {
+                        virtualCategories.add(XtreamCategory(
+                            categoryId = CONTINUE_WATCHING_CATEGORY_ID,
+                            categoryName = "Continue Watching",
+                            parentId = 0
+                        ))
+                    }
+
+                    virtualCategories.add(XtreamCategory(
+                        categoryId = FAVORITES_CATEGORY_ID,
+                        categoryName = "Favorites",
+                        parentId = 0
+                    ))
+
+                    virtualCategories.add(XtreamCategory(
                         categoryId = LAST_WATCHED_CATEGORY_ID,
                         categoryName = "Last Watched",
                         parentId = 0
-                    )
-                    categories = listOf(lastWatchedCategory) + result.data
+                    ))
+
+                    categories = virtualCategories + result.data
 
                     val lastStreamId = repository.getLastStreamId(contentType)
                     _uiState.value = UiState.Success(
@@ -186,6 +204,38 @@ class CategoryViewModel(
                 categoriesPayloadSize = getCategoriesPayloadSize(),
                 streamsPayloadSize = null
             )
+
+            // Handle "Continue Watching" virtual category
+            if (categoryId == CONTINUE_WATCHING_CATEGORY_ID) {
+                val inProgress = repository.getInProgressStreams(contentType)
+                currentStreams = inProgress.map { watched ->
+                    XtreamStream(
+                        num = 0,
+                        name = watched.streamName,
+                        streamType = contentType.lowercase(),
+                        streamId = watched.streamId,
+                        streamIcon = null,
+                        epgChannelId = null,
+                        added = null,
+                        categoryId = watched.categoryId,
+                        customSid = null,
+                        tvArchive = 0,
+                        directSource = null,
+                        tvArchiveDuration = 0
+                    )
+                }
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedStreamId = lastStreamId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null
+                )
+                return@launch
+            }
 
             // Handle "Last Watched" virtual category
             if (categoryId == LAST_WATCHED_CATEGORY_ID) {
@@ -343,6 +393,38 @@ class CategoryViewModel(
 
             // Clear cache
             repository.clearStreamsCache(categoryId)
+
+            // Handle "Continue Watching" virtual category
+            if (categoryId == CONTINUE_WATCHING_CATEGORY_ID) {
+                val inProgress = repository.getInProgressStreams(contentType)
+                currentStreams = inProgress.map { watched ->
+                    XtreamStream(
+                        num = 0,
+                        name = watched.streamName,
+                        streamType = contentType.lowercase(),
+                        streamId = watched.streamId,
+                        streamIcon = null,
+                        epgChannelId = null,
+                        added = null,
+                        categoryId = watched.categoryId,
+                        customSid = null,
+                        tvArchive = 0,
+                        directSource = null,
+                        tvArchiveDuration = 0
+                    )
+                }
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedStreamId = lastStreamId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null
+                )
+                return@launch
+            }
 
             // Handle "Favorites" virtual category
             if (categoryId == FAVORITES_CATEGORY_ID) {

@@ -63,6 +63,7 @@ fun TvPlayerScreen(
         val accountManager = AccountManager(context.applicationContext)
         XtreamRepository(accountManager, context.applicationContext)
     }
+    val appSettings = remember { repository.getAppSettings() }
 
     var streamUrl by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -87,6 +88,20 @@ fun TvPlayerScreen(
         }
         println("TvPlayerScreen: Configuring player for $playerContentType")
         StreamingPlaybackService.getInstance()?.setContentType(playerContentType)
+    }
+
+    // Set up auto-save listener for playback position
+    LaunchedEffect(streamId, streamName, categoryId, contentType) {
+        StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration ->
+            repository.savePlaybackPosition(
+                streamId = currentStreamId,
+                streamName = currentStreamName,
+                categoryId = categoryId,
+                contentType = contentType,
+                position = position,
+                duration = duration
+            )
+        }
     }
 
     // Load stream list for channel switching
@@ -195,6 +210,13 @@ fun TvPlayerScreen(
         }
     }
 
+    // Fetch saved position if VOD content
+    val savedPosition = remember(currentStreamId, contentType) {
+        if (contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
+            repository.getPlaybackPosition(currentStreamId, contentType)
+        } else null
+    }
+
     // Start playback when URL is ready
     LaunchedEffect(streamUrl) {
         streamUrl?.let { url ->
@@ -207,6 +229,22 @@ fun TvPlayerScreen(
             println("TvPlayerScreen: Playing stream")
             println("TvPlayerScreen: Stream URL: $url")
 
+            // Determine resume position
+            val resumePosition = savedPosition?.let { saved ->
+                val progressPercent = if (saved.duration > 0) {
+                    (saved.playbackPosition.toFloat() / saved.duration.toFloat()) * 100f
+                } else 0f
+
+                // Only resume if 2-95% watched
+                if (progressPercent in 2.0..95.0 && !saved.isCompleted) {
+                    println("TvPlayerScreen: Resuming playback from ${saved.playbackPosition}ms (${progressPercent.toInt()}%)")
+                    saved.playbackPosition
+                } else {
+                    println("TvPlayerScreen: Starting from beginning (progress: ${progressPercent.toInt()}%, completed: ${saved.isCompleted})")
+                    0L
+                }
+            } ?: 0L
+
             val metadata = PlayerMetadata(
                 title = currentStreamName,
                 channelName = "IPTV.atr",
@@ -214,7 +252,7 @@ fun TvPlayerScreen(
                 isLive = contentType == "LIVE_TV", // Only live TV is live, movies/shows are VOD
                 headers = emptyMap()
             )
-            viewModel.playStream(metadata)
+            viewModel.playStream(metadata, resumePosition)
         }
     }
 

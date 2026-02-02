@@ -151,7 +151,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun playStream(metadata: PlayerMetadata) {
+    fun playStream(metadata: PlayerMetadata, resumeFromPosition: Long = 0L) {
         // Reset error state on new stream
         isInErrorState = false
         _currentMetadata.value = metadata
@@ -162,6 +162,12 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             if (service != null) {
                 // Use service's playStream method which uses StreamingMediaSourceFactory
                 service.playStream(metadata)
+
+                // Seek to resume position after playback starts
+                if (resumeFromPosition > 0L) {
+                    kotlinx.coroutines.delay(500) // Small delay to ensure player is ready
+                    seekTo(resumeFromPosition)
+                }
             }
         }
     }

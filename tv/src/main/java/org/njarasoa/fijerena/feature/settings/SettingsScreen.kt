@@ -95,6 +95,8 @@ fun SettingsScreen(
     var isEditingQueueSize by remember { mutableStateOf(false) }
     var isEditingFavoritesSize by remember { mutableStateOf(false) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
+    var autoResumeEnabled by remember { mutableStateOf(appSettings.autoResumeEnabled) }
+    var showClearProgressDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -391,6 +393,70 @@ fun SettingsScreen(
                 }
             }
 
+            // Auto-Resume Setting
+            item {
+                Column {
+                    Text(
+                        text = "Auto-Resume Playback",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Automatically resume VOD content from where you left off",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Switch(
+                            checked = autoResumeEnabled,
+                            onCheckedChange = { enabled ->
+                                autoResumeEnabled = enabled
+                                appSettings.autoResumeEnabled = enabled
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = if (autoResumeEnabled) "Enabled" else "Disabled",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (autoResumeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            // Clear All Progress Button
+            item {
+                Column {
+                    Text(
+                        text = "Clear All Playback Progress",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Remove all saved playback positions (Continue Watching will be empty)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = { showClearProgressDialog = true },
+                        colors = ButtonDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        )
+                    ) {
+                        Text("Clear All Progress")
+                    }
+                }
+            }
+
             // Developer Mode Setting
             item {
                 Column {
@@ -633,6 +699,52 @@ fun SettingsScreen(
             dismissButton = {
                 Button(
                     onClick = { showClearFavoritesDialog = false },
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        )
+    }
+
+    // Clear Progress Confirmation Dialog
+    if (showClearProgressDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearProgressDialog = false },
+            title = {
+                Text(
+                    "Clear All Playback Progress?",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    "This will remove all saved playback positions. You will start from the beginning when playing any VOD content.",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        repository.clearWatchHistory()
+                        showClearProgressDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Clear All")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showClearProgressDialog = false },
                     colors = ButtonDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant

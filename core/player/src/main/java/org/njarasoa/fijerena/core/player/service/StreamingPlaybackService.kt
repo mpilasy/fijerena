@@ -38,6 +38,8 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _totalFrames = MutableStateFlow(0L)
     val totalFrames: StateFlow<Long> = _totalFrames.asStateFlow()
 
+    private var onPositionSaveListener: ((Long, Long) -> Unit)? = null
+
 
     override fun onCreate() {
         super.onCreate()
@@ -69,7 +71,10 @@ class StreamingPlaybackService : MediaSessionService() {
             onWakeLockRequired = {
                 acquireWakeLock()
             },
-            player = player
+            player = player,
+            onPositionSave = { position, duration ->
+                onPositionSaveListener?.invoke(position, duration)
+            }
         )
         player.addListener(playerListener!!)
 
@@ -92,6 +97,10 @@ class StreamingPlaybackService : MediaSessionService() {
         }
         mediaSession = null
         initializePlayer(contentType)
+    }
+
+    fun setPositionSaveListener(listener: (position: Long, duration: Long) -> Unit) {
+        onPositionSaveListener = listener
     }
 
     fun playStream(metadata: PlayerMetadata) {
@@ -269,6 +278,13 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        // Save final position before cleanup
+        mediaSession?.player?.let {
+            if (it.isPlaying || it.playbackState == Player.STATE_READY) {
+                onPositionSaveListener?.invoke(it.currentPosition, it.duration)
+            }
+        }
+
         mediaSession?.run {
             player.removeListener(playerListener!!)
             // Analytics listener will be cleaned up automatically when player is released
@@ -287,14 +303,29 @@ class StreamingPlaybackService : MediaSessionService() {
     private class PlayerListener(
         private val onStateChanged: (PlaybackState) -> Unit,
         private val onWakeLockRequired: () -> Unit,
-        private val player: Player
+        private val player: Player,
+        private val onPositionSave: ((Long, Long) -> Unit)? = null
     ) : Player.Listener {
         private var isInErrorState = false
+        private var lastSavedPosition = 0L
+        private val saveIntervalMs = 10_000L // Save every 10 seconds
 
         fun resetErrorState() {
             isInErrorState = false
         }
         override fun onPlaybackStateChanged(playbackState: Int) {
+            // Auto-save position when playing
+            if (playbackState == Player.STATE_READY && player.isPlaying) {
+                val currentPosition = player.currentPosition
+                val duration = player.duration
+
+                // Save if 10 seconds elapsed since last save
+                if (currentPosition - lastSavedPosition >= saveIntervalMs) {
+                    onPositionSave?.invoke(currentPosition, duration)
+                    lastSavedPosition = currentPosition
+                }
+            }
+
             updatePlaybackState()
         }
 

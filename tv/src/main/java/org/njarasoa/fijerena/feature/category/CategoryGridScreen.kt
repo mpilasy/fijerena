@@ -554,9 +554,18 @@ private fun StreamList(
                             items = streams,
                             key = { it.streamId }
                         ) { stream ->
+                            // Get watch progress for this stream
+                            val watchedStream = repository.getPlaybackPosition(stream.streamId, contentType)
+                            val progress = watchedStream?.let {
+                                if (it.duration > 0) {
+                                    (it.playbackPosition.toFloat() / it.duration.toFloat()).coerceIn(0f, 1f)
+                                } else 0f
+                            } ?: 0f
+
                             StreamItem(
                                 stream = stream,
                                 isFavorite = repository.isFavorite(stream.streamId, contentType),
+                                watchProgress = progress,
                                 onClick = { onStreamSelected(stream.streamId, stream.name, stream.categoryId) },
                                 focusRequester = focusRequesters[stream.streamId]
                             )
@@ -572,6 +581,7 @@ private fun StreamList(
 private fun StreamItem(
     stream: XtreamStream,
     isFavorite: Boolean = false,
+    watchProgress: Float = 0f,  // 0.0 to 1.0 (0% to 100%)
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null
 ) {
@@ -603,42 +613,56 @@ private fun StreamItem(
         ),
         scale = CardDefaults.scale(focusedScale = 1.0f)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Favorite star indicator
-                    if (isFavorite) {
-                        Text(
-                            text = "★",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color(0xFFFFD700)  // Gold
-                        )
-                    }
+        Column {  // Wrap in Column for progress bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Favorite star indicator
+                        if (isFavorite) {
+                            Text(
+                                text = "★",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFFFFD700)  // Gold
+                            )
+                        }
 
-                    Text(
-                        text = stream.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        maxLines = 1
-                    )
-                }
-                stream.streamIcon?.let { icon ->
-                    if (icon.isNotBlank()) {
                         Text(
-                            text = "HD",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f)
+                            text = stream.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            maxLines = 1
                         )
                     }
+                    stream.streamIcon?.let { icon ->
+                        if (icon.isNotBlank()) {
+                            Text(
+                                text = "HD",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
                 }
+            }
+
+            // Progress bar (only show if > 0%)
+            if (watchProgress > 0f) {
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { watchProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.White.copy(alpha = 0.2f)
+                )
             }
         }
     }

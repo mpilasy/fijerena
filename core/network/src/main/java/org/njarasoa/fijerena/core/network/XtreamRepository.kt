@@ -27,7 +27,10 @@ data class WatchedStream(
     val streamName: String,
     val categoryId: String,
     val contentType: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val playbackPosition: Long = 0L,      // Current position in ms
+    val duration: Long = 0L,               // Total duration in ms
+    val isCompleted: Boolean = false       // True if watched > 95%
 )
 
 /**
@@ -661,14 +664,26 @@ class XtreamRepository(
     /**
      * Add a stream to watch history (max 25 most recent)
      */
-    private fun addToWatchHistory(streamId: Int, streamName: String, categoryId: String, contentType: String) {
+    private fun addToWatchHistory(
+        streamId: Int,
+        streamName: String,
+        categoryId: String,
+        contentType: String,
+        playbackPosition: Long = 0L,
+        duration: Long = 0L,
+        isCompleted: Boolean = false
+    ) {
         val history = getWatchHistory().toMutableList()
 
-        // Remove existing entry if present (to update timestamp)
+        // Remove existing entry if present (to update timestamp/position)
         history.removeAll { it.streamId == streamId && it.contentType == contentType }
 
         // Add new entry at the beginning
-        history.add(0, WatchedStream(streamId, streamName, categoryId, contentType))
+        history.add(0, WatchedStream(
+            streamId, streamName, categoryId, contentType,
+            System.currentTimeMillis(),
+            playbackPosition, duration, isCompleted
+        ))
 
         // Keep only last N items based on settings
         val trimmedHistory = history.take(appSettings.watchHistorySize)
@@ -853,6 +868,74 @@ class XtreamRepository(
             bytes < 1024 * 1024 -> String.format("%.2f KB", bytes / 1024.0)
             bytes < 1024 * 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
             else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+        }
+    }
+
+    /**
+     * Save playback position for a stream
+     */
+    fun savePlaybackPosition(
+        streamId: Int,
+        streamName: String,
+        categoryId: String,
+        contentType: String,
+        position: Long,
+        duration: Long
+    ) {
+        // Skip for Live TV
+        if (contentType == "LIVE_TV") return
+
+        // Calculate completion
+        val progressPercent = if (duration > 0) {
+            (position.toFloat() / duration.toFloat()) * 100f
+        } else 0f
+
+        val isCompleted = progressPercent > 95.0f
+
+        addToWatchHistory(
+            streamId, streamName, categoryId, contentType,
+            position, duration, isCompleted
+        )
+    }
+
+    /**
+     * Get saved playback position for a stream
+     */
+    fun getPlaybackPosition(streamId: Int, contentType: String): WatchedStream? {
+        return getWatchHistory()
+            .firstOrNull { it.streamId == streamId && it.contentType == contentType }
+    }
+
+    /**
+     * Get in-progress streams (for Continue Watching category)
+     */
+    fun getInProgressStreams(contentType: String): List<WatchedStream> {
+        return getWatchHistory()
+            .filter {
+                it.contentType == contentType &&
+                !it.isCompleted &&
+                it.playbackPosition > 0 &&
+                it.duration > 0
+            }
+            .filter {
+                val progressPercent = (it.playbackPosition.toFloat() / it.duration.toFloat()) * 100f
+                progressPercent in 2.0..95.0 // Only 2-95% watched
+            }
+    }
+
+    /**
+     * Clear playback position for a stream (when user manually restarts)
+     */
+    fun clearPlaybackPosition(streamId: Int, contentType: String) {
+        val history = getWatchHistory().toMutableList()
+        val index = history.indexOfFirst {
+            it.streamId == streamId && it.contentType == contentType
+        }
+
+        if (index != -1) {
+            val item = history[index]
+            history[index] = item.copy(playbackPosition = 0L, isCompleted = false)
+            cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
         }
     }
 
