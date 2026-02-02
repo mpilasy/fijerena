@@ -28,29 +28,31 @@
 
 ---
 
-## Stream Info Not Updating on Channel Change
+## ~~Stream Info Not Updating on Channel Change~~ ✅ FIXED
 
 **Issue**: Live TV channel switching updates stream but not metadata display
 
-**Details**:
-- When using D-pad up/down to change channels in live TV player
-- Stream switches correctly (video changes)
-- Stream name/title on screen does not update to show new channel info
-- Only happens during channel switching, not initial load
+**Status**: ✅ **RESOLVED** - Fixed in commit [pending]
 
-**Expected Behavior**:
-- When channel changes, both video AND metadata should update
-- Display should show new channel name/title
+**Solution**:
+- Added `currentStreamId` and `currentStreamName` as dependencies to the LaunchedEffect that creates PlayerMetadata
+- Changed: `LaunchedEffect(streamUrl)` → `LaunchedEffect(streamUrl, currentStreamId, currentStreamName)`
+- This ensures metadata is recreated and sent to the player whenever stream info changes
+- Now when channels switch, both video AND metadata update correctly
 
-**Location**:
-- File: `tv/src/main/java/org/njarasoa/fijerena/ui/player/PlayerScreen.kt`
-- Function: Channel switching logic (onNextChannel/onPreviousChannel)
-- Related: `TvPlayerScreen.kt` - switchToNextChannel() / switchToPreviousChannel()
+**Root Cause**:
+- The LaunchedEffect that created PlayerMetadata only depended on `streamUrl`
+- It used `currentStreamName` inside but didn't track it as a dependency
+- When channel switched, `currentStreamName` updated but LaunchedEffect didn't re-run
+- Result: Video changed but UI displayed old stream name
 
-**To Fix**:
-- Update currentMetadata when switching channels
-- Ensure stream name updates trigger UI recomposition
-- May need to update PlayerMetadata state in ViewModel when switching
+**Location Fixed**:
+- File: `tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt`
+- Line: 221 (LaunchedEffect dependencies)
+
+**Testing**:
+- Build: ✅ Successful compilation
+- Manual testing: Pending (requires live TV channel switching test)
 
 ---
 

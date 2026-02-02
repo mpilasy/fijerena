@@ -217,8 +217,8 @@ fun TvPlayerScreen(
         } else null
     }
 
-    // Start playback when URL is ready
-    LaunchedEffect(streamUrl) {
+    // Start playback when URL is ready or stream info changes
+    LaunchedEffect(streamUrl, currentStreamId, currentStreamName) {
         streamUrl?.let { url ->
             // Save last played stream
             // For TV shows, save the series info (not episode) so "Last Watched" works correctly
@@ -226,7 +226,7 @@ fun TvPlayerScreen(
             val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
             repository.saveLastPlayedStream(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
 
-            println("TvPlayerScreen: Playing stream")
+            println("TvPlayerScreen: Playing stream (streamId=$currentStreamId, name=$currentStreamName)")
             println("TvPlayerScreen: Stream URL: $url")
 
             // Determine resume position
