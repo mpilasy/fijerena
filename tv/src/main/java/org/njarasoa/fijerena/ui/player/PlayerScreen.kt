@@ -74,7 +74,9 @@ fun PlayerScreen(
     viewModel: PlaybackViewModel = viewModel(),
     onBack: () -> Unit = {},
     onNextChannel: () -> Unit = {},
-    onPreviousChannel: () -> Unit = {}
+    onPreviousChannel: () -> Unit = {},
+    isFavorite: Boolean = false,
+    onToggleFavorite: (() -> Unit)? = null
 ) {
     val playbackState = viewModel.playbackState.collectAsState().value
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
@@ -302,6 +304,8 @@ fun PlayerScreen(
                 onAudioTrack = { showAudioTrackSelector = true },
                 onSubtitle = { showSubtitleSelector = true },
                 onQuality = { showQualitySelector = true },
+                isFavorite = isFavorite,
+                onToggleFavorite = onToggleFavorite,
                 onBack = {
                     viewModel.stop()
                     onBack()
@@ -455,6 +459,7 @@ private fun ControlHintsOverlay(
                     ControlHint("Audio Button", "Select audio track")
                     ControlHint("Subtitle Button", "Enable/disable subtitles")
                     ControlHint("Quality Button", "Select video quality")
+                    ControlHint("Favorite Button", "Add/remove from favorites")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1523,6 +1528,8 @@ private fun MetadataOverlay(
     onAudioTrack: (() -> Unit)? = null,
     onSubtitle: (() -> Unit)? = null,
     onQuality: (() -> Unit)? = null,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (() -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val position = when (playbackState) {
@@ -1635,6 +1642,21 @@ private fun MetadataOverlay(
 
                 Button(onClick = { onQuality?.invoke() }) {
                     Text("⚙️ Quality")
+                }
+
+                // Favorite toggle button
+                if (onToggleFavorite != null) {
+                    Button(
+                        onClick = { onToggleFavorite() },
+                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                            containerColor = if (isFavorite)
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            else
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                        )
+                    ) {
+                        Text(if (isFavorite) "★ Favorited" else "☆ Favorite")
+                    }
                 }
 
                 Button(onClick = onBack) {

@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.FavoriteStream
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.WatchedStream
 import org.njarasoa.fijerena.core.network.XtreamRepository
@@ -28,6 +29,7 @@ class CategoryViewModel(
 ) : ViewModel() {
 
     companion object {
+        const val FAVORITES_CATEGORY_ID = "favorites"
         const val LAST_WATCHED_CATEGORY_ID = "last_watched"
     }
 
@@ -286,13 +288,18 @@ class CategoryViewModel(
 
             when (result) {
                 is Result.Success -> {
-                    // Add "Last Watched" virtual category at the top
+                    // Add virtual categories at the top: Favorites, then Last Watched
+                    val favoritesCategory = XtreamCategory(
+                        categoryId = FAVORITES_CATEGORY_ID,
+                        categoryName = "Favorites",
+                        parentId = 0
+                    )
                     val lastWatchedCategory = XtreamCategory(
                         categoryId = LAST_WATCHED_CATEGORY_ID,
                         categoryName = "Last Watched",
                         parentId = 0
                     )
-                    categories = listOf(lastWatchedCategory) + result.data
+                    categories = listOf(favoritesCategory, lastWatchedCategory) + result.data
 
                     val lastStreamId = repository.getLastStreamId(contentType)
                     _uiState.value = UiState.Success(
@@ -336,6 +343,39 @@ class CategoryViewModel(
 
             // Clear cache
             repository.clearStreamsCache(categoryId)
+
+            // Handle "Favorites" virtual category
+            if (categoryId == FAVORITES_CATEGORY_ID) {
+                val favorites = repository.getFavorites()
+                    .filter { it.contentType == contentType }
+                currentStreams = favorites.map { favorite ->
+                    XtreamStream(
+                        num = 0,
+                        name = favorite.streamName,
+                        streamType = contentType.lowercase(),
+                        streamId = favorite.streamId,
+                        streamIcon = null,
+                        epgChannelId = null,
+                        added = null,
+                        categoryId = favorite.categoryId,
+                        customSid = null,
+                        tvArchive = 0,
+                        directSource = null,
+                        tvArchiveDuration = 0
+                    )
+                }
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedStreamId = lastStreamId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = getPayloadSize(categoryId)
+                )
+                return@launch
+            }
 
             // Handle "Last Watched" virtual category
             if (categoryId == LAST_WATCHED_CATEGORY_ID) {

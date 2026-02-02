@@ -73,6 +73,11 @@ fun TvPlayerScreen(
     var currentStreamId by remember { mutableIntStateOf(streamId) }
     var currentStreamName by remember { mutableStateOf(streamName) }
 
+    // Favorite state
+    var isFavorite by remember(currentStreamId, contentType) {
+        mutableStateOf(repository.isFavorite(currentStreamId, contentType))
+    }
+
     // Configure player buffer profile based on content type
     LaunchedEffect(contentType) {
         val playerContentType = when (contentType) {
@@ -231,7 +236,22 @@ fun TvPlayerScreen(
                     onBack()
                 },
                 onNextChannel = { switchToNextChannel() },
-                onPreviousChannel = { switchToPreviousChannel() }
+                onPreviousChannel = { switchToPreviousChannel() },
+                isFavorite = isFavorite,
+                onToggleFavorite = {
+                    if (isFavorite) {
+                        val removed = repository.removeFavorite(currentStreamId, contentType)
+                        if (removed) isFavorite = false
+                    } else {
+                        val added = repository.addFavorite(
+                            currentStreamId,
+                            currentStreamName,
+                            categoryId,
+                            contentType
+                        )
+                        if (added) isFavorite = true
+                    }
+                }
             )
         }
     }

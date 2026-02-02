@@ -30,6 +30,18 @@ data class WatchedStream(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+/**
+ * Represents a favorite stream
+ */
+@Serializable
+data class FavoriteStream(
+    val streamId: Int,           // streamId for Live/Movies, seriesId for TV Shows
+    val streamName: String,       // Display name
+    val categoryId: String,       // Original category reference
+    val contentType: String,      // "LIVE_TV", "MOVIES", or "TV_SHOWS"
+    val timestamp: Long = System.currentTimeMillis()  // For ordering
+)
+
 class XtreamRepository(
     private val accountManager: AccountManager,
     context: Context
@@ -76,6 +88,9 @@ class XtreamRepository(
 
         // Watch history tracking
         private const val KEY_WATCH_HISTORY = "watch_history"
+
+        // Favorites tracking
+        private const val KEY_FAVORITES = "favorites"
     }
 
     suspend fun login(
@@ -680,6 +695,64 @@ class XtreamRepository(
      */
     fun clearWatchHistory() {
         cache.edit().remove(KEY_WATCH_HISTORY).apply()
+    }
+
+    /**
+     * Add a stream to favorites
+     */
+    fun addFavorite(streamId: Int, streamName: String, categoryId: String, contentType: String): Boolean {
+        val favorites = getFavorites().toMutableList()
+
+        // Check for duplicate
+        if (favorites.any { it.streamId == streamId && it.contentType == contentType }) {
+            return false
+        }
+
+        // Add at beginning (newest first)
+        favorites.add(0, FavoriteStream(streamId, streamName, categoryId, contentType))
+
+        // Trim to max size
+        val trimmed = favorites.take(appSettings.favoritesMaxSize)
+
+        // Save
+        cache.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
+        return true
+    }
+
+    /**
+     * Remove a stream from favorites
+     */
+    fun removeFavorite(streamId: Int, contentType: String): Boolean {
+        val favorites = getFavorites().toMutableList()
+        val removed = favorites.removeAll { it.streamId == streamId && it.contentType == contentType }
+        cache.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
+        return removed
+    }
+
+    /**
+     * Get all favorites
+     */
+    fun getFavorites(): List<FavoriteStream> {
+        val json = cache.getString(KEY_FAVORITES, null) ?: return emptyList()
+        return try {
+            this.json.decodeFromString<List<FavoriteStream>>(json)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * Check if a stream is favorited
+     */
+    fun isFavorite(streamId: Int, contentType: String): Boolean {
+        return getFavorites().any { it.streamId == streamId && it.contentType == contentType }
+    }
+
+    /**
+     * Clear all favorites
+     */
+    fun clearFavorites() {
+        cache.edit().remove(KEY_FAVORITES).apply()
     }
 
     /**

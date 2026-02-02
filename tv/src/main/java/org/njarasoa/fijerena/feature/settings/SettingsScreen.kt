@@ -79,6 +79,8 @@ fun SettingsScreen(
     var currentUsername by remember { mutableStateOf(repository.getCurrentUsername() ?: "") }
     var watchHistorySize by remember { mutableStateOf(appSettings.watchHistorySize.toString()) }
     var newWatchHistorySize by remember { mutableStateOf("") }
+    var favoritesMaxSize by remember { mutableStateOf(appSettings.favoritesMaxSize.toString()) }
+    var newFavoritesMaxSize by remember { mutableStateOf("") }
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
 
     // Provider dialog state
@@ -91,6 +93,8 @@ fun SettingsScreen(
     var providerChangeError by remember { mutableStateOf<String?>(null) }
 
     var isEditingQueueSize by remember { mutableStateOf(false) }
+    var isEditingFavoritesSize by remember { mutableStateOf(false) }
+    var showClearFavoritesDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -260,6 +264,129 @@ fun SettingsScreen(
                                 Text("Save")
                             }
                         }
+                    }
+                }
+            }
+
+            // Favorites Max Size Setting
+            item {
+                Column {
+                    Text(
+                        text = "Favorites Max Size",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Maximum number of favorites to store (10-500)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (!isEditingFavoritesSize) {
+                        // Display mode - show size with edit button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = favoritesMaxSize,
+                                onValueChange = {},
+                                readOnly = true,
+                                singleLine = true,
+                                modifier = Modifier.width(200.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                    disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                ),
+                                enabled = false
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(
+                                onClick = {
+                                    isEditingFavoritesSize = true
+                                    newFavoritesMaxSize = favoritesMaxSize
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Favorites Max Size",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    } else {
+                        // Edit mode - allow size editing
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextField(
+                                value = newFavoritesMaxSize,
+                                onValueChange = { newValue ->
+                                    if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
+                                        newFavoritesMaxSize = newValue
+                                    }
+                                },
+                                label = { Text("Max Size") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.width(200.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Button(
+                                onClick = {
+                                    isEditingFavoritesSize = false
+                                    newFavoritesMaxSize = ""
+                                }
+                            ) {
+                                Text("Cancel")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    val size = newFavoritesMaxSize.toIntOrNull()
+                                    if (size != null && size in 10..500) {
+                                        appSettings.favoritesMaxSize = size
+                                        favoritesMaxSize = size.toString()
+                                        isEditingFavoritesSize = false
+                                        newFavoritesMaxSize = ""
+                                    }
+                                },
+                                enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true
+                            ) {
+                                Text("Save")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Clear Favorites Button
+            item {
+                Column {
+                    Text(
+                        text = "Clear All Favorites",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Remove all favorited streams from all content types",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = { showClearFavoritesDialog = true },
+                        colors = ButtonDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        )
+                    ) {
+                        Text("Clear All Favorites")
                     }
                 }
             }
@@ -460,6 +587,52 @@ fun SettingsScreen(
             dismissButton = {
                 Button(
                     onClick = { showProviderDialog = false },
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        )
+    }
+
+    // Clear Favorites Confirmation Dialog
+    if (showClearFavoritesDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearFavoritesDialog = false },
+            title = {
+                Text(
+                    "Clear All Favorites?",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    "This will remove all favorited streams from all content types (Live TV, Movies, TV Shows). This action cannot be undone.",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        repository.clearFavorites()
+                        showClearFavoritesDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Clear All")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showClearFavoritesDialog = false },
                     colors = ButtonDefaults.colors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant

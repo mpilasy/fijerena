@@ -16,7 +16,9 @@ class AppSettings(context: Context) {
         private const val KEY_DEV_MODE = "dev_mode"
         private const val KEY_WATCH_HISTORY_SIZE = "watch_history_size"
         private const val KEY_PROVIDER_NAME = "provider_name"
+        private const val KEY_FAVORITES_MAX_SIZE = "favorites_max_size"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
+        const val DEFAULT_FAVORITES_MAX_SIZE = 100
     }
 
     /**
@@ -42,4 +44,14 @@ class AppSettings(context: Context) {
     var providerName: String
         get() = prefs.getString(KEY_PROVIDER_NAME, "My Provider") ?: "My Provider"
         set(value) = prefs.edit().putString(KEY_PROVIDER_NAME, value).apply()
+
+    /**
+     * Get or set the maximum size of the favorites queue.
+     */
+    var favoritesMaxSize: Int
+        get() = prefs.getInt(KEY_FAVORITES_MAX_SIZE, DEFAULT_FAVORITES_MAX_SIZE)
+        set(value) {
+            val clampedValue = value.coerceIn(10, 500)
+            prefs.edit().putInt(KEY_FAVORITES_MAX_SIZE, clampedValue).apply()
+        }
 }

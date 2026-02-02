@@ -36,7 +36,9 @@ import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.*
+import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 import org.njarasoa.fijerena.feature.common.StatsOverlay
@@ -165,6 +167,9 @@ private fun TwoColumnLayout(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val providerName by remember { mutableStateOf(appSettings.providerName) }
+    val repository = remember {
+        XtreamRepository(AccountManager(context.applicationContext), context.applicationContext)
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
@@ -246,6 +251,8 @@ private fun TwoColumnLayout(
                 selectedCategoryId = selectedCategoryId,
                 selectedCategoryName = categories.find { it.categoryId == selectedCategoryId }?.categoryName,
                 lastPlayedStreamId = lastPlayedStreamId,
+                contentType = contentType,
+                repository = repository,
                 onStreamSelected = onStreamSelected,
                 onRefreshStreams = onRefreshStreams,
                 modifier = Modifier
@@ -422,6 +429,8 @@ private fun StreamList(
     selectedCategoryId: String?,
     selectedCategoryName: String?,
     lastPlayedStreamId: Int?,
+    contentType: String,
+    repository: XtreamRepository,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -547,6 +556,7 @@ private fun StreamList(
                         ) { stream ->
                             StreamItem(
                                 stream = stream,
+                                isFavorite = repository.isFavorite(stream.streamId, contentType),
                                 onClick = { onStreamSelected(stream.streamId, stream.name, stream.categoryId) },
                                 focusRequester = focusRequesters[stream.streamId]
                             )
@@ -561,6 +571,7 @@ private fun StreamList(
 @Composable
 private fun StreamItem(
     stream: XtreamStream,
+    isFavorite: Boolean = false,
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null
 ) {
@@ -599,12 +610,26 @@ private fun StreamItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stream.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    maxLines = 1
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Favorite star indicator
+                    if (isFavorite) {
+                        Text(
+                            text = "★",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color(0xFFFFD700)  // Gold
+                        )
+                    }
+
+                    Text(
+                        text = stream.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        maxLines = 1
+                    )
+                }
                 stream.streamIcon?.let { icon ->
                     if (icon.isNotBlank()) {
                         Text(
