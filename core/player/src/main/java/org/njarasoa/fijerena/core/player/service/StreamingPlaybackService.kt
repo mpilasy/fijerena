@@ -98,10 +98,15 @@ class StreamingPlaybackService : MediaSessionService() {
 
     fun pause() {
         mediaSession?.player?.pause()
+        // Release wake lock when paused to save battery
+        // User can pause long movies and put device to sleep
+        releaseWakeLock()
     }
 
     fun resume() {
         mediaSession?.player?.play()
+        // Re-acquire wake lock when resuming playback
+        acquireWakeLock()
     }
 
     fun stop() {
@@ -154,8 +159,12 @@ class StreamingPlaybackService : MediaSessionService() {
                 "StreamingPlayback:WakeLock"
             ).apply {
                 setReferenceCounted(false)
-                acquire(10 * 60 * 1000L) // 10 minutes timeout
             }
+        }
+        // Acquire without timeout for long-form content (movies can be 2+ hours)
+        // Will be released when playback stops or service is destroyed
+        if (wakeLock?.isHeld == false) {
+            wakeLock?.acquire()
         }
     }
 
@@ -164,8 +173,8 @@ class StreamingPlaybackService : MediaSessionService() {
             if (it.isHeld) {
                 it.release()
             }
-            wakeLock = null
         }
+        // Don't set to null, keep instance for reuse
     }
 
     override fun onDestroy() {
@@ -176,6 +185,8 @@ class StreamingPlaybackService : MediaSessionService() {
         }
         mediaSession = null
         releaseWakeLock()
+        // Clean up wake lock reference
+        wakeLock = null
         instance = null
         super.onDestroy()
     }
