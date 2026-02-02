@@ -98,6 +98,19 @@ sealed interface Screen {
     ) : Screen
 
     /**
+     * EPG (Electronic Program Guide) screen destination.
+     * Shows TV guide with time grid for Live TV channels.
+     *
+     * @param categoryId The category ID to show EPG for
+     * @param categoryName The display name of the category
+     */
+    @Serializable
+    data class EpgGuide(
+        val categoryId: String,
+        val categoryName: String
+    ) : Screen
+
+    /**
      * Player screen destination with stream parameters.
      *
      * @param streamId The Xtream stream ID to play (or episode ID for TV shows as string converted to int hash)

@@ -157,6 +157,66 @@ A dynamically generated category that displays:
 - Automatically updated when streams are played
 - Size configurable via Settings (default: 25 items)
 
+### EPG (Electronic Program Guide)
+**Feature:** Full TV Guide with grid view for Live TV channels displaying 24-hour program schedules.
+
+**Access:** Category Grid Screen → "TV Guide" button (next to Search, only visible for Live TV)
+
+**Features:**
+- **Grid Layout:** Two-pane design with channel list (20% width) and time grid (80% width)
+- **Time Slots:** 48 x 30-minute intervals covering full 24-hour day
+- **Current Time Indicator:** Highlighted time slot showing current time
+- **Auto-Scroll:** Automatically scrolls to current time on initial load
+- **Date Navigation:**
+  - Previous Day button (← arrow)
+  - Next Day button (→ arrow)
+  - Jump to Now button (returns to current date/time)
+- **Program Information:** Each cell displays start time and program title
+- **Current Program Highlighting:** Different background color for programs airing now
+- **Channel Selection:** Click any channel to start playback
+- **Program Selection:** Click any program to start playback on that channel
+
+**API Integration:**
+- **Primary Endpoint:** `get_simple_data_table` - Full EPG data for a stream
+- **Fallback Endpoint:** `get_short_epg` - Limited programs with configurable limit
+- **Cache Strategy:** 30-minute TTL with background refresh for optimal performance
+- **Bulk Fetching:** Parallel API calls for multiple channels (max 50 channels for performance)
+
+**Technical Details:**
+- **Data Models:** `EpgModels.kt` (EpgProgram, EpgResponse, EpgChannelRow, TimeSlot)
+- **ViewModel:** `EpgViewModel.kt` with Loading, Success, Error states
+- **UI Components:** `EpgGuideScreen.kt`, `EpgGridLayout.kt`
+- **Navigation:** Type-safe navigation via `Screen.EpgGuide(categoryId, categoryName)`
+- **Caching:** SharedPreferences with keys `epg_` + `epg_timestamp_` prefixes
+
+**Performance Optimizations:**
+- Maximum 50 channels displayed to ensure smooth scrolling
+- 30-minute cache expiry with background refresh
+- Lazy loading for channel rows and program cells
+- Synchronized horizontal scrolling across all channel rows
+
+**Error Handling:**
+- No EPG data available for channels
+- Authentication failures
+- Network errors
+- Empty program listings
+- Missing streams in category
+
+**Usage Flow:**
+1. Navigate to Live TV → Select a category
+2. Focus on "TV Guide" button in header (has calendar icon)
+3. Press OK/Center button
+4. EPG grid loads with current date and time
+5. Use D-pad to navigate: UP/DOWN for channels, LEFT/RIGHT for time
+6. Select program or channel to start playback
+7. Use date navigation buttons to view other days
+
+**Limitations:**
+- Live TV only (not available for Movies or TV Shows)
+- Max 50 channels displayed at once
+- Requires EPG data from IPTV provider
+- 30-minute cache refresh interval
+
 ### Player UI Features
 
 #### Channel Switching Feedback

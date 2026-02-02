@@ -26,6 +26,7 @@ import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.feature.category.CategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
+import org.njarasoa.fijerena.feature.epg.EpgGuideScreen
 import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
@@ -166,6 +167,15 @@ fun TvNavHost(
                     onSearchClick = {
                         navController.navigate(Screen.Search(categoryListScreen.contentType))
                     },
+                    onEpgClick = { categoryId, categoryName ->
+                        // Navigate to EPG Guide for the selected category
+                        navController.navigate(
+                            Screen.EpgGuide(
+                                categoryId = categoryId,
+                                categoryName = categoryName
+                            )
+                        )
+                    },
                     onBack = {
                         // Go back to content type selection to access Movies/TV Shows
                         navController.navigate(Screen.ContentTypeSelection) {
@@ -253,6 +263,40 @@ fun TvNavHost(
                                 episodeExtension = extension,
                                 seriesId = episodeSelectionScreen.seriesId,
                                 seriesName = episodeSelectionScreen.seriesName
+                            )
+                        )
+                    },
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
+            // EPG Guide Screen
+            composable<Screen.EpgGuide> { backStackEntry ->
+                val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
+                EpgGuideScreen(
+                    categoryId = epgScreen.categoryId,
+                    categoryName = epgScreen.categoryName,
+                    onProgramSelected = { program, stream ->
+                        // Navigate to player for the selected program
+                        navController.navigate(
+                            Screen.Player(
+                                streamId = stream.streamId,
+                                streamName = stream.name,
+                                categoryId = stream.categoryId,
+                                contentType = "LIVE_TV"
+                            )
+                        )
+                    },
+                    onChannelSelected = { streamId, streamName, categoryId ->
+                        // Navigate to player for the selected channel
+                        navController.navigate(
+                            Screen.Player(
+                                streamId = streamId,
+                                streamName = streamName,
+                                categoryId = categoryId,
+                                contentType = "LIVE_TV"
                             )
                         )
                     },

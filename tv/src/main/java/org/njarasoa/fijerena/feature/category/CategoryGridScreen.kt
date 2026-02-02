@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -59,6 +60,7 @@ fun CategoryGridScreen(
     contentType: String,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onSearchClick: () -> Unit = {},
+    onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit = {},
     viewModel: CategoryViewModel = viewModel(
         factory = CategoryViewModelFactory(
@@ -111,6 +113,7 @@ fun CategoryGridScreen(
                         viewModel.refreshStreams(categoryId)
                     },
                     onSearchClick = onSearchClick,
+                    onEpgClick = onEpgClick,
                     onBack = onBack
                 )
             }
@@ -162,6 +165,7 @@ private fun TwoColumnLayout(
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
     onSearchClick: () -> Unit,
+    onEpgClick: (categoryId: String, categoryName: String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -201,6 +205,27 @@ private fun TwoColumnLayout(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Search")
+                }
+                // EPG button - only for Live TV
+                if (contentType == "LIVE_TV" && selectedCategoryId != null) {
+                    val selectedCategoryName = categories.find { it.categoryId == selectedCategoryId }?.categoryName
+                    if (selectedCategoryName != null) {
+                        Button(
+                            onClick = { onEpgClick(selectedCategoryId, selectedCategoryName) },
+                            colors = ButtonDefaults.colors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                focusedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "TV Guide",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("TV Guide")
+                        }
+                    }
                 }
                 Column {
                     Text(

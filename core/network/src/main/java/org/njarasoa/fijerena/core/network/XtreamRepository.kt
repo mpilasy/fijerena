@@ -11,6 +11,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import java.util.concurrent.ConcurrentHashMap
+import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
@@ -94,6 +95,11 @@ class XtreamRepository(
 
         // Favorites tracking
         private const val KEY_FAVORITES = "favorites"
+
+        // EPG caching
+        private const val KEY_EPG_PREFIX = "epg_"
+        private const val KEY_EPG_TIMESTAMP_PREFIX = "epg_timestamp_"
+        private const val EPG_CACHE_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
     }
 
     suspend fun login(
@@ -943,4 +949,97 @@ class XtreamRepository(
      * Get app settings instance
      */
     fun getAppSettings(): AppSettings = appSettings
+
+    /**
+     * Fetches EPG data for a specific stream with caching
+     */
+    suspend fun getEpgForStream(streamId: Int): Result<EpgResponse> = withContext(Dispatchers.IO) {
+        suspendResultOf {
+            val service = apiService ?: throw Exception("Not authenticated")
+
+            // Try cache first
+            val cached = getCachedEpg(streamId)
+            if (cached != null) {
+                // Refresh in background
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val fresh = service.getEpgForStream(streamId)
+                        cacheEpg(streamId, fresh)
+                    } catch (e: Exception) {
+                        // Ignore network errors when refreshing
+                    }
+                }
+                return@suspendResultOf cached
+            }
+
+            val epg = service.getEpgForStream(streamId)
+            cacheEpg(streamId, epg)
+            epg
+        }
+    }
+
+    /**
+     * Fetches EPG data for multiple streams in parallel
+     */
+    suspend fun getEpgForStreams(streamIds: List<Int>): Result<Map<Int, EpgResponse>> =
+        withContext(Dispatchers.IO) {
+            suspendResultOf {
+                val results = mutableMapOf<Int, EpgResponse>()
+                streamIds.forEach { streamId ->
+                    when (val result = getEpgForStream(streamId)) {
+                        is Result.Success -> results[streamId] = result.data
+                        is Result.Error -> {
+                            // Continue on failure - EPG may not be available for all channels
+                        }
+                    }
+                }
+                results
+            }
+        }
+
+    /**
+     * Get cached EPG data for a stream
+     */
+    private fun getCachedEpg(streamId: Int): EpgResponse? {
+        val timestamp = cache.getLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, 0L)
+        if (System.currentTimeMillis() - timestamp > EPG_CACHE_EXPIRY_MS) {
+            return null
+        }
+        val cached = cache.getString(KEY_EPG_PREFIX + streamId, null) ?: return null
+        return try {
+            json.decodeFromString<EpgResponse>(cached)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Cache EPG data for a stream
+     */
+    private fun cacheEpg(streamId: Int, epg: EpgResponse) {
+        cache.edit()
+            .putString(KEY_EPG_PREFIX + streamId, json.encodeToString(epg))
+            .putLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, System.currentTimeMillis())
+            .apply()
+    }
+
+    /**
+     * Clear EPG cache for a specific stream
+     */
+    fun clearEpgCache(streamId: Int) {
+        cache.edit()
+            .remove(KEY_EPG_PREFIX + streamId)
+            .remove(KEY_EPG_TIMESTAMP_PREFIX + streamId)
+            .apply()
+    }
+
+    /**
+     * Clear all EPG cache
+     */
+    fun clearAllEpgCache() {
+        val editor = cache.edit()
+        cache.all.keys.filter { it.startsWith(KEY_EPG_PREFIX) || it.startsWith(KEY_EPG_TIMESTAMP_PREFIX) }
+            .forEach { editor.remove(it) }
+        editor.apply()
+    }
 }

@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.player.api
 
+import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
@@ -258,6 +259,42 @@ class XtreamApiService(
     fun buildEpisodeStreamUrl(episodeId: String, extension: String): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
         return "$normalizedUrl/series/$username/$password/$episodeId.$extension"
+    }
+
+    /**
+     * Fetches EPG data for a specific stream.
+     * Endpoint: player_api.php?action=get_simple_data_table&stream_id=X
+     *
+     * @param streamId The stream ID to fetch EPG data for
+     * @return EPG response containing program listings
+     * @throws Exception if the request fails
+     */
+    suspend fun getEpgForStream(streamId: Int): EpgResponse {
+        return client.get("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_simple_data_table")
+            parameter("stream_id", streamId)
+        }.body()
+    }
+
+    /**
+     * Fallback: Short EPG (next X programs) for a specific stream.
+     * Endpoint: player_api.php?action=get_short_epg&stream_id=X&limit=Y
+     *
+     * @param streamId The stream ID to fetch short EPG for
+     * @param limit Maximum number of programs to fetch (default: 10)
+     * @return EPG response containing limited program listings
+     * @throws Exception if the request fails
+     */
+    suspend fun getShortEpg(streamId: Int, limit: Int = 10): EpgResponse {
+        return client.get("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_short_epg")
+            parameter("stream_id", streamId)
+            parameter("limit", limit)
+        }.body()
     }
 
     /**
