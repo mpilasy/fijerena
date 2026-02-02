@@ -85,6 +85,7 @@ fun PlayerScreen(
     var showAudioTrackSelector by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableStateOf(0L) }
     val focusRequester = remember { FocusRequester() }
+    var channelSwitchNotification by remember { mutableStateOf<String?>(null) }
 
     // Auto-hide controls after 10 seconds
     LaunchedEffect(showControls) {
@@ -94,9 +95,30 @@ fun PlayerScreen(
         }
     }
 
+    // Auto-hide channel switch notification after 3 seconds
+    LaunchedEffect(channelSwitchNotification) {
+        channelSwitchNotification?.let {
+            delay(3.seconds)
+            channelSwitchNotification = null
+        }
+    }
+
     // Request focus on mount
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
+    }
+
+    // Show channel switch notification when metadata changes during playback
+    var previousMetadataTitle by remember { mutableStateOf(currentMetadata.title) }
+    LaunchedEffect(currentMetadata.title) {
+        // Only show notification if we're already playing (not initial load)
+        if (previousMetadataTitle.isNotEmpty() &&
+            currentMetadata.title != previousMetadataTitle &&
+            currentMetadata.title.isNotEmpty() &&
+            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
+            channelSwitchNotification = currentMetadata.title
+        }
+        previousMetadataTitle = currentMetadata.title
     }
 
     Box(
@@ -277,6 +299,66 @@ fun PlayerScreen(
                 viewModel = viewModel,
                 onDismiss = { showAudioTrackSelector = false }
             )
+        }
+
+        // Channel switch notification
+        AnimatedVisibility(
+            visible = channelSwitchNotification != null,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 48.dp),
+            enter = fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
+            exit = fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { -it })
+        ) {
+            channelSwitchNotification?.let { channelName ->
+                ChannelSwitchNotification(channelName = channelName)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChannelSwitchNotification(channelName: String) {
+    Surface(
+        modifier = Modifier
+            .padding(horizontal = 32.dp),
+        color = Color.Black.copy(alpha = 0.8f),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            2.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Channel icon
+            Text(
+                text = "📺",
+                style = MaterialTheme.typography.headlineSmall
+            )
+
+            // Channel name
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "Now Playing",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = channelName,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
