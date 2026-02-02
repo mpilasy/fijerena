@@ -38,3 +38,12 @@ data class AudioTrackInfo(
     val bitrate: Int,
     val isSelected: Boolean
 )
+
+data class SubtitleTrackInfo(
+    val groupIndex: Int,
+    val trackIndex: Int,
+    val language: String,
+    val label: String,
+    val mimeType: String, // e.g., "text/vtt", "application/x-subrip"
+    val isSelected: Boolean
+)

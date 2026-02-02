@@ -11,6 +11,7 @@ import androidx.media3.session.MediaController
 import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
@@ -232,6 +233,59 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance()
             service?.selectAudioTrack(groupIndex, trackIndex)
+        }
+    }
+
+    /**
+     * Get available subtitle tracks from the player.
+     * Returns a list of subtitle track info (language, label, mime type, selection status).
+     */
+    fun getSubtitleTracks(): List<SubtitleTrackInfo> {
+        val controller = _controller.value ?: return emptyList()
+        val tracks = controller.currentTracks
+        val subtitleTracks = mutableListOf<SubtitleTrackInfo>()
+
+        for (groupIndex in 0 until tracks.groups.size) {
+            val group = tracks.groups[groupIndex]
+            if (group.type == androidx.media3.common.C.TRACK_TYPE_TEXT) {
+                for (trackIndex in 0 until group.length) {
+                    val format = group.getTrackFormat(trackIndex)
+                    val isSelected = group.isTrackSelected(trackIndex)
+
+                    subtitleTracks.add(
+                        SubtitleTrackInfo(
+                            groupIndex = groupIndex,
+                            trackIndex = trackIndex,
+                            language = format.language ?: "Unknown",
+                            label = format.label ?: format.language ?: "Subtitle ${trackIndex + 1}",
+                            mimeType = format.sampleMimeType ?: "unknown",
+                            isSelected = isSelected
+                        )
+                    )
+                }
+            }
+        }
+
+        return subtitleTracks
+    }
+
+    /**
+     * Select a subtitle track by group and track index.
+     */
+    fun selectSubtitleTrack(groupIndex: Int, trackIndex: Int) {
+        viewModelScope.launch {
+            val service = StreamingPlaybackService.getInstance()
+            service?.selectSubtitleTrack(groupIndex, trackIndex)
+        }
+    }
+
+    /**
+     * Disable all subtitle tracks.
+     */
+    fun disableSubtitles() {
+        viewModelScope.launch {
+            val service = StreamingPlaybackService.getInstance()
+            service?.disableSubtitles()
         }
     }
 
