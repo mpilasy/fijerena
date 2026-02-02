@@ -27,3 +27,14 @@ data class StreamQuality(
     val height: Int = 0,
     val frameRate: Int = 0
 )
+
+data class AudioTrackInfo(
+    val groupIndex: Int,
+    val trackIndex: Int,
+    val language: String,
+    val label: String,
+    val channelCount: Int,
+    val sampleRate: Int,
+    val bitrate: Int,
+    val isSelected: Boolean
+)

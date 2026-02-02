@@ -82,6 +82,7 @@ fun PlayerScreen(
 
     var showControls by remember { mutableStateOf(false) }
     var showStats by remember { mutableStateOf(false) }
+    var showAudioTrackSelector by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableStateOf(0L) }
     val focusRequester = remember { FocusRequester() }
 
@@ -262,11 +263,182 @@ fun PlayerScreen(
                 isPaused = isPaused,
                 onPause = if (!isPaused) ({ viewModel.pause() }) else null,
                 onResume = if (isPaused) ({ viewModel.resume() }) else null,
+                onAudioTrack = { showAudioTrackSelector = true },
                 onBack = {
                     viewModel.stop()
                     onBack()
                 }
             )
+        }
+
+        // Audio track selector dialog
+        if (showAudioTrackSelector) {
+            AudioTrackSelectorDialog(
+                viewModel = viewModel,
+                onDismiss = { showAudioTrackSelector = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AudioTrackSelectorDialog(
+    viewModel: PlaybackViewModel,
+    onDismiss: () -> Unit
+) {
+    val audioTracks = remember { viewModel.getAudioTracks() }
+    var selectedIndex by remember { mutableStateOf(audioTracks.indexOfFirst { it.isSelected }.coerceAtLeast(0)) }
+    val focusRequesters = remember { List(audioTracks.size) { FocusRequester() } }
+    val context = LocalContext.current
+
+    // Request focus on selected item
+    LaunchedEffect(Unit) {
+        if (selectedIndex in focusRequesters.indices) {
+            focusRequesters[selectedIndex].requestFocus()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.85f)),
+        contentAlignment = Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .width(600.dp)
+                .padding(32.dp),
+            color = Color(0xFF1E1E1E),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(32.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header
+                Text(
+                    text = "🔊 Select Audio Track",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                if (audioTracks.isEmpty()) {
+                    Text(
+                        text = "No audio tracks available",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.align(CenterHorizontally)
+                    ) {
+                        Text("Close")
+                    }
+                } else {
+                    // Track list
+                    audioTracks.forEachIndexed { index, track ->
+                        val isSelected = index == selectedIndex
+                        Button(
+                            onClick = {
+                                selectedIndex = index
+                                viewModel.selectAudioTrack(track.groupIndex, track.trackIndex)
+                                onDismiss()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequesters[index])
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused) {
+                                        selectedIndex = index
+                                    }
+                                }
+                                .then(
+                                    if (isSelected) Modifier.border(
+                                        2.dp,
+                                        MaterialTheme.colorScheme.primary,
+                                        RoundedCornerShape(8.dp)
+                                    ) else Modifier
+                                ),
+                            colors = androidx.tv.material3.ButtonDefaults.colors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                else Color(0xFF2A2A2A),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = track.label,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                    if (track.isSelected) {
+                                        Text(
+                                            text = "✓ Active",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "${track.channelCount}ch • ${track.sampleRate / 1000}kHz",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Close button
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(CenterHorizontally)
+                            .width(200.dp)
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+
+                // Hint text
+                Text(
+                    text = "Use D-pad to navigate • OK to select • BACK to cancel",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.5f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+
+    // Handle back button
+    DisposableEffect(Unit) {
+        val callback = object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                onDismiss()
+            }
+        }
+        val activity = context as? androidx.activity.ComponentActivity
+        activity?.onBackPressedDispatcher?.addCallback(callback)
+
+        onDispose {
+            callback.remove()
         }
     }
 }
@@ -628,6 +800,7 @@ private fun MetadataOverlay(
     isPaused: Boolean,
     onPause: (() -> Unit)? = null,
     onResume: (() -> Unit)? = null,
+    onAudioTrack: (() -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val position = when (playbackState) {
@@ -728,6 +901,10 @@ private fun MetadataOverlay(
                     Button(onClick = { onPause?.invoke() }) {
                         Text("⏸ Pause")
                     }
+                }
+
+                Button(onClick = { onAudioTrack?.invoke() }) {
+                    Text("🔊 Audio")
                 }
 
                 Button(onClick = onBack) {

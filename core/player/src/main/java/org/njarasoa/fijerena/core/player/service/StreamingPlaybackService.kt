@@ -114,6 +114,30 @@ class StreamingPlaybackService : MediaSessionService() {
         mediaSession?.player?.seekTo(position)
     }
 
+    fun selectAudioTrack(groupIndex: Int, trackIndex: Int) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+
+        val currentTracks = player.currentTracks
+        if (groupIndex < 0 || groupIndex >= currentTracks.groups.size) return
+
+        val trackGroup = currentTracks.groups[groupIndex]
+        if (trackIndex < 0 || trackIndex >= trackGroup.length) return
+
+        // Build track selection parameters to override the audio track
+        val trackSelectionOverride = androidx.media3.common.TrackSelectionOverride(
+            trackGroup.mediaTrackGroup,
+            listOf(trackIndex)
+        )
+
+        val parameters = trackSelector.parameters
+            .buildUpon()
+            .setOverrideForType(trackSelectionOverride)
+            .build()
+
+        trackSelector.parameters = parameters
+    }
+
     fun getPlayer(): androidx.media3.common.Player? {
         return mediaSession?.player
     }

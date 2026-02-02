@@ -8,6 +8,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
+import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
@@ -186,6 +187,51 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     fun seekTo(position: Long) {
         viewModelScope.launch {
             StreamingPlaybackService.getInstance()?.seekTo(position)
+        }
+    }
+
+    /**
+     * Get available audio tracks from the player.
+     * Returns a list of audio track info (language, label, track group index, track index).
+     */
+    fun getAudioTracks(): List<AudioTrackInfo> {
+        val controller = _controller.value ?: return emptyList()
+        val tracks = controller.currentTracks
+        val audioTracks = mutableListOf<AudioTrackInfo>()
+
+        for (groupIndex in 0 until tracks.groups.size) {
+            val group = tracks.groups[groupIndex]
+            if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
+                for (trackIndex in 0 until group.length) {
+                    val format = group.getTrackFormat(trackIndex)
+                    val isSelected = group.isTrackSelected(trackIndex)
+
+                    audioTracks.add(
+                        AudioTrackInfo(
+                            groupIndex = groupIndex,
+                            trackIndex = trackIndex,
+                            language = format.language ?: "Unknown",
+                            label = format.label ?: "${format.language ?: "Track"} - ${format.channelCount}ch",
+                            channelCount = format.channelCount,
+                            sampleRate = format.sampleRate,
+                            bitrate = format.bitrate,
+                            isSelected = isSelected
+                        )
+                    )
+                }
+            }
+        }
+
+        return audioTracks
+    }
+
+    /**
+     * Select an audio track by group and track index.
+     */
+    fun selectAudioTrack(groupIndex: Int, trackIndex: Int) {
+        viewModelScope.launch {
+            val service = StreamingPlaybackService.getInstance()
+            service?.selectAudioTrack(groupIndex, trackIndex)
         }
     }
 
