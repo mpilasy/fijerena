@@ -1154,6 +1154,10 @@ private fun StatsOverlay(
     var networkSpeed by remember { mutableStateOf("N/A") }
     var bufferHealth by remember { mutableStateOf(0) }
 
+    // Collect dropped frames from service
+    val serviceDroppedFrames = StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsState()
+    val serviceTotalFrames = StreamingPlaybackService.getInstance()?.totalFrames?.collectAsState()
+
     // Update stats periodically
     LaunchedEffect(Unit) {
         while (true) {
@@ -1161,8 +1165,8 @@ private fun StatsOverlay(
                 // Update buffered position
                 bufferedPosition = p.bufferedPosition
 
-                // Dropped frames tracking (would require custom analytics listener)
-                droppedFrames = 0L // Placeholder for future implementation
+                // Get dropped frames from analytics
+                droppedFrames = serviceDroppedFrames?.value ?: 0L
 
                 // Calculate buffer health (percentage of buffer vs target)
                 val currentPos = p.currentPosition
@@ -1363,8 +1367,31 @@ private fun StatsOverlay(
                         SectionHeader("PLAYBACK")
                         CompactStatRow("Pos", formatTime(position))
                         CompactStatRow("Dur", if (duration > 0) formatTime(duration) else "Live")
-                        if (droppedFrames > 0) {
-                            CompactStatRow("Dropped", "$droppedFrames frames")
+
+                        // Performance metrics with color coding
+                        SectionHeader("PERFORMANCE")
+                        val totalFrames = serviceTotalFrames?.value ?: 0L
+                        val dropRate = if (totalFrames > 0) {
+                            (droppedFrames.toFloat() / totalFrames * 100)
+                        } else 0f
+
+                        val dropColor = when {
+                            dropRate < 0.5f -> Color(0xFF4CAF50) // Green - Good
+                            dropRate < 2.0f -> Color(0xFFFFC107) // Yellow - Warning
+                            else -> Color(0xFFF44336) // Red - Poor
+                        }
+
+                        CompactStatRowColored(
+                            "Dropped",
+                            "$droppedFrames / $totalFrames",
+                            dropColor
+                        )
+                        if (totalFrames > 0) {
+                            CompactStatRowColored(
+                                "Drop Rate",
+                                String.format("%.2f%%", dropRate),
+                                dropColor
+                            )
                         }
 
                         // Stream info
@@ -1436,6 +1463,27 @@ private fun CompactStatRow(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
             color = Color.White,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun CompactStatRowColored(label: String, value: String, valueColor: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            color = Color.White.copy(alpha = 0.7f),
+            modifier = Modifier.weight(1f, fill = false)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            color = valueColor,
             fontWeight = FontWeight.Bold
         )
     }

@@ -23,12 +23,20 @@ class StreamingPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var playerListener: PlayerListener? = null
+    private var analyticsListener: PerformanceAnalyticsListener? = null
 
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
     private val _currentMetadata = MutableStateFlow(PlayerMetadata())
     val currentMetadata: StateFlow<PlayerMetadata> = _currentMetadata.asStateFlow()
+
+    // Performance metrics
+    private val _droppedFrames = MutableStateFlow(0L)
+    val droppedFrames: StateFlow<Long> = _droppedFrames.asStateFlow()
+
+    private val _totalFrames = MutableStateFlow(0L)
+    val totalFrames: StateFlow<Long> = _totalFrames.asStateFlow()
 
 
     override fun onCreate() {
@@ -64,6 +72,15 @@ class StreamingPlaybackService : MediaSessionService() {
             player = player
         )
         player.addListener(playerListener!!)
+
+        // Add analytics listener for performance monitoring
+        analyticsListener = PerformanceAnalyticsListener(
+            onMetricsUpdate = { dropped, total ->
+                _droppedFrames.value = dropped
+                _totalFrames.value = total
+            }
+        )
+        player.addAnalyticsListener(analyticsListener!!)
     }
 
     fun setContentType(contentType: PlayerConfigFactory.ContentType) {
@@ -254,6 +271,7 @@ class StreamingPlaybackService : MediaSessionService() {
     override fun onDestroy() {
         mediaSession?.run {
             player.removeListener(playerListener!!)
+            // Analytics listener will be cleaned up automatically when player is released
             player.release()
             release()
         }
@@ -261,6 +279,7 @@ class StreamingPlaybackService : MediaSessionService() {
         releaseWakeLock()
         // Clean up wake lock reference
         wakeLock = null
+        analyticsListener = null
         instance = null
         super.onDestroy()
     }
@@ -369,6 +388,31 @@ class StreamingPlaybackService : MediaSessionService() {
                 else -> PlaybackState.Idle
             }
             onStateChanged(state)
+        }
+    }
+
+    private class PerformanceAnalyticsListener(
+        private val onMetricsUpdate: (droppedFrames: Long, totalFrames: Long) -> Unit
+    ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
+        private var droppedFrames = 0L
+        private var totalFrames = 0L
+
+        override fun onVideoFrameProcessingOffset(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            totalProcessingOffsetUs: Long,
+            frameCount: Int
+        ) {
+            // This method is called periodically with frame processing metrics
+            totalFrames += frameCount
+        }
+
+        override fun onDroppedVideoFrames(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            droppedFrames: Int,
+            elapsedMs: Long
+        ) {
+            this.droppedFrames += droppedFrames
+            onMetricsUpdate(this.droppedFrames, totalFrames)
         }
     }
 
