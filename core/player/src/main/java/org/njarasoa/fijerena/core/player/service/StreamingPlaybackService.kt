@@ -6,6 +6,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -164,6 +165,56 @@ class StreamingPlaybackService : MediaSessionService() {
                 onWakeLockRequired()
             }
             updatePlaybackState()
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            val errorMessage = parsePlaybackError(error)
+            onStateChanged(PlaybackState.Error(errorMessage, error))
+        }
+
+        private fun parsePlaybackError(error: PlaybackException): String {
+            return when (error.errorCode) {
+                PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+                PlaybackException.ERROR_CODE_DECODING_FAILED,
+                PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+                PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED -> {
+                    // Codec/decoder errors
+                    val codecInfo = extractCodecInfo(error.message ?: "")
+                    if (codecInfo.isNotEmpty()) {
+                        "Video codec not supported on this device: $codecInfo"
+                    } else {
+                        "Video format not supported on this device"
+                    }
+                }
+                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> {
+                    "Network connection failed. Check your internet connection."
+                }
+                PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
+                    "Stream unavailable (HTTP error). The content may have been removed."
+                }
+                PlaybackException.ERROR_CODE_TIMEOUT -> {
+                    "Playback timeout. The stream may be too slow or unavailable."
+                }
+                PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+                PlaybackException.ERROR_CODE_IO_NO_PERMISSION -> {
+                    "Stream not found or access denied."
+                }
+                PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+                PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED -> {
+                    "Invalid stream format. The stream may be corrupted."
+                }
+                else -> {
+                    "Playback error: ${error.errorCodeName}"
+                }
+            }
+        }
+
+        private fun extractCodecInfo(message: String): String {
+            // Extract codec info from error message like "video/hevc" or "hvc1.2.4.H150.B0"
+            val codecRegex = Regex("video/(\\w+)|format=(\\w+)")
+            val match = codecRegex.find(message)
+            return match?.value?.replace("video/", "")?.uppercase() ?: ""
         }
 
         private fun updatePlaybackState() {

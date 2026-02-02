@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +39,7 @@ import androidx.tv.material3.*
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.feature.common.StatsOverlay
 
 /**
  * TV two-column layout: Categories on left, Streams on right.
@@ -54,6 +56,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamStream
 fun CategoryGridScreen(
     contentType: String,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    onSearchClick: () -> Unit = {},
     onBack: () -> Unit = {},
     viewModel: CategoryViewModel = viewModel(
         factory = CategoryViewModelFactory(
@@ -64,32 +67,34 @@ fun CategoryGridScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val configuration = LocalConfiguration.current
+    val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
 
     // 5% padding for TV overscan safety
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(
-                horizontal = (configuration.screenWidthDp * 0.05).dp,
-                vertical = (configuration.screenHeightDp * 0.05).dp
-            )
+        modifier = Modifier.fillMaxSize()
     ) {
-        when (val state = uiState) {
-            is CategoryViewModel.UiState.Loading -> {
-                LoadingScreen()
-            }
-            is CategoryViewModel.UiState.Success -> {
-                TwoColumnLayout(
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = (configuration.screenWidthDp * 0.05).dp,
+                    vertical = (configuration.screenHeightDp * 0.05).dp
+                )
+        ) {
+            when (val state = uiState) {
+                is CategoryViewModel.UiState.Loading -> {
+                    LoadingScreen()
+                }
+                is CategoryViewModel.UiState.Success -> {
+                    TwoColumnLayout(
                     categories = state.categories,
                     selectedCategoryId = state.selectedCategoryId,
                     streams = state.streams,
                     streamsLoading = state.streamsLoading,
                     categoriesRefreshing = state.categoriesRefreshing,
                     lastPlayedStreamId = state.lastPlayedStreamId,
-                    categoriesPayloadSize = state.categoriesPayloadSize,
-                    streamsPayloadSize = state.streamsPayloadSize,
-                    categoriesFetchTime = viewModel.getCategoriesFetchTime(),
-                    streamsFetchTime = state.selectedCategoryId?.let { viewModel.getFetchTime(it) },
                     contentType = contentType,
                     onCategorySelected = { categoryId ->
                         viewModel.loadStreams(categoryId)
@@ -103,15 +108,39 @@ fun CategoryGridScreen(
                     onRefreshStreams = { categoryId ->
                         viewModel.refreshStreams(categoryId)
                     },
+                    onSearchClick = onSearchClick,
                     onBack = onBack
                 )
             }
-            is CategoryViewModel.UiState.Error -> {
-                ErrorScreen(
-                    message = state.message,
-                    onRetry = { viewModel.retry() }
+                is CategoryViewModel.UiState.Error -> {
+                    ErrorScreen(
+                        message = state.message,
+                        onRetry = { viewModel.retry() }
+                    )
+                }
+            }
+        }
+
+        // Stats overlay (only visible in dev mode)
+        when (val state = uiState) {
+            is CategoryViewModel.UiState.Success -> {
+                val stats = buildMap {
+                    state.categoriesPayloadSize?.let { put("Categories", it) }
+                    state.streamsPayloadSize?.let { put("Streams", it) }
+                    viewModel.getCategoriesFetchTime()?.let { put("Cat. Time", it) }
+                    state.selectedCategoryId?.let {
+                        viewModel.getFetchTime(it)?.let { time -> put("Stream Time", time) }
+                    }
+                    put("Categories", "${state.categories.size}")
+                    state.streams?.let { put("Streams", "${it.size}") }
+                }
+
+                StatsOverlay(
+                    visible = isDevMode,
+                    stats = stats
                 )
             }
+            else -> { /* No stats in loading/error states */ }
         }
     }
 }
@@ -124,15 +153,12 @@ private fun TwoColumnLayout(
     streamsLoading: Boolean,
     categoriesRefreshing: Boolean,
     lastPlayedStreamId: Int?,
-    categoriesPayloadSize: String?,
-    streamsPayloadSize: String?,
-    categoriesFetchTime: String?,
-    streamsFetchTime: String?,
     contentType: String,
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
+    onSearchClick: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -155,6 +181,21 @@ private fun TwoColumnLayout(
                 Button(onClick = onBack) {
                     Text("← Back")
                 }
+                Button(
+                    onClick = onSearchClick,
+                    colors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Search")
+                }
                 Column {
                     Text(
                         text = "IPTV.atr",
@@ -166,20 +207,8 @@ private fun TwoColumnLayout(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    // Always show item count, optionally show payload size and fetch time
-                    val infoText = buildString {
-                        if (categoriesPayloadSize != null) {
-                            append(categoriesPayloadSize)
-                            append(" • ")
-                        }
-                        if (categoriesFetchTime != null) {
-                            append(categoriesFetchTime)
-                            append(" • ")
-                        }
-                        append("${categories.size} items")
-                    }
                     Text(
-                        text = infoText,
+                        text = "${categories.size} categories",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -215,8 +244,6 @@ private fun TwoColumnLayout(
                 streamsLoading = streamsLoading,
                 selectedCategoryId = selectedCategoryId,
                 selectedCategoryName = categories.find { it.categoryId == selectedCategoryId }?.categoryName,
-                streamsPayloadSize = streamsPayloadSize,
-                streamsFetchTime = streamsFetchTime,
                 lastPlayedStreamId = lastPlayedStreamId,
                 onStreamSelected = onStreamSelected,
                 onRefreshStreams = onRefreshStreams,
@@ -356,24 +383,14 @@ private fun CategoryItem(
             .scale(scale)
             .onFocusChanged { focusState ->
                 isFocused = focusState.isFocused
-            }
-            .then(
-                if (isFocused) {
-                    Modifier.border(
-                        BorderStroke(3.dp, Color(0xFF00FF00)),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                } else {
-                    Modifier
-                }
-            ),
+            },
         colors = CardDefaults.colors(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surface
             },
-            focusedContainerColor = MaterialTheme.colorScheme.primary
+            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
         ),
         scale = CardDefaults.scale(focusedScale = 1.0f)
     ) {
@@ -387,7 +404,7 @@ private fun CategoryItem(
                 text = category.categoryName,
                 style = MaterialTheme.typography.titleMedium,
                 color = when {
-                    isFocused -> MaterialTheme.colorScheme.onPrimary
+                    isFocused -> Color.White
                     isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
                     else -> MaterialTheme.colorScheme.onSurface
                 },
@@ -403,8 +420,6 @@ private fun StreamList(
     streamsLoading: Boolean,
     selectedCategoryId: String?,
     selectedCategoryName: String?,
-    streamsPayloadSize: String?,
-    streamsFetchTime: String?,
     lastPlayedStreamId: Int?,
     onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
     onRefreshStreams: (String) -> Unit,
@@ -473,22 +488,10 @@ private fun StreamList(
                     }
                 }
             }
-            // Always show item count, optionally show payload size and fetch time
+            // Show stream count
             if (streams != null) {
-                val streamCount = streams.size
-                val infoText = buildString {
-                    if (streamsPayloadSize != null) {
-                        append(streamsPayloadSize)
-                        append(" • ")
-                    }
-                    if (streamsFetchTime != null) {
-                        append(streamsFetchTime)
-                        append(" • ")
-                    }
-                    append("$streamCount items")
-                }
                 Text(
-                    text = infoText,
+                    text = "${streams.size} streams",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
@@ -581,20 +584,10 @@ private fun StreamItem(
             .scale(scale)
             .onFocusChanged { focusState ->
                 isFocused = focusState.isFocused
-            }
-            .then(
-                if (isFocused) {
-                    Modifier.border(
-                        BorderStroke(3.dp, Color(0xFF00FF00)),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                } else {
-                    Modifier
-                }
-            ),
+            },
         colors = CardDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface,
-            focusedContainerColor = MaterialTheme.colorScheme.primary
+            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
         ),
         scale = CardDefaults.scale(focusedScale = 1.0f)
     ) {
@@ -608,11 +601,7 @@ private fun StreamItem(
                 Text(
                     text = stream.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isFocused) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
+                    color = Color.White,
                     maxLines = 1
                 )
                 stream.streamIcon?.let { icon ->
@@ -620,11 +609,7 @@ private fun StreamItem(
                         Text(
                             text = "HD",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (isFocused) {
-                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
+                            color = Color.White.copy(alpha = 0.7f)
                         )
                     }
                 }

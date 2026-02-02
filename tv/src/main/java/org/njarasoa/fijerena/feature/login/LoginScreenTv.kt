@@ -5,6 +5,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -109,6 +110,18 @@ fun LoginScreenTv(
                     .width(600.dp) // Wide field for TV
                     .padding(bottom = 20.dp)
                     .focusRequester(urlFocusRequester),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    disabledTextColor = Color.White.copy(alpha = 0.5f),
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    focusedPlaceholderColor = Color.White.copy(alpha = 0.5f),
+                    unfocusedPlaceholderColor = Color.White.copy(alpha = 0.5f)
+                ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
                     imeAction = ImeAction.Next
@@ -129,6 +142,16 @@ fun LoginScreenTv(
                     .width(600.dp)
                     .padding(bottom = 20.dp)
                     .focusRequester(usernameFocusRequester),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    disabledTextColor = Color.White.copy(alpha = 0.5f),
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
@@ -150,6 +173,16 @@ fun LoginScreenTv(
                     .width(600.dp)
                     .padding(bottom = 32.dp)
                     .focusRequester(passwordFocusRequester),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    disabledTextColor = Color.White.copy(alpha = 0.5f),
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
@@ -185,9 +218,9 @@ fun LoginScreenTv(
                         uiState !is LoginViewModel.UiState.Loading,
                 colors = ButtonDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    focusedContainerColor = Color(0xFF00FF00), // Bright green when focused
-                    focusedContentColor = Color.Black
+                    contentColor = Color.White,
+                    focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    focusedContentColor = Color.White
                 ),
                 scale = ButtonDefaults.scale(
                     focusedScale = 1.05f // Slightly enlarge when focused

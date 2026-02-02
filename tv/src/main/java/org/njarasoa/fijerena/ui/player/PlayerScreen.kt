@@ -6,7 +6,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +40,7 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -43,8 +48,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -94,8 +102,16 @@ fun PlayerScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .focusRequester(focusRequester)
-            .focusable()
+            .then(
+                // Only make the player box focusable when stats are not visible
+                if (!showStats) {
+                    Modifier
+                        .focusRequester(focusRequester)
+                        .focusable()
+                } else {
+                    Modifier
+                }
+            )
             .onKeyEvent { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     when (keyEvent.key) {
@@ -118,18 +134,36 @@ fun PlayerScreen(
                             true
                         }
                         Key.DirectionUp -> {
-                            println("PlayerScreen: UP button pressed")
-                            onPreviousChannel()
-                            showControls = true
-                            println("PlayerScreen: showControls set to true, metadata title=${currentMetadata.title}")
-                            true
+                            // Only change channel if stats are not visible
+                            if (!showStats) {
+                                println("PlayerScreen: UP button pressed")
+                                onPreviousChannel()
+                                showControls = true
+                                println("PlayerScreen: showControls set to true, metadata title=${currentMetadata.title}")
+                                true
+                            } else {
+                                false // Let stats overlay handle it
+                            }
                         }
                         Key.DirectionDown -> {
-                            println("PlayerScreen: DOWN button pressed")
-                            onNextChannel()
-                            showControls = true
-                            println("PlayerScreen: showControls set to true, metadata title=${currentMetadata.title}")
-                            true
+                            // Only change channel if stats are not visible
+                            if (!showStats) {
+                                println("PlayerScreen: DOWN button pressed")
+                                onNextChannel()
+                                showControls = true
+                                println("PlayerScreen: showControls set to true, metadata title=${currentMetadata.title}")
+                                true
+                            } else {
+                                false // Let stats overlay handle it
+                            }
+                        }
+                        Key.DirectionLeft, Key.DirectionRight -> {
+                            // Let stats overlay handle left/right when visible
+                            if (showStats) {
+                                false
+                            } else {
+                                false // Not used for anything else
+                            }
                         }
                         Key.Back -> {
                             if (showStats) {
@@ -196,14 +230,17 @@ fun PlayerScreen(
         // Stats overlay (double-click to show)
         AnimatedVisibility(
             visible = showStats && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused),
-            modifier = Modifier.align(Alignment.TopEnd),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
             StatsOverlay(
                 playbackState = playbackState,
                 metadata = currentMetadata,
-                context = context
+                context = context,
+                onHide = {
+                    showStats = false
+                    showControls = false
+                }
             )
         }
 
@@ -234,13 +271,36 @@ fun PlayerScreen(
     }
 }
 
+enum class QuadrantPosition {
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT
+}
+
+private fun getQuadrantAlignment(position: QuadrantPosition): Alignment {
+    return when (position) {
+        QuadrantPosition.TOP_LEFT -> Alignment.TopStart
+        QuadrantPosition.TOP_RIGHT -> Alignment.TopEnd
+        QuadrantPosition.BOTTOM_LEFT -> Alignment.BottomStart
+        QuadrantPosition.BOTTOM_RIGHT -> Alignment.BottomEnd
+    }
+}
+
 @Composable
 private fun StatsOverlay(
     playbackState: PlaybackState,
     metadata: PlayerMetadata,
-    context: android.content.Context
+    context: android.content.Context,
+    onHide: () -> Unit = {}
 ) {
     val player = StreamingPlaybackService.getInstance()?.getPlayer()
+    val configuration = LocalConfiguration.current
+
+    var quadrantPosition by remember { mutableStateOf(QuadrantPosition.TOP_RIGHT) }
+    var isFocused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    var lastClickTime by remember { mutableStateOf(0L) }
 
     // Get current track info
     var videoCodec by remember { mutableStateOf("N/A") }
@@ -254,6 +314,9 @@ private fun StatsOverlay(
     var audioBitrate by remember { mutableStateOf("N/A") }
 
     var bufferedPosition by remember { mutableStateOf(0L) }
+    var droppedFrames by remember { mutableStateOf(0L) }
+    var networkSpeed by remember { mutableStateOf("N/A") }
+    var bufferHealth by remember { mutableStateOf(0) }
 
     // Update stats periodically
     LaunchedEffect(Unit) {
@@ -262,7 +325,21 @@ private fun StatsOverlay(
                 // Update buffered position
                 bufferedPosition = p.bufferedPosition
 
+                // Dropped frames tracking (would require custom analytics listener)
+                droppedFrames = 0L // Placeholder for future implementation
+
+                // Calculate buffer health (percentage of buffer vs target)
+                val currentPos = p.currentPosition
+                val buffered = p.bufferedPosition
+                bufferHealth = if (buffered > currentPos) {
+                    ((buffered - currentPos) / 1000).toInt().coerceIn(0, 100)
+                } else {
+                    0
+                }
+
+                // Estimate network speed from bitrate
                 val tracks = p.currentTracks
+                var totalBitrate = 0
 
                 // Get video track
                 for (i in 0 until tracks.groups.size) {
@@ -273,132 +350,209 @@ private fun StatsOverlay(
                         videoResolution = "${format.width} × ${format.height}"
                         videoFrameRate = if (format.frameRate > 0) "${format.frameRate.toInt()} fps" else "N/A"
                         videoBitrate = formatBitrate(format.bitrate)
+                        if (format.bitrate > 0) totalBitrate += format.bitrate
                     }
                     if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO && group.length > 0) {
                         val format = group.getTrackFormat(0)
                         audioCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
-                        audioSampleRate = if (format.sampleRate > 0) "${format.sampleRate} Hz" else "N/A"
-                        audioChannels = if (format.channelCount > 0) "${format.channelCount}" else "N/A"
+                        audioSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else "N/A"
+                        audioChannels = if (format.channelCount > 0) {
+                            when (format.channelCount) {
+                                1 -> "Mono"
+                                2 -> "Stereo"
+                                6 -> "5.1"
+                                8 -> "7.1"
+                                else -> "${format.channelCount}ch"
+                            }
+                        } else "N/A"
                         audioBitrate = formatBitrate(format.bitrate)
+                        if (format.bitrate > 0) totalBitrate += format.bitrate
                     }
                 }
+
+                networkSpeed = if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
             }
 
             delay(1.seconds)
         }
     }
 
+    // Calculate overlay size (30% width × 50% height)
+    val overlayWidth = (configuration.screenWidthDp * 0.30).dp
+    val overlayHeight = (configuration.screenHeightDp * 0.50).dp
+
     Box(
         modifier = Modifier
-            .padding(16.dp)
-            .background(
-                Color.Black.copy(alpha = 0.85f),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(16.dp)
-            .width(400.dp)
+            .fillMaxSize()
+            .padding(20.dp)
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Box(
+            modifier = Modifier
+                .width(overlayWidth)
+                .height(overlayHeight)
+                .align(getQuadrantAlignment(quadrantPosition))
+                .background(Color.Black.copy(alpha = 0.15f), shape = RoundedCornerShape(8.dp))
+                .focusRequester(focusRequester)
+                .onFocusChanged { isFocused = it.isFocused }
+                .focusable()
+                .onKeyEvent { keyEvent ->
+                    if (keyEvent.type == KeyEventType.KeyDown) {
+                        when (keyEvent.key) {
+                            Key.DirectionCenter -> {
+                                val currentTime = System.currentTimeMillis()
+                                val timeDiff = currentTime - lastClickTime
+
+                                if (timeDiff < 600) {
+                                    // Double tap detected - hide overlay
+                                    onHide()
+                                }
+
+                                lastClickTime = currentTime
+                                true
+                            }
+                            Key.DirectionUp -> {
+                                quadrantPosition = when (quadrantPosition) {
+                                    QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.TOP_LEFT
+                                    QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.TOP_RIGHT
+                                    else -> quadrantPosition
+                                }
+                                true
+                            }
+                            Key.DirectionDown -> {
+                                quadrantPosition = when (quadrantPosition) {
+                                    QuadrantPosition.TOP_LEFT -> QuadrantPosition.BOTTOM_LEFT
+                                    QuadrantPosition.TOP_RIGHT -> QuadrantPosition.BOTTOM_RIGHT
+                                    else -> quadrantPosition
+                                }
+                                true
+                            }
+                            Key.DirectionLeft -> {
+                                quadrantPosition = when (quadrantPosition) {
+                                    QuadrantPosition.TOP_RIGHT -> QuadrantPosition.TOP_LEFT
+                                    QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.BOTTOM_LEFT
+                                    else -> quadrantPosition
+                                }
+                                true
+                            }
+                            Key.DirectionRight -> {
+                                quadrantPosition = when (quadrantPosition) {
+                                    QuadrantPosition.TOP_LEFT -> QuadrantPosition.TOP_RIGHT
+                                    QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.BOTTOM_RIGHT
+                                    else -> quadrantPosition
+                                }
+                                true
+                            }
+                            else -> false
+                        }
+                    } else {
+                        false
+                    }
+                }
         ) {
-            // Header
-            Text(
-                text = "📊 Stats for Nerds",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                // Header
+                Text(
+                    text = "📊 Stats",
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Spacer(modifier = Modifier.height(4.dp))
+                val position = when (playbackState) {
+                    is PlaybackState.Playing -> playbackState.position
+                    is PlaybackState.Paused -> playbackState.position
+                    else -> 0L
+                }
 
-            // Video stats
-            Text(
-                text = "VIDEO",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.6f),
-                fontWeight = FontWeight.Bold
-            )
+                val duration = when (playbackState) {
+                    is PlaybackState.Playing -> playbackState.duration
+                    is PlaybackState.Paused -> playbackState.duration
+                    else -> 0L
+                }
 
-            StatRow("Codec", videoCodec)
-            StatRow("Resolution", videoResolution)
-            StatRow("Frame Rate", videoFrameRate)
-            StatRow("Bitrate", videoBitrate)
+                // Two-column layout
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Left Column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        // Video stats
+                        SectionHeader("VIDEO")
+                        CompactStatRow("Codec", videoCodec)
+                        CompactStatRow("Res", videoResolution)
+                        CompactStatRow("FPS", videoFrameRate)
+                        CompactStatRow("Bitrate", videoBitrate)
 
-            Spacer(modifier = Modifier.height(8.dp))
+                        // Audio stats
+                        SectionHeader("AUDIO")
+                        CompactStatRow("Codec", audioCodec)
+                        CompactStatRow("Rate", audioSampleRate)
+                        CompactStatRow("Ch", audioChannels)
+                        CompactStatRow("Bitrate", audioBitrate)
 
-            // Audio stats
-            Text(
-                text = "AUDIO",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.6f),
-                fontWeight = FontWeight.Bold
-            )
+                        // Network stats
+                        SectionHeader("NETWORK")
+                        CompactStatRow("Speed", networkSpeed)
+                        CompactStatRow("Buffer", "${bufferHealth}s")
+                        CompactStatRow("Buffered", formatTime(bufferedPosition))
+                    }
 
-            StatRow("Codec", audioCodec)
-            StatRow("Sample Rate", audioSampleRate)
-            StatRow("Channels", audioChannels)
-            StatRow("Bitrate", audioBitrate)
+                    // Right Column
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        // Playback stats
+                        SectionHeader("PLAYBACK")
+                        CompactStatRow("Pos", formatTime(position))
+                        CompactStatRow("Dur", if (duration > 0) formatTime(duration) else "Live")
+                        if (droppedFrames > 0) {
+                            CompactStatRow("Dropped", "$droppedFrames frames")
+                        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+                        // Stream info
+                        SectionHeader("STREAM")
+                        CompactStatRow("Type", if (metadata.isLive) "Live" else "VOD")
+                        CompactStatRow("URL", metadata.streamUrl.substringAfterLast("/").take(20))
 
-            // Playback stats
-            Text(
-                text = "PLAYBACK",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.6f),
-                fontWeight = FontWeight.Bold
-            )
+                        // Device info
+                        SectionHeader("DEVICE")
+                        CompactStatRow("Model", android.os.Build.MODEL.take(15))
+                        CompactStatRow("API", "${android.os.Build.VERSION.SDK_INT}")
+                    }
+                }
 
-            val position = when (playbackState) {
-                is PlaybackState.Playing -> playbackState.position
-                is PlaybackState.Paused -> playbackState.position
-                else -> 0L
+                Spacer(modifier = Modifier.weight(1f))
+
+                if (isFocused) {
+                    Text(
+                        text = "D-pad to move • Double-tap center to hide",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
             }
-
-            val duration = when (playbackState) {
-                is PlaybackState.Playing -> playbackState.duration
-                is PlaybackState.Paused -> playbackState.duration
-                else -> 0L
             }
-
-            StatRow("Position", formatTime(position))
-            StatRow("Duration", if (duration > 0) formatTime(duration) else "Live")
-            StatRow("Buffered", formatTime(bufferedPosition))
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Stream info
-            Text(
-                text = "STREAM",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.6f),
-                fontWeight = FontWeight.Bold
-            )
-
-            StatRow("Type", if (metadata.isLive) "Live" else "VOD")
-            StatRow("URL", metadata.streamUrl.substringAfterLast("/").take(30))
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Device info
-            Text(
-                text = "DEVICE",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.6f),
-                fontWeight = FontWeight.Bold
-            )
-
-            StatRow("Model", android.os.Build.MODEL)
-            StatRow("Android", "API ${android.os.Build.VERSION.SDK_INT}")
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Double-click OK to hide",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f)
-            )
         }
+    }
+
+    // Auto-request focus when overlay becomes visible
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
     }
 }
 
@@ -420,6 +574,38 @@ private fun StatRow(label: String, value: String) {
             fontWeight = FontWeight.Medium
         )
     }
+}
+
+@Composable
+private fun CompactStatRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = Color.White.copy(alpha = 0.6f),
+            modifier = Modifier.weight(1f, fill = false)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = Color.White,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 4.dp)
+    )
 }
 
 private fun formatBitrate(bitrate: Int): String {
@@ -459,14 +645,6 @@ private fun MetadataOverlay(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.Black.copy(alpha = 0.9f)
-                    )
-                )
-            )
             .padding(horizontal = 48.dp, vertical = 32.dp)
     ) {
         Column(
@@ -642,30 +820,107 @@ private fun ErrorContent(
     onRetry: () -> Unit,
     onBack: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = CenterHorizontally,
-        modifier = Modifier.padding(32.dp)
+    val context = LocalContext.current
+    val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
+    val isDevMode = appSettings.isDevMode
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.95f)),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "Playback Error",
-            color = Color.Red,
-            fontSize = 24.sp
-        )
-        Spacer(modifier = Modifier.padding(16.dp))
-        Text(
-            text = error.message,
-            color = Color.Gray,
-            fontSize = 16.sp
-        )
-        Spacer(modifier = Modifier.padding(32.dp))
-        Row(
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+        Column(
+            horizontalAlignment = CenterHorizontally,
+            modifier = Modifier
+                .padding(48.dp)
+                .width(600.dp)
         ) {
-            Button(onClick = onRetry) {
-                Text("Retry")
+            // Error icon/title
+            Text(
+                text = "⚠️ Playback Error",
+                color = MaterialTheme.colorScheme.error,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // User-friendly error message
+            Text(
+                text = error.message,
+                color = Color.White,
+                fontSize = 18.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Technical details in dev mode
+            if (isDevMode && error.exception != null) {
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF1E1E1E),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Technical Details (Dev Mode):",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        val exception = error.exception
+                        val errorDetails = buildString {
+                            append("Type: ${exception?.javaClass?.simpleName ?: "Unknown"}\n")
+                            exception?.message?.let { msg ->
+                                append("Message: $msg\n")
+                            }
+                            // Get stack trace preview (first 5 lines)
+                            val stackTrace = exception?.stackTraceToString()
+                                ?.lines()
+                                ?.take(5)
+                                ?.joinToString("\n") ?: "No stack trace available"
+                            append("\nStack Trace:\n$stackTrace")
+                        }
+
+                        Text(
+                            text = errorDetails,
+                            color = Color(0xFFCCCCCC),
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .verticalScroll(rememberScrollState())
+                        )
+                    }
+                }
             }
-            Button(onClick = onBack) {
-                Text("Back")
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // Action buttons
+            Row(
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+            ) {
+                Button(
+                    onClick = onRetry,
+                    modifier = Modifier.width(120.dp).height(56.dp)
+                ) {
+                    Text("Retry", fontSize = 16.sp)
+                }
+                Button(
+                    onClick = onBack,
+                    modifier = Modifier.width(120.dp).height(56.dp)
+                ) {
+                    Text("Back", fontSize = 16.sp)
+                }
             }
         }
     }

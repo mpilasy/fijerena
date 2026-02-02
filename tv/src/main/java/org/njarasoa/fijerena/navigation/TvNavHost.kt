@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.login.LoginScreenTv
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
+import org.njarasoa.fijerena.feature.search.SearchScreen
 import org.njarasoa.fijerena.feature.settings.EditProviderScreen
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
 
@@ -63,19 +64,17 @@ fun TvNavHost(
     // Check authentication status on startup
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
-    // Auto-navigate to content type selection if already authenticated
-    LaunchedEffect(isAuthenticated) {
-        if (isAuthenticated != null && authViewModel.isAuthenticated()) {
-            navController.navigate(Screen.ContentTypeSelection) {
-                popUpTo(Screen.Login) { inclusive = true }
-            }
-        }
+    // Determine initial destination based on auth status
+    val startDestination = if (isAuthenticated != null && authViewModel.isAuthenticated()) {
+        Screen.ContentTypeSelection
+    } else {
+        Screen.Login
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = Screen.Login
+            startDestination = startDestination
         ) {
             // Login Screen
             composable<Screen.Login> {
@@ -156,12 +155,51 @@ fun TvNavHost(
                             }
                         }
                     },
+                    onSearchClick = {
+                        navController.navigate(Screen.Search(categoryListScreen.contentType))
+                    },
                     onBack = {
                         // Go back to content type selection to access Movies/TV Shows
                         navController.navigate(Screen.ContentTypeSelection) {
                             popUpTo(Screen.CategoryList("LIVE_TV")) { inclusive = true }
                         }
                     }
+                )
+            }
+
+            // Search Screen
+            composable<Screen.Search> { backStackEntry ->
+                val searchScreen = backStackEntry.toRoute<Screen.Search>()
+                SearchScreen(
+                    contentType = searchScreen.contentType,
+                    onStreamSelected = { streamId, streamName, categoryId ->
+                        // Navigate based on content type
+                        when (searchScreen.contentType) {
+                            "TV_SHOWS" -> navController.navigate(
+                                Screen.EpisodeSelection(
+                                    seriesId = streamId,
+                                    seriesName = streamName,
+                                    categoryId = categoryId
+                                )
+                            )
+                            "MOVIES" -> navController.navigate(
+                                Screen.MovieDetails(
+                                    movieId = streamId,
+                                    movieName = streamName,
+                                    categoryId = categoryId
+                                )
+                            )
+                            else -> navController.navigate(
+                                Screen.Player(
+                                    streamId = streamId,
+                                    streamName = streamName,
+                                    categoryId = categoryId,
+                                    contentType = searchScreen.contentType
+                                )
+                            )
+                        }
+                    },
+                    onBack = { navController.navigateUp() }
                 )
             }
 

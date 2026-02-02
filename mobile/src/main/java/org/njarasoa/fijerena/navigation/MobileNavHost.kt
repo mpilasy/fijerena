@@ -18,6 +18,14 @@ import androidx.navigation.toRoute
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.feature.login.LoginScreen
+import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
+import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelectionScreen
+import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
+import org.njarasoa.fijerena.feature.search.MobileSearchScreen
+import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
+import org.njarasoa.fijerena.feature.settings.MobileEditProviderScreen
+import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
+import org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen
 
 /**
  * Mobile navigation host with Material3 transitions.
@@ -43,21 +51,29 @@ fun MobileNavHost(
     authViewModel: AuthViewModel = viewModel()
 ) {
     // Check authentication status on startup
-    val isAuthenticated by authViewModel.authResponse.collectAsState()
+    val authResponse by authViewModel.authResponse.collectAsState()
 
-    // Auto-navigate to ContentTypeSelection if already authenticated
-    LaunchedEffect(isAuthenticated) {
-        if (isAuthenticated != null && authViewModel.isAuthenticated()) {
-            navController.navigate(Screen.ContentTypeSelection) {
-                popUpTo(Screen.Login) { inclusive = true }
-            }
+    // Wait for auth state to be determined before rendering NavHost
+    // This prevents flashing the login screen when already authenticated
+    if (authResponse == null) {
+        // Still loading auth state, show nothing or a splash screen
+        Surface(modifier = Modifier.fillMaxSize()) {
+            // Empty surface while loading
         }
+        return
+    }
+
+    // Determine initial destination based on auth status
+    val startDestination = if (authViewModel.isAuthenticated()) {
+        Screen.ContentTypeSelection
+    } else {
+        Screen.Login
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         NavHost(
             navController = navController,
-            startDestination = Screen.Login,
+            startDestination = startDestination,
             enterTransition = {
                 slideIntoContainer(
                     AnimatedContentTransitionScope.SlideDirection.Left,
@@ -101,7 +117,10 @@ fun MobileNavHost(
                     onContentTypeSelected = { contentType ->
                         navController.navigate(Screen.CategoryList(contentType))
                     },
-                    onBack = {
+                    onSettings = {
+                        navController.navigate(Screen.Settings)
+                    },
+                    onLogout = {
                         authViewModel.clearAuthSession()
                         navController.navigate(Screen.Login) {
                             popUpTo(Screen.ContentTypeSelection) { inclusive = true }
@@ -115,9 +134,36 @@ fun MobileNavHost(
                 val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
                 MobileCategoryListScreen(
                     contentType = categoryListScreen.contentType,
-                    authViewModel = authViewModel,
                     onStreamSelected = { streamId, streamName, categoryId, contentType ->
-                        navController.navigate(Screen.Player(streamId, streamName, categoryId, contentType))
+                        when (categoryListScreen.contentType) {
+                            "TV_SHOWS" -> {
+                                // For TV shows, navigate to episode selection
+                                navController.navigate(
+                                    Screen.EpisodeSelection(
+                                        seriesId = streamId,
+                                        seriesName = streamName,
+                                        categoryId = categoryId
+                                    )
+                                )
+                            }
+                            "MOVIES" -> {
+                                // For movies, navigate to movie details
+                                navController.navigate(
+                                    Screen.MovieDetails(
+                                        movieId = streamId,
+                                        movieName = streamName,
+                                        categoryId = categoryId
+                                    )
+                                )
+                            }
+                            else -> {
+                                // For Live TV, go directly to player
+                                navController.navigate(Screen.Player(streamId, streamName, categoryId, contentType))
+                            }
+                        }
+                    },
+                    onSearchClick = {
+                        navController.navigate(Screen.Search(categoryListScreen.contentType))
                     },
                     onBack = {
                         navController.navigateUp()
@@ -132,7 +178,122 @@ fun MobileNavHost(
                     streamId = playerScreen.streamId,
                     streamName = playerScreen.streamName,
                     categoryId = playerScreen.categoryId,
-                    authViewModel = authViewModel,
+                    contentType = playerScreen.contentType,
+                    episodeId = playerScreen.episodeId,
+                    episodeExtension = playerScreen.episodeExtension,
+                    seriesId = playerScreen.seriesId,
+                    seriesName = playerScreen.seriesName,
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
+            // Settings Screen
+            composable<Screen.Settings> {
+                MobileSettingsScreen(
+                    onBack = {
+                        navController.navigateUp()
+                    },
+                    onEditProvider = {
+                        navController.navigate(Screen.EditProvider)
+                    }
+                )
+            }
+
+            // Edit Provider Screen
+            composable<Screen.EditProvider> {
+                MobileEditProviderScreen(
+                    onSaved = {
+                        navController.navigateUp()
+                    },
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
+            // Search Screen
+            composable<Screen.Search> { backStackEntry ->
+                val searchScreen = backStackEntry.toRoute<Screen.Search>()
+                MobileSearchScreen(
+                    contentType = searchScreen.contentType,
+                    onStreamSelected = { streamId, streamName, categoryId, contentType ->
+                        // Navigate based on content type
+                        when (searchScreen.contentType) {
+                            "TV_SHOWS" -> navController.navigate(
+                                Screen.EpisodeSelection(
+                                    seriesId = streamId,
+                                    seriesName = streamName,
+                                    categoryId = categoryId
+                                )
+                            )
+                            "MOVIES" -> navController.navigate(
+                                Screen.MovieDetails(
+                                    movieId = streamId,
+                                    movieName = streamName,
+                                    categoryId = categoryId
+                                )
+                            )
+                            else -> navController.navigate(
+                                Screen.Player(
+                                    streamId = streamId,
+                                    streamName = streamName,
+                                    categoryId = categoryId,
+                                    contentType = searchScreen.contentType
+                                )
+                            )
+                        }
+                    },
+                    onBack = { navController.navigateUp() }
+                )
+            }
+
+            // Movie Details Screen (for VOD Movies)
+            composable<Screen.MovieDetails> { backStackEntry ->
+                val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
+                MobileMovieDetailsScreen(
+                    movieId = movieDetailsScreen.movieId,
+                    movieName = movieDetailsScreen.movieName,
+                    categoryId = movieDetailsScreen.categoryId,
+                    onPlayMovie = { movieId, movieName, extension ->
+                        navController.navigate(
+                            Screen.Player(
+                                streamId = movieId,
+                                streamName = movieName,
+                                categoryId = movieDetailsScreen.categoryId,
+                                contentType = "MOVIES",
+                                episodeExtension = extension
+                            )
+                        )
+                    },
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
+            // Episode Selection Screen (for TV Shows)
+            composable<Screen.EpisodeSelection> { backStackEntry ->
+                val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
+                MobileEpisodeSelectionScreen(
+                    seriesId = episodeSelectionScreen.seriesId,
+                    seriesName = episodeSelectionScreen.seriesName,
+                    categoryId = episodeSelectionScreen.categoryId,
+                    onEpisodeSelected = { episodeId, episodeTitle, extension ->
+                        navController.navigate(
+                            Screen.Player(
+                                streamId = episodeId.hashCode(),
+                                streamName = episodeTitle,
+                                categoryId = episodeSelectionScreen.categoryId,
+                                contentType = "TV_SHOWS",
+                                episodeId = episodeId,
+                                episodeExtension = extension,
+                                seriesId = episodeSelectionScreen.seriesId,
+                                seriesName = episodeSelectionScreen.seriesName
+                            )
+                        )
+                    },
                     onBack = {
                         navController.navigateUp()
                     }
@@ -142,71 +303,4 @@ fun MobileNavHost(
     }
 }
 
-/**
- * Placeholder Content Type Selection screen for Mobile.
- * TODO: Implement full content type selection with touch UI.
- */
-@Composable
-fun MobileContentTypeSelectionScreen(
-    onContentTypeSelected: (contentType: String) -> Unit,
-    onBack: () -> Unit
-) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        androidx.compose.material3.Text(
-            text = "Content Type Selection (Mobile)\nTODO: Implement Live TV / Movies / TV Shows selection",
-            modifier = Modifier.fillMaxSize()
-        )
-        // TODO: Implement content type selection UI
-        // - Show three buttons: Live TV, Movies, TV Shows
-        // - Add logout button
-    }
-}
 
-/**
- * Placeholder Category List screen for Mobile.
- * TODO: Implement full category list with touch UI.
- */
-@Composable
-fun MobileCategoryListScreen(
-    contentType: String,
-    authViewModel: AuthViewModel,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String, contentType: String) -> Unit,
-    onBack: () -> Unit
-) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        androidx.compose.material3.Text(
-            text = "Category List Screen (Mobile)\nContent Type: $contentType\nTODO: Implement category grid with touch navigation",
-            modifier = Modifier.fillMaxSize()
-        )
-        // TODO: Implement category list UI
-        // - Use LazyVerticalGrid for categories
-        // - Show category cards with images
-        // - Implement pull-to-refresh
-        // - Add search functionality
-    }
-}
-
-/**
- * Placeholder Player screen for Mobile.
- * TODO: Implement full player with touch controls.
- */
-@Composable
-fun MobilePlayerScreen(
-    streamId: Int,
-    streamName: String,
-    categoryId: String,
-    authViewModel: AuthViewModel,
-    onBack: () -> Unit
-) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        androidx.compose.material3.Text(
-            text = "Player Screen (Mobile)\nStream: $streamName (ID: $streamId)\nCategory: $categoryId\nTODO: Implement ExoPlayer integration",
-            modifier = Modifier.fillMaxSize()
-        )
-        // TODO: Implement player UI
-        // - Integrate StreamingPlaybackService
-        // - Show touch-based playback controls
-        // - Handle orientation changes
-        // - Add PiP (Picture-in-Picture) support
-    }
-}

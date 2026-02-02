@@ -9,6 +9,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -122,12 +123,15 @@ private fun ContentTypeButton(
             .height(80.dp),
         colors = ButtonDefaults.colors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
-            focusedContainerColor = MaterialTheme.colorScheme.primary
+            contentColor = Color.White,
+            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            focusedContentColor = Color.White
         )
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.titleLarge
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White
         )
     }
 }

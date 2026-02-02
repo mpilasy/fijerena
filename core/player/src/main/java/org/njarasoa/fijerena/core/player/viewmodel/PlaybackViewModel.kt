@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
@@ -41,6 +42,27 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             updatePlaybackState()
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            // Error handling is done in the service, but we also update state here
+            // to ensure the error is displayed even if service flow isn't collected yet
+            val errorMessage = when (error.errorCode) {
+                PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+                PlaybackException.ERROR_CODE_DECODING_FAILED,
+                PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+                PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED -> {
+                    "Video format not supported on this device"
+                }
+                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> {
+                    "Network connection failed"
+                }
+                else -> {
+                    "Playback error occurred"
+                }
+            }
+            _playbackState.value = PlaybackState.Error(errorMessage, error)
         }
 
         private fun updatePlaybackState() {

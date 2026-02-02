@@ -17,6 +17,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,51 +91,27 @@ fun EditProviderScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // URL Input Field
-                var isFocused by remember { mutableStateOf(false) }
-                BasicTextField(
+                OutlinedTextField(
                     value = urlInput,
                     onValueChange = {
                         urlInput = it
                         error = null
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { isFocused = it.isFocused },
-                    textStyle = TextStyle(
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = MaterialTheme.typography.bodyLarge.fontSize
-                    ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    label = { Text("Provider URL") },
+                    placeholder = { Text("Enter new provider URL") },
                     singleLine = true,
-                    decorationBox = { innerTextField ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(
-                                    width = 2.dp,
-                                    color = if (isFocused) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                                    },
-                                    shape = MaterialTheme.shapes.medium
-                                )
-                                .background(
-                                    color = MaterialTheme.colorScheme.surface,
-                                    shape = MaterialTheme.shapes.medium
-                                )
-                                .padding(16.dp)
-                        ) {
-                            if (urlInput.isEmpty()) {
-                                Text(
-                                    text = "Enter new provider URL",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                            }
-                            innerTextField()
-                        }
-                    }
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = androidx.compose.ui.graphics.Color.White,
+                        unfocusedTextColor = androidx.compose.ui.graphics.Color.White,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        focusedPlaceholderColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f),
+                        unfocusedPlaceholderColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f)
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))

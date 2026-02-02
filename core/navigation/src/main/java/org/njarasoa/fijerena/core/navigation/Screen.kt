@@ -87,6 +87,17 @@ sealed interface Screen {
     ) : Screen
 
     /**
+     * Search screen destination.
+     * Allows users to search across all categories for a specific content type.
+     *
+     * @param contentType The type of content to search (LIVE_TV, MOVIES, TV_SHOWS)
+     */
+    @Serializable
+    data class Search(
+        val contentType: String
+    ) : Screen
+
+    /**
      * Player screen destination with stream parameters.
      *
      * @param streamId The Xtream stream ID to play (or episode ID for TV shows as string converted to int hash)
