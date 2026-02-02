@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.C
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -89,11 +91,10 @@ fun PlayerScreen(
     var showQualitySelector by remember { mutableStateOf(false) }
     var lastClickTime by remember { mutableStateOf(0L) }
     val focusRequester = remember { FocusRequester() }
-    var channelSwitchNotification by remember { mutableStateOf<String?>(null) }
 
-    // Control hints for first-time users
+    // Control hints for first-time users (currently disabled)
     val prefs = remember { context.getSharedPreferences("player_prefs", android.content.Context.MODE_PRIVATE) }
-    var showControlHints by remember { mutableStateOf(!prefs.getBoolean("hints_dismissed", false)) }
+    var showControlHints by remember { mutableStateOf(false) } // Disabled: was !prefs.getBoolean("hints_dismissed", false)
 
     // Auto-dismiss hints after 7 seconds
     LaunchedEffect(showControlHints) {
@@ -103,19 +104,11 @@ fun PlayerScreen(
         }
     }
 
-    // Auto-hide controls after 10 seconds
+    // Auto-hide controls after 15 seconds
     LaunchedEffect(showControls) {
         if (showControls && !showStats) {
-            delay(10.seconds)
+            delay(15.seconds)
             showControls = false
-        }
-    }
-
-    // Auto-hide channel switch notification after 3 seconds
-    LaunchedEffect(channelSwitchNotification) {
-        channelSwitchNotification?.let {
-            delay(3.seconds)
-            channelSwitchNotification = null
         }
     }
 
@@ -124,17 +117,16 @@ fun PlayerScreen(
         focusRequester.requestFocus()
     }
 
-    // Show channel switch notification when metadata changes during playback
-    var previousMetadataTitle by remember { mutableStateOf(currentMetadata.title) }
-    LaunchedEffect(currentMetadata.title) {
-        // Only show notification if we're already playing (not initial load)
-        if (previousMetadataTitle.isNotEmpty() &&
+    // Show controls overlay when stream starts or changes
+    var previousMetadataTitle by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(currentMetadata.title, playbackState) {
+        // Show controls when title changes or on first playback
+        if (currentMetadata.title.isNotEmpty() &&
             currentMetadata.title != previousMetadataTitle &&
-            currentMetadata.title.isNotEmpty() &&
             (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
-            channelSwitchNotification = currentMetadata.title
+            showControls = true
+            previousMetadataTitle = currentMetadata.title
         }
-        previousMetadataTitle = currentMetadata.title
     }
 
     Box(
@@ -225,17 +217,38 @@ fun PlayerScreen(
                 }
             }
     ) {
-        // Video surface
         val playerView = remember {
             PlayerView(context).apply {
-                useController = false // We'll use custom controls
+                useController = false
                 keepScreenOn = true
+                setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
             }
         }
 
         AndroidView(
             factory = { playerView },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            update = { view ->
+                // Capture metadata to trigger update on change
+                @Suppress("UNUSED_VARIABLE")
+                val metadataTitle = currentMetadata.title
+
+                view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                // Force the view to match parent dimensions
+                val parent = view.parent as? android.view.ViewGroup
+                parent?.let { p ->
+                    val params = android.widget.FrameLayout.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    view.layoutParams = params
+                    view.measure(
+                        android.view.View.MeasureSpec.makeMeasureSpec(p.width, android.view.View.MeasureSpec.EXACTLY),
+                        android.view.View.MeasureSpec.makeMeasureSpec(p.height, android.view.View.MeasureSpec.EXACTLY)
+                    )
+                    view.layout(0, 0, p.width, p.height)
+                }
+            }
         )
 
         // Bind player to view when service is available
@@ -337,20 +350,6 @@ fun PlayerScreen(
             )
         }
 
-        // Channel switch notification
-        AnimatedVisibility(
-            visible = channelSwitchNotification != null,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 48.dp),
-            enter = fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { -it }),
-            exit = fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { -it })
-        ) {
-            channelSwitchNotification?.let { channelName ->
-                ChannelSwitchNotification(channelName = channelName)
-            }
-        }
-
         // Control hints for first-time users
         if (showControlHints && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)) {
             ControlHintsOverlay(
@@ -362,52 +361,6 @@ fun PlayerScreen(
                     showControlHints = false
                 }
             )
-        }
-    }
-}
-
-@Composable
-private fun ChannelSwitchNotification(channelName: String) {
-    Surface(
-        modifier = Modifier
-            .padding(horizontal = 32.dp),
-        color = Color.Black.copy(alpha = 0.8f),
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            2.dp,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Channel icon
-            Text(
-                text = "📺",
-                style = MaterialTheme.typography.headlineSmall
-            )
-
-            // Channel name
-            Column(
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = "Now Playing",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = channelName,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
-            }
         }
     }
 }
@@ -1710,18 +1663,10 @@ private fun IdleContent(onBack: () -> Unit) {
 
 @Composable
 private fun BufferingContent() {
-    Column(
-        horizontalAlignment = CenterHorizontally,
-        modifier = Modifier.padding(32.dp)
-    ) {
-        CircularProgressIndicator(color = Color.White)
-        Spacer(modifier = Modifier.padding(16.dp))
-        Text(
-            text = "Loading...",
-            color = Color.White,
-            fontSize = 20.sp
-        )
-    }
+    CircularProgressIndicator(
+        color = Color.White,
+        modifier = Modifier.size(48.dp)
+    )
 }
 
 

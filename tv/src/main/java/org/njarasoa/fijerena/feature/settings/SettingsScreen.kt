@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -124,38 +125,29 @@ fun SettingsScreen(
         // Settings List
         TvLazyColumn(
             contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            // Provider Details Setting
+            // Provider Details
             item {
                 Column {
                     Text(
-                        text = "Provider Details",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "Provider",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    // Display mode - show provider name with edit button
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedTextField(
-                            value = providerName,
-                            onValueChange = {},
-                            readOnly = true,
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                            ),
-                            enabled = false
+                        Text(
+                            text = providerName,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
+                        Button(
                             onClick = {
                                 dialogProviderName = providerName
                                 dialogUrl = currentUrl
@@ -165,66 +157,84 @@ fun SettingsScreen(
                                 showProviderDialog = true
                             }
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Provider",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Edit")
                         }
                     }
                 }
             }
 
-            // Watch History Size Setting
+            // Auto-Resume
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Auto-Resume",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Resume VOD content from where you left off",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Switch(
+                        checked = autoResumeEnabled,
+                        onCheckedChange = { enabled ->
+                            autoResumeEnabled = enabled
+                            appSettings.autoResumeEnabled = enabled
+                        }
+                    )
+                }
+            }
+
+            // Watch History Size
             item {
                 Column {
                     Text(
                         text = "Last Watched Queue Size",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Number of items to keep in the Last Watched category (1-100)",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Items to keep in Last Watched category (1-100)",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (!isEditingQueueSize) {
-                        // Display mode - show size with edit button
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            OutlinedTextField(
-                                value = watchHistorySize,
-                                onValueChange = {},
-                                readOnly = true,
-                                singleLine = true,
-                                modifier = Modifier.width(200.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                    disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                ),
-                                enabled = false
+                            Text(
+                                text = watchHistorySize,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            IconButton(
+                            Button(
                                 onClick = {
                                     isEditingQueueSize = true
                                     newWatchHistorySize = watchHistorySize
                                 }
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit Queue Size",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+                                Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Edit")
                             }
                         }
                     } else {
-                        // Edit mode - allow size editing
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -270,56 +280,45 @@ fun SettingsScreen(
                 }
             }
 
-            // Favorites Max Size Setting
+            // Favorites Max Size
             item {
                 Column {
                     Text(
                         text = "Favorites Max Size",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Maximum number of favorites to store (10-500)",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (!isEditingFavoritesSize) {
-                        // Display mode - show size with edit button
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            OutlinedTextField(
-                                value = favoritesMaxSize,
-                                onValueChange = {},
-                                readOnly = true,
-                                singleLine = true,
-                                modifier = Modifier.width(200.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                    disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                ),
-                                enabled = false
+                            Text(
+                                text = favoritesMaxSize,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            IconButton(
+                            Button(
                                 onClick = {
                                     isEditingFavoritesSize = true
                                     newFavoritesMaxSize = favoritesMaxSize
                                 }
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit Favorites Max Size",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+                                Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Edit")
                             }
                         }
                     } else {
-                        // Edit mode - allow size editing
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -365,22 +364,21 @@ fun SettingsScreen(
                 }
             }
 
-            // Clear Favorites Button
+            // Clear Favorites
             item {
                 Column {
                     Text(
                         text = "Clear All Favorites",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Remove all favorited streams from all content types",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-
                     Button(
                         onClick = { showClearFavoritesDialog = true },
                         colors = ButtonDefaults.colors(
@@ -393,58 +391,21 @@ fun SettingsScreen(
                 }
             }
 
-            // Auto-Resume Setting
+            // Clear Progress
             item {
                 Column {
                     Text(
-                        text = "Auto-Resume Playback",
-                        style = MaterialTheme.typography.titleLarge,
+                        text = "Clear Playback Progress",
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Automatically resume VOD content from where you left off",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Remove all saved positions (Continue Watching will be empty)",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Switch(
-                            checked = autoResumeEnabled,
-                            onCheckedChange = { enabled ->
-                                autoResumeEnabled = enabled
-                                appSettings.autoResumeEnabled = enabled
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = if (autoResumeEnabled) "Enabled" else "Disabled",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (autoResumeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            // Clear All Progress Button
-            item {
-                Column {
-                    Text(
-                        text = "Clear All Playback Progress",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Remove all saved playback positions (Continue Watching will be empty)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
                     Button(
                         onClick = { showClearProgressDialog = true },
                         colors = ButtonDefaults.colors(
@@ -457,54 +418,54 @@ fun SettingsScreen(
                 }
             }
 
-            // Developer Mode Setting
+            // Developer Mode
             item {
-                Column {
-                    Text(
-                        text = "Developer Mode",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Enable stats for nerds, payload size tracking, and debug features",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Switch(
-                            checked = isDevMode,
-                            onCheckedChange = { enabled ->
-                                isDevMode = enabled
-                                appSettings.isDevMode = enabled
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isDevMode) "Enabled" else "Disabled",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (isDevMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            text = "Developer Mode",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Enable stats for nerds and debug features",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Switch(
+                        checked = isDevMode,
+                        onCheckedChange = { enabled ->
+                            isDevMode = enabled
+                            appSettings.isDevMode = enabled
+                        }
+                    )
                 }
             }
 
-            // Logout Button
+            // Logout
             item {
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = onLogout,
-                    colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Text("Logout", style = MaterialTheme.typography.titleMedium)
+                    Button(
+                        onClick = onLogout,
+                        colors = ButtonDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        ),
+                        modifier = Modifier.fillMaxWidth(0.25f)
+                    ) {
+                        Text("Logout")
+                    }
                 }
             }
         }
