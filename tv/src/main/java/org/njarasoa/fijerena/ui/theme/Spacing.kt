@@ -18,6 +18,10 @@ object Spacing {
     val xl: Dp = 32.dp    // Large gaps
     val xxl: Dp = 48.dp   // Extra large gaps
 
+    // TV Safe Margins (Google TV design language)
+    val tvSafeMarginHorizontal: Dp = 56.dp
+    val tvSafeMarginVertical: Dp = 32.dp
+
     /**
      * TV Safe Area - Horizontal (5% overscan)
      * Ensures UI remains visible on Sony TVs and other devices with overscan.

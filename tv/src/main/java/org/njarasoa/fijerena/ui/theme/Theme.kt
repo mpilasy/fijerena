@@ -10,22 +10,21 @@ import androidx.tv.material3.darkColorScheme
 fun FirstVideoPlayerTheme(
     content: @Composable () -> Unit,
 ) {
-    // Use Cinema color scheme - modern dark theme with cyan accents
-    // Note: Using TV Material3 darkColorScheme function
+    // Deep Night color scheme - Electric Blue primary, Vivid Orange secondary
     val colorScheme = darkColorScheme(
-        // Primary colors (main accent - cyan)
+        // Primary colors (Electric Blue)
         primary = CinemaAccent,
-        onPrimary = androidx.compose.ui.graphics.Color.Black,
+        onPrimary = androidx.compose.ui.graphics.Color.White,
         primaryContainer = CinemaAccentDark,
         onPrimaryContainer = CinemaAccentLight,
 
-        // Secondary colors (slightly muted cyan)
-        secondary = CinemaAccent.copy(alpha = 0.8f),
+        // Secondary colors (Vivid Orange)
+        secondary = CinemaOrange,
         onSecondary = androidx.compose.ui.graphics.Color.Black,
-        secondaryContainer = CinemaSurfaceVariant,
-        onSecondaryContainer = CinemaAccentLight,
+        secondaryContainer = CinemaOrangeDark,
+        onSecondaryContainer = CinemaOrangeLight,
 
-        // Tertiary colors (alternative accent)
+        // Tertiary colors (Light Blue)
         tertiary = CinemaAccentLight,
         onTertiary = androidx.compose.ui.graphics.Color.Black,
         tertiaryContainer = CinemaSurface,

@@ -2,6 +2,8 @@
 
 package org.njarasoa.fijerena.feature.category
 
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -118,8 +120,8 @@ private fun CategoryGridContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    horizontal = Spacing.tvSafeHorizontal(configuration.screenWidthDp),
-                    vertical = Spacing.tvSafeVertical(configuration.screenHeightDp)
+                    horizontal = Spacing.tvSafeMarginHorizontal,
+                    vertical = Spacing.tvSafeMarginVertical
                 )
         ) {
             when (val state = uiState) {
@@ -404,7 +406,18 @@ private fun CategoryList(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    color = CinemaSurfaceVariant.copy(alpha = 0.3f),
+                    color = CinemaGlassBackground,
+                    shape = RoundedCornerShape(CornerRadius.small)
+                )
+                .border(
+                    width = 1.dp,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            CinemaGlassBorder,
+                            Color.White.copy(alpha = 0.05f),
+                            CinemaGlassBorder
+                        )
+                    ),
                     shape = RoundedCornerShape(CornerRadius.small)
                 )
         ) {
@@ -498,14 +511,20 @@ private fun CategoryItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 4.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
             )
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
         scale = CardDefaults.scale(
             scale = 1.0f,
-            focusedScale = 1.05f,
+            focusedScale = 1.1f,
             pressedScale = 0.95f
+        ),
+        glow = CardDefaults.glow(
+            focusedGlow = androidx.tv.material3.Glow(
+                elevationColor = CinemaAccent.copy(alpha = 0.4f),
+                elevation = 8.dp
+            )
         )
     ) {
         Box(
@@ -717,14 +736,20 @@ private fun StreamItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 4.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
             )
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
         scale = CardDefaults.scale(
             scale = 1.0f,
-            focusedScale = 1.05f,
+            focusedScale = 1.1f,
             pressedScale = 0.95f
+        ),
+        glow = CardDefaults.glow(
+            focusedGlow = androidx.tv.material3.Glow(
+                elevationColor = CinemaAccent.copy(alpha = 0.4f),
+                elevation = 8.dp
+            )
         )
     ) {
         Column {  // Wrap in Column for progress bar

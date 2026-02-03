@@ -22,6 +22,8 @@ import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaOrange
+import org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
 import org.njarasoa.fijerena.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
@@ -69,7 +71,7 @@ fun CinemaPrimaryButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 3.dp.scaled(scale), color = CinemaTextPrimary)
+                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaTextPrimary)
             )
         ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CornerRadius.small.scaled(scale))),
@@ -124,7 +126,7 @@ fun CinemaSecondaryButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 3.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
             )
         ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CornerRadius.small.scaled(scale))),
@@ -182,7 +184,7 @@ fun CinemaTertiaryButton(
                 border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccent)
             ),
             focusedBorder = Border(
-                border = BorderStroke(width = 3.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
             ),
             disabledBorder = Border(
                 border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccent.copy(alpha = 0.4f))
@@ -241,7 +243,7 @@ fun CinemaIconButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 3.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
             )
         ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CornerRadius.small.scaled(scale))),
@@ -253,7 +255,7 @@ fun CinemaIconButton(
 
 /**
  * Danger Button - Destructive actions
- * Red background with white text for destructive actions.
+ * Vivid Orange background with white text for destructive actions.
  * Use for dangerous operations like "Delete", "Logout", "Clear All", etc.
  *
  * @param onClick Callback when button is clicked
@@ -274,11 +276,11 @@ fun CinemaDangerButton(
         modifier = modifier,
         enabled = enabled,
         colors = ButtonDefaults.colors(
-            containerColor = CinemaError,
+            containerColor = CinemaOrange,
             contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaError.copy(alpha = 0.9f),
-            focusedContentColor = CinemaTextPrimary,
-            pressedContainerColor = CinemaError.copy(alpha = 0.7f),
+            focusedContainerColor = CinemaOrangeLight,
+            focusedContentColor = CinemaBackground,
+            pressedContainerColor = CinemaOrange.copy(alpha = 0.7f),
             disabledContainerColor = CinemaSurfaceVariant,
             disabledContentColor = CinemaTextPrimary.copy(alpha = 0.4f)
         ),
@@ -290,7 +292,7 @@ fun CinemaDangerButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 3.dp.scaled(scale), color = CinemaTextPrimary)
+                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaTextPrimary)
             )
         ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CornerRadius.small.scaled(scale))),

@@ -194,7 +194,7 @@ private fun EpisodeListContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
+            .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
     ) {
         // Header with series info and back button
         Row(
@@ -315,12 +315,23 @@ private fun EpisodeCard(
             .height(80.dp),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(3.dp, CinemaAccentLight)
+                border = BorderStroke(2.dp, CinemaAccentLight)
             )
         ),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             focusedContainerColor = CinemaAccent.copy(alpha = 0.2f)
+        ),
+        scale = CardDefaults.scale(
+            scale = 1.0f,
+            focusedScale = 1.1f,
+            pressedScale = 0.95f
+        ),
+        glow = CardDefaults.glow(
+            focusedGlow = androidx.tv.material3.Glow(
+                elevationColor = CinemaAccent.copy(alpha = 0.4f),
+                elevation = 8.dp
+            )
         )
     ) {
         Row(

@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.ui.components.modifiers
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,29 +22,29 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
 /**
  * Standard TV Focus Modifier
  * Applies consistent focus behavior across all focusable elements:
- * - 1.05x scale on focus (TV feedback)
- * - 3dp cyan border when focused
+ * - 1.1x scale on focus with 200ms animated transition
+ * - 2dp Electric Blue border when focused
  * - Rounded corners matching the design system
- *
- * @param focusScale Scale factor when focused (default 1.05f)
- * @param borderWidth Border width when focused (default 3.dp)
- * @param borderColor Border color when focused (default CinemaAccentLight)
- * @param cornerRadius Corner radius for border (default CornerRadius.medium)
  */
 fun Modifier.tvFocusable(
-    focusScale: Float = 1.05f,
-    borderWidth: Dp = 3.dp,
+    focusScale: Float = 1.1f,
+    borderWidth: Dp = 2.dp,
     borderColor: Color = CinemaAccentLight,
     cornerRadius: Dp = CornerRadius.medium
 ): Modifier = composed {
     var isFocused by remember { mutableStateOf(false) }
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isFocused) focusScale else 1.0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "focus_scale"
+    )
 
     this
         .focusable()
         .onFocusChanged { focusState ->
             isFocused = focusState.isFocused
         }
-        .scale(if (isFocused) focusScale else 1.0f)
+        .scale(animatedScale)
         .border(
             width = if (isFocused) borderWidth else 0.dp,
             color = if (isFocused) borderColor else Color.Transparent,
@@ -53,17 +55,14 @@ fun Modifier.tvFocusable(
 /**
  * Subtle Focus Modifier
  * For elements that need less dramatic focus feedback:
- * - 1.03x scale on focus (subtle)
+ * - 1.05x animated scale on focus
  * - 2dp border
- *
- * @param borderColor Border color when focused (default CinemaAccentLight)
- * @param cornerRadius Corner radius for border (default CornerRadius.medium)
  */
 fun Modifier.tvFocusableSubtle(
     borderColor: Color = CinemaAccentLight,
     cornerRadius: Dp = CornerRadius.medium
 ): Modifier = tvFocusable(
-    focusScale = 1.03f,
+    focusScale = 1.05f,
     borderWidth = 2.dp,
     borderColor = borderColor,
     cornerRadius = cornerRadius
@@ -73,19 +72,16 @@ fun Modifier.tvFocusableSubtle(
  * No Scale Focus Modifier
  * For elements that should only show border on focus without scaling:
  * - No scale
- * - 3dp border
+ * - 2dp animated border
  *
  * Useful for cards in dense grids where scaling would cause overlaps.
- *
- * @param borderColor Border color when focused (default CinemaAccentLight)
- * @param cornerRadius Corner radius for border (default CornerRadius.medium)
  */
 fun Modifier.tvFocusableNoScale(
     borderColor: Color = CinemaAccentLight,
     cornerRadius: Dp = CornerRadius.medium
 ): Modifier = tvFocusable(
     focusScale = 1.0f,
-    borderWidth = 3.dp,
+    borderWidth = 2.dp,
     borderColor = borderColor,
     cornerRadius = cornerRadius
 )

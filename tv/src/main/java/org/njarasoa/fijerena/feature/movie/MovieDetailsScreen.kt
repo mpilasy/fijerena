@@ -185,7 +185,7 @@ private fun MovieDetailsContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
+            .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
     ) {
         // Header with back button
         Row(

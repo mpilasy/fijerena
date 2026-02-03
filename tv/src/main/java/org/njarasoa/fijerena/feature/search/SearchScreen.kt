@@ -2,6 +2,8 @@
 
 package org.njarasoa.fijerena.feature.search
 
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
@@ -30,7 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.*
-import org.njarasoa.fijerena.feature.search.SearchViewModel.SearchResult
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.*
 
@@ -68,8 +70,8 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    horizontal = Spacing.tvSafeHorizontal(configuration.screenWidthDp),
-                    vertical = Spacing.tvSafeVertical(configuration.screenHeightDp)
+                    horizontal = Spacing.tvSafeMarginHorizontal,
+                    vertical = Spacing.tvSafeMarginVertical
                 )
         ) {
             // Header with back button
@@ -400,14 +402,20 @@ private fun SearchResultItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 4.dp, color = CinemaAccentLight)
+                border = BorderStroke(width = 2.dp, color = CinemaAccentLight)
             )
         ),
         shape = CardDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(CornerRadius.medium)),
         scale = CardDefaults.scale(
             scale = 1.0f,
-            focusedScale = 1.05f,
+            focusedScale = 1.1f,
             pressedScale = 0.98f
+        ),
+        glow = CardDefaults.glow(
+            focusedGlow = androidx.tv.material3.Glow(
+                elevationColor = CinemaAccent.copy(alpha = 0.4f),
+                elevation = 8.dp
+            )
         )
     ) {
         Column(

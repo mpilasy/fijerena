@@ -3,27 +3,35 @@ package org.njarasoa.fijerena.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Dark Cinema Color Scheme
- * A professional, video-focused dark theme inspired by modern streaming apps.
- * Completely eliminates purple in favor of cyan/teal accents.
+ * Deep Night Cinema Color Scheme
+ * Google TV Material 3 design language with Electric Blue + Vivid Orange dual accent.
  */
 
-// Primary accent - Teal/Cyan (modern, tech-forward)
-val CinemaAccent = Color(0xFF00BCD4)        // Bright cyan
-val CinemaAccentDark = Color(0xFF00838F)    // Darker cyan
-val CinemaAccentLight = Color(0xFF6EEFFF)   // Light cyan
+// Primary accent - Electric Blue
+val CinemaAccent = Color(0xFF2979FF)        // Electric Blue - focus, primary actions
+val CinemaAccentDark = Color(0xFF1565C0)    // Dark blue
+val CinemaAccentLight = Color(0xFF82B1FF)   // Light blue - focus borders
 
-// Surface colors - Dark grays (video-friendly)
-val CinemaBackground = Color(0xFF121212)     // Almost black
-val CinemaSurface = Color(0xFF1E1E1E)        // Dark gray
-val CinemaSurfaceVariant = Color(0xFF2A2A2A) // Medium gray
-val CinemaSurfaceLight = Color(0xFF383838)   // Light gray
+// Secondary accent - Vivid Orange
+val CinemaOrange = Color(0xFFFF6D00)        // Vivid Orange - LIVE, destructive
+val CinemaOrangeDark = Color(0xFFE65100)    // Dark orange
+val CinemaOrangeLight = Color(0xFFFFAB40)   // Light orange
+
+// Surface colors - Deep Night
+val CinemaBackground = Color(0xFF0F1014)     // Deep Night bg
+val CinemaSurface = Color(0xFF161A20)        // Card/surface bg
+val CinemaSurfaceVariant = Color(0xFF1E2228) // Elevated surfaces
+val CinemaSurfaceLight = Color(0xFF2A3038)   // Borders, dividers
+
+// Glassmorphism
+val CinemaGlassBackground = Color(0xBF0F1014)  // #0F1014 @ 75%
+val CinemaGlassBorder = Color(0x262979FF)       // #2979FF @ 15%
 
 // Status colors
 val CinemaSuccess = Color(0xFF4CAF50)       // Green
 val CinemaWarning = Color(0xFFFFC107)       // Yellow
 val CinemaError = Color(0xFFF44336)         // Red
-val CinemaLive = Color(0xFFFF5252)          // Bright red for LIVE badge
+val CinemaLive = Color(0xFFFF6D00)          // Vivid Orange for LIVE badge
 
 // Text colors
 val CinemaTextPrimary = Color(0xFFFFFFFF)   // Pure white
@@ -32,23 +40,22 @@ val CinemaTextTertiary = Color(0xFF808080)  // Medium gray
 val CinemaTextDisabled = Color(0xFF606060)  // Dark gray
 
 /**
- * Creates a complete Material3 ColorScheme using the Cinema color palette.
- * This replaces the purple-based color scheme entirely.
+ * Creates a complete Material3 ColorScheme using the Deep Night Cinema color palette.
  */
 fun CinemaColorScheme() = androidx.compose.material3.darkColorScheme(
-    // Primary colors (main accent - cyan)
+    // Primary colors (main accent - Electric Blue)
     primary = CinemaAccent,
-    onPrimary = Color.Black,  // Dark text on cyan for contrast
+    onPrimary = Color.White,
     primaryContainer = CinemaAccentDark,
     onPrimaryContainer = CinemaAccentLight,
 
-    // Secondary colors (slightly muted cyan)
-    secondary = CinemaAccent.copy(alpha = 0.8f),
+    // Secondary colors (Vivid Orange)
+    secondary = CinemaOrange,
     onSecondary = Color.Black,
-    secondaryContainer = CinemaSurfaceVariant,
-    onSecondaryContainer = CinemaAccentLight,
+    secondaryContainer = CinemaOrangeDark,
+    onSecondaryContainer = CinemaOrangeLight,
 
-    // Tertiary colors (alternative accent)
+    // Tertiary colors (Light Blue)
     tertiary = CinemaAccentLight,
     onTertiary = Color.Black,
     tertiaryContainer = CinemaSurface,

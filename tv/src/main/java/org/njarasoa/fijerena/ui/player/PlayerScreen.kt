@@ -452,7 +452,7 @@ private fun ControlHintsOverlay(
             modifier = Modifier
                 .width(700.dp)
                 .padding(32.dp),
-            color = Color(0xFF1E1E1E),
+            color = CinemaSurface,
             shape = RoundedCornerShape(16.dp),
             border = androidx.compose.foundation.BorderStroke(
                 2.dp,
@@ -505,7 +505,7 @@ private fun ControlHintsOverlay(
                         onClick = onDontShowAgain,
                         modifier = Modifier.weight(1f),
                         colors = androidx.tv.material3.ButtonDefaults.colors(
-                            containerColor = Color(0xFF2A2A2A)
+                            containerColor = CinemaSurfaceVariant
                         )
                     ) {
                         Text("Don't show again")
@@ -579,7 +579,7 @@ private fun AudioTrackSelectorDialog(
             modifier = Modifier
                 .width(600.dp)
                 .padding(32.dp),
-            color = Color(0xFF1E1E1E),
+            color = CinemaSurface,
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(
@@ -636,7 +636,7 @@ private fun AudioTrackSelectorDialog(
                                 ),
                             colors = androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                                else Color(0xFF2A2A2A),
+                                else CinemaSurfaceVariant,
                                 contentColor = Color.White
                             )
                         ) {
@@ -742,7 +742,7 @@ private fun SubtitleSelectorDialog(
             modifier = Modifier
                 .width(600.dp)
                 .padding(32.dp),
-            color = Color(0xFF1E1E1E),
+            color = CinemaSurface,
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(
@@ -784,7 +784,7 @@ private fun SubtitleSelectorDialog(
                         ),
                     colors = androidx.tv.material3.ButtonDefaults.colors(
                         containerColor = if (isOffSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        else Color(0xFF2A2A2A),
+                        else CinemaSurfaceVariant,
                         contentColor = Color.White
                     )
                 ) {
@@ -844,7 +844,7 @@ private fun SubtitleSelectorDialog(
                                 ),
                             colors = androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                                else Color(0xFF2A2A2A),
+                                else CinemaSurfaceVariant,
                                 contentColor = Color.White
                             )
                         ) {
@@ -950,7 +950,7 @@ private fun QualitySelectorDialog(
             modifier = Modifier
                 .width(600.dp)
                 .padding(32.dp),
-            color = Color(0xFF1E1E1E),
+            color = CinemaSurface,
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(
@@ -992,7 +992,7 @@ private fun QualitySelectorDialog(
                         ),
                     colors = androidx.tv.material3.ButtonDefaults.colors(
                         containerColor = if (isAutoSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        else Color(0xFF2A2A2A),
+                        else CinemaSurfaceVariant,
                         contentColor = Color.White
                     )
                 ) {
@@ -1059,7 +1059,7 @@ private fun QualitySelectorDialog(
                                 ),
                             colors = androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                                else Color(0xFF2A2A2A),
+                                else CinemaSurfaceVariant,
                                 contentColor = Color.White
                             )
                         ) {
@@ -1412,9 +1412,9 @@ private fun StatsOverlay(
                         } else 0f
 
                         val dropColor = when {
-                            dropRate < 0.5f -> Color(0xFF4CAF50) // Green - Good
-                            dropRate < 2.0f -> Color(0xFFFFC107) // Yellow - Warning
-                            else -> Color(0xFFF44336) // Red - Poor
+                            dropRate < 0.5f -> CinemaSuccess // Green - Good
+                            dropRate < 2.0f -> CinemaWarning // Yellow - Warning
+                            else -> CinemaError // Red - Poor
                         }
 
                         CompactStatRowColored(
@@ -1793,10 +1793,15 @@ private fun StreamInfoDisplay(
                 // Remaining time and estimated end time for VOD
                 val remainingTime = duration - position
 
-                // Calculate end time using Calendar for better timezone handling
-                val calendar = java.util.Calendar.getInstance()
-                calendar.add(java.util.Calendar.MILLISECOND, remainingTime.toInt())
+                // Calculate end time - add remaining milliseconds to current time
+                val currentTimeMillis = System.currentTimeMillis()
+                val estimatedEndTimeMillis = currentTimeMillis + remainingTime
                 val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+
+                // Debug logging
+                println("PlayerScreen VOD Time: position=$position, duration=$duration, remaining=$remainingTime")
+                println("PlayerScreen VOD Time: currentTime=$currentTimeMillis, endTime=$estimatedEndTimeMillis")
+                println("PlayerScreen VOD Time: Formatted end time = ${timeFormat.format(java.util.Date(estimatedEndTimeMillis))}")
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1808,7 +1813,7 @@ private fun StreamInfoDisplay(
                         color = CinemaAccent
                     )
                     Text(
-                        text = "Ends at ${timeFormat.format(calendar.time)}",
+                        text = "Ends at ${timeFormat.format(java.util.Date(estimatedEndTimeMillis))}",
                         style = MaterialTheme.typography.bodySmall,
                         color = CinemaAccent
                     )

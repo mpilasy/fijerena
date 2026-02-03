@@ -70,7 +70,10 @@ fun EditProviderScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(Spacing.xxl),
+                .padding(
+                    horizontal = Spacing.tvSafeMarginHorizontal,
+                    vertical = Spacing.tvSafeMarginVertical
+                ),
             contentAlignment = Alignment.Center
         ) {
             Column(

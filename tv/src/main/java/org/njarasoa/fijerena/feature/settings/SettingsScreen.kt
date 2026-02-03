@@ -121,7 +121,10 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(Spacing.xxl.scaled(scale))
+            .padding(
+                horizontal = Spacing.tvSafeMarginHorizontal,
+                vertical = Spacing.tvSafeMarginVertical
+            )
     ) {
         // Header
         Row(

@@ -42,8 +42,8 @@ fun ContentTypeSelectionScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(
-                horizontal = Spacing.tvSafeHorizontal(configuration.screenWidthDp),
-                vertical = Spacing.tvSafeVertical(configuration.screenHeightDp)
+                horizontal = Spacing.tvSafeMarginHorizontal,
+                vertical = Spacing.tvSafeMarginVertical
             )
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -137,12 +137,12 @@ private fun ContentTypeButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 5.dp, color = CinemaAccentLight)
+                border = BorderStroke(width = 2.dp, color = CinemaAccentLight)
             )
         ),
         scale = ButtonDefaults.scale(
             scale = 1.0f,
-            focusedScale = 1.12f,
+            focusedScale = 1.1f,
             pressedScale = 0.95f
         )
     ) {

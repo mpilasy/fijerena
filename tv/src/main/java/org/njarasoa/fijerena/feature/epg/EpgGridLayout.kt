@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -76,8 +77,8 @@ fun EpgGridLayout(
         modifier = Modifier
             .fillMaxSize()
             .padding(
-                horizontal = (configuration.screenWidthDp * 0.05).dp,
-                vertical = (configuration.screenHeightDp * 0.05).dp
+                horizontal = org.njarasoa.fijerena.ui.theme.Spacing.tvSafeMarginHorizontal,
+                vertical = org.njarasoa.fijerena.ui.theme.Spacing.tvSafeMarginVertical
             )
     ) {
         // Header: Title, Date selector, Navigation buttons
@@ -227,7 +228,21 @@ private fun ChannelItem(
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
-            .onFocusChanged { isFocused = it.isFocused }
+            .onFocusChanged { isFocused = it.isFocused },
+        colors = CardDefaults.colors(
+            containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
+            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = 0.2f)
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = androidx.compose.foundation.BorderStroke(2.dp, org.njarasoa.fijerena.ui.theme.CinemaAccentLight)
+            )
+        ),
+        scale = CardDefaults.scale(
+            scale = 1.0f,
+            focusedScale = 1.1f,
+            pressedScale = 0.95f
+        )
     ) {
         Box(
             modifier = Modifier
@@ -320,10 +335,10 @@ private fun TimeHeaderRow(
                     .width(120.dp) // 2dp per minute * 60 minutes
                     .fillMaxHeight()
                     .background(
-                        if (isCurrent) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceVariant
+                        if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark
+                        else org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
                     )
-                    .border(0.5.dp, Color.Gray),
+                    .border(0.5.dp, org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -348,7 +363,7 @@ private fun ProgramRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
-            .border(0.5.dp, Color.Gray),
+            .border(0.5.dp, org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight),
         userScrollEnabled = false // Synchronized with header row
     ) {
         items(channelRow.programs.size) { index ->
@@ -378,11 +393,25 @@ private fun ProgramCell(
             .onFocusChanged { isFocused = it.isFocused }
             .background(
                 if (isCurrent) {
-                    MaterialTheme.colorScheme.primaryContainer
+                    org.njarasoa.fijerena.ui.theme.CinemaAccentDark
                 } else {
-                    MaterialTheme.colorScheme.surface
+                    org.njarasoa.fijerena.ui.theme.CinemaSurface
                 }
+            ),
+        colors = CardDefaults.colors(
+            containerColor = if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark else org.njarasoa.fijerena.ui.theme.CinemaSurface,
+            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = 0.3f)
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = androidx.compose.foundation.BorderStroke(2.dp, org.njarasoa.fijerena.ui.theme.CinemaAccentLight)
             )
+        ),
+        scale = CardDefaults.scale(
+            scale = 1.0f,
+            focusedScale = 1.05f,
+            pressedScale = 0.95f
+        )
     ) {
         Column(
             modifier = Modifier

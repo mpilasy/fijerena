@@ -90,6 +90,77 @@ viewModel.selectAudioTrack(groupIndex, trackIndex)
 
 **Implementation:** Uses `PARTIAL_WAKE_LOCK` for CPU, `WAKE_MODE_NETWORK` for screen.
 
+## 🎨 TV Theme & Design System (Deep Night)
+
+### Color Palette
+Google TV Material 3 design with **Electric Blue** primary and **Vivid Orange** secondary:
+- **Primary Accent (Electric Blue)**: `#2979FF` - Focus states, primary CTAs
+- **Primary Dark**: `#1565C0` - Darker interactive states
+- **Primary Light**: `#82B1FF` - Focus borders & subtle highlights
+- **Secondary Accent (Vivid Orange)**: `#FF6D00` - LIVE badges, destructive actions
+- **Secondary Light**: `#FFAB40` - Secondary highlights
+- **Background (Deep Night)**: `#0F1014` - Main background
+- **Surface**: `#161A20` - Cards & elevated surfaces
+- **Surface Variant**: `#1E2228` - Secondary surfaces
+- **Surface Light**: `#2A3038` - Borders & dividers
+- **Glassmorphism BG**: `#0F1014` @ 75% alpha - Translucent backgrounds
+- **Glassmorphism Border**: `#2979FF` @ 15% alpha - Subtle gradient borders
+- **Text Primary**: `#FFFFFF` - Main text
+- **Text Secondary**: `#B0B0B0` - Secondary text
+
+**Implementation:** See `tv/.../ui/theme/CinemaColors.kt` for all color definitions.
+
+### Typography Scale
+Full 13-style scale optimized for 10-foot TV viewing distance (Roboto, system default):
+- **Display**: 48-40sp Bold (headlines, major titles)
+- **Headline**: 32-24sp SemiBold (section headers)
+- **Title**: 22-18sp Medium (subheaders, labels)
+- **Body**: 20-18sp Regular (main content - minimum 18sp)
+- **Label**: 18-14sp Medium (small labels, timestamps)
+
+**Key Rule:** All body text ≥18sp for TV readability.
+
+### Focus States (Every Interactive Element)
+All focusable components use animated focus feedback:
+- **Scale**: 1.0f → 1.1f (animated, 200ms tween)
+- **Border**: 2dp Electric Blue border on focus
+- **Glow**: 8dp shadow with `#2979FF` @ 40% opacity
+- **Animation**: `animateFloatAsState(tween(200ms))` for smooth scaling
+
+**Implementation:** See `FocusModifiers.kt` for `tvFocusable()`, `tvFocusableSubtle()`, `tvFocusableNoScale()`.
+
+### Safe Margins (TV Overscan)
+All screens must respect 56dp horizontal / 32dp vertical safe margins to account for TV overscan:
+- **Horizontal**: `Spacing.tvSafeMarginHorizontal = 56.dp`
+- **Vertical**: `Spacing.tvSafeMarginVertical = 32.dp`
+
+**Usage:** Apply to all screen root containers:
+```kotlin
+.padding(
+    horizontal = Spacing.tvSafeMarginHorizontal,
+    vertical = Spacing.tvSafeMarginVertical
+)
+```
+
+### Component Design
+
+**Cards:**
+- `CinemaSelectableCard` - Interactive, focusable, glow effect
+- `CinemaInfoCard` - Non-interactive info display
+- `CinemaCompactCard` - Dense grid variant
+- `CinemaStandardCard` - Content with accent blocks
+
+**Buttons:**
+- `CinemaPrimaryButton` - Primary CTAs (Electric Blue)
+- `CinemaSecondaryButton` - Secondary actions (muted)
+- `CinemaTertiaryButton` - Minimal emphasis (outline)
+- `CinemaIconButton` - Icon-only actions
+- `CinemaDangerButton` - Destructive actions (Vivid Orange)
+
+**Special Effects:**
+- **Glassmorphism:** Category sidebar uses translucent background + gradient border
+- **Accent Blocks:** `AccentBlock.kt` provides content-type gradients (LIVE_TV orange, MOVIE blue, TV_SHOW light blue)
+
 ## 📋 Coding Standards
 - **Focus Management:** Every @Composable must be D-pad (remote) navigable. Use `Modifier.focusRestorer()` and `Modifier.focusable()`.
 - **Safe Areas:** Respect "Overscan." UI must remain 5% away from screen edges for Sony/Shield TVs.
