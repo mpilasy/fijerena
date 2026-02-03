@@ -124,7 +124,21 @@ The app follows this streamlined navigation structure:
 Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
 - **Provider URL Management:** Enter or change the Xtream provider URL with automatic authentication
 - **Credentials Entry:** Username and password stored securely (encrypted SharedPreferences)
+- **Auto-Resume:** Toggle automatic playback resume for VOD content (default: enabled)
 - **Last Watched Queue Size:** Configure the number of items to keep in the "Last Watched" virtual category (range: 1-100, default: 25)
+- **Favorites Max Size:** Configure maximum number of favorites to store (range: 10-500, default: 100)
+- **Clear All Favorites:** Remove all favorited streams from all content types
+- **Clear Playback Progress:** Remove all saved positions (clears Continue Watching category)
+- **Cache Management:** View cache statistics and clear cached data
+  - Total cache size display
+  - Per-content-type breakdown (Live TV, Movies, TV Shows)
+  - Individual clear buttons for each content type
+  - Shows category cache status and stream list counts
+  - EPG data and other cache information
+- **UI Scale:** Adjust font, spacing, and element sizes for category/grid views
+  - Options: 70%, 80%, 90%, 100% (default: 100%)
+  - Applies to category grid screens and settings page
+  - Scales fonts, buttons, spacing, padding, cards, heights, and widths
 - **Developer Mode:** Enable debug features including:
   - Stats for nerds (payload size tracking for API responses)
   - Payload size metrics displayed in category grid
@@ -150,12 +164,27 @@ The app supports three primary content types:
 - **Movies (VOD):** On-demand movie content
 - **TV Shows:** Series and episodes with episode selection support
 
-### Last Watched Virtual Category
+### Virtual Categories
+The app provides two special virtual categories that load locally from device storage:
+
+#### Favorites Virtual Category
+A user-curated collection of favorite streams:
+- Empty by default until streams are favorited
+- Add/remove favorites via star button in player controls
+- Loads instantly from local storage (no network call)
+- Filtered by content type (separate favorites for Live TV, Movies, TV Shows)
+- Pinned at top of category list for quick access
+- Size configurable via Settings (range: 10-500, default: 100)
+
+#### Last Watched Virtual Category
 A dynamically generated category that displays:
 - Most recently watched streams across all content types
 - Ordered chronologically (newest first)
 - Automatically updated when streams are played
-- Size configurable via Settings (default: 25 items)
+- Loads instantly from local storage (no network call)
+- Filtered by content type (separate history for each type)
+- Pinned at top of category list below Favorites
+- Size configurable via Settings (range: 1-100, default: 25)
 
 ### EPG (Electronic Program Guide)
 **Feature:** Full TV Guide with grid view for Live TV channels displaying 24-hour program schedules.
@@ -229,6 +258,23 @@ A dynamically generated category that displays:
 - Triggered automatically on D-pad up/down during Live TV
 
 **Important:** Channel switching (D-pad up/down) only works for **Live TV content**. For VOD (Movies/TV Shows), D-pad up/down does nothing to prevent accidental stream switching during playback. This is intentional design to protect the viewing experience.
+
+#### VOD Time Display
+**Feature:** Enhanced time information for on-demand content.
+
+**Information Displayed:**
+- **Progress Bar:** Visual indicator of playback progress
+- **Current Position / Total Duration:** Time counters below progress bar
+- **Remaining Time:** Shows time left until video ends (e.g., "Remaining: 1:23:45")
+- **Ends At:** Estimated completion time in 12-hour format (e.g., "Ends at 11:30 PM")
+  - Uses device timezone for accurate local time
+  - Automatically handles date rollovers (crossing midnight)
+  - Updates in real-time as playback progresses
+
+**Technical Details:**
+- Uses `Calendar.getInstance()` for timezone-aware calculations
+- Handles videos of any length (supports 2+ hour movies)
+- Time format adapts to device locale settings
 
 #### Stats Overlay ("Stats for Nerds")
 **Advanced Metrics:** Comprehensive playback statistics for power users.

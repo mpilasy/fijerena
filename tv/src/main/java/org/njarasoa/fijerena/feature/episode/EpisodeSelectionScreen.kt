@@ -53,6 +53,8 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.Episode
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.theme.*
 
 /**
  * Episode selection screen for TV shows.
@@ -192,7 +194,7 @@ private fun EpisodeListContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp, vertical = 32.dp)
+            .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
     ) {
         // Header with series info and back button
         Row(
@@ -203,12 +205,12 @@ private fun EpisodeListContent(
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     Text(
                         text = seriesName,
                         style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = CinemaTextPrimary
                     )
                     // Always show refresh button
                     IconButton(
@@ -223,7 +225,7 @@ private fun EpisodeListContent(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh series info",
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            tint = CinemaTextSecondary.copy(alpha = 0.87f),
                             modifier = Modifier
                                 .size(24.dp)
                                 .rotate(rotation)
@@ -246,40 +248,41 @@ private fun EpisodeListContent(
                 Text(
                     text = infoText,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    color = CinemaTextSecondary
                 )
                 seriesInfo.info?.plot?.let { plot ->
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
                         text = plot,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        color = CinemaTextSecondary.copy(alpha = 0.87f),
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = providerName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = CinemaTextSecondary.copy(alpha = 0.87f)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onBack) {
-                    Text("Back")
-                }
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                CinemaSecondaryButton(
+                    onClick = onBack,
+                    text = "Back"
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Spacing.xl))
 
         // Episodes list
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(vertical = Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             modifier = Modifier.fillMaxSize()
         ) {
             items(allEpisodes, key = { it.episode.id }) { episodeItem ->
@@ -312,18 +315,18 @@ private fun EpisodeCard(
             .height(80.dp),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(3.dp, MaterialTheme.colorScheme.primary)
+                border = BorderStroke(3.dp, CinemaAccentLight)
             )
         ),
         colors = CardDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = CinemaSurface,
+            focusedContainerColor = CinemaAccent.copy(alpha = 0.2f)
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Season and episode number
@@ -334,16 +337,16 @@ private fun EpisodeCard(
                 Text(
                     text = "Season $seasonNumber",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = CinemaTextSecondary
                 )
                 Text(
                     text = "Episode ${episode.episodeNum}",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = CinemaTextPrimary
                 )
             }
 
-            Spacer(modifier = Modifier.width(24.dp))
+            Spacer(modifier = Modifier.width(Spacing.lg))
 
             // Episode title
             Column(
@@ -352,7 +355,7 @@ private fun EpisodeCard(
                 Text(
                     text = episode.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = CinemaTextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -360,7 +363,7 @@ private fun EpisodeCard(
                     Text(
                         text = overview,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        color = CinemaTextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -369,11 +372,11 @@ private fun EpisodeCard(
 
             // Duration
             episode.info?.duration?.let { duration ->
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(Spacing.md))
                 Text(
                     text = duration,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = CinemaTextSecondary
                 )
             }
         }
@@ -390,14 +393,14 @@ private fun LoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(64.dp),
-                color = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(48.dp),
+                color = CinemaAccent
             )
-            Spacer(modifier = Modifier.padding(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
             Text(
                 text = "Loading episodes...",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
         }
     }
@@ -414,23 +417,24 @@ private fun ErrorScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier.padding(Spacing.xl)
         ) {
             Text(
                 text = "Error Loading Episodes",
                 style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.error
+                color = CinemaError
             )
-            Spacer(modifier = Modifier.padding(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
-            Spacer(modifier = Modifier.padding(24.dp))
-            Button(onClick = onBack) {
-                Text("Back to Series List")
-            }
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            CinemaSecondaryButton(
+                onClick = onBack,
+                text = "Back to Series List"
+            )
         }
     }
 }

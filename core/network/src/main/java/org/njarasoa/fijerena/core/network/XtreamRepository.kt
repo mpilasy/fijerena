@@ -67,7 +67,7 @@ class XtreamRepository(
     private val fetchTimes = ConcurrentHashMap<String, Long>()
 
     companion object {
-        private const val CACHE_EXPIRY_MS = 6 * 60 * 60 * 1000L // 6 hours
+        // Cache expiry is now configurable via AppSettings (default: 24 hours)
         private const val KEY_CATEGORIES = "categories"
         private const val KEY_CATEGORIES_TIMESTAMP = "categories_timestamp"
         private const val KEY_VOD_CATEGORIES = "vod_categories"
@@ -317,7 +317,7 @@ class XtreamRepository(
 
     private fun getCachedCategories(): List<XtreamCategory>? {
         val timestamp = cache.getLong(KEY_CATEGORIES_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > CACHE_EXPIRY_MS) {
+        if (System.currentTimeMillis() - timestamp > appSettings.cacheExpiryMs) {
             return null // Cache expired
         }
 
@@ -342,7 +342,7 @@ class XtreamRepository(
 
     private fun getCachedVodCategories(): List<XtreamCategory>? {
         val timestamp = cache.getLong(KEY_VOD_CATEGORIES_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > CACHE_EXPIRY_MS) {
+        if (System.currentTimeMillis() - timestamp > appSettings.cacheExpiryMs) {
             return null
         }
         val cached = cache.getString(KEY_VOD_CATEGORIES, null) ?: return null
@@ -365,7 +365,7 @@ class XtreamRepository(
 
     private fun getCachedSeriesCategories(): List<XtreamCategory>? {
         val timestamp = cache.getLong(KEY_SERIES_CATEGORIES_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > CACHE_EXPIRY_MS) {
+        if (System.currentTimeMillis() - timestamp > appSettings.cacheExpiryMs) {
             return null
         }
         val cached = cache.getString(KEY_SERIES_CATEGORIES, null) ?: return null
@@ -386,13 +386,15 @@ class XtreamRepository(
             .apply()
     }
 
-    suspend fun getStreams(categoryId: String): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
+    suspend fun getStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {
             val service = apiService
                 ?: throw Exception("Not authenticated. Please login first.")
 
+            val cacheKey = if (forSearch) "search_$categoryId" else categoryId
+
             // Try to load from cache first
-            val cachedStreams = getCachedStreams(categoryId)
+            val cachedStreams = getCachedStreams(cacheKey)
             if (cachedStreams != null) {
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
@@ -400,8 +402,8 @@ class XtreamRepository(
                         val startTime = System.currentTimeMillis()
                         val fresh = service.getStreams(categoryId)
                         val fetchTime = System.currentTimeMillis() - startTime
-                        fetchTimes["category_$categoryId"] = fetchTime
-                        cacheStreams(categoryId, fresh)
+                        fetchTimes["category_$cacheKey"] = fetchTime
+                        cacheStreams(cacheKey, fresh)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
                     }
@@ -413,19 +415,21 @@ class XtreamRepository(
             val startTime = System.currentTimeMillis()
             val streams = service.getStreams(categoryId)
             val fetchTime = System.currentTimeMillis() - startTime
-            fetchTimes["category_$categoryId"] = fetchTime
-            cacheStreams(categoryId, streams)
+            fetchTimes["category_$cacheKey"] = fetchTime
+            cacheStreams(cacheKey, streams)
             streams
         }
     }
 
-    suspend fun getVodStreams(categoryId: String): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
+    suspend fun getVodStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {
             val service = apiService
                 ?: throw Exception("Not authenticated. Please login first.")
 
+            val cacheKey = if (forSearch) "search_vod_$categoryId" else "vod_$categoryId"
+
             // Try to load from cache first
-            val cachedStreams = getCachedStreams("vod_$categoryId")
+            val cachedStreams = getCachedStreams(cacheKey)
             if (cachedStreams != null) {
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
@@ -433,8 +437,8 @@ class XtreamRepository(
                         val startTime = System.currentTimeMillis()
                         val fresh = service.getVodStreams(categoryId)
                         val fetchTime = System.currentTimeMillis() - startTime
-                        fetchTimes["category_vod_$categoryId"] = fetchTime
-                        cacheStreams("vod_$categoryId", fresh)
+                        fetchTimes["category_$cacheKey"] = fetchTime
+                        cacheStreams(cacheKey, fresh)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
                     }
@@ -446,19 +450,21 @@ class XtreamRepository(
             val startTime = System.currentTimeMillis()
             val streams = service.getVodStreams(categoryId)
             val fetchTime = System.currentTimeMillis() - startTime
-            fetchTimes["category_vod_$categoryId"] = fetchTime
-            cacheStreams("vod_$categoryId", streams)
+            fetchTimes["category_$cacheKey"] = fetchTime
+            cacheStreams(cacheKey, streams)
             streams
         }
     }
 
-    suspend fun getSeries(categoryId: String): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
+    suspend fun getSeries(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {
             val service = apiService
                 ?: throw Exception("Not authenticated. Please login first.")
 
+            val cacheKey = if (forSearch) "search_series_$categoryId" else "series_$categoryId"
+
             // Try to load from cache first
-            val cachedStreams = getCachedStreams("series_$categoryId")
+            val cachedStreams = getCachedStreams(cacheKey)
             if (cachedStreams != null) {
                 // Return cached data immediately, then refresh in background
                 CoroutineScope(Dispatchers.IO).launch {
@@ -467,8 +473,8 @@ class XtreamRepository(
                         val seriesList = service.getSeries(categoryId)
                         val streams = convertSeriesToStreams(seriesList)
                         val fetchTime = System.currentTimeMillis() - startTime
-                        fetchTimes["category_series_$categoryId"] = fetchTime
-                        cacheStreams("series_$categoryId", streams)
+                        fetchTimes["category_$cacheKey"] = fetchTime
+                        cacheStreams(cacheKey, streams)
                     } catch (e: Exception) {
                         // Ignore network errors when refreshing
                     }
@@ -481,8 +487,8 @@ class XtreamRepository(
             val seriesList = service.getSeries(categoryId)
             val streams = convertSeriesToStreams(seriesList)
             val fetchTime = System.currentTimeMillis() - startTime
-            fetchTimes["category_series_$categoryId"] = fetchTime
-            cacheStreams("series_$categoryId", streams)
+            fetchTimes["category_$cacheKey"] = fetchTime
+            cacheStreams(cacheKey, streams)
             streams
         }
     }
@@ -511,7 +517,7 @@ class XtreamRepository(
 
     private fun getCachedStreams(categoryId: String): List<XtreamStream>? {
         val timestamp = cache.getLong(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId, 0L)
-        if (System.currentTimeMillis() - timestamp > CACHE_EXPIRY_MS) {
+        if (System.currentTimeMillis() - timestamp > appSettings.cacheExpiryMs) {
             return null // Cache expired
         }
 
@@ -527,10 +533,23 @@ class XtreamRepository(
 
     private fun cacheStreams(categoryId: String, streams: List<XtreamStream>) {
         trackPayloadSize("category_$categoryId", streams)
-        cache.edit()
-            .putString(KEY_STREAMS_PREFIX + categoryId, json.encodeToString(streams))
-            .putLong(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId, System.currentTimeMillis())
-            .apply()
+        try {
+            // Only cache if stream list is reasonable size (< 500 items to avoid OOM)
+            if (streams.size > 500) {
+                println("XtreamRepository: Skipping cache for $categoryId - too many streams (${streams.size})")
+                return
+            }
+            cache.edit()
+                .putString(KEY_STREAMS_PREFIX + categoryId, json.encodeToString(streams))
+                .putLong(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId, System.currentTimeMillis())
+                .apply()
+        } catch (e: OutOfMemoryError) {
+            println("XtreamRepository: Failed to cache streams for $categoryId - OutOfMemoryError")
+            // Clear the failed cache entry
+            cache.edit().remove(KEY_STREAMS_PREFIX + categoryId).apply()
+        } catch (e: Exception) {
+            println("XtreamRepository: Failed to cache streams for $categoryId - ${e.message}")
+        }
     }
 
     fun buildStreamUrl(streamId: Int, contentType: String = "LIVE_TV", extension: String? = null): Result<String> = resultOf {
@@ -590,6 +609,193 @@ class XtreamRepository(
 
     fun clearCache() {
         cache.edit().clear().apply()
+        payloadSizes.clear()
+        fetchTimes.clear()
+    }
+
+    /**
+     * Get total cache size in bytes
+     */
+    fun getCacheSize(): Long {
+        var totalSize = 0L
+        cache.all.forEach { (key, value) ->
+            when (value) {
+                is String -> totalSize += value.toByteArray(Charsets.UTF_8).size
+                is Long -> totalSize += 8 // 8 bytes for Long
+                is Int -> totalSize += 4 // 4 bytes for Int
+                is Boolean -> totalSize += 1 // 1 byte for Boolean
+            }
+        }
+        return totalSize
+    }
+
+    /**
+     * Get cache statistics per content type
+     */
+    data class ContentTypeCacheStats(
+        val size: Long,
+        val categoryCached: Boolean,
+        val streamListsCount: Int
+    )
+
+    data class CacheStats(
+        val totalSize: Long,
+        val liveTv: ContentTypeCacheStats,
+        val movies: ContentTypeCacheStats,
+        val tvShows: ContentTypeCacheStats,
+        val epgCount: Int,
+        val otherSize: Long
+    )
+
+    fun getCacheStats(): CacheStats {
+        var liveTvSize = 0L
+        var moviesSize = 0L
+        var tvShowsSize = 0L
+        var epgSize = 0L
+        var otherSize = 0L
+
+        var liveTvCategoryCached = false
+        var moviesCategoryCached = false
+        var tvShowsCategoryCached = false
+
+        var liveTvStreamsCount = 0
+        var moviesStreamsCount = 0
+        var tvShowsStreamsCount = 0
+        var epgCount = 0
+
+        cache.all.forEach { (key, value) ->
+            val valueSize = when (value) {
+                is String -> value.toByteArray(Charsets.UTF_8).size.toLong()
+                is Long -> 8L
+                is Int -> 4L
+                is Boolean -> 1L
+                else -> 0L
+            }
+
+            when {
+                // Live TV categories
+                key == KEY_CATEGORIES || key == KEY_CATEGORIES_TIMESTAMP -> {
+                    liveTvSize += valueSize
+                    if (key == KEY_CATEGORIES) liveTvCategoryCached = true
+                }
+                // Movies categories
+                key == KEY_VOD_CATEGORIES || key == KEY_VOD_CATEGORIES_TIMESTAMP -> {
+                    moviesSize += valueSize
+                    if (key == KEY_VOD_CATEGORIES) moviesCategoryCached = true
+                }
+                // TV Shows categories
+                key == KEY_SERIES_CATEGORIES || key == KEY_SERIES_CATEGORIES_TIMESTAMP -> {
+                    tvShowsSize += valueSize
+                    if (key == KEY_SERIES_CATEGORIES) tvShowsCategoryCached = true
+                }
+                // Live TV streams (no prefix like "vod_" or "series_")
+                key.startsWith(KEY_STREAMS_PREFIX) && !key.contains("vod_") && !key.contains("series_") && !key.contains("search_") -> {
+                    liveTvSize += valueSize
+                    if (!key.contains("_timestamp_")) liveTvStreamsCount++
+                }
+                // Movies streams
+                key.startsWith(KEY_STREAMS_PREFIX) && key.contains("vod_") && !key.contains("search_") -> {
+                    moviesSize += valueSize
+                    if (!key.contains("_timestamp_")) moviesStreamsCount++
+                }
+                // TV Shows streams
+                key.startsWith(KEY_STREAMS_PREFIX) && key.contains("series_") && !key.contains("search_") -> {
+                    tvShowsSize += valueSize
+                    if (!key.contains("_timestamp_")) tvShowsStreamsCount++
+                }
+                // EPG data
+                key.startsWith(KEY_EPG_PREFIX) -> {
+                    epgSize += valueSize
+                    if (!key.contains("_timestamp_")) epgCount++
+                }
+                // Search cache and other
+                else -> {
+                    otherSize += valueSize
+                }
+            }
+        }
+
+        return CacheStats(
+            totalSize = getCacheSize(),
+            liveTv = ContentTypeCacheStats(liveTvSize, liveTvCategoryCached, liveTvStreamsCount),
+            movies = ContentTypeCacheStats(moviesSize, moviesCategoryCached, moviesStreamsCount),
+            tvShows = ContentTypeCacheStats(tvShowsSize, tvShowsCategoryCached, tvShowsStreamsCount),
+            epgCount = epgCount,
+            otherSize = otherSize
+        )
+    }
+
+    /**
+     * Clear cache for specific content type
+     */
+    fun clearCacheForContentType(contentType: String) {
+        val editor = cache.edit()
+
+        when (contentType) {
+            "LIVE_TV" -> {
+                // Clear Live TV categories
+                editor.remove(KEY_CATEGORIES)
+                editor.remove(KEY_CATEGORIES_TIMESTAMP)
+                payloadSizes.remove("live_categories")
+                fetchTimes.remove("live_categories")
+
+                // Clear Live TV streams (keys without "vod_" or "series_" prefix)
+                cache.all.keys.filter { key ->
+                    key.startsWith(KEY_STREAMS_PREFIX) &&
+                    !key.contains("vod_") &&
+                    !key.contains("series_") &&
+                    !key.contains("search_")
+                }.forEach { key ->
+                    editor.remove(key)
+                    val categoryId = key.removePrefix(KEY_STREAMS_PREFIX)
+                        .removePrefix(KEY_STREAMS_TIMESTAMP_PREFIX)
+                    payloadSizes.remove("category_$categoryId")
+                    fetchTimes.remove("category_$categoryId")
+                }
+            }
+            "MOVIES" -> {
+                // Clear Movies categories
+                editor.remove(KEY_VOD_CATEGORIES)
+                editor.remove(KEY_VOD_CATEGORIES_TIMESTAMP)
+                payloadSizes.remove("vod_categories")
+                fetchTimes.remove("vod_categories")
+
+                // Clear Movies streams
+                cache.all.keys.filter { key ->
+                    key.startsWith(KEY_STREAMS_PREFIX) &&
+                    key.contains("vod_") &&
+                    !key.contains("search_")
+                }.forEach { key ->
+                    editor.remove(key)
+                    val categoryId = key.removePrefix(KEY_STREAMS_PREFIX)
+                        .removePrefix(KEY_STREAMS_TIMESTAMP_PREFIX)
+                    payloadSizes.remove("category_$categoryId")
+                    fetchTimes.remove("category_$categoryId")
+                }
+            }
+            "TV_SHOWS" -> {
+                // Clear TV Shows categories
+                editor.remove(KEY_SERIES_CATEGORIES)
+                editor.remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
+                payloadSizes.remove("series_categories")
+                fetchTimes.remove("series_categories")
+
+                // Clear TV Shows streams
+                cache.all.keys.filter { key ->
+                    key.startsWith(KEY_STREAMS_PREFIX) &&
+                    key.contains("series_") &&
+                    !key.contains("search_")
+                }.forEach { key ->
+                    editor.remove(key)
+                    val categoryId = key.removePrefix(KEY_STREAMS_PREFIX)
+                        .removePrefix(KEY_STREAMS_TIMESTAMP_PREFIX)
+                    payloadSizes.remove("category_$categoryId")
+                    fetchTimes.remove("category_$categoryId")
+                }
+            }
+        }
+
+        editor.apply()
     }
 
     fun getCurrentUrl(): String? {

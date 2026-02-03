@@ -30,6 +30,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,6 +44,9 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.VodInfo
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.theme.*
 
 /**
  * Movie details screen for VOD content.
@@ -150,6 +155,14 @@ private fun MovieDetailsContent(
     val movieInfo = vodInfo.info
     val extension = vodInfo.movieData?.containerExtension ?: "mp4"
 
+    // Focus requester for Play button
+    val playButtonFocusRequester = remember { FocusRequester() }
+
+    // Request focus on Play button when screen loads
+    LaunchedEffect(Unit) {
+        playButtonFocusRequester.requestFocus()
+    }
+
     // Track refresh state for animation
     var isRefreshing by remember { mutableStateOf(false) }
     var targetRotation by remember { mutableStateOf(0f) }
@@ -172,7 +185,7 @@ private fun MovieDetailsContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp, vertical = 32.dp)
+            .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
     ) {
         // Header with back button
         Row(
@@ -183,7 +196,7 @@ private fun MovieDetailsContent(
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     Text(
                         text = movieInfo?.name ?: movieName,
@@ -203,7 +216,7 @@ private fun MovieDetailsContent(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh movie info",
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            tint = CinemaTextSecondary.copy(alpha = 0.87f),
                             modifier = Modifier
                                 .size(24.dp)
                                 .rotate(rotation)
@@ -224,65 +237,66 @@ private fun MovieDetailsContent(
                     Text(
                         text = infoText,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        color = CinemaTextSecondary
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.md))
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = providerName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = CinemaTextSecondary.copy(alpha = 0.87f)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onBack) {
-                    Text("Back")
-                }
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                CinemaSecondaryButton(
+                    onClick = onBack,
+                    text = "Back"
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Spacing.xl))
 
         // Movie metadata
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
             // Genre, Rating, Duration
             movieInfo?.genre?.let { genre ->
                 Text(
                     text = genre,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = CinemaAccent
                 )
             }
             movieInfo?.rating?.let { rating ->
                 Text(
                     text = "★ $rating",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.secondary
+                    color = CinemaAccent
                 )
             }
             movieInfo?.duration?.let { duration ->
                 Text(
                     text = formatDuration(duration),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = CinemaTextSecondary
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Spacing.md))
 
         // Release date
         movieInfo?.releaseDate?.let { releaseDate ->
             Text(
                 text = "Released: $releaseDate",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                color = CinemaTextSecondary
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
         }
 
         // Plot/Description
@@ -290,11 +304,11 @@ private fun MovieDetailsContent(
             Text(
                 text = plot,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = CinemaTextPrimary,
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
         }
 
         // Cast
@@ -302,11 +316,11 @@ private fun MovieDetailsContent(
             Text(
                 text = "Cast: $cast",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                color = CinemaTextSecondary.copy(alpha = 0.87f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.xs))
         }
 
         // Director
@@ -314,27 +328,24 @@ private fun MovieDetailsContent(
             Text(
                 text = "Director: $director",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                color = CinemaTextSecondary.copy(alpha = 0.87f)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.xs))
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Spacing.xl))
 
         // Play button
-        Button(
+        CinemaPrimaryButton(
             onClick = {
                 onPlayMovie(movieId, movieInfo?.name ?: movieName, extension)
             },
+            text = "▶ Play Movie",
             modifier = Modifier
                 .width(200.dp)
                 .height(60.dp)
-        ) {
-            Text(
-                text = "▶ Play Movie",
-                style = MaterialTheme.typography.titleLarge
-            )
-        }
+                .focusRequester(playButtonFocusRequester)
+        )
     }
 }
 
@@ -348,14 +359,14 @@ private fun LoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(64.dp),
-                color = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(48.dp),
+                color = CinemaAccent
             )
-            Spacer(modifier = Modifier.padding(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
             Text(
                 text = "Loading movie details...",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
         }
     }
@@ -372,23 +383,24 @@ private fun ErrorScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier.padding(Spacing.xl)
         ) {
             Text(
                 text = "Error Loading Movie",
                 style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.error
+                color = CinemaError
             )
-            Spacer(modifier = Modifier.padding(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
-            Spacer(modifier = Modifier.padding(24.dp))
-            Button(onClick = onBack) {
-                Text("Back to Movies")
-            }
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            CinemaSecondaryButton(
+                onClick = onBack,
+                text = "Back to Movies"
+            )
         }
     }
 }

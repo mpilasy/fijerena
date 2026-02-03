@@ -41,6 +41,9 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.theme.*
 
 /**
  * Edit Provider URL screen.
@@ -67,7 +70,7 @@ fun EditProviderScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(48.dp),
+                .padding(Spacing.xxl),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -80,15 +83,15 @@ fun EditProviderScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(Spacing.xl))
 
                 Text(
                     text = "Current URL: $currentUrl",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = CinemaTextSecondary.copy(alpha = 0.87f)
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Spacing.lg))
 
                 // URL Input Field
                 OutlinedTextField(
@@ -102,49 +105,48 @@ fun EditProviderScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = androidx.compose.ui.graphics.Color.White,
-                        unfocusedTextColor = androidx.compose.ui.graphics.Color.White,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        focusedPlaceholderColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f),
-                        unfocusedPlaceholderColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f)
+                        focusedTextColor = CinemaTextPrimary,
+                        unfocusedTextColor = CinemaTextPrimary,
+                        cursorColor = CinemaAccent,
+                        focusedBorderColor = CinemaAccent,
+                        unfocusedBorderColor = CinemaTextSecondary,
+                        focusedLabelColor = CinemaAccent,
+                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f),
+                        focusedPlaceholderColor = CinemaTextSecondary,
+                        unfocusedPlaceholderColor = CinemaTextSecondary
                     )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Spacing.md))
 
                 // Error message
                 error?.let { errorMsg ->
                     Text(
                         text = errorMsg,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
+                        color = CinemaError
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Spacing.md))
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Spacing.lg))
 
                 // Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md, Alignment.CenterHorizontally)
                 ) {
-                    Button(
+                    CinemaSecondaryButton(
                         onClick = onBack,
-                        enabled = !isLoading
-                    ) {
-                        Text("Cancel")
-                    }
+                        enabled = !isLoading,
+                        text = "Cancel"
+                    )
 
-                    Button(
+                    CinemaPrimaryButton(
                         onClick = {
                             if (urlInput.isBlank()) {
                                 error = "URL cannot be empty"
-                                return@Button
+                                return@CinemaPrimaryButton
                             }
 
                             scope.launch {
@@ -163,17 +165,9 @@ fun EditProviderScreen(
                                 }
                             }
                         },
-                        enabled = !isLoading && urlInput.trim() != currentUrl
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        } else {
-                            Text("Save & Re-authenticate")
-                        }
-                    }
+                        enabled = !isLoading && urlInput.trim() != currentUrl,
+                        text = if (isLoading) "Saving..." else "Save & Re-authenticate"
+                    )
                 }
             }
         }

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,6 +21,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.theme.*
 
 @Composable
 fun EpgGuideScreen(
@@ -71,9 +73,16 @@ private fun LoadingScreen() {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(modifier = Modifier.size(64.dp))
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Loading TV Guide...", style = MaterialTheme.typography.titleLarge)
+            CircularProgressIndicator(
+                modifier = Modifier.size(48.dp),
+                color = CinemaAccent
+            )
+            Spacer(modifier = Modifier.height(Spacing.md))
+            Text(
+                text = "Loading TV Guide...",
+                style = MaterialTheme.typography.titleLarge,
+                color = CinemaTextSecondary
+            )
         }
     }
 }
@@ -88,19 +97,25 @@ private fun ErrorScreen(message: String, onRetry: () -> Unit, onBack: () -> Unit
             Text(
                 text = "Error Loading Guide",
                 style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.error
+                color = CinemaError
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = message, style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = CinemaTextSecondary
+            )
+            Spacer(modifier = Modifier.height(Spacing.lg))
             Row {
-                Button(onClick = onBack) {
-                    Text("Back")
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Button(onClick = onRetry) {
-                    Text("Retry")
-                }
+                CinemaSecondaryButton(
+                    onClick = onBack,
+                    text = "Back"
+                )
+                Spacer(modifier = Modifier.width(Spacing.md))
+                CinemaPrimaryButton(
+                    onClick = onRetry,
+                    text = "Retry"
+                )
             }
         }
     }

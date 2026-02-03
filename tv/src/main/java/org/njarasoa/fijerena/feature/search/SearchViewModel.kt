@@ -35,7 +35,9 @@ class SearchViewModel(
         data class Success(
             val allResults: List<SearchResult>,
             val filteredResults: List<SearchResult>,
-            val query: String
+            val query: String,
+            val isSearching: Boolean = false,
+            val searchProgress: String? = null
         ) : UiState()
         data class Error(val message: String) : UiState()
     }
@@ -57,8 +59,13 @@ class SearchViewModel(
     private val searchQuery = MutableStateFlow("")
 
     init {
-        loadAllData()
         observeSearchQuery()
+        // Start with an empty success state
+        _uiState.value = UiState.Success(
+            allResults = emptyList(),
+            filteredResults = emptyList(),
+            query = ""
+        )
     }
 
     /**
@@ -69,9 +76,13 @@ class SearchViewModel(
     }
 
     /**
-     * Load all categories and streams for the current content type
+     * Perform efficient sequential search with early stopping
+     * - Searches categories one at a time (memory efficient)
+     * - Stops after finding enough matches (fast)
+     * - Shows results as they arrive (responsive)
+     * - Prioritizes exact/prefix matches
      */
-    private fun loadAllData() {
+    private fun performIncrementalSearch(query: String) {
         viewModelScope.launch {
             try {
                 // Ensure we have an authenticated session
@@ -86,6 +97,9 @@ class SearchViewModel(
                         }
                     }
                 }
+
+                // Show loading state
+                _uiState.value = UiState.Loading
 
                 // 1. Load categories based on content type
                 val categoriesResult = when (contentType) {
@@ -109,50 +123,122 @@ class SearchViewModel(
                 // Filter out "Last Watched" virtual category
                 val realCategories = categories.filter { it.categoryId != "last_watched" }
 
-                // 2. Load all streams for each category in parallel
-                val allResults = mutableListOf<SearchResult>()
+                // 2. Search sequentially with early stopping
+                val results = mutableListOf<SearchResult>()
+                val normalizedQuery = query.trim().lowercase()
+                val targetResults = 200 // Increased limit for better search results
 
-                coroutineScope {
-                    realCategories.forEach { category ->
-                        launch {
-                            val streamsResult = when (contentType) {
-                                "LIVE_TV" -> repository.getStreams(category.categoryId)
-                                "MOVIES" -> repository.getVodStreams(category.categoryId)
-                                "TV_SHOWS" -> repository.getSeries(category.categoryId)
-                                else -> return@launch
+                println("SearchViewModel: Starting search for query='$normalizedQuery', contentType=$contentType, categories=${realCategories.size}")
+
+                // Show initial searching state
+                _uiState.value = UiState.Success(
+                    allResults = emptyList(),
+                    filteredResults = emptyList(),
+                    query = query,
+                    isSearching = true,
+                    searchProgress = "Searching categories..."
+                )
+
+                var categoriesSearched = 0
+                for (category in realCategories) {
+                    categoriesSearched++
+                    // Stop if we have enough results
+                    if (results.size >= targetResults) {
+                        println("SearchViewModel: Reached target of $targetResults results, stopping search")
+                        break
+                    }
+
+                    // Check if search query has changed (user kept typing)
+                    if (searchQuery.value != query) {
+                        println("SearchViewModel: Query changed, stopping search")
+                        break
+                    }
+
+                    // Load streams for this category (use search cache to avoid overwriting catalog cache)
+                    val streamsResult = when (contentType) {
+                        "LIVE_TV" -> repository.getStreams(category.categoryId, forSearch = true)
+                        "MOVIES" -> repository.getVodStreams(category.categoryId, forSearch = true)
+                        "TV_SHOWS" -> repository.getSeries(category.categoryId, forSearch = true)
+                        else -> continue
+                    }
+
+                    when (streamsResult) {
+                        is Result.Success -> {
+                            println("SearchViewModel: Category ${category.categoryName} has ${streamsResult.data.size} streams")
+
+                            // Filter streams that match the query
+                            val matchingStreams = streamsResult.data
+                                .filter {
+                                    val matches = it.name.lowercase().contains(normalizedQuery)
+                                    if (matches) println("SearchViewModel: Found match: ${it.name}")
+                                    matches
+                                }
+                                .map { stream ->
+                                    SearchResult(
+                                        streamId = stream.streamId,
+                                        streamName = stream.name,
+                                        categoryId = category.categoryId,
+                                        categoryName = category.categoryName,
+                                        contentType = contentType
+                                    )
+                                }
+
+                            println("SearchViewModel: Found ${matchingStreams.size} matches in category ${category.categoryName}")
+                            results.addAll(matchingStreams)
+
+                            // Sort by relevance: exact match > starts with > contains
+                            val sortedResults = results.sortedWith(compareBy<SearchResult> {
+                                when {
+                                    it.streamName.lowercase() == normalizedQuery -> 0
+                                    it.streamName.lowercase().startsWith(normalizedQuery) -> 1
+                                    else -> 2
+                                }
+                            }.thenBy { it.streamName })
+
+                            val finalResults = sortedResults.take(targetResults)
+                            println("SearchViewModel: Updating UI state with ${finalResults.size} results for query='$query'")
+                            if (finalResults.isNotEmpty()) {
+                                println("SearchViewModel: First result - streamName='${finalResults.first().streamName}', streamId=${finalResults.first().streamId}, contentType='${finalResults.first().contentType}'")
                             }
 
-                            when (streamsResult) {
-                                is Result.Success -> {
-                                    val streams = streamsResult.data.map { stream ->
-                                        SearchResult(
-                                            streamId = stream.streamId,
-                                            streamName = stream.name,
-                                            categoryId = category.categoryId,
-                                            categoryName = category.categoryName,
-                                            contentType = contentType
-                                        )
-                                    }
-                                    synchronized(allResults) {
-                                        allResults.addAll(streams)
-                                    }
-                                }
-                                is Result.Error -> {
-                                    // Skip failed categories, continue loading others
-                                }
-                            }
+                            // Update UI incrementally (every category) with progress
+                            _uiState.value = UiState.Success(
+                                allResults = finalResults,
+                                filteredResults = finalResults,
+                                query = query,
+                                isSearching = true,
+                                searchProgress = "Found ${finalResults.size} results (searched $categoriesSearched/${realCategories.size} categories)"
+                            )
+
+                            println("SearchViewModel: UI state updated. Current state: ${_uiState.value}")
+                        }
+                        is Result.Error -> {
+                            // Skip failed categories, continue loading others
                         }
                     }
                 }
 
-                // 3. Update state with all results
+                // Search complete - update final state
+                val sortedFinalResults = results.sortedWith(compareBy<SearchResult> {
+                    when {
+                        it.streamName.lowercase() == normalizedQuery -> 0
+                        it.streamName.lowercase().startsWith(normalizedQuery) -> 1
+                        else -> 2
+                    }
+                }.thenBy { it.streamName })
+
+                val finalResults = sortedFinalResults.take(targetResults)
+                println("SearchViewModel: Search complete. Found ${finalResults.size} total results")
+
                 _uiState.value = UiState.Success(
-                    allResults = allResults,
-                    filteredResults = allResults,
-                    query = ""
+                    allResults = finalResults,
+                    filteredResults = finalResults,
+                    query = query,
+                    isSearching = false,
+                    searchProgress = null
                 )
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Failed to load data")
+                _uiState.value = UiState.Error(e.message ?: "Failed to search")
             }
         }
     }
@@ -163,20 +249,18 @@ class SearchViewModel(
     @OptIn(FlowPreview::class)
     private fun observeSearchQuery() {
         searchQuery
-            .debounce(300)
+            .debounce(500) // Increased debounce to reduce API calls
             .onEach { query ->
-                val currentState = _uiState.value
-                if (currentState is UiState.Success) {
-                    val filtered = if (query.isBlank()) {
-                        currentState.allResults
-                    } else {
-                        filterResults(query, currentState.allResults)
-                    }
-
-                    _uiState.value = currentState.copy(
-                        filteredResults = filtered.take(200), // Limit to 200 results
-                        query = query
+                if (query.isBlank()) {
+                    // Empty query - show empty results
+                    _uiState.value = UiState.Success(
+                        allResults = emptyList(),
+                        filteredResults = emptyList(),
+                        query = ""
                     )
+                } else if (query.length >= 2) {
+                    // Only search when query is at least 2 characters
+                    performIncrementalSearch(query)
                 }
             }
             .launchIn(viewModelScope)

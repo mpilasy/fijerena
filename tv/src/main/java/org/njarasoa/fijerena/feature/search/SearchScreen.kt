@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -30,6 +31,8 @@ import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.*
 import org.njarasoa.fijerena.feature.search.SearchViewModel.SearchResult
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.theme.*
 
 /**
  * Search screen for searching streams across all categories.
@@ -57,8 +60,6 @@ fun SearchScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
     val configuration = LocalConfiguration.current
-    val horizontalPadding = (configuration.screenWidthDp * 0.05).dp
-    val verticalPadding = (configuration.screenHeightDp * 0.05).dp
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -66,21 +67,27 @@ fun SearchScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+                .padding(
+                    horizontal = Spacing.tvSafeHorizontal(configuration.screenWidthDp),
+                    vertical = Spacing.tvSafeVertical(configuration.screenHeightDp)
+                )
         ) {
             // Header with back button
             HeaderRow(onBack = onBack, contentType = contentType)
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             when (uiState) {
                 is SearchViewModel.UiState.Loading -> LoadingView()
                 is SearchViewModel.UiState.Error -> ErrorView((uiState as SearchViewModel.UiState.Error).message)
                 is SearchViewModel.UiState.Success -> {
                     val successState = uiState as SearchViewModel.UiState.Success
+                    println("SearchScreen: Rendering with ${successState.filteredResults.size} results, query='${successState.query}', isSearching=${successState.isSearching}")
                     SearchContent(
                         query = successState.query,
                         results = successState.filteredResults,
+                        isSearching = successState.isSearching,
+                        searchProgress = successState.searchProgress,
                         onQueryChange = { viewModel.updateSearchQuery(it) },
                         onResultClick = { result ->
                             onStreamSelected(result.streamId, result.streamName, result.categoryId)
@@ -103,12 +110,13 @@ private fun HeaderRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(onClick = onBack) {
-                Text("← Back")
-            }
+            CinemaSecondaryButton(
+                onClick = onBack,
+                text = "← Back"
+            )
             Column {
                 Text(
                     text = "Search",
@@ -118,7 +126,7 @@ private fun HeaderRow(
                 Text(
                     text = contentType.replace("_", " "),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = CinemaAccent
                 )
             }
         }
@@ -133,16 +141,16 @@ private fun LoadingView() {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(64.dp),
-                color = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(48.dp),
+                color = CinemaAccent
             )
             Text(
                 text = "Loading categories...",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
         }
     }
@@ -156,18 +164,18 @@ private fun ErrorView(message: String) {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(32.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            modifier = Modifier.padding(Spacing.xl)
         ) {
             Text(
                 text = "Error",
                 style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.error
+                color = CinemaError
             )
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
         }
     }
@@ -177,12 +185,21 @@ private fun ErrorView(message: String) {
 private fun SearchContent(
     query: String,
     results: List<SearchResult>,
+    isSearching: Boolean,
+    searchProgress: String?,
     onQueryChange: (String) -> Unit,
     onResultClick: (SearchResult) -> Unit
 ) {
     val searchFocusRequester = remember { FocusRequester() }
-    // Local state for text field to avoid debounce clearing
-    var localQuery by remember { mutableStateOf("") }
+    // Local state for text field - manages user input independently
+    var localQuery by remember { mutableStateOf(query) }
+
+    // Sync with incoming query only if local is empty (prevents erasing user input)
+    LaunchedEffect(query) {
+        if (localQuery.isEmpty() && query.isNotEmpty()) {
+            localQuery = query
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Search field
@@ -195,7 +212,7 @@ private fun SearchContent(
             focusRequester = searchFocusRequester
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(Spacing.lg))
 
         // Results or empty state
         if (localQuery.isEmpty()) {
@@ -206,13 +223,15 @@ private fun SearchContent(
                 Text(
                     text = "Enter search term to find streams across all categories",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = CinemaTextSecondary.copy(alpha = 0.87f)
                 )
             }
         } else {
             SearchResultsList(
                 results = results,
                 query = localQuery,
+                isSearching = isSearching,
+                searchProgress = searchProgress,
                 onResultClick = onResultClick
             )
         }
@@ -235,15 +254,15 @@ private fun SearchTextField(
             .width(600.dp)
             .focusRequester(focusRequester),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            cursorColor = MaterialTheme.colorScheme.primary,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
-            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            focusedPlaceholderColor = Color.White.copy(alpha = 0.5f),
-            unfocusedPlaceholderColor = Color.White.copy(alpha = 0.5f)
+            focusedTextColor = CinemaTextPrimary,
+            unfocusedTextColor = CinemaTextPrimary,
+            cursorColor = CinemaAccent,
+            focusedBorderColor = CinemaAccent,
+            unfocusedBorderColor = CinemaTextSecondary,
+            focusedLabelColor = CinemaAccent,
+            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f),
+            focusedPlaceholderColor = CinemaTextSecondary,
+            unfocusedPlaceholderColor = CinemaTextSecondary
         ),
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Text,
@@ -264,13 +283,42 @@ private fun SearchTextField(
 private fun SearchResultsList(
     results: List<SearchResult>,
     query: String,
+    isSearching: Boolean,
+    searchProgress: String?,
     onResultClick: (SearchResult) -> Unit
 ) {
+    println("SearchResultsList: Received ${results.size} results, query='$query', isSearching=$isSearching")
+    if (results.isNotEmpty()) {
+        println("SearchResultsList: First result - ${results.first().streamName}")
+    }
+
     val focusRequesters = remember(results) {
         results.associate { it.streamId to FocusRequester() }
     }
 
-    if (results.isEmpty()) {
+    if (isSearching && results.isEmpty()) {
+        // Show loading state while searching
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(48.dp),
+                    color = CinemaAccent
+                )
+                Text(
+                    text = searchProgress ?: "Searching...",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CinemaTextSecondary
+                )
+            }
+        }
+    } else if (results.isEmpty()) {
+        // No results found after search completed
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -278,19 +326,45 @@ private fun SearchResultsList(
             Text(
                 text = "No results found for '$query'. Try different keywords.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                color = CinemaTextSecondary.copy(alpha = 0.87f)
             )
         }
     } else {
         Column {
-            Text(
-                text = "${results.size} results",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = Spacing.sm),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${results.size} results",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                )
+
+                if (isSearching && searchProgress != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = CinemaAccent,
+                            strokeWidth = 2.dp
+                        )
+                        Text(
+                            text = searchProgress,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaAccent
+                        )
+                    }
+                }
+            }
+
             TvLazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(results, key = { "${it.streamId}_${it.categoryId}" }) { result ->
@@ -311,39 +385,48 @@ private fun SearchResultItem(
     onClick: () -> Unit,
     focusRequester: FocusRequester?
 ) {
-    var isFocused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (isFocused) 1.05f else 1.0f, label = "search_item_scale")
-
     Card(
         onClick = onClick,
         modifier = Modifier
+            .padding(horizontal = 16.dp)
             .fillMaxWidth()
             .height(80.dp)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .scale(scale)
-            .onFocusChanged { isFocused = it.isFocused },
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
         colors = CardDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            containerColor = CinemaSurface,
+            contentColor = CinemaTextPrimary,
+            focusedContainerColor = CinemaAccent.copy(alpha = 0.15f),
+            focusedContentColor = CinemaTextPrimary
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(width = 4.dp, color = CinemaAccentLight)
+            )
+        ),
+        shape = CardDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(CornerRadius.medium)),
+        scale = CardDefaults.scale(
+            scale = 1.0f,
+            focusedScale = 1.05f,
+            pressedScale = 0.98f
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(Spacing.md),
             verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = result.streamName,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaTextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = "Category: ${result.categoryName}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.7f)
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextSecondary
             )
         }
     }

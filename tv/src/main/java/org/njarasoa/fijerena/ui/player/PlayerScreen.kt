@@ -60,16 +60,24 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.C
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.theme.*
 import kotlin.time.Duration.Companion.seconds
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun PlayerScreen(
@@ -83,14 +91,19 @@ fun PlayerScreen(
     val playbackState = viewModel.playbackState.collectAsState().value
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
     val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val isDeveloperMode = remember { appSettings.isDevMode }
 
     var showControls by remember { mutableStateOf(false) }
     var showStats by remember { mutableStateOf(false) }
     var showAudioTrackSelector by remember { mutableStateOf(false) }
     var showSubtitleSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
-    var lastClickTime by remember { mutableStateOf(0L) }
+    var showStreamInfo by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
+
+    // Keep last displayed metadata to show during channel transitions
+    var displayedMetadata by remember { mutableStateOf(currentMetadata) }
 
     // Control hints for first-time users (currently disabled)
     val prefs = remember { context.getSharedPreferences("player_prefs", android.content.Context.MODE_PRIVATE) }
@@ -104,9 +117,19 @@ fun PlayerScreen(
         }
     }
 
-    // Auto-hide controls after 15 seconds
-    LaunchedEffect(showControls) {
-        if (showControls && !showStats) {
+    // Auto-hide overlays
+    LaunchedEffect(showControls, showStreamInfo) {
+        if (showControls && showStreamInfo) {
+            // Both visible (OK press) - hide after 15 seconds
+            delay(15.seconds)
+            showControls = false
+            showStreamInfo = false
+        } else if (showStreamInfo) {
+            // Stream info alone (channel switch or menu) - hide after 3 seconds
+            delay(3.seconds)
+            showStreamInfo = false
+        } else if (showControls) {
+            // Controls alone (shouldn't happen but handle it) - hide after 15 seconds
             delay(15.seconds)
             showControls = false
         }
@@ -117,14 +140,30 @@ fun PlayerScreen(
         focusRequester.requestFocus()
     }
 
-    // Show controls overlay when stream starts or changes
-    var previousMetadataTitle by remember { mutableStateOf<String?>(null) }
+    // Update displayed metadata when stream actually starts playing
     LaunchedEffect(currentMetadata.title, playbackState) {
-        // Show controls when title changes or on first playback
+        // Only update displayed metadata when stream is actually playing/buffering
+        if (currentMetadata.title.isNotEmpty() &&
+            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
+            displayedMetadata = currentMetadata
+        }
+    }
+
+    // Show only stream info when stream starts from menu
+    var previousMetadataTitle by remember { mutableStateOf<String?>(null) }
+    var isInitialLoad by remember { mutableStateOf(true) }
+    LaunchedEffect(currentMetadata.title, playbackState) {
+        // Show only stream info when title changes on initial load from menu
         if (currentMetadata.title.isNotEmpty() &&
             currentMetadata.title != previousMetadataTitle &&
             (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
-            showControls = true
+
+            if (isInitialLoad) {
+                // From menu selection - show only stream info
+                showStreamInfo = true
+                isInitialLoad = false
+            }
+            // Note: Channel switching sets showStreamInfo directly in key handler
             previousMetadataTitle = currentMetadata.title
         }
     }
@@ -132,10 +171,10 @@ fun PlayerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(CinemaBackground)
             .then(
-                // Only make the player box focusable when stats are not visible
-                if (!showStats) {
+                // Only make the player box focusable when overlays are not visible
+                if (!showStats && !showControls) {
                     Modifier
                         .focusRequester(focusRequester)
                         .focusable()
@@ -147,62 +186,80 @@ fun PlayerScreen(
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     when (keyEvent.key) {
                         Key.DirectionCenter, Key.Enter -> {
-                            val currentTime = System.currentTimeMillis()
-                            val timeDiff = currentTime - lastClickTime
+                            // When controls are visible, let ENTER pass through to buttons
+                            if (showControls) {
+                                false
+                            } else if (!showStats) {
+                                // For VOD: Show controls AND toggle pause/resume
+                                // For Live TV: Just show controls
+                                val newState = !showControls
+                                showControls = newState
+                                showStreamInfo = newState
 
-                            if (timeDiff < 500) {
-                                // Double click detected - toggle stats
-                                showStats = !showStats
-                                showControls = showStats
-                            } else {
-                                // Single click - toggle controls
-                                if (!showStats) {
-                                    showControls = !showControls
+                                // VOD only: Also toggle pause/resume when showing controls
+                                if (!currentMetadata.isLive) {
+                                    when (playbackState) {
+                                        is PlaybackState.Playing -> viewModel.pause()
+                                        is PlaybackState.Paused -> viewModel.resume()
+                                        else -> {}
+                                    }
                                 }
-                            }
-
-                            lastClickTime = currentTime
-                            true
-                        }
-                        Key.DirectionUp -> {
-                            // Only change channel if stats are not visible AND content is Live TV
-                            if (!showStats && currentMetadata.isLive) {
-                                println("PlayerScreen: UP button pressed")
-                                onPreviousChannel()
-                                showControls = true
-                                println("PlayerScreen: showControls set to true, metadata title=${currentMetadata.title}")
                                 true
                             } else {
-                                false // Let stats overlay handle it or ignore for VOD
+                                false
+                            }
+                        }
+                        Key.DirectionUp -> {
+                            println("PlayerScreen: UP key pressed - showControls=$showControls, isLive=${currentMetadata.isLive}")
+                            // Only change channel if controls are not visible AND content is Live TV
+                            // Stats overlay does NOT prevent channel switching
+                            if (!showControls && currentMetadata.isLive) {
+                                println("PlayerScreen: Switching to previous channel")
+                                onPreviousChannel()
+                                // Show stream info overlay (not full controls)
+                                showStreamInfo = true
+                                true
+                            } else {
+                                println("PlayerScreen: Not switching channel (controls visible or not live)")
+                                // When controls are visible, let D-pad navigate between buttons
+                                false
                             }
                         }
                         Key.DirectionDown -> {
-                            // Only change channel if stats are not visible AND content is Live TV
-                            if (!showStats && currentMetadata.isLive) {
-                                println("PlayerScreen: DOWN button pressed")
-                                onNextChannel()
-                                showControls = true
-                                println("PlayerScreen: showControls set to true, metadata title=${currentMetadata.title}")
-                                true
+                            println("PlayerScreen: DOWN key pressed - showControls=$showControls, isLive=${currentMetadata.isLive}")
+                            if (!showControls) {
+                                if (currentMetadata.isLive) {
+                                    // Live TV: Change channel
+                                    println("PlayerScreen: Switching to next channel")
+                                    onNextChannel()
+                                    // Show stream info overlay (not full controls)
+                                    showStreamInfo = true
+                                    true
+                                } else {
+                                    // VOD: Show controls and stream info without pausing
+                                    println("PlayerScreen: VOD - Showing controls without pausing")
+                                    showControls = true
+                                    showStreamInfo = true
+                                    true
+                                }
                             } else {
-                                false // Let stats overlay handle it or ignore for VOD
+                                println("PlayerScreen: Controls visible, letting D-pad navigate")
+                                // When controls are visible, let D-pad navigate between buttons
+                                false
                             }
                         }
                         Key.DirectionLeft, Key.DirectionRight -> {
-                            // Let stats overlay handle left/right when visible
-                            if (showStats) {
-                                false
-                            } else {
-                                false // Not used for anything else
-                            }
+                            // Don't consume LEFT/RIGHT - let them navigate
+                            // Stats overlay will handle repositioning when visible
+                            // Control buttons will handle focus navigation when visible
+                            false
                         }
                         Key.Back -> {
-                            if (showStats) {
+                            // Close any visible overlays first, then exit
+                            if (showStats || showControls || showStreamInfo) {
                                 showStats = false
                                 showControls = false
-                                true
-                            } else if (showControls) {
-                                showControls = false
+                                showStreamInfo = false
                                 true
                             } else {
                                 viewModel.stop()
@@ -217,49 +274,34 @@ fun PlayerScreen(
                 }
             }
     ) {
-        val playerView = remember {
-            PlayerView(context).apply {
-                useController = false
-                keepScreenOn = true
-                setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-            }
-        }
+        // Use metadata title as key to force AndroidView recreation on stream change
+        val streamKey = currentMetadata.title + currentMetadata.streamUrl
 
         AndroidView(
-            factory = { playerView },
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    useController = false
+                    keepScreenOn = true
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
+            },
             modifier = Modifier.fillMaxSize(),
             update = { view ->
-                // Capture metadata to trigger update on change
+                // Capture stream key to trigger re-creation when it changes
                 @Suppress("UNUSED_VARIABLE")
-                val metadataTitle = currentMetadata.title
+                val capturedStreamKey = streamKey
 
+                // Ensure resize mode is set
                 view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                // Force the view to match parent dimensions
-                val parent = view.parent as? android.view.ViewGroup
-                parent?.let { p ->
-                    val params = android.widget.FrameLayout.LayoutParams(
-                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    view.layoutParams = params
-                    view.measure(
-                        android.view.View.MeasureSpec.makeMeasureSpec(p.width, android.view.View.MeasureSpec.EXACTLY),
-                        android.view.View.MeasureSpec.makeMeasureSpec(p.height, android.view.View.MeasureSpec.EXACTLY)
-                    )
-                    view.layout(0, 0, p.width, p.height)
+
+                // Bind player
+                val service = StreamingPlaybackService.getInstance()
+                if (view.player == null) {
+                    view.player = service?.getPlayer()
                 }
             }
         )
-
-        // Bind player to view when service is available
-        DisposableEffect(Unit) {
-            val service = StreamingPlaybackService.getInstance()
-            playerView.player = service?.getPlayer()
-
-            onDispose {
-                playerView.player = null
-            }
-        }
 
         // Loading/Error overlays (always show)
         Box(
@@ -280,8 +322,9 @@ fun PlayerScreen(
         }
 
         // Stats overlay (double-click to show)
+        // Visible whenever showStats is true, regardless of playbackState (survives channel switches)
         AnimatedVisibility(
-            visible = showStats && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused),
+            visible = showStats,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -290,40 +333,69 @@ fun PlayerScreen(
                 metadata = currentMetadata,
                 context = context,
                 onHide = {
+                    // Just close stats, leave controls as they are
                     showStats = false
-                    showControls = false
                 }
             )
         }
 
-        // Metadata overlay (single-click to show)
-        val overlayVisible = showControls && !showStats
-        println("PlayerScreen: Overlay visible=$overlayVisible, showControls=$showControls, showStats=$showStats, playbackState=$playbackState, metadata.title=${currentMetadata.title}")
-
-        AnimatedVisibility(
-            visible = overlayVisible,
-            modifier = Modifier.align(BottomCenter),
-            enter = fadeIn(),
-            exit = fadeOut()
+        // Stream info overlay - top left
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(48.dp)
         ) {
-            println("PlayerScreen: Inside AnimatedVisibility content")
-            val isPaused = playbackState is PlaybackState.Paused
-            MetadataOverlay(
-                playbackState = playbackState,
-                metadata = currentMetadata,
-                isPaused = isPaused,
-                onPause = if (!isPaused) ({ viewModel.pause() }) else null,
-                onResume = if (isPaused) ({ viewModel.resume() }) else null,
-                onAudioTrack = { showAudioTrackSelector = true },
-                onSubtitle = { showSubtitleSelector = true },
-                onQuality = { showQualitySelector = true },
-                isFavorite = isFavorite,
-                onToggleFavorite = onToggleFavorite,
-                onBack = {
-                    viewModel.stop()
-                    onBack()
-                }
-            )
+            AnimatedVisibility(
+                visible = showStreamInfo,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                StreamInfoDisplay(
+                    playbackState = playbackState,
+                    metadata = displayedMetadata
+                )
+            }
+        }
+
+        // Control buttons overlay - bottom center
+        Box(
+            modifier = Modifier
+                .align(BottomCenter)
+                .fillMaxWidth()
+        ) {
+            AnimatedVisibility(
+                visible = showControls && !showStats,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                val isPaused = playbackState is PlaybackState.Paused
+                val isLive = currentMetadata.isLive
+
+                // Get track counts to determine which buttons to show
+                val audioTrackCount = viewModel.getAudioTracks().size
+                val subtitleTrackCount = viewModel.getSubtitleTracks().size
+                val qualityCount = viewModel.getVideoQualities().size
+
+                ControlButtonsRow(
+                    isLive = isLive,
+                    isPaused = isPaused,
+                    onPause = if (!isPaused && !isLive) ({ viewModel.pause() }) else null,
+                    onResume = if (isPaused && !isLive) ({ viewModel.resume() }) else null,
+                    hasMultipleAudioTracks = audioTrackCount > 1,
+                    onAudioTrack = { showAudioTrackSelector = true },
+                    hasSubtitles = subtitleTrackCount > 0,
+                    onSubtitle = { showSubtitleSelector = true },
+                    hasMultipleQualities = qualityCount > 1,
+                    onQuality = { showQualitySelector = true },
+                    onStats = if (isDeveloperMode) ({ showStats = !showStats }) else null,
+                    isFavorite = isFavorite,
+                    onToggleFavorite = onToggleFavorite,
+                    onBack = {
+                        viewModel.stop()
+                        onBack()
+                    }
+                )
+            }
         }
 
         // Audio track selector dialog
@@ -1094,7 +1166,11 @@ private fun StatsOverlay(
     var quadrantPosition by remember { mutableStateOf(QuadrantPosition.BOTTOM_RIGHT) }
     var isFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
-    var lastClickTime by remember { mutableStateOf(0L) }
+
+    // Request focus when overlay appears to capture all key events
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 
     // Get current track info
     var videoCodec by remember { mutableStateOf("N/A") }
@@ -1175,8 +1251,8 @@ private fun StatsOverlay(
         }
     }
 
-    // Calculate overlay size (30% width × 50% height)
-    val overlayWidth = (configuration.screenWidthDp * 0.30).dp
+    // Calculate overlay size (35% width × 50% height)
+    val overlayWidth = (configuration.screenWidthDp * 0.35).dp
     val overlayHeight = (configuration.screenHeightDp * 0.50).dp
 
     Box(
@@ -1203,19 +1279,18 @@ private fun StatsOverlay(
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.type == KeyEventType.KeyDown) {
                         when (keyEvent.key) {
-                            Key.DirectionCenter -> {
-                                val currentTime = System.currentTimeMillis()
-                                val timeDiff = currentTime - lastClickTime
-
-                                if (timeDiff < 600) {
-                                    // Double tap detected - hide overlay
-                                    onHide()
-                                }
-
-                                lastClickTime = currentTime
+                            Key.DirectionCenter, Key.Enter -> {
+                                // Single press closes overlay
+                                onHide()
+                                true
+                            }
+                            Key.Back -> {
+                                // Close overlay (not the stream)
+                                onHide()
                                 true
                             }
                             Key.DirectionUp -> {
+                                // Move to top
                                 quadrantPosition = when (quadrantPosition) {
                                     QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.TOP_LEFT
                                     QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.TOP_RIGHT
@@ -1224,6 +1299,7 @@ private fun StatsOverlay(
                                 true
                             }
                             Key.DirectionDown -> {
+                                // Move to bottom
                                 quadrantPosition = when (quadrantPosition) {
                                     QuadrantPosition.TOP_LEFT -> QuadrantPosition.BOTTOM_LEFT
                                     QuadrantPosition.TOP_RIGHT -> QuadrantPosition.BOTTOM_RIGHT
@@ -1232,6 +1308,7 @@ private fun StatsOverlay(
                                 true
                             }
                             Key.DirectionLeft -> {
+                                // Move to left
                                 quadrantPosition = when (quadrantPosition) {
                                     QuadrantPosition.TOP_RIGHT -> QuadrantPosition.TOP_LEFT
                                     QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.BOTTOM_LEFT
@@ -1240,6 +1317,7 @@ private fun StatsOverlay(
                                 true
                             }
                             Key.DirectionRight -> {
+                                // Move to right
                                 quadrantPosition = when (quadrantPosition) {
                                     QuadrantPosition.TOP_LEFT -> QuadrantPosition.TOP_RIGHT
                                     QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.BOTTOM_RIGHT
@@ -1247,10 +1325,10 @@ private fun StatsOverlay(
                                 }
                                 true
                             }
-                            else -> false
+                            else -> true  // Consume all other keys when stats are visible
                         }
                     } else {
-                        false
+                        true  // Consume all key events
                     }
                 }
         ) {
@@ -1481,6 +1559,7 @@ private fun MetadataOverlay(
     onAudioTrack: (() -> Unit)? = null,
     onSubtitle: (() -> Unit)? = null,
     onQuality: (() -> Unit)? = null,
+    onStats: (() -> Unit)? = null,
     isFavorite: Boolean = false,
     onToggleFavorite: (() -> Unit)? = null,
     onBack: () -> Unit
@@ -1570,50 +1649,69 @@ private fun MetadataOverlay(
                 }
             }
 
-            // Controls
-            Row(
+            // Controls - using TvLazyRow for better D-pad focus navigation
+            TvLazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                if (isPaused) {
-                    Button(onClick = { onResume?.invoke() }) {
-                        Text("▶ Resume")
+                item {
+                    if (isPaused) {
+                        Button(onClick = { onResume?.invoke() }) {
+                            Text("▶ Resume")
+                        }
+                    } else {
+                        Button(onClick = { onPause?.invoke() }) {
+                            Text("⏸ Pause")
+                        }
                     }
-                } else {
-                    Button(onClick = { onPause?.invoke() }) {
-                        Text("⏸ Pause")
+                }
+
+                item {
+                    Button(onClick = { onAudioTrack?.invoke() }) {
+                        Text("🔊 Audio")
                     }
                 }
 
-                Button(onClick = { onAudioTrack?.invoke() }) {
-                    Text("🔊 Audio")
+                item {
+                    Button(onClick = { onSubtitle?.invoke() }) {
+                        Text("💬 Subtitle")
+                    }
                 }
 
-                Button(onClick = { onSubtitle?.invoke() }) {
-                    Text("💬 Subtitle")
+                item {
+                    Button(onClick = { onQuality?.invoke() }) {
+                        Text("⚙️ Quality")
+                    }
                 }
 
-                Button(onClick = { onQuality?.invoke() }) {
-                    Text("⚙️ Quality")
+                item {
+                    Button(onClick = { onStats?.invoke() }) {
+                        Text("📊 Stats")
+                    }
                 }
 
                 // Favorite toggle button
                 if (onToggleFavorite != null) {
-                    Button(
-                        onClick = { onToggleFavorite() },
-                        colors = androidx.tv.material3.ButtonDefaults.colors(
-                            containerColor = if (isFavorite)
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                            else
-                                MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                        )
-                    ) {
-                        Text(if (isFavorite) "★ Favorited" else "☆ Favorite")
+                    item {
+                        Button(
+                            onClick = { onToggleFavorite() },
+                            colors = androidx.tv.material3.ButtonDefaults.colors(
+                                containerColor = if (isFavorite)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                else
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                            )
+                        ) {
+                            Text(if (isFavorite) "★ Favorited" else "☆ Favorite")
+                        }
                     }
                 }
 
-                Button(onClick = onBack) {
-                    Text("⬅ Back")
+                item {
+                    Button(onClick = onBack) {
+                        Text("⬅ Back")
+                    }
                 }
             }
 
@@ -1623,6 +1721,282 @@ private fun MetadataOverlay(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.6f)
             )
+        }
+    }
+}
+
+@Composable
+private fun StreamInfoDisplay(
+    playbackState: PlaybackState,
+    metadata: PlayerMetadata
+) {
+    val position = when (playbackState) {
+        is PlaybackState.Playing -> playbackState.position
+        is PlaybackState.Paused -> playbackState.position
+        else -> 0L
+    }
+
+    val duration = when (playbackState) {
+        is PlaybackState.Playing -> playbackState.duration
+        is PlaybackState.Paused -> playbackState.duration
+        else -> 0L
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Channel name and title
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = metadata.channelName,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = metadata.title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Progress bar (for non-live streams) or LIVE indicator
+        if (duration > 0 && !metadata.isLive) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LinearProgressIndicator(
+                    progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.White.copy(alpha = 0.3f)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = formatTime(position),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        text = formatTime(duration),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+
+                // Remaining time and estimated end time for VOD
+                val remainingTime = duration - position
+
+                // Calculate end time using Calendar for better timezone handling
+                val calendar = java.util.Calendar.getInstance()
+                calendar.add(java.util.Calendar.MILLISECOND, remainingTime.toInt())
+                val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Remaining: ${formatTime(remainingTime)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaAccent
+                    )
+                    Text(
+                        text = "Ends at ${timeFormat.format(calendar.time)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaAccent
+                    )
+                }
+            }
+        } else if (metadata.isLive) {
+            // Live indicator
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .background(Color.Red, shape = RoundedCornerShape(6.dp))
+                )
+                Text(
+                    text = "LIVE",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ControlButtonsRow(
+    isLive: Boolean,
+    isPaused: Boolean,
+    onPause: (() -> Unit)?,
+    onResume: (() -> Unit)?,
+    hasMultipleAudioTracks: Boolean,
+    onAudioTrack: (() -> Unit)?,
+    hasSubtitles: Boolean,
+    onSubtitle: (() -> Unit)?,
+    hasMultipleQualities: Boolean,
+    onQuality: (() -> Unit)?,
+    onStats: (() -> Unit)?,
+    isFavorite: Boolean,
+    onToggleFavorite: (() -> Unit)?,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+    ) {
+        // Control buttons
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Back button first
+            CinemaSecondaryButton(
+                onClick = onBack,
+                text = "⬅ Back"
+            )
+
+            // Pause/Resume for VOD content only, after back button
+            if (!isLive) {
+                if (isPaused) {
+                    CinemaPrimaryButton(
+                        onClick = { onResume?.invoke() },
+                        text = "▶ Resume"
+                    )
+                } else {
+                    CinemaPrimaryButton(
+                        onClick = { onPause?.invoke() },
+                        text = "⏸ Pause"
+                    )
+                }
+            }
+
+            // Only show audio button if multiple audio tracks available
+            if (hasMultipleAudioTracks) {
+                CinemaSecondaryButton(
+                    onClick = { onAudioTrack?.invoke() },
+                    text = "🔊 Audio"
+                )
+            }
+
+            // Only show subtitle button if subtitles are available
+            if (hasSubtitles) {
+                CinemaSecondaryButton(
+                    onClick = { onSubtitle?.invoke() },
+                    text = "💬 Subtitle"
+                )
+            }
+
+            // Only show quality button if multiple qualities available
+            if (hasMultipleQualities) {
+                CinemaSecondaryButton(
+                    onClick = { onQuality?.invoke() },
+                    text = "⚙️ Quality"
+                )
+            }
+
+            // Only show stats button if dev mode is enabled
+            if (onStats != null) {
+                CinemaSecondaryButton(
+                    onClick = { onStats.invoke() },
+                    text = "📊 Stats"
+                )
+            }
+
+            // Favorite toggle button
+            if (onToggleFavorite != null) {
+                Button(
+                    onClick = { onToggleFavorite() },
+                    colors = androidx.tv.material3.ButtonDefaults.colors(
+                        containerColor = if (isFavorite)
+                            CinemaAccent.copy(alpha = 0.5f)
+                        else
+                            CinemaSurface.copy(alpha = 0.7f)
+                    )
+                ) {
+                    Text(
+                        text = if (isFavorite) "★ Favorited" else "☆ Favorite",
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
+        // Hint text
+        Text(
+            text = "Press OK to hide controls • Press BACK to exit",
+            style = MaterialTheme.typography.bodySmall,
+            color = CinemaTextTertiary
+        )
+    }
+}
+
+@Composable
+private fun StreamInfoOverlay(
+    metadata: PlayerMetadata
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            modifier = Modifier
+                .background(
+                    color = CinemaSurface.copy(alpha = 0.8f),
+                    shape = RoundedCornerShape(CornerRadius.small)
+                )
+                .padding(Spacing.lg),
+            horizontalAlignment = CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+        ) {
+            Text(
+                text = "Now Playing",
+                style = MaterialTheme.typography.labelLarge,
+                color = CinemaAccent,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = metadata.title,
+                style = MaterialTheme.typography.headlineMedium,
+                color = CinemaTextPrimary,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            if (metadata.isLive) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(CinemaLive, shape = RoundedCornerShape(5.dp))
+                    )
+                    Text(
+                        text = "LIVE",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CinemaTextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }
@@ -1644,28 +2018,27 @@ private fun formatTime(millis: Long): String {
 private fun IdleContent(onBack: () -> Unit) {
     Column(
         horizontalAlignment = CenterHorizontally,
-        modifier = Modifier.padding(32.dp)
+        modifier = Modifier.padding(Spacing.xl)
     ) {
         Text(
             text = "Ready to play",
-            color = Color.White,
+            color = CinemaTextPrimary,
             fontSize = 24.sp
         )
-        Spacer(modifier = Modifier.padding(16.dp))
-        Button(
+        Spacer(modifier = Modifier.height(Spacing.md))
+        CinemaSecondaryButton(
             onClick = onBack,
-            modifier = Modifier.padding(8.dp)
-        ) {
-            Text("Back")
-        }
+            text = "Back",
+            modifier = Modifier.padding(Spacing.xs)
+        )
     }
 }
 
 @Composable
 private fun BufferingContent() {
     CircularProgressIndicator(
-        color = Color.White,
-        modifier = Modifier.size(48.dp)
+        color = CinemaAccent,
+        modifier = Modifier.size(Spacing.xxl)
     )
 }
 
@@ -1674,17 +2047,18 @@ private fun BufferingContent() {
 private fun EndedContent(onBack: () -> Unit) {
     Column(
         horizontalAlignment = CenterHorizontally,
-        modifier = Modifier.padding(32.dp)
+        modifier = Modifier.padding(Spacing.xl)
     ) {
         Text(
             text = "Playback ended",
-            color = Color.White,
+            color = CinemaTextPrimary,
             fontSize = 24.sp
         )
-        Spacer(modifier = Modifier.padding(16.dp))
-        Button(onClick = onBack) {
-            Text("Back")
-        }
+        Spacer(modifier = Modifier.height(Spacing.md))
+        CinemaSecondaryButton(
+            onClick = onBack,
+            text = "Back"
+        )
     }
 }
 
@@ -1701,29 +2075,29 @@ private fun ErrorContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f)),
+            .background(CinemaBackground.copy(alpha = 0.95f)),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = CenterHorizontally,
             modifier = Modifier
-                .padding(48.dp)
+                .padding(Spacing.xxl)
                 .width(600.dp)
         ) {
             // Error icon/title
             Text(
                 text = "⚠️ Playback Error",
-                color = MaterialTheme.colorScheme.error,
+                color = CinemaError,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             // User-friendly error message
             Text(
                 text = error.message,
-                color = Color.White,
+                color = CinemaTextPrimary,
                 fontSize = 18.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
@@ -1731,23 +2105,23 @@ private fun ErrorContent(
 
             // Technical details in dev mode
             if (isDevMode && error.exception != null) {
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(Spacing.xl))
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF1E1E1E),
-                    shape = RoundedCornerShape(8.dp)
+                    color = CinemaSurface,
+                    shape = RoundedCornerShape(CornerRadius.small)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(Spacing.md)
                     ) {
                         Text(
                             text = "Technical Details (Dev Mode):",
-                            color = MaterialTheme.colorScheme.primary,
+                            color = CinemaAccent,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xs))
 
                         val exception = error.exception
                         val errorDetails = buildString {
@@ -1765,7 +2139,7 @@ private fun ErrorContent(
 
                         Text(
                             text = errorDetails,
-                            color = Color(0xFFCCCCCC),
+                            color = CinemaTextSecondary,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             modifier = Modifier
@@ -1777,24 +2151,22 @@ private fun ErrorContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(Spacing.xxl + Spacing.xs))
 
             // Action buttons
             Row(
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Spacing.md)
             ) {
-                Button(
+                CinemaPrimaryButton(
                     onClick = onRetry,
+                    text = "Retry",
                     modifier = Modifier.width(120.dp).height(56.dp)
-                ) {
-                    Text("Retry", fontSize = 16.sp)
-                }
-                Button(
+                )
+                CinemaSecondaryButton(
                     onClick = onBack,
+                    text = "Back",
                     modifier = Modifier.width(120.dp).height(56.dp)
-                ) {
-                    Text("Back", fontSize = 16.sp)
-                }
+                )
             }
         }
     }

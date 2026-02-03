@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.infiniteRepeatable
@@ -43,6 +44,9 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 import org.njarasoa.fijerena.feature.common.StatsOverlay
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.theme.*
 
 /**
  * TV two-column layout: Categories on left, Streams on right.
@@ -74,6 +78,37 @@ fun CategoryGridScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
+    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
+
+    // Provide UI scale for all child composables
+    CompositionLocalProvider(LocalUiScale provides uiScale) {
+        CategoryGridContent(
+            uiState = uiState,
+            configuration = configuration,
+            isDevMode = isDevMode,
+            viewModel = viewModel,
+            onStreamSelected = onStreamSelected,
+            onSearchClick = onSearchClick,
+            onEpgClick = onEpgClick,
+            onBack = onBack,
+            contentType = contentType
+        )
+    }
+}
+
+@Composable
+private fun CategoryGridContent(
+    uiState: CategoryViewModel.UiState,
+    configuration: android.content.res.Configuration,
+    isDevMode: Boolean,
+    viewModel: CategoryViewModel,
+    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    onSearchClick: () -> Unit,
+    onEpgClick: (categoryId: String, categoryName: String) -> Unit,
+    onBack: () -> Unit,
+    contentType: String
+) {
+    val scale = LocalUiScale.current
 
     // 5% padding for TV overscan safety
     Box(
@@ -83,8 +118,8 @@ fun CategoryGridScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    horizontal = (configuration.screenWidthDp * 0.05).dp,
-                    vertical = (configuration.screenHeightDp * 0.05).dp
+                    horizontal = Spacing.tvSafeHorizontal(configuration.screenWidthDp),
+                    vertical = Spacing.tvSafeVertical(configuration.screenHeightDp)
                 )
         ) {
             when (val state = uiState) {
@@ -130,12 +165,15 @@ fun CategoryGridScreen(
         when (val state = uiState) {
             is CategoryViewModel.UiState.Success -> {
                 val stats = buildMap {
-                    state.categoriesPayloadSize?.let { put("Categories", it) }
-                    state.streamsPayloadSize?.let { put("Streams", it) }
+                    // Payload sizes
+                    state.categoriesPayloadSize?.let { put("Cat. Payload", it) }
+                    state.streamsPayloadSize?.let { put("Streams Payload", it) }
+                    // Fetch times
                     viewModel.getCategoriesFetchTime()?.let { put("Cat. Time", it) }
                     state.selectedCategoryId?.let {
-                        viewModel.getFetchTime(it)?.let { time -> put("Stream Time", time) }
+                        viewModel.getFetchTime(it)?.let { time -> put("Streams Time", time) }
                     }
+                    // Counts
                     put("Categories", "${state.categories.size}")
                     state.streams?.let { put("Streams", "${it.size}") }
                 }
@@ -175,80 +213,69 @@ private fun TwoColumnLayout(
         XtreamRepository(AccountManager(context.applicationContext), context.applicationContext)
     }
 
+    val scale = LocalUiScale.current
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
+                .padding(bottom = Spacing.lg.scaled(scale)),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(onClick = onBack) {
-                    Text("← Back")
-                }
-                Button(
+                CinemaSecondaryButton(
+                    onClick = onBack,
+                    text = "← Back"
+                )
+                CinemaSecondaryButton(
                     onClick = onSearchClick,
-                    colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Search")
-                }
+                    text = "Search"
+                )
                 // EPG button - only for Live TV
                 if (contentType == "LIVE_TV" && selectedCategoryId != null) {
                     val selectedCategoryName = categories.find { it.categoryId == selectedCategoryId }?.categoryName
                     if (selectedCategoryName != null) {
-                        Button(
+                        CinemaSecondaryButton(
                             onClick = { onEpgClick(selectedCategoryId, selectedCategoryName) },
-                            colors = ButtonDefaults.colors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                focusedContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DateRange,
-                                contentDescription = "TV Guide",
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("TV Guide")
-                        }
+                            text = "TV Guide"
+                        )
                     }
                 }
                 Column {
                     Text(
                         text = "IPTV.atr",
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.displaySmall.copy(
+                            fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
+                        ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = contentType.replace("_", " "),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
+                        color = CinemaAccent
                     )
                     Text(
                         text = "${categories.size} categories",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary
                     )
                 }
             }
             Text(
                 text = providerName,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
+                ),
+                color = CinemaTextSecondary.copy(alpha = 0.87f)
             )
         }
 
@@ -297,15 +324,25 @@ private fun CategoryList(
     onRefreshCategories: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Separate virtual and regular categories
+    val virtualCategoryIds = setOf(
+        CategoryViewModel.FAVORITES_CATEGORY_ID,
+        CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
+        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID
+    )
+
+    val virtualCategories = categories.filter { it.categoryId in virtualCategoryIds }
+    val regularCategories = categories.filter { it.categoryId !in virtualCategoryIds }
+
     val listState = rememberTvLazyListState()
     val focusRequesters = remember(categories) {
         categories.associate { it.categoryId to FocusRequester() }
     }
 
-    // Auto-scroll and focus on selected category
-    LaunchedEffect(categories, selectedCategoryId) {
-        if (categories.isNotEmpty() && selectedCategoryId != null) {
-            val selectedIndex = categories.indexOfFirst { it.categoryId == selectedCategoryId }
+    // Auto-scroll and focus on selected category (only for regular categories)
+    LaunchedEffect(regularCategories, selectedCategoryId) {
+        if (regularCategories.isNotEmpty() && selectedCategoryId != null && selectedCategoryId !in virtualCategoryIds) {
+            val selectedIndex = regularCategories.indexOfFirst { it.categoryId == selectedCategoryId }
             if (selectedIndex != -1) {
                 listState.animateScrollToItem(selectedIndex)
                 // Request focus on the selected category
@@ -332,28 +369,32 @@ private fun CategoryList(
         label = "refresh_rotation"
     )
 
+    val scale = LocalUiScale.current
+
     Column(modifier = modifier) {
         Row(
-            modifier = Modifier.padding(bottom = 16.dp),
+            modifier = Modifier.padding(bottom = Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
         ) {
             Text(
                 text = "Categories",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                ),
                 color = MaterialTheme.colorScheme.onSurface
             )
             IconButton(
                 onClick = onRefreshCategories,
                 enabled = !categoriesRefreshing,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(Spacing.lg.scaled(scale))
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Refresh categories",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    tint = CinemaTextSecondary.copy(alpha = 0.87f),
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(20.dp.scaled(scale))
                         .rotate(rotation)
                 )
             }
@@ -363,25 +404,57 @@ private fun CategoryList(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(8.dp)
+                    color = CinemaSurfaceVariant.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(CornerRadius.small)
                 )
         ) {
-            TvLazyColumn(
-                state = listState,
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(
-                    items = categories,
-                    key = { it.categoryId }
-                ) { category ->
-                    CategoryItem(
-                        category = category,
-                        isSelected = category.categoryId == selectedCategoryId,
-                        onClick = { onCategorySelected(category.categoryId) },
-                        focusRequester = focusRequesters[category.categoryId]
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Sticky virtual categories section
+                if (virtualCategories.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier.padding(Spacing.sm.scaled(scale)),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+                    ) {
+                        virtualCategories.forEach { category ->
+                            CategoryItem(
+                                category = category,
+                                isSelected = category.categoryId == selectedCategoryId,
+                                onClick = { onCategorySelected(category.categoryId) },
+                                focusRequester = focusRequesters[category.categoryId]
+                            )
+                        }
+                    }
+
+                    // Divider between virtual and regular categories
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(2.dp.scaled(scale))
+                            .padding(horizontal = Spacing.md.scaled(scale))
+                            .background(CinemaAccent.copy(alpha = 0.3f))
                     )
+
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                }
+
+                // Scrollable regular categories section
+                TvLazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(
+                        items = regularCategories,
+                        key = { it.categoryId }
+                    ) { category ->
+                        CategoryItem(
+                            category = category,
+                            isSelected = category.categoryId == selectedCategoryId,
+                            onClick = { onCategorySelected(category.categoryId) },
+                            focusRequester = focusRequesters[category.categoryId]
+                        )
+                    }
                 }
             }
         }
@@ -395,16 +468,12 @@ private fun CategoryItem(
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null
 ) {
-    var isFocused by remember { mutableStateOf(false) }
-
-    val scale by animateFloatAsState(
-        targetValue = if (isFocused) 1.05f else 1.0f,
-        label = "category_scale"
-    )
+    val scale = LocalUiScale.current
 
     Card(
         onClick = onClick,
         modifier = Modifier
+            .padding(horizontal = 16.dp.scaled(scale))
             .fillMaxWidth()
             .then(
                 if (focusRequester != null) {
@@ -412,35 +481,45 @@ private fun CategoryItem(
                 } else {
                     Modifier
                 }
-            )
-            .scale(scale)
-            .onFocusChanged { focusState ->
-                isFocused = focusState.isFocused
-            },
+            ),
         colors = CardDefaults.colors(
             containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
+                CinemaAccent.copy(alpha = 0.2f)
             } else {
-                MaterialTheme.colorScheme.surface
+                CinemaSurface
             },
-            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            contentColor = if (isSelected) {
+                CinemaAccent
+            } else {
+                CinemaTextPrimary
+            },
+            focusedContainerColor = CinemaAccent.copy(alpha = 0.15f),
+            focusedContentColor = CinemaTextPrimary
         ),
-        scale = CardDefaults.scale(focusedScale = 1.0f)
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(width = 4.dp.scaled(scale), color = CinemaAccentLight)
+            )
+        ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
+        scale = CardDefaults.scale(
+            scale = 1.0f,
+            focusedScale = 1.05f,
+            pressedScale = 0.95f
+        )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(Spacing.md.scaled(scale)),
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
                 text = category.categoryName,
-                style = MaterialTheme.typography.titleMedium,
-                color = when {
-                    isFocused -> Color.White
-                    isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
-                    else -> MaterialTheme.colorScheme.onSurface
-                },
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                ),
+                color = CinemaTextPrimary,
                 maxLines = 2
             )
         }
@@ -482,6 +561,8 @@ private fun StreamList(
         streams?.associate { it.streamId to FocusRequester() } ?: emptyMap()
     }
 
+    val scale = LocalUiScale.current
+
     // Auto-scroll and focus on last played stream
     LaunchedEffect(streams, lastPlayedStreamId) {
         if (!streams.isNullOrEmpty() && lastPlayedStreamId != null) {
@@ -495,14 +576,16 @@ private fun StreamList(
     }
 
     Column(modifier = modifier) {
-        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Column(modifier = Modifier.padding(bottom = Spacing.md.scaled(scale))) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
             ) {
                 Text(
                     text = selectedCategoryName ?: "Select a category",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 // Always show refresh button when a category is selected
@@ -510,14 +593,14 @@ private fun StreamList(
                     IconButton(
                         onClick = { onRefreshStreams(categoryId) },
                         enabled = !streamsLoading,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(Spacing.lg.scaled(scale))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh streams",
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            tint = CinemaTextSecondary.copy(alpha = 0.87f),
                             modifier = Modifier
-                                .size(20.dp)
+                                .size(20.dp.scaled(scale))
                                 .rotate(rotation)
                         )
                     }
@@ -527,8 +610,10 @@ private fun StreamList(
             if (streams != null) {
                 Text(
                     text = "${streams.size} streams",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                    ),
+                    color = CinemaTextSecondary
                 )
             }
         }
@@ -537,8 +622,8 @@ private fun StreamList(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(8.dp)
+                    color = CinemaSurfaceVariant.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(CornerRadius.small)
                 )
         ) {
             when {
@@ -549,7 +634,7 @@ private fun StreamList(
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(48.dp),
-                            color = MaterialTheme.colorScheme.primary
+                            color = CinemaAccent
                         )
                     }
                 }
@@ -565,15 +650,15 @@ private fun StreamList(
                                 "No channels in this category"
                             },
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = CinemaTextSecondary
                         )
                     }
                 }
                 else -> {
                     TvLazyColumn(
                         state = listState,
-                        contentPadding = PaddingValues(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
                     ) {
                         items(
                             items = streams,
@@ -610,16 +695,12 @@ private fun StreamItem(
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null
 ) {
-    var isFocused by remember { mutableStateOf(false) }
-
-    val scale by animateFloatAsState(
-        targetValue = if (isFocused) 1.05f else 1.0f,
-        label = "stream_scale"
-    )
+    val scale = LocalUiScale.current
 
     Card(
         onClick = onClick,
         modifier = Modifier
+            .padding(horizontal = 16.dp.scaled(scale))
             .fillMaxWidth()
             .then(
                 if (focusRequester != null) {
@@ -627,42 +708,54 @@ private fun StreamItem(
                 } else {
                     Modifier
                 }
-            )
-            .scale(scale)
-            .onFocusChanged { focusState ->
-                isFocused = focusState.isFocused
-            },
+            ),
         colors = CardDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            containerColor = CinemaSurface,
+            contentColor = CinemaTextPrimary,
+            focusedContainerColor = CinemaAccent.copy(alpha = 0.15f),
+            focusedContentColor = CinemaTextPrimary
         ),
-        scale = CardDefaults.scale(focusedScale = 1.0f)
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(width = 4.dp.scaled(scale), color = CinemaAccentLight)
+            )
+        ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
+        scale = CardDefaults.scale(
+            scale = 1.0f,
+            focusedScale = 1.05f,
+            pressedScale = 0.95f
+        )
     ) {
         Column {  // Wrap in Column for progress bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(Spacing.md.scaled(scale)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Favorite star indicator
+                        // Favorite star indicator (gold color)
                         if (isFavorite) {
                             Text(
                                 text = "★",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color(0xFFFFD700)  // Gold
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                                ),
+                                color = Color(0xFFFFD700)  // Gold star
                             )
                         }
 
                         Text(
                             text = stream.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextPrimary,
                             maxLines = 1
                         )
                     }
@@ -670,8 +763,10 @@ private fun StreamItem(
                         if (icon.isNotBlank()) {
                             Text(
                                 text = "HD",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f)
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                ),
+                                color = LocalContentColor.current.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -684,9 +779,9 @@ private fun StreamItem(
                     progress = { watchProgress },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.White.copy(alpha = 0.2f)
+                        .height(4.dp.scaled(scale)),
+                    color = CinemaAccent,
+                    trackColor = CinemaTextPrimary.copy(alpha = 0.2f)
                 )
             }
         }
@@ -701,16 +796,16 @@ private fun LoadingScreen() {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(64.dp),
-                color = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(48.dp),
+                color = CinemaAccent
             )
             Text(
                 text = "Loading...",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
         }
     }
@@ -727,29 +822,25 @@ private fun ErrorScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            modifier = Modifier.padding(32.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+            modifier = Modifier.padding(Spacing.xl)
         ) {
             Text(
                 text = "Error",
                 style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.error
+                color = CinemaError
             )
 
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
 
-            Button(
+            CinemaPrimaryButton(
                 onClick = onRetry,
-                colors = ButtonDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Text("Retry")
-            }
+                text = "Retry"
+            )
         }
     }
 }

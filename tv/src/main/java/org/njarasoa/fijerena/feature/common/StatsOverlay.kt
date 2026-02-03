@@ -19,6 +19,13 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Position of the stats overlay on screen
@@ -112,11 +119,11 @@ fun StatsOverlay(
                     }
                     .border(
                         width = if (isFocused) 3.dp else 1.dp,
-                        color = if (isFocused) Color(0xFF00FF00) else Color(0xFF444444),
+                        color = if (isFocused) CinemaAccentLight else CinemaSurfaceLight,
                         shape = MaterialTheme.shapes.medium
                     )
                     .background(
-                        color = Color.Black.copy(alpha = 0.85f),
+                        color = CinemaSurface.copy(alpha = 0.85f),
                         shape = MaterialTheme.shapes.medium
                     ),
                 onClick = { /* Click to focus */ }
@@ -124,13 +131,13 @@ fun StatsOverlay(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                        .padding(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
                 ) {
                     Text(
                         text = "Stats for Nerds",
                         style = MaterialTheme.typography.titleSmall,
-                        color = Color(0xFF00FF00)
+                        color = CinemaAccent
                     )
 
                     stats.forEach { (label, value) ->
@@ -141,22 +148,22 @@ fun StatsOverlay(
                             Text(
                                 text = "$label:",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = CinemaTextSecondary.copy(alpha = 0.87f)
                             )
                             Text(
                                 text = value,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White
+                                color = CinemaTextPrimary
                             )
                         }
                     }
 
                     if (isFocused) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xxs))
                         Text(
                             text = "Use D-pad to move",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF00FF00).copy(alpha = 0.7f)
+                            color = CinemaAccent.copy(alpha = 0.87f)
                         )
                     }
                 }
@@ -170,23 +177,23 @@ fun StatsOverlay(
                     .align(getAlignment(position))
                     .border(
                         width = 1.dp,
-                        color = Color(0xFF444444),
+                        color = CinemaSurfaceLight,
                         shape = MaterialTheme.shapes.medium
                     )
                     .background(
-                        color = Color.Black.copy(alpha = 0.85f),
+                        color = CinemaSurface.copy(alpha = 0.85f),
                         shape = MaterialTheme.shapes.medium
                     )
-                    .padding(12.dp)
+                    .padding(Spacing.sm)
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
                 ) {
                     Text(
                         text = "Stats for Nerds",
                         style = MaterialTheme.typography.titleSmall,
-                        color = Color(0xFF00FF00)
+                        color = CinemaAccent
                     )
 
                     stats.forEach { (label, value) ->
@@ -197,12 +204,12 @@ fun StatsOverlay(
                             Text(
                                 text = "$label:",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = CinemaTextSecondary.copy(alpha = 0.87f)
                             )
                             Text(
                                 text = value,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White
+                                color = CinemaTextPrimary
                             )
                         }
                     }

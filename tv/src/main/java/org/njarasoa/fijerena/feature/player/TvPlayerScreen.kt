@@ -27,6 +27,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
@@ -305,14 +307,14 @@ private fun LoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(64.dp),
-                color = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(48.dp),
+                color = CinemaAccent
             )
-            Spacer(modifier = Modifier.padding(16.dp))
+            Spacer(modifier = Modifier.padding(Spacing.md))
             Text(
                 text = "Loading stream...",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
         }
     }
@@ -329,23 +331,24 @@ private fun ErrorScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier.padding(Spacing.xl)
         ) {
             Text(
                 text = "Playback Error",
                 style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.error
+                color = CinemaError
             )
-            Spacer(modifier = Modifier.padding(16.dp))
+            Spacer(modifier = Modifier.padding(Spacing.md))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CinemaTextSecondary
             )
-            Spacer(modifier = Modifier.padding(24.dp))
-            Button(onClick = onBack) {
-                Text("Back to Categories")
-            }
+            Spacer(modifier = Modifier.padding(Spacing.lg))
+            CinemaSecondaryButton(
+                onClick = onBack,
+                text = "Back to Categories"
+            )
         }
     }
 }

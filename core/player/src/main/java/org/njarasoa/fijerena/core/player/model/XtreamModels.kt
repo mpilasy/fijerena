@@ -1,7 +1,15 @@
 package org.njarasoa.fijerena.core.player.model
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Represents a live TV category from Xtream API
@@ -355,9 +363,11 @@ data class MovieInfo(
     val duration: String? = null,
 
     @SerialName("video")
+    @Serializable(with = VideoInfoSerializer::class)
     val video: VideoInfo? = null,
 
     @SerialName("audio")
+    @Serializable(with = AudioInfoSerializer::class)
     val audio: AudioInfo? = null
 )
 
@@ -402,3 +412,69 @@ data class AudioInfo(
     @SerialName("language")
     val language: String? = null
 )
+
+/**
+ * Custom serializer for VideoInfo that handles both object and array responses
+ * Some APIs return empty arrays [] instead of null/object for missing video info
+ */
+object VideoInfoSerializer : KSerializer<VideoInfo?> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("VideoInfo")
+
+    override fun deserialize(decoder: Decoder): VideoInfo? {
+        val jsonDecoder = decoder as? JsonDecoder ?: return null
+        val element = jsonDecoder.decodeJsonElement()
+
+        // If it's an array (empty or not), return null
+        return if (element is JsonElement && element.toString().startsWith("[")) {
+            null
+        } else {
+            // Try to decode as VideoInfo object
+            try {
+                jsonDecoder.json.decodeFromJsonElement(VideoInfo.serializer(), element)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: VideoInfo?) {
+        if (value != null) {
+            encoder.encodeSerializableValue(VideoInfo.serializer(), value)
+        } else {
+            encoder.encodeNull()
+        }
+    }
+}
+
+/**
+ * Custom serializer for AudioInfo that handles both object and array responses
+ * Some APIs return empty arrays [] instead of null/object for missing audio info
+ */
+object AudioInfoSerializer : KSerializer<AudioInfo?> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("AudioInfo")
+
+    override fun deserialize(decoder: Decoder): AudioInfo? {
+        val jsonDecoder = decoder as? JsonDecoder ?: return null
+        val element = jsonDecoder.decodeJsonElement()
+
+        // If it's an array (empty or not), return null
+        return if (element is JsonElement && element.toString().startsWith("[")) {
+            null
+        } else {
+            // Try to decode as AudioInfo object
+            try {
+                jsonDecoder.json.decodeFromJsonElement(AudioInfo.serializer(), element)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: AudioInfo?) {
+        if (value != null) {
+            encoder.encodeSerializableValue(AudioInfo.serializer(), value)
+        } else {
+            encoder.encodeNull()
+        }
+    }
+}

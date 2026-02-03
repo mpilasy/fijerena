@@ -30,6 +30,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +53,10 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
+import org.njarasoa.fijerena.ui.theme.*
 
 /**
  * Settings screen for app configuration.
@@ -98,11 +103,25 @@ fun SettingsScreen(
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var autoResumeEnabled by remember { mutableStateOf(appSettings.autoResumeEnabled) }
     var showClearProgressDialog by remember { mutableStateOf(false) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
+    var showClearLiveTvCacheDialog by remember { mutableStateOf(false) }
+    var showClearMoviesCacheDialog by remember { mutableStateOf(false) }
+    var showClearTvShowsCacheDialog by remember { mutableStateOf(false) }
+    var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
+    var cacheRefreshTrigger by remember { mutableStateOf(0) }
+    var uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
+    // Load cache stats
+    LaunchedEffect(cacheRefreshTrigger) {
+        cacheStats = repository.getCacheStats()
+    }
+
+    androidx.compose.runtime.CompositionLocalProvider(LocalUiScale provides uiScale) {
+    val scale = LocalUiScale.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(48.dp)
+            .padding(Spacing.xxl.scaled(scale))
     ) {
         // Header
         Row(
@@ -112,20 +131,23 @@ fun SettingsScreen(
         ) {
             Text(
                 text = "Settings",
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
+                ),
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Button(onClick = onBack) {
-                Text("Back")
-            }
+            CinemaSecondaryButton(
+                onClick = onBack,
+                text = "Back"
+            )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
         // Settings List
         TvLazyColumn(
-            contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
             modifier = Modifier.fillMaxSize()
         ) {
             // Provider Details
@@ -133,21 +155,25 @@ fun SettingsScreen(
                 Column {
                     Text(
                         text = "Provider",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
+                        color = CinemaAccent
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = providerName,
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                            ),
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f)
                         )
-                        Button(
+                        CinemaSecondaryButton(
                             onClick = {
                                 dialogProviderName = providerName
                                 dialogUrl = currentUrl
@@ -155,12 +181,9 @@ fun SettingsScreen(
                                 dialogPassword = repository.getCurrentPassword() ?: ""
                                 providerChangeError = null
                                 showProviderDialog = true
-                            }
-                        ) {
-                            Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Edit")
-                        }
+                            },
+                            text = "Edit"
+                        )
                     }
                 }
             }
@@ -175,17 +198,21 @@ fun SettingsScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Auto-Resume",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                            ),
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale).scaled(scale)))
                         Text(
                             text = "Resume VOD content from where you left off",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextSecondary.copy(alpha = 0.87f)
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                     Switch(
                         checked = autoResumeEnabled,
                         onCheckedChange = { enabled ->
@@ -201,16 +228,20 @@ fun SettingsScreen(
                 Column {
                     Text(
                         text = "Last Watched Queue Size",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
                     Text(
                         text = "Items to keep in Last Watched category (1-100)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = 0.87f)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
                     if (!isEditingQueueSize) {
                         Row(
@@ -219,20 +250,19 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = watchHistorySize,
-                                style = MaterialTheme.typography.titleLarge,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                                ),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f)
                             )
-                            Button(
+                            CinemaSecondaryButton(
                                 onClick = {
                                     isEditingQueueSize = true
                                     newWatchHistorySize = watchHistorySize
-                                }
-                            ) {
-                                Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit")
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Edit")
-                            }
+                                },
+                                text = "Edit"
+                            )
                         }
                     } else {
                         Row(
@@ -249,19 +279,18 @@ fun SettingsScreen(
                                 label = { Text("Queue Size") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
-                                modifier = Modifier.width(200.dp)
+                                modifier = Modifier.width(200.dp.scaled(scale))
                             )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Button(
+                            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
+                            CinemaSecondaryButton(
                                 onClick = {
                                     isEditingQueueSize = false
                                     newWatchHistorySize = ""
-                                }
-                            ) {
-                                Text("Cancel")
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
+                                },
+                                text = "Cancel"
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                            CinemaPrimaryButton(
                                 onClick = {
                                     val size = newWatchHistorySize.toIntOrNull()
                                     if (size != null && size in 1..100) {
@@ -271,10 +300,9 @@ fun SettingsScreen(
                                         newWatchHistorySize = ""
                                     }
                                 },
-                                enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true
-                            ) {
-                                Text("Save")
-                            }
+                                enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true,
+                                text = "Save"
+                            )
                         }
                     }
                 }
@@ -285,16 +313,20 @@ fun SettingsScreen(
                 Column {
                     Text(
                         text = "Favorites Max Size",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
                     Text(
                         text = "Maximum number of favorites to store (10-500)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = 0.87f)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
                     if (!isEditingFavoritesSize) {
                         Row(
@@ -303,20 +335,19 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = favoritesMaxSize,
-                                style = MaterialTheme.typography.titleLarge,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                                ),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f)
                             )
-                            Button(
+                            CinemaSecondaryButton(
                                 onClick = {
                                     isEditingFavoritesSize = true
                                     newFavoritesMaxSize = favoritesMaxSize
-                                }
-                            ) {
-                                Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit")
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Edit")
-                            }
+                                },
+                                text = "Edit"
+                            )
                         }
                     } else {
                         Row(
@@ -333,19 +364,18 @@ fun SettingsScreen(
                                 label = { Text("Max Size") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
-                                modifier = Modifier.width(200.dp)
+                                modifier = Modifier.width(200.dp.scaled(scale))
                             )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Button(
+                            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
+                            CinemaSecondaryButton(
                                 onClick = {
                                     isEditingFavoritesSize = false
                                     newFavoritesMaxSize = ""
-                                }
-                            ) {
-                                Text("Cancel")
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
+                                },
+                                text = "Cancel"
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                            CinemaPrimaryButton(
                                 onClick = {
                                     val size = newFavoritesMaxSize.toIntOrNull()
                                     if (size != null && size in 10..500) {
@@ -355,10 +385,9 @@ fun SettingsScreen(
                                         newFavoritesMaxSize = ""
                                     }
                                 },
-                                enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true
-                            ) {
-                                Text("Save")
-                            }
+                                enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true,
+                                text = "Save"
+                            )
                         }
                     }
                 }
@@ -369,25 +398,24 @@ fun SettingsScreen(
                 Column {
                     Text(
                         text = "Clear All Favorites",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
                     Text(
                         text = "Remove all favorited streams from all content types",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = 0.87f)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                    CinemaDangerButton(
                         onClick = { showClearFavoritesDialog = true },
-                        colors = ButtonDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Text("Clear All Favorites")
-                    }
+                        text = "Clear All Favorites"
+                    )
                 }
             }
 
@@ -396,24 +424,258 @@ fun SettingsScreen(
                 Column {
                     Text(
                         text = "Clear Playback Progress",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
                     Text(
                         text = "Remove all saved positions (Continue Watching will be empty)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = 0.87f)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                    CinemaDangerButton(
                         onClick = { showClearProgressDialog = true },
-                        colors = ButtonDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
+                        text = "Clear All Progress"
+                    )
+                }
+            }
+
+            // Cache Management
+            item {
+                Column {
+                    Text(
+                        text = "Cache Management",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                    Text(
+                        text = "Clear cached data to free up storage space",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = 0.87f)
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+                    // Cache stats
+                    cacheStats?.let { stats ->
+                        // Total cache size
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Total Cache Size",
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                                    ),
+                                    color = CinemaTextPrimary
+                                )
+                                Text(
+                                    text = formatBytes(stats.totalSize),
+                                    style = MaterialTheme.typography.headlineSmall.copy(
+                                        fontSize = MaterialTheme.typography.headlineSmall.fontSize.scaled(scale)
+                                    ),
+                                    color = CinemaAccent
+                                )
+                            }
+                            CinemaDangerButton(
+                                onClick = { showClearCacheDialog = true },
+                                text = "Clear All"
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+                        HorizontalDivider(color = CinemaTextSecondary.copy(alpha = 0.2f))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+                        // Live TV Cache
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Live TV",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
+                                    ),
+                                    color = CinemaTextPrimary
+                                )
+                                Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                                Text(
+                                    text = formatBytes(stats.liveTv.size),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                                    ),
+                                    color = CinemaAccent
+                                )
+                                Text(
+                                    text = "${if (stats.liveTv.categoryCached) "1 category" else "No categories"}, ${stats.liveTv.streamListsCount} stream lists",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                )
+                            }
+                            CinemaSecondaryButton(
+                                onClick = { showClearLiveTvCacheDialog = true },
+                                text = "Clear",
+                                enabled = stats.liveTv.size > 0
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+                        // Movies Cache
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Movies",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
+                                    ),
+                                    color = CinemaTextPrimary
+                                )
+                                Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                                Text(
+                                    text = formatBytes(stats.movies.size),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                                    ),
+                                    color = CinemaAccent
+                                )
+                                Text(
+                                    text = "${if (stats.movies.categoryCached) "1 category" else "No categories"}, ${stats.movies.streamListsCount} stream lists",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                )
+                            }
+                            CinemaSecondaryButton(
+                                onClick = { showClearMoviesCacheDialog = true },
+                                text = "Clear",
+                                enabled = stats.movies.size > 0
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+                        // TV Shows Cache
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "TV Shows",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
+                                    ),
+                                    color = CinemaTextPrimary
+                                )
+                                Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                                Text(
+                                    text = formatBytes(stats.tvShows.size),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                                    ),
+                                    color = CinemaAccent
+                                )
+                                Text(
+                                    text = "${if (stats.tvShows.categoryCached) "1 category" else "No categories"}, ${stats.tvShows.streamListsCount} stream lists",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                )
+                            }
+                            CinemaSecondaryButton(
+                                onClick = { showClearTvShowsCacheDialog = true },
+                                text = "Clear",
+                                enabled = stats.tvShows.size > 0
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+                        // EPG & Other
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "EPG Data: ${stats.epgCount} channels",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                )
+                                Text(
+                                    text = "Other: ${formatBytes(stats.otherSize)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // UI Scale
+            item {
+                Column {
+                    Text(
+                        text = "Category/Grid UI Scale",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                    Text(
+                        text = "Adjust font, spacing, and element sizes for category/grid views",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = 0.87f)
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+
+                    // Scale options as buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                     ) {
-                        Text("Clear All Progress")
+                        listOf(0.7f to "70%", 0.8f to "80%", 0.9f to "90%", 1.0f to "100%").forEach { (scale, label) ->
+                            val isSelected = uiScale == scale
+                            if (isSelected) {
+                                CinemaPrimaryButton(
+                                    onClick = { },
+                                    text = label,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            } else {
+                                CinemaSecondaryButton(
+                                    onClick = {
+                                        uiScale = scale
+                                        appSettings.uiScale = scale
+                                    },
+                                    text = label,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -431,14 +693,14 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
                         Text(
                             text = "Enable stats for nerds and debug features",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            color = CinemaTextSecondary.copy(alpha = 0.87f)
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                     Switch(
                         checked = isDevMode,
                         onCheckedChange = { enabled ->
@@ -451,21 +713,16 @@ fun SettingsScreen(
 
             // Logout
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    Button(
+                    CinemaDangerButton(
                         onClick = onLogout,
-                        colors = ButtonDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        ),
+                        text = "Logout",
                         modifier = Modifier.fillMaxWidth(0.25f)
-                    ) {
-                        Text("Logout")
-                    }
+                    )
                 }
             }
         }
@@ -483,7 +740,7 @@ fun SettingsScreen(
             },
             text = {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
                 ) {
                     OutlinedTextField(
                         value = dialogProviderName,
@@ -493,12 +750,12 @@ fun SettingsScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaTextSecondary,
+                            focusedLabelColor = CinemaAccent,
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f)
                         )
                     )
                     OutlinedTextField(
@@ -509,12 +766,12 @@ fun SettingsScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaTextSecondary,
+                            focusedLabelColor = CinemaAccent,
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f)
                         )
                     )
                     OutlinedTextField(
@@ -525,12 +782,12 @@ fun SettingsScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaTextSecondary,
+                            focusedLabelColor = CinemaAccent,
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f)
                         )
                     )
                     OutlinedTextField(
@@ -542,14 +799,14 @@ fun SettingsScreen(
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaTextSecondary,
+                            focusedLabelColor = CinemaAccent,
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f),
+                            focusedPlaceholderColor = CinemaTextSecondary,
+                            unfocusedPlaceholderColor = CinemaTextSecondary
                         )
                     )
 
@@ -557,7 +814,7 @@ fun SettingsScreen(
                         Text(
                             text = providerChangeError!!,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                            color = CinemaError
                         )
                     }
                 }
@@ -597,14 +854,14 @@ fun SettingsScreen(
                     },
                     enabled = dialogUrl.isNotBlank() && dialogUsername.isNotBlank() && dialogPassword.isNotBlank() && !isChangingProvider,
                     colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = CinemaAccent,
+                        contentColor = androidx.compose.ui.graphics.Color.Black
                     )
                 ) {
                     if (isChangingProvider) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
+                            modifier = Modifier.size(20.dp.scaled(scale)),
+                            color = androidx.compose.ui.graphics.Color.Black
                         )
                     } else {
                         Text("Save")
@@ -615,15 +872,15 @@ fun SettingsScreen(
                 Button(
                     onClick = { showProviderDialog = false },
                     colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary
                     )
                 ) {
                     Text("Cancel")
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
+            containerColor = CinemaSurface,
+            tonalElevation = 6.dp.scaled(scale)
         )
     }
 
@@ -640,7 +897,7 @@ fun SettingsScreen(
             text = {
                 Text(
                     "This will remove all favorited streams from all content types (Live TV, Movies, TV Shows). This action cannot be undone.",
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = CinemaTextSecondary
                 )
             },
             confirmButton = {
@@ -650,8 +907,8 @@ fun SettingsScreen(
                         showClearFavoritesDialog = false
                     },
                     colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
+                        containerColor = CinemaError,
+                        contentColor = androidx.compose.ui.graphics.Color.White
                     )
                 ) {
                     Text("Clear All")
@@ -661,15 +918,15 @@ fun SettingsScreen(
                 Button(
                     onClick = { showClearFavoritesDialog = false },
                     colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary
                     )
                 ) {
                     Text("Cancel")
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
+            containerColor = CinemaSurface,
+            tonalElevation = 6.dp.scaled(scale)
         )
     }
 
@@ -686,7 +943,7 @@ fun SettingsScreen(
             text = {
                 Text(
                     "This will remove all saved playback positions. You will start from the beginning when playing any VOD content.",
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = CinemaTextSecondary
                 )
             },
             confirmButton = {
@@ -696,8 +953,8 @@ fun SettingsScreen(
                         showClearProgressDialog = false
                     },
                     colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
+                        containerColor = CinemaError,
+                        contentColor = androidx.compose.ui.graphics.Color.White
                     )
                 ) {
                     Text("Clear All")
@@ -707,15 +964,216 @@ fun SettingsScreen(
                 Button(
                     onClick = { showClearProgressDialog = false },
                     colors = ButtonDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary
                     )
                 ) {
                     Text("Cancel")
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
+            containerColor = CinemaSurface,
+            tonalElevation = 6.dp.scaled(scale)
         )
+    }
+
+    // Clear All Cache Confirmation Dialog
+    if (showClearCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheDialog = false },
+            title = {
+                Text(
+                    "Clear All Cache?",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    "This will remove all cached data (Live TV, Movies, TV Shows, EPG). The app will need to re-download data from the server. This action cannot be undone.",
+                    color = CinemaTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        repository.clearCache()
+                        cacheRefreshTrigger++
+                        showClearCacheDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaError,
+                        contentColor = androidx.compose.ui.graphics.Color.White
+                    )
+                ) {
+                    Text("Clear All")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showClearCacheDialog = false },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = CinemaSurface,
+            tonalElevation = 6.dp.scaled(scale)
+        )
+    }
+
+    // Clear Live TV Cache Dialog
+    if (showClearLiveTvCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearLiveTvCacheDialog = false },
+            title = {
+                Text(
+                    "Clear Live TV Cache?",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    "This will remove all cached Live TV data (categories and streams). This action cannot be undone.",
+                    color = CinemaTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        repository.clearCacheForContentType("LIVE_TV")
+                        cacheRefreshTrigger++
+                        showClearLiveTvCacheDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaError,
+                        contentColor = androidx.compose.ui.graphics.Color.White
+                    )
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showClearLiveTvCacheDialog = false },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = CinemaSurface,
+            tonalElevation = 6.dp.scaled(scale)
+        )
+    }
+
+    // Clear Movies Cache Dialog
+    if (showClearMoviesCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearMoviesCacheDialog = false },
+            title = {
+                Text(
+                    "Clear Movies Cache?",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    "This will remove all cached Movies data (categories and streams). This action cannot be undone.",
+                    color = CinemaTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        repository.clearCacheForContentType("MOVIES")
+                        cacheRefreshTrigger++
+                        showClearMoviesCacheDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaError,
+                        contentColor = androidx.compose.ui.graphics.Color.White
+                    )
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showClearMoviesCacheDialog = false },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = CinemaSurface,
+            tonalElevation = 6.dp.scaled(scale)
+        )
+    }
+
+    // Clear TV Shows Cache Dialog
+    if (showClearTvShowsCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearTvShowsCacheDialog = false },
+            title = {
+                Text(
+                    "Clear TV Shows Cache?",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    "This will remove all cached TV Shows data (categories and streams). This action cannot be undone.",
+                    color = CinemaTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        repository.clearCacheForContentType("TV_SHOWS")
+                        cacheRefreshTrigger++
+                        showClearTvShowsCacheDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaError,
+                        contentColor = androidx.compose.ui.graphics.Color.White
+                    )
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showClearTvShowsCacheDialog = false },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = CinemaSurface,
+            tonalElevation = 6.dp.scaled(scale)
+        )
+    }
+    } // End CompositionLocalProvider
+}
+
+/**
+ * Format bytes to human-readable string (KB/MB/GB)
+ */
+private fun formatBytes(bytes: Long): String {
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> String.format("%.2f KB", bytes / 1024.0)
+        bytes < 1024 * 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
+        else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
     }
 }

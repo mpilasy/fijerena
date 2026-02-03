@@ -9,13 +9,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
 import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.network.AppSettings
+import androidx.compose.foundation.BorderStroke
+import androidx.tv.material3.Border
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.theme.*
+import androidx.compose.ui.graphics.Color
 
 /**
  * Content type selection screen - allows users to choose between Live TV, Movies, or TV Shows.
@@ -35,8 +42,8 @@ fun ContentTypeSelectionScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(
-                horizontal = (configuration.screenWidthDp * 0.05).dp,
-                vertical = (configuration.screenHeightDp * 0.05).dp
+                horizontal = Spacing.tvSafeHorizontal(configuration.screenWidthDp),
+                vertical = Spacing.tvSafeVertical(configuration.screenHeightDp)
             )
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -44,7 +51,7 @@ fun ContentTypeSelectionScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 48.dp),
+                    .padding(bottom = Spacing.xxl),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
@@ -56,7 +63,7 @@ fun ContentTypeSelectionScreen(
                 Text(
                     text = providerName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.87f)
                 )
             }
 
@@ -70,11 +77,11 @@ fun ContentTypeSelectionScreen(
                     text = "Select Content Type",
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 48.dp)
+                    modifier = Modifier.padding(bottom = Spacing.xxl)
                 )
 
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     ContentTypeButton(
@@ -96,18 +103,19 @@ fun ContentTypeSelectionScreen(
         }
 
         // Settings gear icon at bottom left
-        IconButton(
+        CinemaIconButton(
             onClick = onSettings,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = CinemaAccentLight
+                )
+            },
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Settings",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
+                .padding(Spacing.md)
+        )
     }
 }
 
@@ -119,19 +127,29 @@ private fun ContentTypeButton(
     Button(
         onClick = onClick,
         modifier = Modifier
-            .width(400.dp)
-            .height(80.dp),
+            .width(600.dp)
+            .height(64.dp),
         colors = ButtonDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = Color.White,
-            focusedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-            focusedContentColor = Color.White
+            containerColor = CinemaSurfaceVariant,
+            contentColor = CinemaTextPrimary,
+            focusedContainerColor = CinemaSurface,
+            focusedContentColor = CinemaTextPrimary
+        ),
+        border = ButtonDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(width = 5.dp, color = CinemaAccentLight)
+            )
+        ),
+        scale = ButtonDefaults.scale(
+            scale = 1.0f,
+            focusedScale = 1.12f,
+            pressedScale = 0.95f
         )
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.titleLarge,
-            color = Color.White
+            textAlign = TextAlign.Center
         )
     }
 }

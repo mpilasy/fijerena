@@ -167,14 +167,20 @@ class CategoryViewModel(
                         streamsPayloadSize = null
                     )
 
-                    // Restore last selected category, or auto-select first category
+                    // Restore last selected category, or auto-select first non-virtual category
                     if (categories.isNotEmpty()) {
                         val lastCategoryId = repository.getLastCategoryId(contentType)
                         val categoryToLoad = if (lastCategoryId != null &&
                             categories.any { it.categoryId == lastCategoryId }) {
                             lastCategoryId
                         } else {
-                            categories.first().categoryId
+                            // Skip virtual categories for initial selection, select first regular category
+                            val firstRegularCategory = categories.firstOrNull {
+                                it.categoryId != FAVORITES_CATEGORY_ID &&
+                                it.categoryId != LAST_WATCHED_CATEGORY_ID &&
+                                it.categoryId != CONTINUE_WATCHING_CATEGORY_ID
+                            }
+                            firstRegularCategory?.categoryId ?: categories.first().categoryId
                         }
                         loadStreams(categoryToLoad)
                     }
@@ -193,11 +199,11 @@ class CategoryViewModel(
 
             val lastStreamId = repository.getLastStreamId(contentType)
 
-            // Update state to show loading for streams
+            // Update state to show loading for streams (clear old streams)
             _uiState.value = UiState.Success(
                 categories = categories,
                 selectedCategoryId = categoryId,
-                streams = currentStreams,
+                streams = null,  // Clear old streams when loading new category
                 streamsLoading = true,
                 categoriesRefreshing = false,
                 lastPlayedStreamId = lastStreamId,
@@ -266,6 +272,42 @@ class CategoryViewModel(
                     lastPlayedStreamId = lastStreamId,
                     categoriesPayloadSize = getCategoriesPayloadSize(),
                     streamsPayloadSize = null // Last Watched doesn't have a payload
+                )
+                return@launch
+            }
+
+            // Handle "Favorites" virtual category
+            if (categoryId == FAVORITES_CATEGORY_ID) {
+                println("CategoryViewModel: Loading FAVORITES category in loadStreams()")
+                val favorites = repository.getFavorites()
+                    .filter { it.contentType == contentType }
+                println("CategoryViewModel: Found ${favorites.size} favorites for contentType=$contentType")
+                currentStreams = favorites.map { favorite ->
+                    XtreamStream(
+                        num = 0,
+                        name = favorite.streamName,
+                        streamType = contentType.lowercase(),
+                        streamId = favorite.streamId,
+                        streamIcon = null,
+                        epgChannelId = null,
+                        added = null,
+                        categoryId = favorite.categoryId,
+                        customSid = null,
+                        tvArchive = 0,
+                        directSource = null,
+                        tvArchiveDuration = 0
+                    )
+                }
+                println("CategoryViewModel: Setting ${currentStreams.size} favorite streams in UI state")
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedStreamId = lastStreamId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null
                 )
                 return@launch
             }
@@ -379,11 +421,11 @@ class CategoryViewModel(
 
             val lastStreamId = repository.getLastStreamId(contentType)
 
-            // Set loading state but keep current data
+            // Set loading state and clear streams for refresh
             _uiState.value = UiState.Success(
                 categories = categories,
                 selectedCategoryId = categoryId,
-                streams = currentStreams,
+                streams = null,  // Clear streams when refreshing
                 streamsLoading = true,
                 categoriesRefreshing = false,
                 lastPlayedStreamId = lastStreamId,
@@ -428,8 +470,10 @@ class CategoryViewModel(
 
             // Handle "Favorites" virtual category
             if (categoryId == FAVORITES_CATEGORY_ID) {
+                println("CategoryViewModel: Loading FAVORITES category")
                 val favorites = repository.getFavorites()
                     .filter { it.contentType == contentType }
+                println("CategoryViewModel: Found ${favorites.size} favorites for contentType=$contentType")
                 currentStreams = favorites.map { favorite ->
                     XtreamStream(
                         num = 0,
@@ -446,6 +490,7 @@ class CategoryViewModel(
                         tvArchiveDuration = 0
                     )
                 }
+                println("CategoryViewModel: Setting ${currentStreams.size} favorite streams in UI state")
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,

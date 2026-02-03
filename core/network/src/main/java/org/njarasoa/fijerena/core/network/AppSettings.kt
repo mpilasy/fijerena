@@ -18,8 +18,12 @@ class AppSettings(context: Context) {
         private const val KEY_PROVIDER_NAME = "provider_name"
         private const val KEY_FAVORITES_MAX_SIZE = "favorites_max_size"
         private const val KEY_AUTO_RESUME = "auto_resume_enabled"
+        private const val KEY_CACHE_EXPIRY_HOURS = "cache_expiry_hours"
+        private const val KEY_UI_SCALE = "ui_scale"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
+        const val DEFAULT_CACHE_EXPIRY_HOURS = 24
+        const val DEFAULT_UI_SCALE = 1.0f
     }
 
     /**
@@ -62,4 +66,33 @@ class AppSettings(context: Context) {
     var autoResumeEnabled: Boolean
         get() = prefs.getBoolean(KEY_AUTO_RESUME, true)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_RESUME, value).apply()
+
+    /**
+     * Get or set cache expiry duration in hours.
+     * Default: 24 hours (1 day)
+     * Range: 1-168 hours (1 hour to 7 days)
+     */
+    var cacheExpiryHours: Int
+        get() = prefs.getInt(KEY_CACHE_EXPIRY_HOURS, DEFAULT_CACHE_EXPIRY_HOURS)
+        set(value) {
+            val clampedValue = value.coerceIn(1, 168) // 1 hour to 7 days
+            prefs.edit().putInt(KEY_CACHE_EXPIRY_HOURS, clampedValue).apply()
+        }
+
+    /**
+     * Get cache expiry duration in milliseconds.
+     */
+    val cacheExpiryMs: Long
+        get() = cacheExpiryHours * 60 * 60 * 1000L
+
+    /**
+     * Get or set UI scale for category/grid screens.
+     * Values: 0.7f (70%), 0.8f (80%), 0.9f (90%), 1.0f (100%)
+     */
+    var uiScale: Float
+        get() = prefs.getFloat(KEY_UI_SCALE, DEFAULT_UI_SCALE)
+        set(value) {
+            val clampedValue = value.coerceIn(0.7f, 1.0f)
+            prefs.edit().putFloat(KEY_UI_SCALE, clampedValue).apply()
+        }
 }
