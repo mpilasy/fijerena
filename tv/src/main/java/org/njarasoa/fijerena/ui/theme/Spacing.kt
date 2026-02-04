@@ -2,21 +2,21 @@ package org.njarasoa.fijerena.ui.theme
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
- * Spacing System (8dp Grid)
- * Provides consistent spacing values throughout the app.
- * All values follow the 8dp grid system for visual consistency.
+ * TV Spacing System (8dp Grid)
+ * Re-exports shared spacing values and adds TV-specific safe margins.
  */
 object Spacing {
-    val xxxs: Dp = 2.dp   // Minimal gaps
-    val xxs: Dp = 4.dp    // Tight spacing
-    val xs: Dp = 8.dp     // Base unit (8dp grid)
-    val sm: Dp = 12.dp    // Small spacing
-    val md: Dp = 16.dp    // Standard spacing (most common)
-    val lg: Dp = 24.dp    // Section spacing
-    val xl: Dp = 32.dp    // Large gaps
-    val xxl: Dp = 48.dp   // Extra large gaps
+    val xxxs: Dp = CinemaSpacing.xxxs
+    val xxs: Dp = CinemaSpacing.xxs
+    val xs: Dp = CinemaSpacing.xs
+    val sm: Dp = CinemaSpacing.sm
+    val md: Dp = CinemaSpacing.md
+    val lg: Dp = CinemaSpacing.lg
+    val xl: Dp = CinemaSpacing.xl
+    val xxl: Dp = CinemaSpacing.xxl
 
     // TV Safe Margins (Google TV design language)
     val tvSafeMarginHorizontal: Dp = 56.dp

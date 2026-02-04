@@ -51,6 +51,10 @@ import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -227,21 +231,21 @@ private fun ChannelItem(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp)
+            .height(TvDimensions.epgRowHeight)
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
-            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = 0.2f)
+            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.focusedTint)
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = androidx.compose.foundation.BorderStroke(2.dp, org.njarasoa.fijerena.ui.theme.CinemaAccentLight)
+                border = androidx.compose.foundation.BorderStroke(TvFocusTokens.focusBorderWidth, org.njarasoa.fijerena.ui.theme.CinemaAccentLight)
             )
         ),
         scale = CardDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale
         )
     ) {
         Box(
@@ -288,7 +292,7 @@ private fun TimeGridColumn(
             currentTimeSlot = currentTimeSlot,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp)
+                .height(TvDimensions.epgTimeHeaderHeight)
         )
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -332,13 +336,13 @@ private fun TimeHeaderRow(
 
             Box(
                 modifier = Modifier
-                    .width(120.dp) // 2dp per minute * 60 minutes
+                    .width(TvDimensions.epgTimeSlotWidth) // 2dp per minute * 60 minutes
                     .fillMaxHeight()
                     .background(
                         if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark
                         else org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
                     )
-                    .border(0.5.dp, org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight),
+                    .border(TvDimensions.borderThin, org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -362,8 +366,8 @@ private fun ProgramRow(
         state = scrollState,
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp)
-            .border(0.5.dp, org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight),
+            .height(TvDimensions.epgRowHeight)
+            .border(TvDimensions.borderThin, org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight),
         userScrollEnabled = false // Synchronized with header row
     ) {
         items(channelRow.programs.size) { index ->
@@ -400,17 +404,17 @@ private fun ProgramCell(
             ),
         colors = CardDefaults.colors(
             containerColor = if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark else org.njarasoa.fijerena.ui.theme.CinemaSurface,
-            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = 0.3f)
+            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint)
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = androidx.compose.foundation.BorderStroke(2.dp, org.njarasoa.fijerena.ui.theme.CinemaAccentLight)
+                border = androidx.compose.foundation.BorderStroke(TvFocusTokens.focusBorderWidth, org.njarasoa.fijerena.ui.theme.CinemaAccentLight)
             )
         ),
         scale = CardDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.05f,
-            pressedScale = 0.95f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScaleSubtle,
+            pressedScale = TvFocusTokens.pressedScale
         )
     ) {
         Column(

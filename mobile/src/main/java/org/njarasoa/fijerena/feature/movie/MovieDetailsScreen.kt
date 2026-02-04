@@ -16,6 +16,8 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.VodInfo
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -159,7 +161,7 @@ private fun MovieDetailsContent(
             Text(
                 text = "Released: $releaseDate",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
             )
         }
 
@@ -180,7 +182,7 @@ private fun MovieDetailsContent(
             Text(
                 text = "Cast: $cast",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
@@ -193,7 +195,7 @@ private fun MovieDetailsContent(
             Text(
                 text = "Director: $director",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium)
             )
         }
 

@@ -1,40 +1,37 @@
+@file:Suppress("unused")
+
 package org.njarasoa.fijerena.ui.theme
 
-import androidx.compose.ui.graphics.Color
-
-/**
- * Deep Night Cinema Color Scheme - Google TV Material 3 Design Language
- * Professional, video-focused dark theme with Electric Blue and Vivid Orange accents.
- * Consistent across Mobile and TV platforms.
- */
+// Re-export all colors from core — single source of truth
+// Existing imports like `org.njarasoa.fijerena.ui.theme.CinemaAccent` continue to resolve.
 
 // Primary accent - Electric Blue
-val CinemaAccent = Color(0xFF2979FF)
-val CinemaAccentDark = Color(0xFF1565C0)
-val CinemaAccentLight = Color(0xFF82B1FF)
+val CinemaAccent = org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+val CinemaAccentDark = org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
+val CinemaAccentLight = org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 
-// Secondary accent - Vivid Orange (for LIVE indicators, destructive actions)
-val CinemaOrange = Color(0xFFFF6D00)
-val CinemaOrangeDark = Color(0xFFE65100)
-val CinemaOrangeLight = Color(0xFFFFAB40)
+// Secondary accent - Vivid Orange
+val CinemaOrange = org.njarasoa.fijerena.core.ui.theme.CinemaOrange
+val CinemaOrangeDark = org.njarasoa.fijerena.core.ui.theme.CinemaOrangeDark
+val CinemaOrangeLight = org.njarasoa.fijerena.core.ui.theme.CinemaOrangeLight
 
 // Background & Surface colors - Deep Night palette
-val CinemaBackground = Color(0xFF0F1014)        // Deep Night background
-val CinemaSurface = Color(0xFF161A20)            // Card/surface background
-val CinemaSurfaceVariant = Color(0xFF1E2228)     // Elevated surfaces
-val CinemaSurfaceLight = Color(0xFF2A3038)       // Borders, dividers
+val CinemaBackground = org.njarasoa.fijerena.core.ui.theme.CinemaBackground
+val CinemaSurface = org.njarasoa.fijerena.core.ui.theme.CinemaSurface
+val CinemaSurfaceVariant = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+val CinemaSurfaceLight = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 
 // Glassmorphism support
-val CinemaGlassBackground = Color(0xFF0F1014).copy(alpha = 0.75f)  // 75% opacity
-val CinemaGlassBorder = Color(0xFF2979FF).copy(alpha = 0.15f)      // 15% opacity
+val CinemaGlassBackground = org.njarasoa.fijerena.core.ui.theme.CinemaGlassBackground
+val CinemaGlassBorder = org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 
 // Status colors
-val CinemaSuccess = Color(0xFF4CAF50)
-val CinemaWarning = Color(0xFFFFC107)
-val CinemaError = Color(0xFFF44336)
+val CinemaSuccess = org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
+val CinemaWarning = org.njarasoa.fijerena.core.ui.theme.CinemaWarning
+val CinemaError = org.njarasoa.fijerena.core.ui.theme.CinemaError
 
 // Text colors
-val CinemaTextPrimary = Color(0xFFFFFFFF)
-val CinemaTextSecondary = Color(0xFFB0B0B0)
-val CinemaTextTertiary = Color(0xFF808080)
-val CinemaTextDisabled = Color(0xFF606060)
+val CinemaTextPrimary = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+val CinemaTextSecondary = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+val CinemaTextTertiary = org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
+val CinemaTextDisabled = org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled

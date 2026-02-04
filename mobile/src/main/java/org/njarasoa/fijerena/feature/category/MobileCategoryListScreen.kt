@@ -18,6 +18,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +81,7 @@ fun MobileCategoryListScreen(
 
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outline,
-                            thickness = 0.5.dp
+                            thickness = MobileDimensions.dividerThin
                         )
 
                         // Streams list

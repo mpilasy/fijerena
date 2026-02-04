@@ -18,6 +18,8 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -30,6 +32,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
@@ -59,22 +62,22 @@ fun CinemaPrimaryButton(
             contentColor = CinemaBackground,
             focusedContainerColor = CinemaAccentLight,
             focusedContentColor = CinemaBackground,
-            pressedContainerColor = CinemaAccent.copy(alpha = 0.7f),
+            pressedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
             disabledContainerColor = CinemaSurfaceVariant,
-            disabledContentColor = CinemaTextPrimary.copy(alpha = 0.4f)
+            disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint)
         ),
         scale = ButtonDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f,
-            disabledScale = 1.0f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale,
+            disabledScale = TvFocusTokens.defaultScale
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaTextPrimary)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary)
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
         contentPadding = PaddingValues(
             horizontal = Spacing.md.scaled(scale),
             vertical = Spacing.sm.scaled(scale)
@@ -114,22 +117,22 @@ fun CinemaSecondaryButton(
             contentColor = CinemaTextPrimary,
             focusedContainerColor = CinemaSurface,
             focusedContentColor = CinemaAccentLight,
-            pressedContainerColor = CinemaSurfaceVariant.copy(alpha = 0.7f),
-            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = 0.5f),
-            disabledContentColor = CinemaTextPrimary.copy(alpha = 0.4f)
+            pressedContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textMedium),
+            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
+            disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint)
         ),
         scale = ButtonDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f,
-            disabledScale = 1.0f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale,
+            disabledScale = TvFocusTokens.defaultScale
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
         contentPadding = PaddingValues(
             horizontal = Spacing.md.scaled(scale),
             vertical = Spacing.sm.scaled(scale)
@@ -167,30 +170,30 @@ fun CinemaTertiaryButton(
         colors = ButtonDefaults.colors(
             containerColor = Color.Transparent,
             contentColor = CinemaAccent,
-            focusedContainerColor = CinemaSurface.copy(alpha = 0.5f),
+            focusedContainerColor = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
             focusedContentColor = CinemaAccentLight,
-            pressedContainerColor = CinemaSurface.copy(alpha = 0.3f),
+            pressedContainerColor = CinemaSurface.copy(alpha = CinemaAlpha.tint),
             disabledContainerColor = Color.Transparent,
-            disabledContentColor = CinemaAccent.copy(alpha = 0.4f)
+            disabledContentColor = CinemaAccent.copy(alpha = CinemaAlpha.textFaint)
         ),
         scale = ButtonDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f,
-            disabledScale = 1.0f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale,
+            disabledScale = TvFocusTokens.defaultScale
         ),
         border = ButtonDefaults.border(
             border = Border(
-                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccent)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccent)
             ),
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
             ),
             disabledBorder = Border(
-                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccent.copy(alpha = 0.4f))
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow))
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
         contentPadding = PaddingValues(
             horizontal = Spacing.md.scaled(scale),
             vertical = Spacing.sm.scaled(scale)
@@ -229,24 +232,24 @@ fun CinemaIconButton(
         colors = ButtonDefaults.colors(
             containerColor = CinemaSurfaceVariant,
             contentColor = CinemaAccent,
-            focusedContainerColor = CinemaAccent.copy(alpha = 0.2f),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedTint),
             focusedContentColor = CinemaAccentLight,
-            pressedContainerColor = CinemaSurfaceVariant.copy(alpha = 0.7f),
-            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = 0.5f),
-            disabledContentColor = CinemaAccent.copy(alpha = 0.4f)
+            pressedContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textMedium),
+            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
+            disabledContentColor = CinemaAccent.copy(alpha = CinemaAlpha.textFaint)
         ),
         scale = ButtonDefaults.scale(
-            scale = 1.0f,
+            scale = TvFocusTokens.defaultScale,
             focusedScale = 1.15f,
             pressedScale = 0.9f,
-            disabledScale = 1.0f
+            disabledScale = TvFocusTokens.defaultScale
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
         contentPadding = PaddingValues(Spacing.xs.scaled(scale))
     ) {
         icon()
@@ -280,22 +283,22 @@ fun CinemaDangerButton(
             contentColor = CinemaTextPrimary,
             focusedContainerColor = CinemaOrangeLight,
             focusedContentColor = CinemaBackground,
-            pressedContainerColor = CinemaOrange.copy(alpha = 0.7f),
+            pressedContainerColor = CinemaOrange.copy(alpha = CinemaAlpha.textMedium),
             disabledContainerColor = CinemaSurfaceVariant,
-            disabledContentColor = CinemaTextPrimary.copy(alpha = 0.4f)
+            disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint)
         ),
         scale = ButtonDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f,
-            disabledScale = 1.0f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale,
+            disabledScale = TvFocusTokens.defaultScale
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaTextPrimary)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary)
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
         contentPadding = PaddingValues(
             horizontal = Spacing.md.scaled(scale),
             vertical = Spacing.sm.scaled(scale)

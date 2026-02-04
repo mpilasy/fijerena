@@ -23,6 +23,10 @@ import androidx.tv.material3.ButtonDefaults
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.*
 import androidx.compose.ui.graphics.Color
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * Content type selection screen - allows users to choose between Live TV, Movies, or TV Shows.
@@ -63,7 +67,7 @@ fun ContentTypeSelectionScreen(
                 Text(
                     text = providerName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.87f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textHigh)
                 )
             }
 
@@ -127,8 +131,8 @@ private fun ContentTypeButton(
     Button(
         onClick = onClick,
         modifier = Modifier
-            .width(600.dp)
-            .height(64.dp),
+            .width(TvDimensions.formFieldWidth)
+            .height(TvDimensions.buttonHeight),
         colors = ButtonDefaults.colors(
             containerColor = CinemaSurfaceVariant,
             contentColor = CinemaTextPrimary,
@@ -137,13 +141,13 @@ private fun ContentTypeButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp, color = CinemaAccentLight)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = CinemaAccentLight)
             )
         ),
         scale = ButtonDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale
         )
     ) {
         Text(

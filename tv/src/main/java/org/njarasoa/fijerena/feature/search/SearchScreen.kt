@@ -34,6 +34,10 @@ import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.*
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.*
 
 /**
@@ -146,7 +150,7 @@ private fun LoadingView() {
             verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(TvDimensions.iconXLarge),
                 color = CinemaAccent
             )
             Text(
@@ -225,7 +229,7 @@ private fun SearchContent(
                 Text(
                     text = "Enter search term to find streams across all categories",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
             }
         } else {
@@ -253,7 +257,7 @@ private fun SearchTextField(
         placeholder = { Text("Enter stream name...") },
         singleLine = true,
         modifier = Modifier
-            .width(600.dp)
+            .width(TvDimensions.formFieldWidth)
             .focusRequester(focusRequester),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = CinemaTextPrimary,
@@ -262,7 +266,7 @@ private fun SearchTextField(
             focusedBorderColor = CinemaAccent,
             unfocusedBorderColor = CinemaTextSecondary,
             focusedLabelColor = CinemaAccent,
-            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f),
+            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             focusedPlaceholderColor = CinemaTextSecondary,
             unfocusedPlaceholderColor = CinemaTextSecondary
         ),
@@ -309,7 +313,7 @@ private fun SearchResultsList(
                 verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(TvDimensions.iconXLarge),
                     color = CinemaAccent
                 )
                 Text(
@@ -328,7 +332,7 @@ private fun SearchResultsList(
             Text(
                 text = "No results found for '$query'. Try different keywords.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextSecondary.copy(alpha = 0.87f)
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
         }
     } else {
@@ -343,7 +347,7 @@ private fun SearchResultsList(
                 Text(
                     text = "${results.size} results",
                     style = MaterialTheme.typography.titleMedium,
-                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
 
                 if (isSearching && searchProgress != null) {
@@ -352,7 +356,7 @@ private fun SearchResultsList(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(TvDimensions.iconSmall),
                             color = CinemaAccent,
                             strokeWidth = 2.dp
                         )
@@ -392,29 +396,29 @@ private fun SearchResultItem(
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
-            .height(80.dp)
+            .height(TvDimensions.cardHeight)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaAccent.copy(alpha = 0.15f),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
             focusedContentColor = CinemaTextPrimary
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp, color = CinemaAccentLight)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = CinemaAccentLight)
             )
         ),
         shape = CardDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(CornerRadius.medium)),
         scale = CardDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.98f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScaleSubtle
         ),
         glow = CardDefaults.glow(
             focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = 0.4f),
-                elevation = 8.dp
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
+                elevation = TvFocusTokens.glowElevation
             )
         )
     ) {

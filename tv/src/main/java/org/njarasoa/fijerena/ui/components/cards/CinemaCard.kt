@@ -14,6 +14,8 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusable
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
@@ -23,6 +25,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * Selectable Card - For Category/Content items
@@ -38,21 +41,21 @@ fun CinemaSelectableCard(
     Card(
         onClick = onClick,
         modifier = modifier.tvFocusable(
-            focusScale = 1.1f,
-            borderWidth = 2.dp,
+            focusScale = TvFocusTokens.focusedScale,
+            borderWidth = TvFocusTokens.focusBorderWidth,
             cornerRadius = CornerRadius.medium
         ),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaAccent.copy(alpha = 0.2f),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedTint),
             focusedContentColor = CinemaTextPrimary
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
         glow = CardDefaults.glow(
             focusedGlow = Glow(
-                elevationColor = CinemaAccent.copy(alpha = 0.4f),
-                elevation = 8.dp
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
+                elevation = TvFocusTokens.glowElevation
             )
         )
     ) {
@@ -75,14 +78,14 @@ fun CinemaInfoCard(
         onClick = { /* Non-interactive */ },
         modifier = modifier,
         colors = CardDefaults.colors(
-            containerColor = CinemaSurfaceVariant.copy(alpha = 0.6f),
+            containerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textLow),
             contentColor = CinemaTextPrimary
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
         border = CardDefaults.border(
             border = Border(
                 border = BorderStroke(
-                    width = 2.dp,
+                    width = TvFocusTokens.focusBorderWidth,
                     color = CinemaSurfaceLight
                 )
             )
@@ -107,21 +110,21 @@ fun CinemaCompactCard(
     Card(
         onClick = onClick,
         modifier = modifier.tvFocusable(
-            focusScale = 1.1f,
-            borderWidth = 2.dp,
+            focusScale = TvFocusTokens.focusedScale,
+            borderWidth = TvFocusTokens.focusBorderWidth,
             cornerRadius = CornerRadius.small
         ),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaAccent.copy(alpha = 0.2f),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedTint),
             focusedContentColor = CinemaTextPrimary
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.small)),
         glow = CardDefaults.glow(
             focusedGlow = Glow(
-                elevationColor = CinemaAccent.copy(alpha = 0.4f),
-                elevation = 8.dp
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
+                elevation = TvFocusTokens.glowElevation
             )
         )
     ) {
@@ -147,24 +150,24 @@ fun CinemaStandardCard(
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaAccent.copy(alpha = 0.2f),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedTint),
             focusedContentColor = CinemaTextPrimary
         ),
         scale = CardDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp, color = CinemaAccentLight)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = CinemaAccentLight)
             )
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
         glow = CardDefaults.glow(
             focusedGlow = Glow(
-                elevationColor = CinemaAccent.copy(alpha = 0.4f),
-                elevation = 8.dp
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
+                elevation = TvFocusTokens.glowElevation
             )
         )
     ) {

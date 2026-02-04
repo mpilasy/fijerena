@@ -27,6 +27,10 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.data.AuthViewModel
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * TV-optimized login screen for Xtream IPTV authentication.
@@ -112,18 +116,18 @@ fun LoginScreenTv(
                 placeholder = { Text("http://example.com:8080") },
                 singleLine = true,
                 modifier = Modifier
-                    .width(600.dp) // Wide field for TV
+                    .width(TvDimensions.formFieldWidth) // Wide field for TV
                     .padding(bottom = 20.dp)
                     .focusRequester(urlFocusRequester),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary,
                     unfocusedTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary,
-                    disabledTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary.copy(alpha = 0.5f),
+                    disabledTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.scrim),
                     focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                     focusedPlaceholderColor = org.njarasoa.fijerena.ui.theme.CinemaTextSecondary,
                     unfocusedPlaceholderColor = org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
                 ),
@@ -144,18 +148,18 @@ fun LoginScreenTv(
                 label = { Text("Username") },
                 singleLine = true,
                 modifier = Modifier
-                    .width(600.dp)
+                    .width(TvDimensions.formFieldWidth)
                     .padding(bottom = 20.dp)
                     .focusRequester(usernameFocusRequester),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary,
                     unfocusedTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary,
-                    disabledTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary.copy(alpha = 0.5f),
+                    disabledTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.scrim),
                     focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -175,18 +179,18 @@ fun LoginScreenTv(
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier
-                    .width(600.dp)
+                    .width(TvDimensions.formFieldWidth)
                     .padding(bottom = 32.dp)
                     .focusRequester(passwordFocusRequester),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary,
                     unfocusedTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary,
-                    disabledTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary.copy(alpha = 0.5f),
+                    disabledTextColor = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.scrim),
                     focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
@@ -214,8 +218,8 @@ fun LoginScreenTv(
                     viewModel.login(serverUrl, username, password, rememberMe = true)
                 },
                 modifier = Modifier
-                    .width(600.dp)
-                    .height(64.dp)
+                    .width(TvDimensions.formFieldWidth)
+                    .height(TvDimensions.buttonHeight)
                     .focusRequester(buttonFocusRequester),
                 enabled = serverUrl.isNotBlank() &&
                         username.isNotBlank() &&
@@ -228,12 +232,12 @@ fun LoginScreenTv(
                     focusedContentColor = org.njarasoa.fijerena.ui.theme.CinemaBackground
                 ),
                 scale = ButtonDefaults.scale(
-                    focusedScale = 1.05f // Slightly enlarge when focused
+                    focusedScale = TvFocusTokens.focusedScaleSubtle // Slightly enlarge when focused
                 )
             ) {
                 if (uiState is LoginViewModel.UiState.Loading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(TvDimensions.iconLarge),
                         color = org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
                     )
                 } else {

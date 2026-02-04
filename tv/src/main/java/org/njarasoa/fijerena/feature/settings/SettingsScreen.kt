@@ -56,6 +56,10 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.*
 
 /**
@@ -212,7 +216,7 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                             ),
-                            color = CinemaTextSecondary.copy(alpha = 0.87f)
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
                     }
                     Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
@@ -242,7 +246,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                         ),
-                        color = CinemaTextSecondary.copy(alpha = 0.87f)
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
@@ -282,7 +286,7 @@ fun SettingsScreen(
                                 label = { Text("Queue Size") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
-                                modifier = Modifier.width(200.dp.scaled(scale))
+                                modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale))
                             )
                             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                             CinemaSecondaryButton(
@@ -327,7 +331,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                         ),
-                        color = CinemaTextSecondary.copy(alpha = 0.87f)
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
@@ -367,7 +371,7 @@ fun SettingsScreen(
                                 label = { Text("Max Size") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
-                                modifier = Modifier.width(200.dp.scaled(scale))
+                                modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale))
                             )
                             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                             CinemaSecondaryButton(
@@ -412,7 +416,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                         ),
-                        color = CinemaTextSecondary.copy(alpha = 0.87f)
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                     CinemaDangerButton(
@@ -438,7 +442,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                         ),
-                        color = CinemaTextSecondary.copy(alpha = 0.87f)
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                     CinemaDangerButton(
@@ -464,7 +468,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                         ),
-                        color = CinemaTextSecondary.copy(alpha = 0.87f)
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
                     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
@@ -499,7 +503,7 @@ fun SettingsScreen(
                         }
 
                         Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-                        HorizontalDivider(color = CinemaTextSecondary.copy(alpha = 0.2f))
+                        HorizontalDivider(color = CinemaTextSecondary.copy(alpha = CinemaAlpha.focusedTint))
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Live TV Cache
@@ -527,7 +531,7 @@ fun SettingsScreen(
                                 Text(
                                     text = "${if (stats.liveTv.categoryCached) "1 category" else "No categories"}, ${stats.liveTv.streamListsCount} stream lists",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                                 )
                             }
                             CinemaSecondaryButton(
@@ -564,7 +568,7 @@ fun SettingsScreen(
                                 Text(
                                     text = "${if (stats.movies.categoryCached) "1 category" else "No categories"}, ${stats.movies.streamListsCount} stream lists",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                                 )
                             }
                             CinemaSecondaryButton(
@@ -601,7 +605,7 @@ fun SettingsScreen(
                                 Text(
                                     text = "${if (stats.tvShows.categoryCached) "1 category" else "No categories"}, ${stats.tvShows.streamListsCount} stream lists",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                                 )
                             }
                             CinemaSecondaryButton(
@@ -622,12 +626,12 @@ fun SettingsScreen(
                                 Text(
                                     text = "EPG Data: ${stats.epgCount} channels",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                                 )
                                 Text(
                                     text = "Other: ${formatBytes(stats.otherSize)}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                                 )
                             }
                         }
@@ -651,7 +655,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                         ),
-                        color = CinemaTextSecondary.copy(alpha = 0.87f)
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
@@ -700,7 +704,7 @@ fun SettingsScreen(
                         Text(
                             text = "Enable stats for nerds and debug features",
                             style = MaterialTheme.typography.bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = 0.87f)
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
                     }
                     Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
@@ -758,7 +762,7 @@ fun SettingsScreen(
                             focusedBorderColor = CinemaAccent,
                             unfocusedBorderColor = CinemaTextSecondary,
                             focusedLabelColor = CinemaAccent,
-                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f)
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
                     )
                     OutlinedTextField(
@@ -774,7 +778,7 @@ fun SettingsScreen(
                             focusedBorderColor = CinemaAccent,
                             unfocusedBorderColor = CinemaTextSecondary,
                             focusedLabelColor = CinemaAccent,
-                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f)
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
                     )
                     OutlinedTextField(
@@ -790,7 +794,7 @@ fun SettingsScreen(
                             focusedBorderColor = CinemaAccent,
                             unfocusedBorderColor = CinemaTextSecondary,
                             focusedLabelColor = CinemaAccent,
-                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f)
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
                     )
                     OutlinedTextField(
@@ -807,7 +811,7 @@ fun SettingsScreen(
                             focusedBorderColor = CinemaAccent,
                             unfocusedBorderColor = CinemaTextSecondary,
                             focusedLabelColor = CinemaAccent,
-                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f),
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             focusedPlaceholderColor = CinemaTextSecondary,
                             unfocusedPlaceholderColor = CinemaTextSecondary
                         )
@@ -863,7 +867,7 @@ fun SettingsScreen(
                 ) {
                     if (isChangingProvider) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp.scaled(scale)),
+                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             color = androidx.compose.ui.graphics.Color.Black
                         )
                     } else {

@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,12 +71,12 @@ fun MobileSearchScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
-                    disabledTextColor = Color.White.copy(alpha = 0.5f),
+                    disabledTextColor = Color.White.copy(alpha = CinemaAlpha.textDisabled),
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.tint),
                     focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
             )
 
@@ -168,7 +170,7 @@ private fun SearchResults(
             Text(
                 text = "Enter search term to find streams across all categories",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
             )
         }
     } else if (results.isEmpty()) {
@@ -179,7 +181,7 @@ private fun SearchResults(
             Text(
                 text = "No results found for '$query'\nTry different keywords",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
             )
         }
     } else {
@@ -221,7 +223,7 @@ private fun SearchResultCard(
             Text(
                 text = "Category: ${result.categoryName}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
             )
         }
     }

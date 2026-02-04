@@ -1,28 +1,29 @@
 package org.njarasoa.fijerena.ui.theme
 
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
- * Cinema Spacing System - Deep Night Design System
- * Consistent spacing values across the mobile app using 8dp grid
+ * Mobile Spacing System - Deep Night Design System
+ * Re-exports shared spacing values and adds mobile-specific safe margins.
  */
 object Spacing {
-    // Base spacing (8dp grid)
-    val xxs = 2.dp
-    val xs = 4.dp
-    val sm = 8.dp
-    val md = 16.dp
-    val lg = 24.dp
-    val xl = 32.dp
-    val xxl = 48.dp
+    // Base spacing (8dp grid) — delegated to shared core
+    val xxs: Dp = CinemaSpacing.xxs
+    val xs: Dp = CinemaSpacing.xs
+    val sm: Dp = CinemaSpacing.sm
+    val md: Dp = CinemaSpacing.md
+    val lg: Dp = CinemaSpacing.lg
+    val xl: Dp = CinemaSpacing.xl
+    val xxl: Dp = CinemaSpacing.xxl
 
     // Mobile-specific safe margins (standard Material padding)
-    val mobileSafeMarginHorizontal = 16.dp
-    val mobileSafeMarginVertical = 16.dp
+    val mobileSafeMarginHorizontal: Dp = MobileDimensions.safeMarginHorizontal
+    val mobileSafeMarginVertical: Dp = MobileDimensions.safeMarginVertical
 
     // Component-specific spacing
-    val cardPadding = md
-    val buttonPadding = md
-    val listSpacing = sm
-    val sectionSpacing = lg
+    val cardPadding: Dp = md
+    val buttonPadding: Dp = md
+    val listSpacing: Dp = sm
+    val sectionSpacing: Dp = lg
 }

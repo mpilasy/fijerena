@@ -54,6 +54,11 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.Episode
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.*
 
 /**
@@ -163,7 +168,7 @@ private fun EpisodeListContent(
 
     val rotation by animateFloatAsState(
         targetValue = targetRotation,
-        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
         label = "refresh_rotation"
     )
 
@@ -171,7 +176,7 @@ private fun EpisodeListContent(
         if (isRefreshing) {
             while (isRefreshing) {
                 targetRotation += 360f
-                kotlinx.coroutines.delay(600)
+                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
             }
         }
     }
@@ -220,12 +225,12 @@ private fun EpisodeListContent(
                             isRefreshing = false
                         },
                         enabled = !isRefreshing,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(TvDimensions.iconMedium)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh series info",
-                            tint = CinemaTextSecondary.copy(alpha = 0.87f),
+                            tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             modifier = Modifier
                                 .size(24.dp)
                                 .rotate(rotation)
@@ -255,7 +260,7 @@ private fun EpisodeListContent(
                     Text(
                         text = plot,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextSecondary.copy(alpha = 0.87f),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -266,7 +271,7 @@ private fun EpisodeListContent(
                 Text(
                     text = providerName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 CinemaSecondaryButton(
@@ -312,25 +317,25 @@ private fun EpisodeCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp),
+            .height(TvDimensions.cardHeight),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, CinemaAccentLight)
+                border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight)
             )
         ),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
-            focusedContainerColor = CinemaAccent.copy(alpha = 0.2f)
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedTint)
         ),
         scale = CardDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale
         ),
         glow = CardDefaults.glow(
             focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = 0.4f),
-                elevation = 8.dp
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
+                elevation = TvFocusTokens.glowElevation
             )
         )
     ) {
@@ -342,7 +347,7 @@ private fun EpisodeCard(
         ) {
             // Season and episode number
             Column(
-                modifier = Modifier.width(120.dp),
+                modifier = Modifier.width(TvDimensions.epgTimeSlotWidth),
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
@@ -404,7 +409,7 @@ private fun LoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(TvDimensions.progressIndicator),
                 color = CinemaAccent
             )
             Spacer(modifier = Modifier.height(Spacing.md))

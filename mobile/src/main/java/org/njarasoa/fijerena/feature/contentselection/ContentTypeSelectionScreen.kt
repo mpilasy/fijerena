@@ -11,6 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,7 +91,7 @@ private fun ContentTypeCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
+            .height(MobileDimensions.contentTypeCardHeight)
     ) {
         Row(
             modifier = Modifier
@@ -101,7 +103,7 @@ private fun ContentTypeCard(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(MobileDimensions.iconXLarge),
                 tint = MaterialTheme.colorScheme.primary
             )
             Column {

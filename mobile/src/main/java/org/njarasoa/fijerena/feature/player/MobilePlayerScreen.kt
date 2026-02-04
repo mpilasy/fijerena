@@ -36,10 +36,13 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
-import kotlin.time.Duration.Companion.seconds
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * Mobile player screen with touch controls and Stats for Nerds overlay.
@@ -75,7 +78,7 @@ fun MobilePlayerScreen(
     // Auto-hide controls after 5 seconds
     LaunchedEffect(showControls) {
         if (showControls && !showStats) {
-            delay(5.seconds)
+            delay(CinemaAnimation.controlsAutoHideMobileMs)
             showControls = false
         }
     }
@@ -244,7 +247,7 @@ private fun LoadingScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(MobileDimensions.iconXLarge),
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
@@ -292,7 +295,7 @@ private fun ErrorOverlay(
 ) {
     Surface(
         modifier = Modifier.padding(32.dp),
-        color = Color.Black.copy(alpha = 0.8f),
+        color = Color.Black.copy(alpha = CinemaAlpha.overlayMedium),
         shape = MaterialTheme.shapes.medium
     ) {
         Column(
@@ -334,7 +337,7 @@ private fun ControlsOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.3f))
+            .background(Color.Black.copy(alpha = CinemaAlpha.tint))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -356,7 +359,7 @@ private fun ControlsOverlay(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
                     tint = Color.White,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(MobileDimensions.iconLarge)
                 )
             }
             IconButton(onClick = onStats) {
@@ -364,7 +367,7 @@ private fun ControlsOverlay(
                     imageVector = Icons.Default.Analytics,
                     contentDescription = "Stats for Nerds",
                     tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(MobileDimensions.iconMedium)
                 )
             }
         }
@@ -374,7 +377,7 @@ private fun ControlsOverlay(
             onClick = onPlayPause,
             modifier = Modifier
                 .align(Alignment.Center)
-                .size(72.dp)
+                .size(MobileDimensions.iconPlayContainer)
         ) {
             Icon(
                 imageVector = if (playbackState is PlaybackState.Paused) {
@@ -384,7 +387,7 @@ private fun ControlsOverlay(
                 },
                 contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
                 tint = Color.White,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(MobileDimensions.iconPlayIcon)
             )
         }
 
@@ -393,7 +396,7 @@ private fun ControlsOverlay(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.7f))
+                .background(Color.Black.copy(alpha = CinemaAlpha.textMedium))
                 .padding(16.dp)
         ) {
             Text(
@@ -410,7 +413,7 @@ private fun ControlsOverlay(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(MobileDimensions.liveDotSize)
                             .background(Color.Red, shape = MaterialTheme.shapes.small)
                     )
                     Text(
@@ -439,7 +442,7 @@ private fun ControlsOverlay(
                             .fillMaxWidth()
                             .padding(top = 8.dp),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = Color.White.copy(alpha = 0.3f)
+                        trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
                     )
 
                     Row(
@@ -539,7 +542,7 @@ private fun MobileStatsOverlay(
                 networkSpeed = if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
             }
 
-            delay(1.seconds)
+            delay(CinemaAnimation.statsUpdateMs)
         }
     }
 
@@ -564,7 +567,7 @@ private fun MobileStatsOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
+            .background(Color.Black.copy(alpha = CinemaAlpha.scrim))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -576,9 +579,9 @@ private fun MobileStatsOverlay(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
-                .widthIn(max = 320.dp),
-            color = Color.Black.copy(alpha = 0.85f),
-            shape = RoundedCornerShape(12.dp)
+                .widthIn(max = MobileDimensions.statsOverlayMaxWidth),
+            color = Color.Black.copy(alpha = CinemaAlpha.overlayHeavy),
+            shape = RoundedCornerShape(CinemaCornerRadius.medium)
         ) {
             Column(
                 modifier = Modifier
@@ -600,13 +603,13 @@ private fun MobileStatsOverlay(
                     )
                     IconButton(
                         onClick = onClose,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(MobileDimensions.iconLarge)
                     ) {
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.size(20.dp)
+                            tint = Color.White.copy(alpha = CinemaAlpha.textMedium),
+                            modifier = Modifier.size(MobileDimensions.iconSmall)
                         )
                     }
                 }
@@ -677,7 +680,7 @@ private fun StatRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-            color = Color.White.copy(alpha = 0.7f)
+            color = Color.White.copy(alpha = CinemaAlpha.textMedium)
         )
         Text(
             text = value,
@@ -697,7 +700,7 @@ private fun StatRowColored(label: String, value: String, valueColor: Color) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-            color = Color.White.copy(alpha = 0.7f)
+            color = Color.White.copy(alpha = CinemaAlpha.textMedium)
         )
         Text(
             text = value,

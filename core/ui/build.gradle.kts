@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -8,6 +9,10 @@ android {
 
     defaultConfig {
         minSdk = 21
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     compileOptions {
@@ -25,6 +30,10 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+
+    // Compose
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

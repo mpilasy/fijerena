@@ -43,6 +43,10 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.*
 
 /**
@@ -77,7 +81,7 @@ fun EditProviderScreen(
             contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier.width(600.dp),
+                modifier = Modifier.width(TvDimensions.formFieldWidth),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -91,7 +95,7 @@ fun EditProviderScreen(
                 Text(
                     text = "Current URL: $currentUrl",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
 
                 Spacer(modifier = Modifier.height(Spacing.lg))
@@ -114,7 +118,7 @@ fun EditProviderScreen(
                         focusedBorderColor = CinemaAccent,
                         unfocusedBorderColor = CinemaTextSecondary,
                         focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = 0.87f),
+                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         focusedPlaceholderColor = CinemaTextSecondary,
                         unfocusedPlaceholderColor = CinemaTextSecondary
                     )

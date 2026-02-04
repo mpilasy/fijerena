@@ -19,7 +19,10 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,7 +106,7 @@ fun MobileSettingsScreen(
                 Text(
                     text = currentUrl,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -132,7 +135,7 @@ fun MobileSettingsScreen(
                         Text(
                             text = "Resume VOD content from where you left off",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -151,7 +154,7 @@ fun MobileSettingsScreen(
                 Text(
                     text = "Items to keep in Last Watched category (1-100)",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -219,7 +222,7 @@ fun MobileSettingsScreen(
                 Text(
                     text = "Maximum number of favorites to store (10-500)",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -287,7 +290,7 @@ fun MobileSettingsScreen(
                 Text(
                     text = "Remove all favorited streams from all content types",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -306,7 +309,7 @@ fun MobileSettingsScreen(
                 Text(
                     text = "Remove all saved positions (Continue Watching will be empty)",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -325,7 +328,7 @@ fun MobileSettingsScreen(
                 Text(
                     text = "Clear cached data to free up storage space",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -359,7 +362,7 @@ fun MobileSettingsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.divider)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -400,12 +403,12 @@ fun MobileSettingsScreen(
                     Text(
                         text = "EPG Data: ${stats.epgCount} channels",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                     )
                     Text(
                         text = "Other: ${formatBytes(stats.otherSize)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                     )
                 }
             }
@@ -421,7 +424,7 @@ fun MobileSettingsScreen(
                         Text(
                             text = "Enable stats for nerds and debug features",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -538,7 +541,7 @@ fun MobileSettingsScreen(
                 ) {
                     if (isChangingProvider) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
@@ -691,7 +694,7 @@ private fun CacheRow(
             Text(
                 text = detail,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
             )
         }
         OutlinedButton(

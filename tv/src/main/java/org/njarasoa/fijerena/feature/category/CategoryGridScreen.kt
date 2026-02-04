@@ -46,9 +46,14 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 import org.njarasoa.fijerena.feature.common.StatsOverlay
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * TV two-column layout: Categories on left, Streams on right.
@@ -277,7 +282,7 @@ private fun TwoColumnLayout(
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
                 ),
-                color = CinemaTextSecondary.copy(alpha = 0.87f)
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
         }
 
@@ -360,14 +365,14 @@ private fun CategoryList(
         if (categoriesRefreshing) {
             while (categoriesRefreshing) {
                 targetRotation += 360f
-                kotlinx.coroutines.delay(600)
+                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
             }
         }
     }
 
     val rotation by animateFloatAsState(
         targetValue = targetRotation,
-        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
         label = "refresh_rotation"
     )
 
@@ -394,9 +399,9 @@ private fun CategoryList(
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Refresh categories",
-                    tint = CinemaTextSecondary.copy(alpha = 0.87f),
+                    tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                     modifier = Modifier
-                        .size(20.dp.scaled(scale))
+                        .size(TvDimensions.iconSmall.scaled(scale))
                         .rotate(rotation)
                 )
             }
@@ -410,11 +415,11 @@ private fun CategoryList(
                     shape = RoundedCornerShape(CornerRadius.small)
                 )
                 .border(
-                    width = 1.dp,
+                    width = TvDimensions.borderDefault,
                     brush = androidx.compose.ui.graphics.Brush.verticalGradient(
                         colors = listOf(
                             CinemaGlassBorder,
-                            Color.White.copy(alpha = 0.05f),
+                            Color.White.copy(alpha = CinemaAlpha.ghost),
                             CinemaGlassBorder
                         )
                     ),
@@ -444,7 +449,7 @@ private fun CategoryList(
                             .fillMaxWidth()
                             .height(2.dp.scaled(scale))
                             .padding(horizontal = Spacing.md.scaled(scale))
-                            .background(CinemaAccent.copy(alpha = 0.3f))
+                            .background(CinemaAccent.copy(alpha = CinemaAlpha.tint))
                     )
 
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
@@ -497,7 +502,7 @@ private fun CategoryItem(
             ),
         colors = CardDefaults.colors(
             containerColor = if (isSelected) {
-                CinemaAccent.copy(alpha = 0.2f)
+                CinemaAccent.copy(alpha = CinemaAlpha.focusedTint)
             } else {
                 CinemaSurface
             },
@@ -506,24 +511,24 @@ private fun CategoryItem(
             } else {
                 CinemaTextPrimary
             },
-            focusedContainerColor = CinemaAccent.copy(alpha = 0.15f),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
             focusedContentColor = CinemaTextPrimary
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
             )
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
         scale = CardDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale
         ),
         glow = CardDefaults.glow(
             focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = 0.4f),
-                elevation = 8.dp
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
+                elevation = TvFocusTokens.glowElevation
             )
         )
     ) {
@@ -565,14 +570,14 @@ private fun StreamList(
         if (streamsLoading) {
             while (streamsLoading) {
                 targetRotation += 360f
-                kotlinx.coroutines.delay(600)
+                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
             }
         }
     }
 
     val rotation by animateFloatAsState(
         targetValue = targetRotation,
-        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
         label = "refresh_rotation"
     )
     val listState = rememberTvLazyListState()
@@ -617,9 +622,9 @@ private fun StreamList(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh streams",
-                            tint = CinemaTextSecondary.copy(alpha = 0.87f),
+                            tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             modifier = Modifier
-                                .size(20.dp.scaled(scale))
+                                .size(TvDimensions.iconSmall.scaled(scale))
                                 .rotate(rotation)
                         )
                     }
@@ -641,7 +646,7 @@ private fun StreamList(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    color = CinemaSurfaceVariant.copy(alpha = 0.3f),
+                    color = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.tint),
                     shape = RoundedCornerShape(CornerRadius.small)
                 )
         ) {
@@ -652,7 +657,7 @@ private fun StreamList(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier.size(TvDimensions.progressIndicator),
                             color = CinemaAccent
                         )
                     }
@@ -731,24 +736,24 @@ private fun StreamItem(
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaAccent.copy(alpha = 0.15f),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
             focusedContentColor = CinemaTextPrimary
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(width = 2.dp.scaled(scale), color = CinemaAccentLight)
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
             )
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
         scale = CardDefaults.scale(
-            scale = 1.0f,
-            focusedScale = 1.1f,
-            pressedScale = 0.95f
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScale
         ),
         glow = CardDefaults.glow(
             focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = 0.4f),
-                elevation = 8.dp
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
+                elevation = TvFocusTokens.glowElevation
             )
         )
     ) {
@@ -791,7 +796,7 @@ private fun StreamItem(
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                                 ),
-                                color = LocalContentColor.current.copy(alpha = 0.7f)
+                                color = LocalContentColor.current.copy(alpha = CinemaAlpha.textMedium)
                             )
                         }
                     }
@@ -806,7 +811,7 @@ private fun StreamItem(
                         .fillMaxWidth()
                         .height(4.dp.scaled(scale)),
                     color = CinemaAccent,
-                    trackColor = CinemaTextPrimary.copy(alpha = 0.2f)
+                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint)
                 )
             }
         }
@@ -824,7 +829,7 @@ private fun LoadingScreen() {
             verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(TvDimensions.progressIndicator),
                 color = CinemaAccent
             )
             Text(

@@ -1,14 +1,14 @@
 package org.njarasoa.fijerena.ui.theme
 
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 
 /**
- * Corner Radius System
- * Provides consistent corner radii for UI elements throughout the app.
+ * Corner Radius System — re-exports from core.
+ * Prefer using CinemaCornerRadius directly in new code.
  */
 object CornerRadius {
-    val small: Dp = 8.dp   // Buttons, small cards, chips
-    val medium: Dp = 12.dp // Standard cards, list items
-    val large: Dp = 16.dp  // Dialogs, large surfaces, modals
+    val small: Dp = CinemaCornerRadius.small
+    val medium: Dp = CinemaCornerRadius.medium
+    val large: Dp = CinemaCornerRadius.large
 }

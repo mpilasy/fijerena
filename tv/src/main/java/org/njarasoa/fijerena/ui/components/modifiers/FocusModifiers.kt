@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * Standard TV Focus Modifier
@@ -27,15 +29,15 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
  * - Rounded corners matching the design system
  */
 fun Modifier.tvFocusable(
-    focusScale: Float = 1.1f,
-    borderWidth: Dp = 2.dp,
+    focusScale: Float = TvFocusTokens.focusedScale,
+    borderWidth: Dp = TvFocusTokens.focusBorderWidth,
     borderColor: Color = CinemaAccentLight,
     cornerRadius: Dp = CornerRadius.medium
 ): Modifier = composed {
     var isFocused by remember { mutableStateOf(false) }
     val animatedScale by animateFloatAsState(
-        targetValue = if (isFocused) focusScale else 1.0f,
-        animationSpec = tween(durationMillis = 200),
+        targetValue = if (isFocused) focusScale else TvFocusTokens.defaultScale,
+        animationSpec = tween(durationMillis = CinemaAnimation.focusDurationMs),
         label = "focus_scale"
     )
 
@@ -62,8 +64,8 @@ fun Modifier.tvFocusableSubtle(
     borderColor: Color = CinemaAccentLight,
     cornerRadius: Dp = CornerRadius.medium
 ): Modifier = tvFocusable(
-    focusScale = 1.05f,
-    borderWidth = 2.dp,
+    focusScale = TvFocusTokens.focusedScaleSubtle,
+    borderWidth = TvFocusTokens.focusBorderWidth,
     borderColor = borderColor,
     cornerRadius = cornerRadius
 )
@@ -80,8 +82,8 @@ fun Modifier.tvFocusableNoScale(
     borderColor: Color = CinemaAccentLight,
     cornerRadius: Dp = CornerRadius.medium
 ): Modifier = tvFocusable(
-    focusScale = 1.0f,
-    borderWidth = 2.dp,
+    focusScale = TvFocusTokens.defaultScale,
+    borderWidth = TvFocusTokens.focusBorderWidth,
     borderColor = borderColor,
     cornerRadius = cornerRadius
 )

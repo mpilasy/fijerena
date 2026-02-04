@@ -46,6 +46,11 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.*
 
 /**
@@ -169,7 +174,7 @@ private fun MovieDetailsContent(
 
     val rotation by animateFloatAsState(
         targetValue = targetRotation,
-        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
         label = "refresh_rotation"
     )
 
@@ -177,7 +182,7 @@ private fun MovieDetailsContent(
         if (isRefreshing) {
             while (isRefreshing) {
                 targetRotation += 360f
-                kotlinx.coroutines.delay(600)
+                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
             }
         }
     }
@@ -211,12 +216,12 @@ private fun MovieDetailsContent(
                             isRefreshing = false
                         },
                         enabled = !isRefreshing,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(TvDimensions.iconMedium)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh movie info",
-                            tint = CinemaTextSecondary.copy(alpha = 0.87f),
+                            tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             modifier = Modifier
                                 .size(24.dp)
                                 .rotate(rotation)
@@ -246,7 +251,7 @@ private fun MovieDetailsContent(
                 Text(
                     text = providerName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = CinemaTextSecondary.copy(alpha = 0.87f)
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 CinemaSecondaryButton(
@@ -316,7 +321,7 @@ private fun MovieDetailsContent(
             Text(
                 text = "Cast: $cast",
                 style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary.copy(alpha = 0.87f),
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -328,7 +333,7 @@ private fun MovieDetailsContent(
             Text(
                 text = "Director: $director",
                 style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary.copy(alpha = 0.87f)
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
             Spacer(modifier = Modifier.height(Spacing.xs))
         }
@@ -342,8 +347,8 @@ private fun MovieDetailsContent(
             },
             text = "▶ Play Movie",
             modifier = Modifier
-                .width(200.dp)
-                .height(60.dp)
+                .width(TvDimensions.selectionListWidth)
+                .height(TvDimensions.moviePosterHeight)
                 .focusRequester(playButtonFocusRequester)
         )
     }
@@ -359,7 +364,7 @@ private fun LoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(TvDimensions.progressIndicator),
                 color = CinemaAccent
             )
             Spacer(modifier = Modifier.height(Spacing.md))

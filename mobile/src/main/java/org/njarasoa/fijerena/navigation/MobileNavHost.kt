@@ -25,6 +25,7 @@ import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
 import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
 import org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 
 /**
  * Mobile navigation host with Material3 transitions.
@@ -67,26 +68,26 @@ fun MobileNavHost(
             enterTransition = {
                 slideIntoContainer(
                     AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(300)
-                ) + fadeIn(animationSpec = tween(300))
+                    animationSpec = tween(CinemaAnimation.navTransitionMs)
+                ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
             },
             exitTransition = {
                 slideOutOfContainer(
                     AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(300)
-                ) + fadeOut(animationSpec = tween(300))
+                    animationSpec = tween(CinemaAnimation.navTransitionMs)
+                ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
             },
             popEnterTransition = {
                 slideIntoContainer(
                     AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(300)
-                ) + fadeIn(animationSpec = tween(300))
+                    animationSpec = tween(CinemaAnimation.navTransitionMs)
+                ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
             },
             popExitTransition = {
                 slideOutOfContainer(
                     AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(300)
-                ) + fadeOut(animationSpec = tween(300))
+                    animationSpec = tween(CinemaAnimation.navTransitionMs)
+                ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
             }
         ) {
             // Login Screen

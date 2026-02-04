@@ -27,6 +27,9 @@ import org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
  * Position of the stats overlay on screen
@@ -119,7 +122,7 @@ fun StatsOverlay(
                         }
                     }
                     .border(
-                        width = if (isFocused) 3.dp else 1.dp,
+                        width = if (isFocused) TvDimensions.borderFocusedStats else TvDimensions.borderDefault,
                         color = if (isFocused) CinemaAccentLight else CinemaSurfaceLight,
                         shape = MaterialTheme.shapes.medium
                     )
@@ -149,7 +152,7 @@ fun StatsOverlay(
                             Text(
                                 text = "$label:",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                             )
                             Text(
                                 text = value,
@@ -164,7 +167,7 @@ fun StatsOverlay(
                         Text(
                             text = "Use D-pad to move",
                             style = MaterialTheme.typography.labelSmall,
-                            color = CinemaAccent.copy(alpha = 0.87f)
+                            color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh)
                         )
                     }
                 }
@@ -177,12 +180,12 @@ fun StatsOverlay(
                     .height(overlayHeight)
                     .align(getAlignment(position))
                     .border(
-                        width = 1.dp,
+                        width = TvDimensions.borderDefault,
                         color = CinemaSurfaceLight,
                         shape = MaterialTheme.shapes.medium
                     )
                     .background(
-                        color = CinemaSurface.copy(alpha = 0.85f),
+                        color = CinemaSurface.copy(alpha = CinemaAlpha.overlayHeavy),
                         shape = MaterialTheme.shapes.medium
                     )
                     .padding(Spacing.sm)
@@ -205,7 +208,7 @@ fun StatsOverlay(
                             Text(
                                 text = "$label:",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextSecondary.copy(alpha = 0.87f)
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                             )
                             Text(
                                 text = value,
