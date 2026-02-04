@@ -48,11 +48,13 @@ data class FavoriteStream(
 
 class XtreamRepository(
     private val accountManager: AccountManager,
-    context: Context
+    context: Context,
+    providerId: Long = 0L
 ) {
     private var apiService: XtreamApiService? = null
+    private val cacheName = if (providerId > 0L) "xtream_cache_$providerId" else "xtream_cache"
     private val cache: SharedPreferences = context.getSharedPreferences(
-        "xtream_cache",
+        cacheName,
         Context.MODE_PRIVATE
     )
     private val appSettings = AppSettings(context)
@@ -592,6 +594,31 @@ class XtreamRepository(
             fetchTimes["vod_$vodId"] = fetchTime
             trackPayloadSize("vod_$vodId", vodInfo)
             vodInfo
+        }
+    }
+
+    /**
+     * Reinitialize the API service with new credentials (for provider switching).
+     */
+    suspend fun reinitialize(
+        url: String,
+        username: String,
+        password: String
+    ): Result<XtreamAuthResponse> = withContext(Dispatchers.IO) {
+        suspendResultOf {
+            val service = XtreamApiService(url, username, password)
+            val authResponse = service.authenticate()
+
+            if (authResponse.userInfo?.auth != 1) {
+                throw Exception("Authentication failed: Invalid credentials")
+            }
+
+            if (authResponse.userInfo?.status != "Active") {
+                throw Exception("Account is not active: ${authResponse.userInfo?.status}")
+            }
+
+            apiService = service
+            authResponse
         }
     }
 

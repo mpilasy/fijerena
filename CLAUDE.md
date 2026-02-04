@@ -7,6 +7,8 @@ Targeting: Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Br
 - **Networking:** Ktor with kotlinx.serialization (JSON).
 - **Video Player:** Media3 (ExoPlayer). Optimize for 4K/HDR hardware acceleration.
 - **Navigation:** Adaptive Navigation Suite (handles Mobile and TV D-Pad logic).
+- **Database:** Room (provider management). Per-provider EncryptedSharedPreferences for passwords.
+- **Theming:** Dynamic runtime theme switching via `CinemaThemeHolder` + `CinemaThemePalette`.
 
 ## 🎬 Media3 Player Configuration
 
@@ -34,7 +36,7 @@ Optimized for smooth playback during network fluctuations:
 - `bufferForPlaybackAfterRebufferMs: 5000ms` - Recover gracefully
 - `backBufferDurationMs: 10000ms` - Support seeking in VOD content
 
-**Content Type Detection:** Automatically applied in `TvPlayerScreen` based on `contentType` parameter.
+**Content Type Detection:** Automatically applied in both `TvPlayerScreen` and `MobilePlayerScreen` based on `contentType` parameter.
 
 ### Codec Prioritization Strategy
 Hardware-accelerated codec selection based on device capabilities:
@@ -90,9 +92,27 @@ viewModel.selectAudioTrack(groupIndex, trackIndex)
 
 **Implementation:** Uses `PARTIAL_WAKE_LOCK` for CPU, `WAKE_MODE_NETWORK` for screen.
 
-## 🎨 TV Theme & Design System (Deep Night)
+## 🎨 Theme & Design System
 
-### Color Palette
+### User-Selectable Themes
+The app supports 4 dark theme variants, switchable at runtime from Settings:
+
+| Theme | Accent | Surfaces |
+|-------|--------|----------|
+| **Deep Night** (default) | Electric Blue `#2979FF` | `#0F1014`, `#161A20` |
+| **AMOLED Black** | Electric Blue `#2979FF` | `#000000`, `#0A0A0A` |
+| **Emerald** | Green `#00C853` | `#0F1014`, `#161A20` |
+| **Crimson** | Red `#FF1744` | `#0F1014`, `#161A20` |
+
+**Architecture:** `CinemaThemeHolder` (global object) + `CinemaThemePalette` (immutable data class). TV and mobile re-export files (`CinemaColors.kt`, `Color.kt`) use computed `get()` properties that read from the holder. Zero screen-file changes needed when adding themes.
+
+**Implementation:**
+- Theme palettes defined in `core/ui/.../theme/CinemaThemePalette.kt`
+- TV re-exports: `tv/.../ui/theme/CinemaColors.kt`
+- Mobile re-exports: `mobile/.../ui/theme/Color.kt`
+- Theme ID persisted in `AppSettings.themeId`
+
+### Color Palette (Deep Night Default)
 Google TV Material 3 design with **Electric Blue** primary and **Vivid Orange** secondary:
 - **Primary Accent (Electric Blue)**: `#2979FF` - Focus states, primary CTAs
 - **Primary Dark**: `#1565C0` - Darker interactive states
@@ -108,7 +128,7 @@ Google TV Material 3 design with **Electric Blue** primary and **Vivid Orange** 
 - **Text Primary**: `#FFFFFF` - Main text
 - **Text Secondary**: `#B0B0B0` - Secondary text
 
-**Implementation:** See `tv/.../ui/theme/CinemaColors.kt` for all color definitions.
+Status colors (success/warning/error/live), text colors, and orange secondary remain constant across all themes.
 
 ### Typography Scale
 Full 13-style scale optimized for 10-foot TV viewing distance (Roboto, system default):
@@ -162,6 +182,13 @@ All screens must respect 56dp horizontal / 32dp vertical safe margins to account
 - **Accent Blocks:** `AccentBlock.kt` provides content-type gradients (LIVE_TV orange, MOVIE blue, TV_SHOW light blue)
 
 ## 📋 Coding Standards
+- **Design Tokens (mandatory):** All UI components must use the shared design token constants — never hardcode colors, dimensions, spacing, opacity, corner radii, or animation values. The token files are:
+  - **Shared (core/ui):** `CinemaColors` (colors), `CinemaAlpha` (opacity), `CinemaAnimation` (timing), `CinemaCornerRadius` (radii), `CinemaSpacing` (padding/margins)
+  - **TV-specific:** `TvDimensions` (sizes/spacing), `TvFocusTokens` (focus scale/border/glow)
+  - **Mobile-specific:** `MobileDimensions` (sizes/spacing)
+  - **Platform re-exports:** TV `CinemaColors.kt` and mobile `Color.kt` re-export core colors as computed `get()` properties from `CinemaThemeHolder` — screen files import from their platform package, not from core directly
+  - **Theme palettes:** `CinemaThemePalette.kt` defines per-theme color sets; `CinemaThemeHolder.current` is set by the theme composable
+  - If a needed token doesn't exist, add it to the appropriate token file first, then reference it
 - **Focus Management:** Every @Composable must be D-pad (remote) navigable. Use `Modifier.focusRestorer()` and `Modifier.focusable()`.
 - **Safe Areas:** Respect "Overscan." UI must remain 5% away from screen edges for Sony/Shield TVs.
 - **Mobile vs TV:** Use `WindowSizeClass` to switch between NavigationBar (Mobile) and NavigationRail/Drawer (TV).
@@ -188,13 +215,17 @@ The app follows this streamlined navigation structure:
 3. **Category Grid** - Browse categories and streams/episodes
 4. **Player Screen** - Video playback
 5. **Settings** - Accessible from Content Type Selection via gear icon
+6. **Provider Management** - Accessible from Settings → "Manage Providers"
+   - **Provider Selection:** List all providers, select/edit/delete
+   - **Add/Edit Provider:** Form with name, URL, username, password fields
 
-**Note:** The login screen has been removed. Authentication happens automatically on startup or after configuring provider URL in Settings.
+**Note:** There is no login screen. Authentication happens automatically on startup via stored credentials, or after configuring a provider in Settings. Both TV and mobile use the same flow.
 
 ### Settings Screen
 Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
-- **Provider URL Management:** Enter or change the Xtream provider URL with automatic authentication
-- **Credentials Entry:** Username and password stored securely (encrypted SharedPreferences)
+- **Active Provider Display:** Shows current provider name and URL
+- **Manage Providers:** Navigate to provider selection/management screen (add, edit, delete, switch providers)
+- **Theme Selection:** Choose from 4 dark themes (Deep Night, AMOLED Black, Emerald, Crimson) — persists across app restarts
 - **Auto-Resume:** Toggle automatic playback resume for VOD content (default: enabled)
 - **Last Watched Queue Size:** Configure the number of items to keep in the "Last Watched" virtual category (range: 1-100, default: 25)
 - **Favorites Max Size:** Configure maximum number of favorites to store (range: 10-500, default: 100)
@@ -316,6 +347,31 @@ A dynamically generated category that displays:
 - Max 50 channels displayed at once
 - Requires EPG data from IPTV provider
 - 30-minute cache refresh interval
+
+### Multiple Provider Management
+The app supports managing multiple IPTV providers:
+
+**Storage:**
+- **Room database** (`ProviderEntity`) stores provider metadata (name, URL, username, active flag)
+- **Per-provider EncryptedSharedPreferences** for passwords (keyed by provider ID)
+- **Per-provider cache SharedPreferences** files (`xtream_cache_{id}`)
+
+**Screens:**
+- **Provider Selection** (`Screen.ProviderSelection`): List all providers with select/edit/delete
+- **Add/Edit Provider** (`Screen.AddProvider`): Form with name, URL, username, password
+
+**Migration:** On first launch after upgrade, existing single-provider credentials from `AccountManager` are automatically migrated to Room via `ProviderViewModel.migrateIfNeeded()`.
+
+**Key Files:**
+- `core/network/.../provider/ProviderEntity.kt` - Room entity
+- `core/network/.../provider/ProviderDao.kt` - Data access object
+- `core/network/.../provider/ProviderDatabase.kt` - Room database singleton
+- `core/network/.../provider/ProviderRepository.kt` - Repository wrapping DAO + encrypted prefs
+- `core/ui/.../viewmodels/ProviderViewModel.kt` - ViewModel with migration logic
+- `tv/.../feature/provider/TvProviderSelectionScreen.kt` - TV provider list
+- `tv/.../feature/provider/TvAddProviderScreen.kt` - TV add/edit form
+- `mobile/.../feature/provider/MobileProviderSelectionScreen.kt` - Mobile provider list
+- `mobile/.../feature/provider/MobileAddProviderScreen.kt` - Mobile add/edit form
 
 ### Player UI Features
 

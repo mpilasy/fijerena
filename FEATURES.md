@@ -4,10 +4,12 @@ A native Android application for streaming IPTV content across Android Mobile, N
 
 ## Core Features
 
-### 1. Authentication
-- **Login Screen:** Secure authentication with Xtream provider
-- **Session Management:** Automatic session restoration on app restart
-- **Credential Storage:** Secure storage using Android's SharedPreferences
+### 1. Authentication & Provider Management
+- **No Login Screen:** Authentication happens automatically on startup or after configuring a provider in Settings
+- **Session Management:** Automatic session restoration from stored credentials on app restart
+- **Multiple Providers:** Room database stores provider metadata; add, edit, delete, and switch between providers
+- **Credential Storage:** Per-provider EncryptedSharedPreferences for passwords
+- **Provider Migration:** Automatic one-time migration of legacy single-provider credentials to Room on first launch
 - **Provider Support:** HTTP/Cleartext support for legacy Xtream providers
 
 ### 2. Content Management
@@ -53,11 +55,22 @@ The Media3 player supports multiple stream formats:
 
 #### Settings Screen Features
 
-**Provider URL Management**
-- Change provider URL at any time
-- Input validation and error handling
-- Success/failure feedback
-- Seamless URL updates without app restart
+**Active Provider Display**
+- Shows current provider name and URL
+- "Manage Providers" button navigates to provider selection screen
+
+**Theme Selection**
+- 4 dark theme variants: Deep Night (default), AMOLED Black, Emerald, Crimson
+- Visual preview with color dots for each theme
+- Persists selection across app restarts via AppSettings
+- Dynamic runtime switching without app restart
+
+**Manage Providers**
+- View all configured providers in a list
+- Select a provider to make it active
+- Edit provider details (name, URL, username, password)
+- Delete providers with confirmation
+- Add new providers via form
 
 **Last Watched Queue Size**
 - Adjustable configuration (range: 1-100 items)
@@ -76,6 +89,10 @@ Configuration stored in `SharedPreferences` with key-value pairs:
 ```kotlin
 - isDevMode: Boolean (default: false)
 - watchHistorySize: Int (default: 25, range: 1-100)
+- themeId: String (default: "deep_night")
+- favoritesMaxSize: Int (default: 100, range: 10-500)
+- autoResume: Boolean (default: true)
+- uiScale: Float (default: 1.0)
 ```
 
 ### 5. Watch History & Last Watched
@@ -98,30 +115,41 @@ Configuration stored in `SharedPreferences` with key-value pairs:
 The application uses type-safe navigation with Jetpack Navigation Compose:
 
 ```
-Login Screen
-    ↓
-Content Type Selection (with Settings gear icon at bottom left)
+App Startup
+    ├─→ No provider → Settings
+    └─→ Provider exists → Auto-restore session
+                              ↓
+Content Type Selection (with Settings gear icon)
     ├─→ Live TV Categories
     │     ├─→ Live TV Stream Player
-    │     └─→ Category Grid (side-by-side layout)
+    │     ├─→ Search
+    │     └─→ EPG Guide (TV Guide)
     │
     ├─→ Movie Categories
-    │     ├─→ Movie Details Screen
-    │     └─→ Movie Player
+    │     ├─→ Movie Details Screen → Movie Player
+    │     └─→ Search
     │
     └─→ TV Show Categories
-          ├─→ Episode Selection (by Season)
-          └─→ Episode Player
+          ├─→ Episode Selection (by Season) → Episode Player
+          └─→ Search
+
+Settings
+    └─→ Manage Providers
+          ├─→ Provider Selection (list, select, delete)
+          └─→ Add/Edit Provider (form)
 ```
 
 #### Navigation Destinations
-- **Login:** Initial authentication screen
 - **ContentTypeSelection:** Choose between Live TV, Movies, or TV Shows (main landing page)
 - **CategoryList:** Browse categories for selected content type
 - **MovieDetails:** View movie information and play options
 - **EpisodeSelection:** Browse TV show seasons and episodes
 - **Player:** Video playback screen with playback controls
-- **Settings:** App configuration and preferences (accessible from ContentTypeSelection)
+- **Search:** Search across categories for a content type
+- **EpgGuide:** TV Guide with 24-hour program grid (Live TV only)
+- **Settings:** App configuration, theme selection, provider management
+- **ProviderSelection:** List, select, edit, and delete providers
+- **AddProvider:** Form for adding or editing a provider
 
 #### Navigation Features
 - **Type-Safe Navigation:** kotlinx.serialization for compile-time safety
@@ -169,10 +197,11 @@ When enabled via Settings, Developer Mode provides:
 ### 9. Authentication & Credentials
 
 #### Credential Management
-- **Secure Storage:** Android SharedPreferences for credentials
-- **Session Persistence:** Automatic login on app restart
-- **Provider Configuration:** Supports multiple provider types
-- **Account Switching:** Logout and re-login with different provider
+- **Room Database:** Provider metadata (name, URL, username, active flag) stored in Room
+- **Encrypted Passwords:** Per-provider EncryptedSharedPreferences (AES256-GCM)
+- **Session Persistence:** Automatic session restoration on app restart
+- **Multiple Providers:** Add, edit, delete, and switch between IPTV providers
+- **Migration:** Automatic one-time migration from legacy single-provider storage to Room
 
 #### Provider URL Handling
 - **HTTP/Cleartext Support:** Compatibility with legacy providers
@@ -198,8 +227,9 @@ When enabled via Settings, Developer Mode provides:
 
 ### Dependency Injection
 - **ViewModel Factory:** Custom factories for screen-specific ViewModels
-- **Repository Pattern:** XtreamRepository as data layer
-- **Service Layer:** AccountManager for credential management
+- **Repository Pattern:** XtreamRepository as data layer, ProviderRepository for provider management
+- **Service Layer:** AccountManager for legacy credential management, ProviderRepository for multi-provider
+- **Database:** Room for provider metadata, EncryptedSharedPreferences for passwords
 
 ### State Management
 - **Jetpack Compose State:** Local state for UI
@@ -245,8 +275,14 @@ When enabled via Settings, Developer Mode provides:
 ### Settings Access
 - From ContentTypeSelection: Press gear icon button (bottom left)
 - Settings Screen options:
-  - Provider URL: Change provider without re-login
+  - Active Provider: View name and URL of current provider
+  - Manage Providers: Add, edit, delete, switch between providers
+  - Theme: Select from 4 dark themes
+  - Auto-Resume: Toggle VOD auto-resume
   - Watch History Size: Configure queue length
+  - Favorites Max Size: Configure max favorites
+  - UI Scale: Adjust font and element sizes
+  - Cache Management: View and clear cached data
   - Developer Mode: Toggle debug features
 
 ## File Structure
@@ -254,9 +290,20 @@ When enabled via Settings, Developer Mode provides:
 ```
 core/
 ├── network/          # Networking and repository layer
-│   ├── AppSettings.kt       # Settings configuration
-│   ├── AccountManager.kt    # Credential management
-│   └── XtreamRepository.kt  # Data layer
+│   ├── AppSettings.kt       # Settings configuration (incl. themeId)
+│   ├── AccountManager.kt    # Legacy credential management
+│   ├── XtreamRepository.kt  # Data layer
+│   └── provider/             # Multi-provider support
+│       ├── ProviderEntity.kt     # Room entity
+│       ├── ProviderDao.kt        # Data access object
+│       ├── ProviderDatabase.kt   # Room database singleton
+│       └── ProviderRepository.kt # Repository (DAO + encrypted prefs)
+├── ui/               # Shared UI components
+│   ├── theme/
+│   │   └── CinemaThemePalette.kt  # Theme palettes + CinemaThemeHolder
+│   └── viewmodels/
+│       ├── ProviderViewModel.kt   # Provider management + migration
+│       └── ProviderViewModelFactory.kt
 ├── player/           # Video playback
 │   └── StreamingMediaSourceFactory.kt  # Stream type detection
 └── navigation/       # Navigation types
@@ -267,23 +314,36 @@ tv/
 └── src/main/java/
     ├── feature/
     │   ├── category/           # Category browsing
-    │   │   ├── CategoryGridScreen.kt
-    │   │   └── CategoryViewModel.kt
     │   ├── contentselection/   # Content type selection
-    │   │   └── ContentTypeSelectionScreen.kt
     │   ├── episode/            # TV show episodes
-    │   │   └── EpisodeSelectionScreen.kt
-    │   ├── login/              # Authentication
-    │   │   └── LoginScreenTv.kt
     │   ├── movie/              # Movie details
-    │   │   └── MovieDetailsScreen.kt
     │   ├── player/             # Video playback
-    │   │   └── TvPlayerScreen.kt
-    │   └── settings/           # App settings
-    │       ├── SettingsScreen.kt
-    │       └── EditProviderScreen.kt
+    │   ├── provider/           # Provider management
+    │   │   ├── TvProviderSelectionScreen.kt
+    │   │   └── TvAddProviderScreen.kt
+    │   ├── search/             # Search
+    │   ├── settings/           # App settings + theme picker
+    │   └── epg/                # Electronic Program Guide
+    ├── ui/theme/               # TV theme (CinemaColors re-exports, Theme.kt)
     └── navigation/
-        └── TvNavHost.kt        # Navigation routing
+        └── TvNavHost.kt
+
+mobile/
+└── src/main/java/
+    ├── feature/
+    │   ├── category/           # Category browsing
+    │   ├── contentselection/   # Content type selection
+    │   ├── episode/            # TV show episodes
+    │   ├── movie/              # Movie details
+    │   ├── player/             # Video playback
+    │   ├── provider/           # Provider management
+    │   │   ├── MobileProviderSelectionScreen.kt
+    │   │   └── MobileAddProviderScreen.kt
+    │   ├── search/             # Search
+    │   └── settings/           # App settings + theme picker
+    ├── ui/theme/               # Mobile theme (Color re-exports, Theme.kt)
+    └── navigation/
+        └── MobileNavHost.kt
 ```
 
 ## Performance Considerations
@@ -308,10 +368,12 @@ tv/
 
 ## Future Enhancement Opportunities
 
-- Cloud sync for watch history
+- Cloud sync for watch history and favorites
 - Recommendations based on watch history
-- Search functionality across categories
 - Content filtering and sorting
 - Parental controls
-- Multiple profile support
+- Multiple profile support per provider
 - Scheduled recordings (if applicable)
+- Playback speed control for VOD (0.5x, 1.25x, 1.5x, 2x)
+- Picture-in-Picture mode (mobile only)
+- Audio/subtitle language persistence per stream

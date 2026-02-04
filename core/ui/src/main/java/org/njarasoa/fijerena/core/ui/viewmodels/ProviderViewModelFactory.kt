@@ -4,23 +4,20 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import org.njarasoa.fijerena.core.network.AccountManager
-import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 
-/**
- * Factory for creating CategoryViewModel with XtreamRepository dependency.
- */
-class CategoryViewModelFactory(
-    private val context: Context,
-    private val contentType: String,
-    private val providerId: Long = 0L
+class ProviderViewModelFactory(
+    private val context: Context
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(CategoryViewModel::class.java)) {
+        if (modelClass.isAssignableFrom(ProviderViewModel::class.java)) {
+            val providerRepository = ProviderRepository(context.applicationContext)
             val accountManager = AccountManager(context.applicationContext)
-            val repository = XtreamRepository(accountManager, context.applicationContext, providerId)
-            return CategoryViewModel(repository, contentType) as T
+            val appSettings = AppSettings(context.applicationContext)
+            return ProviderViewModel(providerRepository, accountManager, appSettings) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

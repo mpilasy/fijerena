@@ -20,6 +20,7 @@ class AppSettings(context: Context) {
         private const val KEY_AUTO_RESUME = "auto_resume_enabled"
         private const val KEY_CACHE_EXPIRY_HOURS = "cache_expiry_hours"
         private const val KEY_UI_SCALE = "ui_scale"
+        private const val KEY_THEME_ID = "theme_id"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
@@ -95,4 +96,8 @@ class AppSettings(context: Context) {
             val clampedValue = value.coerceIn(0.7f, 1.0f)
             prefs.edit().putFloat(KEY_UI_SCALE, clampedValue).apply()
         }
+
+    var themeId: String
+        get() = prefs.getString(KEY_THEME_ID, "deep_night") ?: "deep_night"
+        set(value) = prefs.edit().putString(KEY_THEME_ID, value).apply()
 }

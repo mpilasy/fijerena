@@ -1,66 +1,78 @@
 package org.njarasoa.fijerena.ui.theme
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
+import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.paletteById
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun FirstVideoPlayerTheme(
+    themeId: String = "deep_night",
     content: @Composable () -> Unit,
 ) {
-    // Deep Night color scheme - Electric Blue primary, Vivid Orange secondary
+    val palette = paletteById(themeId)
+
+    // Set the global holder so non-composable code (re-export vals) can read it
+    CinemaThemeHolder.current = palette
+
+    // Build Material3 color scheme from active palette
     val colorScheme = darkColorScheme(
-        // Primary colors (Electric Blue)
-        primary = CinemaAccent,
+        // Primary colors
+        primary = palette.accent,
         onPrimary = androidx.compose.ui.graphics.Color.White,
-        primaryContainer = CinemaAccentDark,
-        onPrimaryContainer = CinemaAccentLight,
+        primaryContainer = palette.accentDark,
+        onPrimaryContainer = palette.accentLight,
 
         // Secondary colors (Vivid Orange)
-        secondary = CinemaOrange,
+        secondary = palette.orange,
         onSecondary = androidx.compose.ui.graphics.Color.Black,
-        secondaryContainer = CinemaOrangeDark,
-        onSecondaryContainer = CinemaOrangeLight,
+        secondaryContainer = palette.orangeDark,
+        onSecondaryContainer = palette.orangeLight,
 
-        // Tertiary colors (Light Blue)
-        tertiary = CinemaAccentLight,
+        // Tertiary colors (Light accent)
+        tertiary = palette.accentLight,
         onTertiary = androidx.compose.ui.graphics.Color.Black,
-        tertiaryContainer = CinemaSurface,
-        onTertiaryContainer = CinemaAccentLight,
+        tertiaryContainer = palette.surface,
+        onTertiaryContainer = palette.accentLight,
 
         // Error colors
-        error = CinemaError,
+        error = palette.error,
         onError = androidx.compose.ui.graphics.Color.White,
-        errorContainer = CinemaError.copy(alpha = 0.2f),
-        onErrorContainer = CinemaError.copy(alpha = 0.8f),
+        errorContainer = palette.error.copy(alpha = 0.2f),
+        onErrorContainer = palette.error.copy(alpha = 0.8f),
 
         // Background colors
-        background = CinemaBackground,
-        onBackground = CinemaTextPrimary,
+        background = palette.background,
+        onBackground = palette.textPrimary,
 
         // Surface colors
-        surface = CinemaSurface,
-        onSurface = CinemaTextPrimary,
-        surfaceVariant = CinemaSurfaceVariant,
-        onSurfaceVariant = CinemaTextSecondary,
+        surface = palette.surface,
+        onSurface = palette.textPrimary,
+        surfaceVariant = palette.surfaceVariant,
+        onSurfaceVariant = palette.textSecondary,
 
         // Borders
-        border = CinemaSurfaceLight,
+        border = palette.surfaceLight,
 
         // Surface tint
-        surfaceTint = CinemaAccent,
-        inverseSurface = CinemaTextPrimary,
-        inverseOnSurface = CinemaBackground,
+        surfaceTint = palette.accent,
+        inverseSurface = palette.textPrimary,
+        inverseOnSurface = palette.background,
 
         // Scrim (overlays, dialogs)
         scrim = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f)
     )
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalCinemaTheme provides palette) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

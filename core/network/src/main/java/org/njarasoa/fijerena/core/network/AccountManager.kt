@@ -103,6 +103,17 @@ class AccountManager(context: Context) {
     }
 
     /**
+     * Exports existing credentials for one-time migration to the multi-provider system.
+     * Returns Triple(url, username, password) or null if no credentials stored.
+     */
+    fun exportForMigration(): Triple<String, String, String>? {
+        val url = prefs.getString(KEY_URL, null) ?: return null
+        val username = prefs.getString(KEY_USERNAME, null) ?: return null
+        val password = prefs.getString(KEY_PASSWORD, null) ?: return null
+        return Triple(url, username, password)
+    }
+
+    /**
      * Updates only the provider URL while keeping username/password unchanged.
      * Clears auth response as it will be invalid with the new URL.
      */

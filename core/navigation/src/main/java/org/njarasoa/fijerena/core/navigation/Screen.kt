@@ -18,6 +18,21 @@ import kotlinx.serialization.Serializable
  */
 sealed interface Screen {
     /**
+     * Provider selection screen destination.
+     * Shown when multiple providers are configured.
+     */
+    @Serializable
+    data object ProviderSelection : Screen
+
+    /**
+     * Add/edit provider screen destination.
+     *
+     * @param editId If > 0, edit the provider with this ID instead of creating new
+     */
+    @Serializable
+    data class AddProvider(val editId: Long = -1L) : Screen
+
+    /**
      * Login screen destination.
      * Entry point for unauthenticated users.
      */

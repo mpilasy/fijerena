@@ -8,7 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -16,8 +18,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import org.njarasoa.fijerena.core.data.AuthViewModel
+import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.Result
+import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.navigation.Screen
-import org.njarasoa.fijerena.feature.login.LoginScreen
+import org.njarasoa.fijerena.feature.provider.MobileAddProviderScreen
+import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
 import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
 import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
@@ -48,17 +54,39 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 @Composable
 fun MobileNavHost(
     navController: NavHostController = rememberNavController(),
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    onThemeChanged: (String) -> Unit = {}
 ) {
-    // Check authentication status on startup
-    val authResponse by authViewModel.authResponse.collectAsState()
+    val context = LocalContext.current
+    val accountManager = remember { AccountManager(context.applicationContext) }
+    val repository = remember {
+        XtreamRepository(accountManager, context.applicationContext)
+    }
 
-    // Determine initial destination based on auth status
-    // LoginScreen will attempt to restore session automatically
-    val startDestination = if (authViewModel.isAuthenticated()) {
+    // Check if provider is configured on startup
+    val hasProvider = remember { accountManager.hasStoredCredentials() }
+    val isAuthenticated by authViewModel.authResponse.collectAsState()
+
+    // Determine initial destination based on provider configuration
+    val startDestination = if (hasProvider) {
         Screen.ContentTypeSelection
     } else {
-        Screen.Login
+        Screen.Settings
+    }
+
+    // Auto-restore session if credentials are stored but not authenticated
+    LaunchedEffect(hasProvider, isAuthenticated) {
+        if (hasProvider && isAuthenticated == null) {
+            when (val result = repository.restoreSession()) {
+                is Result.Success -> {
+                    val url = repository.getCurrentUrl() ?: ""
+                    authViewModel.setAuthSession(result.data, url)
+                }
+                is Result.Error -> {
+                    // Silently fail - user can configure provider in Settings
+                }
+            }
+        }
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -90,18 +118,6 @@ fun MobileNavHost(
                 ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
             }
         ) {
-            // Login Screen
-            composable<Screen.Login> {
-                LoginScreen(
-                    authViewModel = authViewModel,
-                    onLoginSuccess = {
-                        navController.navigate(Screen.ContentTypeSelection) {
-                            popUpTo(Screen.Login) { inclusive = true }
-                        }
-                    }
-                )
-            }
-
             // Content Type Selection Screen
             composable<Screen.ContentTypeSelection> {
                 MobileContentTypeSelectionScreen(
@@ -113,7 +129,7 @@ fun MobileNavHost(
                     },
                     onLogout = {
                         authViewModel.clearAuthSession()
-                        navController.navigate(Screen.Login) {
+                        navController.navigate(Screen.Settings) {
                             popUpTo(Screen.ContentTypeSelection) { inclusive = true }
                         }
                     }
@@ -180,11 +196,50 @@ fun MobileNavHost(
                 )
             }
 
+            // Add/Edit Provider Screen
+            composable<Screen.AddProvider> { backStackEntry ->
+                val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
+                MobileAddProviderScreen(
+                    editId = addProviderScreen.editId,
+                    onBack = {
+                        navController.navigateUp()
+                    },
+                    onSuccess = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
+            // Provider Selection Screen
+            composable<Screen.ProviderSelection> {
+                MobileProviderSelectionScreen(
+                    onProviderSelected = { provider ->
+                        // For now, navigate to content type selection
+                        navController.navigate(Screen.ContentTypeSelection) {
+                            popUpTo(Screen.ProviderSelection) { inclusive = true }
+                        }
+                    },
+                    onAddProvider = {
+                        navController.navigate(Screen.AddProvider())
+                    },
+                    onEditProvider = { id ->
+                        navController.navigate(Screen.AddProvider(editId = id))
+                    },
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
             // Settings Screen
             composable<Screen.Settings> {
                 MobileSettingsScreen(
                     onBack = {
                         navController.navigateUp()
+                    },
+                    onThemeChanged = onThemeChanged,
+                    onManageProviders = {
+                        navController.navigate(Screen.ProviderSelection)
                     },
                     onProviderChanged = {
                         // Navigate back to content type selection after provider change
@@ -194,7 +249,7 @@ fun MobileNavHost(
                     },
                     onLogout = {
                         authViewModel.clearAuthSession()
-                        navController.navigate(Screen.Login) {
+                        navController.navigate(Screen.Settings) {
                             popUpTo(Screen.ContentTypeSelection) { inclusive = true }
                         }
                     }

@@ -2,37 +2,40 @@
 
 package org.njarasoa.fijerena.ui.theme
 
-// Re-export all colors from core — single source of truth
-// Existing imports like `org.njarasoa.fijerena.ui.theme.CinemaAccent` continue to resolve.
+import androidx.compose.ui.graphics.Color
+import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 
-// Primary accent - Electric Blue
-val CinemaAccent = org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-val CinemaAccentDark = org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
-val CinemaAccentLight = org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
+// Dynamic color re-exports — reads from CinemaThemeHolder.current at access time.
+// All 400+ references across screen files resolve through these properties.
+
+// Primary accent - Electric Blue (or theme override)
+val CinemaAccent: Color get() = CinemaThemeHolder.current.accent
+val CinemaAccentDark: Color get() = CinemaThemeHolder.current.accentDark
+val CinemaAccentLight: Color get() = CinemaThemeHolder.current.accentLight
 
 // Secondary accent - Vivid Orange
-val CinemaOrange = org.njarasoa.fijerena.core.ui.theme.CinemaOrange
-val CinemaOrangeDark = org.njarasoa.fijerena.core.ui.theme.CinemaOrangeDark
-val CinemaOrangeLight = org.njarasoa.fijerena.core.ui.theme.CinemaOrangeLight
+val CinemaOrange: Color get() = CinemaThemeHolder.current.orange
+val CinemaOrangeDark: Color get() = CinemaThemeHolder.current.orangeDark
+val CinemaOrangeLight: Color get() = CinemaThemeHolder.current.orangeLight
 
-// Surface colors - Deep Night
-val CinemaBackground = org.njarasoa.fijerena.core.ui.theme.CinemaBackground
-val CinemaSurface = org.njarasoa.fijerena.core.ui.theme.CinemaSurface
-val CinemaSurfaceVariant = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-val CinemaSurfaceLight = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
+// Surface colors
+val CinemaBackground: Color get() = CinemaThemeHolder.current.background
+val CinemaSurface: Color get() = CinemaThemeHolder.current.surface
+val CinemaSurfaceVariant: Color get() = CinemaThemeHolder.current.surfaceVariant
+val CinemaSurfaceLight: Color get() = CinemaThemeHolder.current.surfaceLight
 
 // Glassmorphism
-val CinemaGlassBackground = org.njarasoa.fijerena.core.ui.theme.CinemaGlassBackground
-val CinemaGlassBorder = org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
+val CinemaGlassBackground: Color get() = CinemaThemeHolder.current.glassBackground
+val CinemaGlassBorder: Color get() = CinemaThemeHolder.current.glassBorder
 
 // Status colors
-val CinemaSuccess = org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
-val CinemaWarning = org.njarasoa.fijerena.core.ui.theme.CinemaWarning
-val CinemaError = org.njarasoa.fijerena.core.ui.theme.CinemaError
-val CinemaLive = org.njarasoa.fijerena.core.ui.theme.CinemaLive
+val CinemaSuccess: Color get() = CinemaThemeHolder.current.success
+val CinemaWarning: Color get() = CinemaThemeHolder.current.warning
+val CinemaError: Color get() = CinemaThemeHolder.current.error
+val CinemaLive: Color get() = CinemaThemeHolder.current.live
 
 // Text colors
-val CinemaTextPrimary = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-val CinemaTextSecondary = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-val CinemaTextTertiary = org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
-val CinemaTextDisabled = org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
+val CinemaTextPrimary: Color get() = CinemaThemeHolder.current.textPrimary
+val CinemaTextSecondary: Color get() = CinemaThemeHolder.current.textSecondary
+val CinemaTextTertiary: Color get() = CinemaThemeHolder.current.textTertiary
+val CinemaTextDisabled: Color get() = CinemaThemeHolder.current.textDisabled

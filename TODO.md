@@ -19,7 +19,7 @@
 - Possible timing issue or state flow collection problem
 
 **To Fix**:
-- Debug state flow propagation from service → ViewModel → PlayerScreen
+- Debug state flow propagation from service -> ViewModel -> PlayerScreen
 - Check if PlayerScreen's state observation is working correctly
 - Verify ErrorContent composable is being triggered
 - May need to add logging to trace state changes through the layers
@@ -28,31 +28,21 @@
 
 ---
 
-## ~~Stream Info Not Updating on Channel Change~~ ✅ FIXED
+## ~~Stream Info Not Updating on Channel Change~~ FIXED
 
-**Issue**: Live TV channel switching updates stream but not metadata display
+**Status**: RESOLVED
 
-**Status**: ✅ **RESOLVED** - Fixed in commit [pending]
+---
 
-**Solution**:
-- Added `currentStreamId` and `currentStreamName` as dependencies to the LaunchedEffect that creates PlayerMetadata
-- Changed: `LaunchedEffect(streamUrl)` → `LaunchedEffect(streamUrl, currentStreamId, currentStreamName)`
-- This ensures metadata is recreated and sent to the player whenever stream info changes
-- Now when channels switch, both video AND metadata update correctly
+## ~~Login Screen Flash on Mobile~~ FIXED
 
-**Root Cause**:
-- The LaunchedEffect that created PlayerMetadata only depended on `streamUrl`
-- It used `currentStreamName` inside but didn't track it as a dependency
-- When channel switched, `currentStreamName` updated but LaunchedEffect didn't re-run
-- Result: Video changed but UI displayed old stream name
+**Status**: RESOLVED - Login screen removed entirely from mobile navigation in Phase 5. Both TV and mobile now use Settings-based provider configuration with auto-session restore.
 
-**Location Fixed**:
-- File: `tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt`
-- Line: 221 (LaunchedEffect dependencies)
+---
 
-**Testing**:
-- Build: ✅ Successful compilation
-- Manual testing: Pending (requires live TV channel switching test)
+## ~~Mobile Live TV Playback Failures~~ FIXED
+
+**Status**: RESOLVED - Added `setContentType()` call to MobilePlayerScreen. Without this, Live TV streams used VOD buffer settings (15s min buffer) causing timeouts.
 
 ---
 
@@ -64,3 +54,11 @@ Both issues require testing on actual Android TV hardware for proper validation:
 - **Sony Bravia**: Test TV-specific behavior
 
 Emulator has limited codec support and may not represent real device behavior accurately.
+
+## Recently Completed (Phase 5)
+
+- User-selectable themes (4 dark variants)
+- Multiple provider management (Room database)
+- Login screen removal (both TV and mobile)
+- Mobile player buffer profile fix
+- Provider migration from legacy single-provider storage

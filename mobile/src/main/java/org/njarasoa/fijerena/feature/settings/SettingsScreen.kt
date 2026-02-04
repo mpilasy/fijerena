@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -28,6 +29,8 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 @Composable
 fun MobileSettingsScreen(
     onBack: () -> Unit,
+    onThemeChanged: (String) -> Unit = {},
+    onManageProviders: () -> Unit = {},
     onProviderChanged: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -48,15 +51,7 @@ fun MobileSettingsScreen(
     var newFavoritesMaxSize by remember { mutableStateOf("") }
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
     var autoResumeEnabled by remember { mutableStateOf(appSettings.autoResumeEnabled) }
-
-    // Provider dialog state
-    var showProviderDialog by remember { mutableStateOf(false) }
-    var dialogProviderName by remember { mutableStateOf("") }
-    var dialogUrl by remember { mutableStateOf("") }
-    var dialogUsername by remember { mutableStateOf("") }
-    var dialogPassword by remember { mutableStateOf("") }
-    var isChangingProvider by remember { mutableStateOf(false) }
-    var providerChangeError by remember { mutableStateOf<String?>(null) }
+    var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
 
     var isEditingQueueSize by remember { mutableStateOf(false) }
     var isEditingFavoritesSize by remember { mutableStateOf(false) }
@@ -110,17 +105,47 @@ fun MobileSettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
-                    onClick = {
-                        dialogProviderName = providerName
-                        dialogUrl = currentUrl
-                        dialogUsername = currentUsername
-                        dialogPassword = repository.getCurrentPassword() ?: ""
-                        providerChangeError = null
-                        showProviderDialog = true
-                    },
+                    onClick = onManageProviders,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Edit Provider")
+                    Text("Manage Providers")
+                }
+            }
+
+            // === Theme ===
+            SettingsSection(title = "Theme") {
+                Text(
+                    text = "Select a color theme for the app",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AllPalettes.forEach { palette ->
+                        val isSelected = selectedThemeId == palette.id
+                        if (isSelected) {
+                            Button(
+                                onClick = { },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(palette.displayName, maxLines = 1)
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = {
+                                    selectedThemeId = palette.id
+                                    appSettings.themeId = palette.id
+                                    onThemeChanged(palette.id)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(palette.displayName, maxLines = 1)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -455,110 +480,6 @@ fun MobileSettingsScreen(
     }
 
     // === Dialogs ===
-
-    // Provider Edit Dialog
-    if (showProviderDialog) {
-        AlertDialog(
-            onDismissRequest = { if (!isChangingProvider) showProviderDialog = false },
-            title = { Text("Edit Provider Details") },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = dialogProviderName,
-                        onValueChange = { dialogProviderName = it },
-                        label = { Text("Provider Name") },
-                        placeholder = { Text("My Provider") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = dialogUrl,
-                        onValueChange = { dialogUrl = it },
-                        label = { Text("URL") },
-                        placeholder = { Text("http://example.com:8080") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = dialogUsername,
-                        onValueChange = { dialogUsername = it },
-                        label = { Text("Username") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = dialogPassword,
-                        onValueChange = { dialogPassword = it },
-                        label = { Text("Password") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    providerChangeError?.let { error ->
-                        Text(
-                            text = error,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CinemaError
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (dialogUrl.isNotBlank() && dialogUsername.isNotBlank() && dialogPassword.isNotBlank()) {
-                            isChangingProvider = true
-                            providerChangeError = null
-
-                            coroutineScope.launch {
-                                when (val result = repository.login(
-                                    dialogUrl,
-                                    dialogUsername,
-                                    dialogPassword,
-                                    rememberMe = true
-                                )) {
-                                    is Result.Success -> {
-                                        providerName = dialogProviderName.ifBlank { "My Provider" }
-                                        appSettings.providerName = providerName
-                                        currentUrl = dialogUrl
-                                        currentUsername = dialogUsername
-                                        isChangingProvider = false
-                                        showProviderDialog = false
-                                        onProviderChanged()
-                                    }
-                                    is Result.Error -> {
-                                        providerChangeError = result.message ?: "Failed to update provider"
-                                        isChangingProvider = false
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    enabled = dialogUrl.isNotBlank() && dialogUsername.isNotBlank() && dialogPassword.isNotBlank() && !isChangingProvider
-                ) {
-                    if (isChangingProvider) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(MobileDimensions.iconSmall),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text("Save")
-                    }
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showProviderDialog = false },
-                    enabled = !isChangingProvider
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 
     // Clear Favorites Dialog
     if (showClearFavoritesDialog) {

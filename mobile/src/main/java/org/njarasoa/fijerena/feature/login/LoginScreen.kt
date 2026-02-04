@@ -51,7 +51,7 @@ fun LoginScreen(
     var serverUrl by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var rememberMe by remember { mutableStateOf(false) }
+    var rememberMe by remember { mutableStateOf(true) }
 
     // Attempt to restore session from encrypted credentials on startup
     LaunchedEffect(Unit) {

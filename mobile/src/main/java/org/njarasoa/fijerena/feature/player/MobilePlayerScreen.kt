@@ -83,6 +83,16 @@ fun MobilePlayerScreen(
         }
     }
 
+    // Configure player buffer profile based on content type
+    LaunchedEffect(contentType) {
+        val playerContentType = when (contentType) {
+            "LIVE_TV" -> org.njarasoa.fijerena.core.player.config.PlayerConfigFactory.ContentType.LIVE_TV
+            "MOVIES", "TV_SHOWS" -> org.njarasoa.fijerena.core.player.config.PlayerConfigFactory.ContentType.VOD
+            else -> org.njarasoa.fijerena.core.player.config.PlayerConfigFactory.ContentType.VOD
+        }
+        StreamingPlaybackService.getInstance()?.setContentType(playerContentType)
+    }
+
     // Load stream URL
     LaunchedEffect(streamId, episodeId) {
         isLoading = true

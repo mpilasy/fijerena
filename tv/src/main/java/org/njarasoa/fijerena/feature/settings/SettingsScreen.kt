@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalTvMaterial3Api::class)
+@file:OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 
 package org.njarasoa.fijerena.feature.settings
 
@@ -38,6 +38,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -60,6 +63,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.ui.theme.*
 
 /**
@@ -73,6 +77,8 @@ import org.njarasoa.fijerena.ui.theme.*
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onThemeChanged: (String) -> Unit = {},
+    onManageProviders: () -> Unit = {},
     onProviderChanged: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -93,15 +99,6 @@ fun SettingsScreen(
     var newFavoritesMaxSize by remember { mutableStateOf("") }
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
 
-    // Provider dialog state
-    var showProviderDialog by remember { mutableStateOf(false) }
-    var dialogProviderName by remember { mutableStateOf("") }
-    var dialogUrl by remember { mutableStateOf("") }
-    var dialogUsername by remember { mutableStateOf("") }
-    var dialogPassword by remember { mutableStateOf("") }
-    var isChangingProvider by remember { mutableStateOf(false) }
-    var providerChangeError by remember { mutableStateOf<String?>(null) }
-
     var isEditingQueueSize by remember { mutableStateOf(false) }
     var isEditingFavoritesSize by remember { mutableStateOf(false) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
@@ -114,6 +111,7 @@ fun SettingsScreen(
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
     var cacheRefreshTrigger by remember { mutableStateOf(0) }
     var uiScale by remember { mutableStateOf(appSettings.uiScale) }
+    var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
 
     // Load cache stats
     LaunchedEffect(cacheRefreshTrigger) {
@@ -172,25 +170,79 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = providerName,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = providerName,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = currentUrl,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                ),
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                            )
+                        }
                         CinemaSecondaryButton(
-                            onClick = {
-                                dialogProviderName = providerName
-                                dialogUrl = currentUrl
-                                dialogUsername = currentUsername
-                                dialogPassword = repository.getCurrentPassword() ?: ""
-                                providerChangeError = null
-                                showProviderDialog = true
-                            },
-                            text = "Edit"
+                            onClick = onManageProviders,
+                            text = "Manage Providers"
                         )
+                    }
+                }
+            }
+
+            // Theme Selection
+            item {
+                Column {
+                    Text(
+                        text = "Theme",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
+                        color = CinemaAccent
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                    Text(
+                        text = "Select a color theme for the app",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+
+                    val selectedThemeFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRestorer { selectedThemeFocusRequester },
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                    ) {
+                        AllPalettes.forEach { palette ->
+                            val isSelected = selectedThemeId == palette.id
+                            if (isSelected) {
+                                CinemaPrimaryButton(
+                                    onClick = { },
+                                    text = palette.displayName,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .focusRequester(selectedThemeFocusRequester)
+                                )
+                            } else {
+                                CinemaSecondaryButton(
+                                    onClick = {
+                                        selectedThemeId = palette.id
+                                        appSettings.themeId = palette.id
+                                        onThemeChanged(palette.id)
+                                    },
+                                    text = palette.displayName,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -733,162 +785,6 @@ fun SettingsScreen(
                 }
             }
         }
-    }
-
-    // Provider Details Dialog
-    if (showProviderDialog) {
-        AlertDialog(
-            onDismissRequest = { showProviderDialog = false },
-            title = {
-                Text(
-                    "Edit Provider Details",
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
-                ) {
-                    OutlinedTextField(
-                        value = dialogProviderName,
-                        onValueChange = { dialogProviderName = it },
-                        label = { Text("Provider Name") },
-                        placeholder = { Text("My Provider") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = CinemaTextPrimary,
-                            unfocusedTextColor = CinemaTextPrimary,
-                            focusedBorderColor = CinemaAccent,
-                            unfocusedBorderColor = CinemaTextSecondary,
-                            focusedLabelColor = CinemaAccent,
-                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                        )
-                    )
-                    OutlinedTextField(
-                        value = dialogUrl,
-                        onValueChange = { dialogUrl = it },
-                        label = { Text("URL") },
-                        placeholder = { Text("http://example.com:8080") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = CinemaTextPrimary,
-                            unfocusedTextColor = CinemaTextPrimary,
-                            focusedBorderColor = CinemaAccent,
-                            unfocusedBorderColor = CinemaTextSecondary,
-                            focusedLabelColor = CinemaAccent,
-                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                        )
-                    )
-                    OutlinedTextField(
-                        value = dialogUsername,
-                        onValueChange = { dialogUsername = it },
-                        label = { Text("Username") },
-                        placeholder = { Text("username") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = CinemaTextPrimary,
-                            unfocusedTextColor = CinemaTextPrimary,
-                            focusedBorderColor = CinemaAccent,
-                            unfocusedBorderColor = CinemaTextSecondary,
-                            focusedLabelColor = CinemaAccent,
-                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                        )
-                    )
-                    OutlinedTextField(
-                        value = dialogPassword,
-                        onValueChange = { dialogPassword = it },
-                        label = { Text("Password") },
-                        placeholder = { Text("••••••••") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = CinemaTextPrimary,
-                            unfocusedTextColor = CinemaTextPrimary,
-                            focusedBorderColor = CinemaAccent,
-                            unfocusedBorderColor = CinemaTextSecondary,
-                            focusedLabelColor = CinemaAccent,
-                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                            focusedPlaceholderColor = CinemaTextSecondary,
-                            unfocusedPlaceholderColor = CinemaTextSecondary
-                        )
-                    )
-
-                    if (providerChangeError != null) {
-                        Text(
-                            text = providerChangeError!!,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CinemaError
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (dialogUrl.isNotBlank() && dialogUsername.isNotBlank() && dialogPassword.isNotBlank()) {
-                            isChangingProvider = true
-                            providerChangeError = null
-
-                            coroutineScope.launch {
-                                // Try to login with new credentials
-                                when (val result = repository.login(
-                                    dialogUrl,
-                                    dialogUsername,
-                                    dialogPassword,
-                                    rememberMe = true
-                                )) {
-                                    is Result.Success -> {
-                                        providerName = dialogProviderName.ifBlank { "My Provider" }
-                                        appSettings.providerName = providerName
-                                        currentUrl = dialogUrl
-                                        currentUsername = dialogUsername
-                                        isChangingProvider = false
-                                        showProviderDialog = false
-                                        // Notify parent that provider changed
-                                        onProviderChanged()
-                                    }
-                                    is Result.Error -> {
-                                        providerChangeError = result.message ?: "Failed to update provider"
-                                        isChangingProvider = false
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    enabled = dialogUrl.isNotBlank() && dialogUsername.isNotBlank() && dialogPassword.isNotBlank() && !isChangingProvider,
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaAccent,
-                        contentColor = androidx.compose.ui.graphics.Color.Black
-                    )
-                ) {
-                    if (isChangingProvider) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            color = androidx.compose.ui.graphics.Color.Black
-                        )
-                    } else {
-                        Text("Save")
-                    }
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showProviderDialog = false },
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary
-                    )
-                ) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = CinemaSurface,
-            tonalElevation = 6.dp.scaled(scale)
-        )
     }
 
     // Clear Favorites Confirmation Dialog

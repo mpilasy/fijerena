@@ -1,13 +1,13 @@
 # Release Notes - Complete Player Enhancement Suite
 
-## Version: Post-Phase 4 (All Phases Complete + UX Improvements)
-**Release Date:** 2026-02-02
+## Version: Post-Phase 5 (Themes + Multi-Provider + UX)
+**Release Date:** 2026-02-04
 
 ---
 
 ## 🎯 Overview
 
-This comprehensive release delivers fundamental player improvements, high-value features, nice-to-have enhancements, and critical UX improvements that transform the IPTV streaming experience. Includes dramatic performance gains for Live TV, comprehensive audio/visual controls, accessibility features, advanced performance monitoring, and streamlined navigation with removed login screen.
+This comprehensive release delivers fundamental player improvements, high-value features, nice-to-have enhancements, UX improvements, user-selectable themes, and multi-provider management. Includes dramatic performance gains for Live TV, comprehensive audio/visual controls, accessibility features, advanced performance monitoring, streamlined navigation, 4 dark theme variants, and Room database-backed provider management with automatic migration.
 
 ---
 
@@ -554,7 +554,106 @@ val metadata = PlayerMetadata(
 
 ---
 
-## 🔮 Future Enhancements (Phase 5+)
+## 🎨 Phase 5: Themes & Multi-Provider Management
+
+### User-Selectable Themes
+**New Feature: 4 dark theme variants with runtime switching**
+
+**Themes Available:**
+| Theme | Accent Color | Surfaces |
+|-------|-------------|----------|
+| Deep Night (default) | Electric Blue `#2979FF` | `#0F1014`, `#161A20` |
+| AMOLED Black | Electric Blue `#2979FF` | `#000000`, `#0A0A0A` |
+| Emerald | Green `#00C853` | `#0F1014`, `#161A20` |
+| Crimson | Red `#FF1744` | `#0F1014`, `#161A20` |
+
+**Key Features:**
+- Select theme from Settings screen on both TV and mobile
+- Theme persists across app restarts (stored in AppSettings)
+- Dynamic runtime switching — no app restart needed
+- All 400+ color references resolve dynamically via computed properties
+- Status colors, text colors, and orange secondary remain constant
+
+**Architecture:**
+- `CinemaThemePalette` — immutable data class with all color properties
+- `CinemaThemeHolder` — global mutable holder set by theme composable
+- TV `CinemaColors.kt` and mobile `Color.kt` re-export as computed `get()` properties
+- Zero screen-file changes needed for theme support
+
+**Files Created:**
+- `core/ui/.../theme/CinemaThemePalette.kt` — Palettes, holder, CompositionLocal
+
+**Files Modified:**
+- `tv/.../ui/theme/CinemaColors.kt` — Computed properties from CinemaThemeHolder
+- `mobile/.../ui/theme/Color.kt` — Computed properties from CinemaThemeHolder
+- `core/network/.../AppSettings.kt` — Added `themeId` setting
+- `tv/.../ui/theme/Theme.kt` — Dynamic palette resolution
+- `mobile/.../ui/theme/Theme.kt` — Dynamic palette resolution (moved CinemaColorScheme inside composable)
+- TV and mobile `MainActivity.kt` — Theme state management
+- TV and mobile NavHost — Thread `onThemeChanged` callback
+- TV and mobile `SettingsScreen.kt` — Theme picker UI
+
+---
+
+### Multiple Provider Management
+**New Feature: Room database-backed multi-provider support**
+
+**Key Features:**
+- Add, edit, delete, and switch between IPTV providers
+- Provider metadata stored in Room database (name, URL, username, active flag)
+- Passwords stored in per-provider EncryptedSharedPreferences (AES256-GCM)
+- Per-provider cache isolation (`xtream_cache_{id}`)
+- Automatic one-time migration from legacy single-provider storage
+- Provider list with select/edit/delete actions
+- Add/edit provider form with 4 fields (name, URL, username, password)
+
+**Navigation Flow:**
+- Settings → "Manage Providers" → Provider Selection (list) → Add/Edit Provider (form)
+- Provider switch navigates back to ContentTypeSelection with cleared back stack
+
+**Files Created:**
+- `core/network/.../provider/ProviderEntity.kt` — Room entity
+- `core/network/.../provider/ProviderDao.kt` — Data access object
+- `core/network/.../provider/ProviderDatabase.kt` — Room database singleton
+- `core/network/.../provider/ProviderRepository.kt` — Repository (DAO + encrypted prefs)
+- `core/ui/.../viewmodels/ProviderViewModel.kt` — ViewModel with migration logic
+- `core/ui/.../viewmodels/ProviderViewModelFactory.kt` — Manual factory
+- `tv/.../feature/provider/TvProviderSelectionScreen.kt` — TV provider list
+- `tv/.../feature/provider/TvAddProviderScreen.kt` — TV add/edit form
+- `mobile/.../feature/provider/MobileProviderSelectionScreen.kt` — Mobile provider list
+- `mobile/.../feature/provider/MobileAddProviderScreen.kt` — Mobile add/edit form
+
+**Files Modified:**
+- `gradle/libs.versions.toml` — Room + KSP dependencies
+- Root `build.gradle.kts` — KSP plugin
+- `core/network/build.gradle.kts` — Room runtime + KSP compiler
+- `core/navigation/.../Screen.kt` — Added ProviderSelection, AddProvider destinations
+- TV and mobile NavHost — Provider routes, startup logic
+- TV and mobile `SettingsScreen.kt` — Removed old edit dialog, added "Manage Providers" button
+
+---
+
+### Mobile Login Screen Removal
+**Impact: Unified startup flow across TV and mobile**
+
+- Removed `composable<Screen.Login>` route from MobileNavHost
+- Mobile now uses same startup logic as TV: check stored credentials → ContentTypeSelection or Settings
+- Auto-session restore via `LaunchedEffect` on startup
+- No more login screen flash on mobile app launch
+- Logout navigates to Settings (not Login) on both platforms
+
+---
+
+### Mobile Player Buffer Fix
+**Impact: Fixed Live TV playback failures on mobile**
+
+- Added `setContentType()` call to MobilePlayerScreen (was missing, TV had it)
+- Without this, Live TV streams used VOD buffer settings (15s min buffer) causing timeouts
+- Now properly configures LIVE_TV profile (2s min buffer, 250ms startup) for live streams
+
+---
+
+## 🔮 Future Enhancements (Phase 6+)
 
 ### Planned Features:
 - **Playback Speed Control** - Variable speed for VOD content (0.5x, 1.25x, 1.5x, 2x)
@@ -571,7 +670,7 @@ val metadata = PlayerMetadata(
 
 ## 🙏 Credits
 
-**Development:** Claude Sonnet 4.5
+**Development:** Claude Opus 4.5
 **Architecture:** Based on Android Media3 (ExoPlayer)
 **UI Framework:** Jetpack Compose for TV
 **Testing:** Manual testing on Android TV platforms

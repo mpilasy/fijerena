@@ -24,12 +24,16 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.navigation.Screen
+import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.feature.category.CategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.epg.EpgGuideScreen
 import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
+import org.njarasoa.fijerena.feature.provider.TvAddProviderScreen
+import org.njarasoa.fijerena.feature.provider.TvProviderSelectionScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
 import org.njarasoa.fijerena.feature.settings.EditProviderScreen
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
@@ -56,7 +60,8 @@ import org.njarasoa.fijerena.feature.settings.SettingsScreen
 @Composable
 fun TvNavHost(
     navController: NavHostController = rememberNavController(),
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    onThemeChanged: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val accountManager = remember { AccountManager(context.applicationContext) }
@@ -324,11 +329,61 @@ fun TvNavHost(
                 )
             }
 
+            // Add/Edit Provider Screen
+            composable<Screen.AddProvider> { backStackEntry ->
+                val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
+                TvAddProviderScreen(
+                    editId = addProviderScreen.editId,
+                    onBack = {
+                        navController.navigateUp()
+                    },
+                    onSuccess = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
+            // Provider Selection Screen
+            composable<Screen.ProviderSelection> {
+                TvProviderSelectionScreen(
+                    onProviderSelected = { provider ->
+                        // Re-authenticate with selected provider and go to content selection
+                        coroutineScope.launch {
+                            when (val result = repository.restoreSession()) {
+                                is Result.Success -> {
+                                    val url = repository.getCurrentUrl() ?: ""
+                                    authViewModel.setAuthSession(result.data, url)
+                                    navController.navigate(Screen.ContentTypeSelection) {
+                                        popUpTo(Screen.ProviderSelection) { inclusive = true }
+                                    }
+                                }
+                                is Result.Error -> {
+                                    // Stay on provider selection
+                                }
+                            }
+                        }
+                    },
+                    onAddProvider = {
+                        navController.navigate(Screen.AddProvider())
+                    },
+                    onEditProvider = { id ->
+                        navController.navigate(Screen.AddProvider(editId = id))
+                    },
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
             // Settings Screen
             composable<Screen.Settings> {
                 SettingsScreen(
                     onBack = {
                         navController.navigateUp()
+                    },
+                    onThemeChanged = onThemeChanged,
+                    onManageProviders = {
+                        navController.navigate(Screen.ProviderSelection)
                     },
                     onProviderChanged = {
                         // Provider changed, try to re-authenticate and go to content selection

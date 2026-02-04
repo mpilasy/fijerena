@@ -11,14 +11,15 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
  */
 class SearchViewModelFactory(
     private val context: Context,
-    private val contentType: String
+    private val contentType: String,
+    private val providerId: Long = 0L
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SearchViewModel::class.java)) {
             val accountManager = AccountManager(context.applicationContext)
-            val repository = XtreamRepository(accountManager, context.applicationContext)
+            val repository = XtreamRepository(accountManager, context.applicationContext, providerId)
             return SearchViewModel(repository, contentType) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
