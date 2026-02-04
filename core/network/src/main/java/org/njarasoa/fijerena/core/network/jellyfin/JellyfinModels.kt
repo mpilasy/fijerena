@@ -90,6 +90,17 @@ data class JellyfinPlaybackProgress(
 )
 
 @Serializable
+data class JellyfinPlaybackStopped(
+    @SerialName("ItemId") val itemId: String,
+    @SerialName("PositionTicks") val positionTicks: Long
+)
+
+@Serializable
+data class JellyfinPlaybackStart(
+    @SerialName("ItemId") val itemId: String
+)
+
+@Serializable
 data class JellyfinAuthBody(
     @SerialName("Username") val username: String,
     @SerialName("Pw") val password: String

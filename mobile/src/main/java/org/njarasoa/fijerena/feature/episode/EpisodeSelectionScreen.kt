@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,21 +53,25 @@ fun MobileEpisodeSelectionScreen(
 
     var seriesDetail by remember { mutableStateOf<SeriesDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var refreshTrigger by remember { mutableStateOf(0) }
 
-    // Load series info on launch
-    LaunchedEffect(seriesId) {
-        isLoading = true
+    // Load series info on launch or refresh
+    LaunchedEffect(seriesId, refreshTrigger) {
+        if (!isRefreshing) isLoading = true
         error = null
         val result = mediaRepository.getSeriesDetail(seriesId)
         result.fold(
             onSuccess = { detail ->
                 seriesDetail = detail
                 isLoading = false
+                isRefreshing = false
             },
             onFailure = { e ->
                 error = e.message ?: "Failed to load series info"
                 isLoading = false
+                isRefreshing = false
             }
         )
     }
@@ -99,10 +104,19 @@ fun MobileEpisodeSelectionScreen(
                     )
                 }
                 seriesDetail != null -> {
-                    EpisodeListContent(
-                        seriesDetail = seriesDetail!!,
-                        onEpisodeSelected = onEpisodeSelected
-                    )
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = {
+                            isRefreshing = true
+                            refreshTrigger++
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        EpisodeListContent(
+                            seriesDetail = seriesDetail!!,
+                            onEpisodeSelected = onEpisodeSelected
+                        )
+                    }
                 }
             }
         }

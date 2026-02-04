@@ -1,8 +1,5 @@
 package org.njarasoa.fijerena.core.player.service
 
-import android.content.Intent
-import android.os.Binder
-import android.os.IBinder
 import android.os.PowerManager
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -10,14 +7,13 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
-import org.njarasoa.fijerena.core.player.device.DeviceDetector
-import org.njarasoa.fijerena.core.player.model.PlaybackState
-import org.njarasoa.fijerena.core.player.model.PlayerMetadata
-import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 
 class StreamingPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null

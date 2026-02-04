@@ -16,17 +16,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -105,14 +104,17 @@ fun MobilePlayerScreen(
     var showStats by remember { mutableStateOf(false) }
     var hasStartedPlaying by remember { mutableStateOf(false) }
 
+    val coroutineScope = rememberCoroutineScope()
+
     // Selector dialogs
     var showAudioTrackSelector by remember { mutableStateOf(false) }
     var showSubtitleSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
 
-    // Favorites
-    var isFavorite by remember {
-        mutableStateOf(mediaRepository.isFavorite(streamId, contentType))
+    // Favorites (async for server-backed providers)
+    var isFavorite by remember { mutableStateOf(false) }
+    LaunchedEffect(streamId, contentType) {
+        isFavorite = mediaRepository.isFavoriteSuspend(streamId, contentType)
     }
 
     val playbackState = viewModel.playbackState.collectAsState().value
@@ -126,22 +128,24 @@ fun MobilePlayerScreen(
     }
 
     // Save playback position periodically for VOD content
-    LaunchedEffect(playbackState) {
+    LaunchedEffect(Unit) {
         if (contentType != "LIVE_TV") {
             while (true) {
                 delay(5000L)
-                val pos = when (playbackState) {
-                    is PlaybackState.Playing -> playbackState.position
-                    is PlaybackState.Paused -> playbackState.position
+                val ps = viewModel.playbackState.value
+                val pos = when (ps) {
+                    is PlaybackState.Playing -> ps.position
+                    is PlaybackState.Paused -> ps.position
                     else -> null
                 }
-                val dur = when (playbackState) {
-                    is PlaybackState.Playing -> playbackState.duration
-                    is PlaybackState.Paused -> playbackState.duration
+                val dur = when (ps) {
+                    is PlaybackState.Playing -> ps.duration
+                    is PlaybackState.Paused -> ps.duration
                     else -> null
                 }
                 if (pos != null && dur != null && dur > 0) {
                     mediaRepository.savePlaybackPosition(streamId, streamName, categoryId, contentType, pos, dur)
+                    mediaRepository.onPlaybackProgress(streamId, pos, dur)
                 }
             }
         }
@@ -188,15 +192,20 @@ fun MobilePlayerScreen(
         )
     }
 
-    // Fetch saved position for VOD resume
-    val savedPosition = remember(streamId, contentType) {
-        if (contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
-            mediaRepository.getPlaybackPosition(streamId, contentType)
+    // Fetch saved position for VOD resume (async for server-backed providers)
+    var savedPosition by remember { mutableStateOf<org.njarasoa.fijerena.core.network.WatchedItem?>(null) }
+    var positionLoaded by remember { mutableStateOf(false) }
+    LaunchedEffect(streamId, contentType) {
+        positionLoaded = false
+        savedPosition = if (contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
+            mediaRepository.getPlaybackPositionSuspend(streamId, contentType)
         } else null
+        positionLoaded = true
     }
 
     // Start playback when URL is ready
-    LaunchedEffect(streamUrl) {
+    LaunchedEffect(streamUrl, positionLoaded) {
+        if (!positionLoaded) return@LaunchedEffect
         streamUrl?.let { url ->
             val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else streamId
             val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else streamName
@@ -326,6 +335,26 @@ fun MobilePlayerScreen(
                             }
                         },
                         onBack = {
+                            // Save position before stopping (stop sets state to Idle)
+                            if (contentType != "LIVE_TV") {
+                                val ps = viewModel.playbackState.value
+                                val pos = when (ps) {
+                                    is PlaybackState.Playing -> ps.position
+                                    is PlaybackState.Paused -> ps.position
+                                    else -> null
+                                }
+                                val dur = when (ps) {
+                                    is PlaybackState.Playing -> ps.duration
+                                    is PlaybackState.Paused -> ps.duration
+                                    else -> null
+                                }
+                                if (pos != null && dur != null && dur > 0) {
+                                    mediaRepository.savePlaybackPosition(streamId, streamName, categoryId, contentType, pos, dur)
+                                    coroutineScope.launch {
+                                        mediaRepository.onPlaybackProgress(streamId, pos, dur)
+                                    }
+                                }
+                            }
                             viewModel.stop()
                             onBack()
                         },
@@ -334,13 +363,15 @@ fun MobilePlayerScreen(
                         onSubtitle = { showSubtitleSelector = true },
                         onQuality = { showQualitySelector = true },
                         onToggleFavorite = {
-                            if (isFavorite) {
-                                if (mediaRepository.removeFavorite(streamId, contentType)) {
-                                    isFavorite = false
-                                }
-                            } else {
-                                if (mediaRepository.addFavorite(streamId, streamName, categoryId, contentType)) {
-                                    isFavorite = true
+                            coroutineScope.launch {
+                                if (isFavorite) {
+                                    if (mediaRepository.removeFavoriteSuspend(streamId, contentType)) {
+                                        isFavorite = false
+                                    }
+                                } else {
+                                    if (mediaRepository.addFavoriteSuspend(streamId, streamName, categoryId, contentType)) {
+                                        isFavorite = true
+                                    }
                                 }
                             }
                         }

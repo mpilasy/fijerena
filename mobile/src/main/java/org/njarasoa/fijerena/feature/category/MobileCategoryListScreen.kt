@@ -1,24 +1,49 @@
 package org.njarasoa.fijerena.feature.category
 
-import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,15 +109,23 @@ fun MobileCategoryListScreen(
                             thickness = MobileDimensions.dividerThin
                         )
 
-                        // Streams list
-                        StreamsList(
-                            items = state.streams,
-                            streamsLoading = state.streamsLoading,
-                            selectedCategoryId = state.selectedCategoryId,
-                            onItemSelected = { itemId, itemName, categoryId ->
-                                onStreamSelected(itemId, itemName, categoryId, contentType)
-                            }
-                        )
+                        // Streams list with pull-to-refresh
+                        PullToRefreshBox(
+                            isRefreshing = state.streamsLoading,
+                            onRefresh = {
+                                state.selectedCategoryId?.let { viewModel.refreshStreams(it) }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            StreamsList(
+                                items = state.streams,
+                                streamsLoading = state.streamsLoading,
+                                selectedCategoryId = state.selectedCategoryId,
+                                onItemSelected = { itemId, itemName, categoryId ->
+                                    onStreamSelected(itemId, itemName, categoryId, contentType)
+                                }
+                            )
+                        }
                     }
                 }
                 is CategoryViewModel.UiState.Error -> {
@@ -131,16 +164,26 @@ private fun CategoryChipRow(
     selectedCategoryId: String?,
     onCategorySelected: (String) -> Unit
 ) {
-    val scrollState = rememberScrollState()
+    val listState = rememberLazyListState()
 
-    Row(
+    LaunchedEffect(selectedCategoryId) {
+        if (selectedCategoryId != null) {
+            val index = categories.indexOfFirst { it.id == selectedCategoryId }
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+            }
+        }
+    }
+
+    LazyRow(
+        state = listState,
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(scrollState)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        categories.forEach { category ->
+        itemsIndexed(categories, key = { _, cat -> cat.id }) { _, category ->
             val isSelected = category.id == selectedCategoryId
             FilterChip(
                 selected = isSelected,

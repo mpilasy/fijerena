@@ -7,6 +7,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.request.delete
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -175,6 +176,118 @@ class JellyfinApiService(
             }
         } catch (_: Exception) {
             // Best-effort progress reporting
+        }
+    }
+
+    suspend fun addFavorite(itemId: String): Result<Unit> {
+        return try {
+            client.post("$serverUrl/Users/$userId/FavoriteItems/$itemId") {
+                header("X-Emby-Authorization", authHeader)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun removeFavorite(itemId: String): Result<Unit> {
+        return try {
+            client.delete("$serverUrl/Users/$userId/FavoriteItems/$itemId") {
+                header("X-Emby-Authorization", authHeader)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getResumableItems(
+        includeItemTypes: String? = null,
+        limit: Int = 50
+    ): Result<List<JellyfinItem>> {
+        return try {
+            val response = client.get("$serverUrl/Users/$userId/Items") {
+                header("X-Emby-Authorization", authHeader)
+                parameter("Filters", "IsResumable")
+                parameter("SortBy", "DatePlayed")
+                parameter("SortOrder", "Descending")
+                includeItemTypes?.let { parameter("IncludeItemTypes", it) }
+                parameter("Limit", limit)
+                parameter("Fields", "Overview,MediaSources,UserData")
+                parameter("Recursive", true)
+            }.body<JellyfinItemsResponse>()
+            Result.success(response.items)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getFavoriteItems(
+        includeItemTypes: String? = null,
+        limit: Int = 50
+    ): Result<List<JellyfinItem>> {
+        return try {
+            val response = client.get("$serverUrl/Users/$userId/Items") {
+                header("X-Emby-Authorization", authHeader)
+                parameter("Filters", "IsFavorite")
+                parameter("SortBy", "SortName")
+                parameter("SortOrder", "Ascending")
+                includeItemTypes?.let { parameter("IncludeItemTypes", it) }
+                parameter("Limit", limit)
+                parameter("Fields", "Overview,MediaSources,UserData")
+                parameter("Recursive", true)
+            }.body<JellyfinItemsResponse>()
+            Result.success(response.items)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getRecentlyPlayed(
+        includeItemTypes: String? = null,
+        limit: Int = 50
+    ): Result<List<JellyfinItem>> {
+        return try {
+            val response = client.get("$serverUrl/Users/$userId/Items") {
+                header("X-Emby-Authorization", authHeader)
+                parameter("IsPlayed", true)
+                parameter("SortBy", "DatePlayed")
+                parameter("SortOrder", "Descending")
+                includeItemTypes?.let { parameter("IncludeItemTypes", it) }
+                parameter("Limit", limit)
+                parameter("Fields", "Overview,MediaSources,UserData")
+                parameter("Recursive", true)
+            }.body<JellyfinItemsResponse>()
+            Result.success(response.items)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun reportPlaybackStart(itemId: String) {
+        try {
+            client.post("$serverUrl/Sessions/Playing") {
+                contentType(ContentType.Application.Json)
+                header("X-Emby-Authorization", authHeader)
+                setBody(JellyfinPlaybackStart(itemId = itemId))
+            }
+        } catch (_: Exception) {
+            // Best-effort reporting
+        }
+    }
+
+    suspend fun reportPlaybackStopped(itemId: String, positionTicks: Long) {
+        try {
+            client.post("$serverUrl/Sessions/Playing/Stopped") {
+                contentType(ContentType.Application.Json)
+                header("X-Emby-Authorization", authHeader)
+                setBody(JellyfinPlaybackStopped(
+                    itemId = itemId,
+                    positionTicks = positionTicks
+                ))
+            }
+        } catch (_: Exception) {
+            // Best-effort reporting
         }
     }
 

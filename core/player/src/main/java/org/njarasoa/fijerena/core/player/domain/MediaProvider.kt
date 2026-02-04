@@ -21,8 +21,20 @@ interface MediaProvider {
         extension: String? = null
     ): Result<PlayableStream>
 
+    suspend fun search(query: String, contentType: String): Result<List<MediaItem>>? = null
+
     suspend fun getEpg(streamId: String): Result<EpgResponse>? = null
     suspend fun getEpgBulk(streamIds: List<String>): Result<Map<String, EpgResponse>>? = null
 
     suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long) {}
+
+    // Server-side user data methods (only Jellyfin overrides these)
+    suspend fun setFavorite(itemId: String, isFavorite: Boolean): Result<Unit>? = null
+    suspend fun isFavorite(itemId: String): Boolean? = null
+    suspend fun getFavoriteItems(contentType: String): Result<List<MediaItem>>? = null
+    suspend fun getResumeItems(contentType: String): Result<List<MediaItem>>? = null
+    suspend fun getRecentlyPlayed(contentType: String): Result<List<MediaItem>>? = null
+    suspend fun getPlaybackPosition(itemId: String): Pair<Long, Long>? = null  // (positionMs, durationMs)
+    suspend fun onPlaybackStarted(itemId: String) {}
+    suspend fun onPlaybackStopped(itemId: String, positionMs: Long, durationMs: Long) {}
 }

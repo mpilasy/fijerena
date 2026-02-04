@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network.jellyfin
 
-import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -29,7 +28,8 @@ class JellyfinMediaProvider(
         supportsEpg = false,
         supportsSearch = true,
         supportsAuthentication = true,
-        supportsProgressSync = true
+        supportsProgressSync = true,
+        supportsServerUserData = true
     )
 
     override suspend fun connect(): Result<Unit> {
@@ -78,6 +78,23 @@ class JellyfinMediaProvider(
 
         return api.getItems(parentId = categoryId, includeItemTypes = includeTypes).map { items ->
             items.map { item -> item.toDomainItem(categoryId, contentType) }
+        }
+    }
+
+    override suspend fun search(query: String, contentType: String): Result<List<MediaItem>> {
+        if (!isConnected()) {
+            val connectResult = connect()
+            if (connectResult.isFailure) return connectResult.map { emptyList() }
+        }
+
+        val includeTypes = when (contentType) {
+            "MOVIES" -> "Movie"
+            "TV_SHOWS" -> "Series"
+            else -> null
+        }
+
+        return api.searchItems(query = query, includeItemTypes = includeTypes).map { items ->
+            items.map { item -> item.toDomainItem(categoryId = "", contentType = contentType) }
         }
     }
 
@@ -201,12 +218,91 @@ class JellyfinMediaProvider(
         api.reportPlaybackProgress(itemId, positionTicks, isPaused)
     }
 
+    override suspend fun setFavorite(itemId: String, isFavorite: Boolean): Result<Unit> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        return if (isFavorite) api.addFavorite(itemId) else api.removeFavorite(itemId)
+    }
+
+    override suspend fun isFavorite(itemId: String): Boolean {
+        if (!ensureConnected()) return false
+        val item = api.getItemById(itemId).getOrNull() ?: return false
+        return item.userData?.isFavorite == true
+    }
+
+    override suspend fun getFavoriteItems(contentType: String): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        val jellyfinType = contentTypeToJellyfinType(contentType)
+        return api.getFavoriteItems(includeItemTypes = jellyfinType).map { items ->
+            items.map { it.toDomainItem(categoryId = "", contentType = contentType) }
+        }
+    }
+
+    override suspend fun getResumeItems(contentType: String): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        val jellyfinType = contentTypeToJellyfinType(contentType)
+        return api.getResumableItems(includeItemTypes = jellyfinType).map { items ->
+            items.map { it.toDomainItem(categoryId = "", contentType = contentType) }
+        }
+    }
+
+    override suspend fun getRecentlyPlayed(contentType: String): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        val jellyfinType = contentTypeToJellyfinType(contentType)
+        return api.getRecentlyPlayed(includeItemTypes = jellyfinType).map { items ->
+            items.map { it.toDomainItem(categoryId = "", contentType = contentType) }
+        }
+    }
+
+    override suspend fun getPlaybackPosition(itemId: String): Pair<Long, Long>? {
+        if (!ensureConnected()) return null
+        val item = api.getItemById(itemId).getOrNull() ?: return null
+        val ticks = item.userData?.playbackPositionTicks ?: return null
+        if (ticks <= 0) return null
+        val posMs = ticks / 10_000
+        val durMs = (item.runTimeTicks ?: 0L) / 10_000
+        return Pair(posMs, durMs)
+    }
+
+    override suspend fun onPlaybackStarted(itemId: String) {
+        if (!isConnected()) return
+        api.reportPlaybackStart(itemId)
+    }
+
+    override suspend fun onPlaybackStopped(itemId: String, positionMs: Long, durationMs: Long) {
+        if (!isConnected()) return
+        api.reportPlaybackStopped(itemId, positionMs * 10_000)
+    }
+
+    private suspend fun ensureConnected(): Boolean {
+        if (isConnected()) return true
+        return connect().isSuccess
+    }
+
+    private fun contentTypeToJellyfinType(contentType: String): String? {
+        return when (contentType) {
+            "MOVIES" -> "Movie"
+            "TV_SHOWS" -> "Series"
+            else -> null
+        }
+    }
+
     private fun JellyfinItem.toDomainItem(categoryId: String, contentType: String): MediaItem {
         val mediaType = when (type) {
             "Movie" -> MediaType.MOVIE
             "Series" -> MediaType.SERIES
             "Episode" -> MediaType.EPISODE
             else -> if (contentType == "TV_SHOWS") MediaType.SERIES else MediaType.MOVIE
+        }
+
+        val provData = buildMap {
+            userData?.let { ud ->
+                val posMs = ud.playbackPositionTicks / 10_000
+                val durMs = runTimeTicks?.let { it / 10_000 } ?: 0L
+                put("playbackPosition", posMs.toString())
+                put("duration", durMs.toString())
+                put("isFavorite", ud.isFavorite.toString())
+                put("isCompleted", ud.played.toString())
+            }
         }
 
         return MediaItem(
@@ -223,7 +319,8 @@ class JellyfinMediaProvider(
                 genre = genres.joinToString(", ").ifEmpty { null },
                 rating = officialRating,
                 duration = runTimeTicks?.let { formatTicks(it) }
-            )
+            ),
+            providerData = provData
         )
     }
 

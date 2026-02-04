@@ -540,7 +540,8 @@ fun TvAddProviderScreen(
                                         saveUsername,
                                         savePassword,
                                         selectedType.name,
-                                        saveConfig
+                                        saveConfig,
+                                        onComplete = onSuccess
                                     )
                                 } else {
                                     viewModel.addProvider(
@@ -549,10 +550,10 @@ fun TvAddProviderScreen(
                                         saveUsername,
                                         savePassword,
                                         selectedType.name,
-                                        saveConfig
+                                        saveConfig,
+                                        onComplete = onSuccess
                                     )
                                 }
-                                onSuccess()
                             }
                         },
                         enabled = !isSaving,

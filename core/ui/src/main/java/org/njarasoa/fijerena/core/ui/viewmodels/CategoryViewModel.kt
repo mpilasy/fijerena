@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -82,6 +83,9 @@ class CategoryViewModel(
     private var categories: List<MediaCategory> = emptyList()
     private var currentStreams: List<MediaItem> = emptyList()
     private var currentCategoryId: String? = null
+    private var isInitialLoad = true
+    private var initialLoadRetried = false
+    private var categoriesRetried = false
 
     init {
         loadCategories()
@@ -104,62 +108,77 @@ class CategoryViewModel(
 
             result.fold(
                 onSuccess = { fetchedCategories ->
-                    val virtualCategories = mutableListOf<MediaCategory>()
-
-                    if (contentType != "LIVE_TV") {
-                        virtualCategories.add(MediaCategory(
-                            id = CONTINUE_WATCHING_CATEGORY_ID,
-                            name = "Continue Watching",
-                            isVirtual = true
-                        ))
+                    // Retry once if provider returned no categories (server session may not be ready)
+                    if (fetchedCategories.isEmpty() && !categoriesRetried) {
+                        categoriesRetried = true
+                        delay(1500)
+                        val retryResult = repository.getCategories(contentType)
+                        retryResult.fold(
+                            onSuccess = { buildAndShowCategories(it) },
+                            onFailure = { buildAndShowCategories(emptyList()) }
+                        )
+                        return@launch
                     }
-
-                    virtualCategories.add(MediaCategory(
-                        id = FAVORITES_CATEGORY_ID,
-                        name = "Favorites",
-                        isVirtual = true
-                    ))
-
-                    virtualCategories.add(MediaCategory(
-                        id = LAST_WATCHED_CATEGORY_ID,
-                        name = "Last Watched",
-                        isVirtual = true
-                    ))
-
-                    categories = virtualCategories + fetchedCategories
-
-                    val lastItemId = repository.getLastItemId(contentType)
-                    _uiState.value = UiState.Success(
-                        categories = categories,
-                        selectedCategoryId = null,
-                        streams = null,
-                        streamsLoading = false,
-                        categoriesRefreshing = false,
-                        lastPlayedItemId = lastItemId,
-                        categoriesPayloadSize = getCategoriesPayloadSize(),
-                        streamsPayloadSize = null
-                    )
-
-                    if (categories.isNotEmpty()) {
-                        val lastCategoryId = repository.getLastCategoryId(contentType)
-                        val categoryToLoad = if (lastCategoryId != null &&
-                            categories.any { it.id == lastCategoryId }) {
-                            lastCategoryId
-                        } else {
-                            val firstRegularCategory = categories.firstOrNull {
-                                it.id != FAVORITES_CATEGORY_ID &&
-                                it.id != LAST_WATCHED_CATEGORY_ID &&
-                                it.id != CONTINUE_WATCHING_CATEGORY_ID
-                            }
-                            firstRegularCategory?.id ?: categories.first().id
-                        }
-                        loadStreams(categoryToLoad)
-                    }
+                    buildAndShowCategories(fetchedCategories)
                 },
                 onFailure = { error ->
                     _uiState.value = UiState.Error(error.message ?: "Failed to load categories")
                 }
             )
+        }
+    }
+
+    private fun buildAndShowCategories(fetchedCategories: List<MediaCategory>) {
+        val virtualCategories = mutableListOf<MediaCategory>()
+
+        if (contentType != "LIVE_TV") {
+            virtualCategories.add(MediaCategory(
+                id = CONTINUE_WATCHING_CATEGORY_ID,
+                name = "Continue Watching",
+                isVirtual = true
+            ))
+        }
+
+        virtualCategories.add(MediaCategory(
+            id = FAVORITES_CATEGORY_ID,
+            name = "Favorites",
+            isVirtual = true
+        ))
+
+        virtualCategories.add(MediaCategory(
+            id = LAST_WATCHED_CATEGORY_ID,
+            name = "Last Watched",
+            isVirtual = true
+        ))
+
+        categories = virtualCategories + fetchedCategories
+
+        val lastItemId = repository.getLastItemId(contentType)
+        _uiState.value = UiState.Success(
+            categories = categories,
+            selectedCategoryId = null,
+            streams = null,
+            streamsLoading = false,
+            categoriesRefreshing = false,
+            lastPlayedItemId = lastItemId,
+            categoriesPayloadSize = getCategoriesPayloadSize(),
+            streamsPayloadSize = null
+        )
+
+        if (categories.isNotEmpty()) {
+            val lastCategoryId = repository.getLastCategoryId(contentType)
+            val categoryToLoad = if (lastCategoryId != null &&
+                categories.any { it.id == lastCategoryId }) {
+                lastCategoryId
+            } else {
+                val firstRegularCategory = categories.firstOrNull {
+                    it.id != FAVORITES_CATEGORY_ID &&
+                    it.id != LAST_WATCHED_CATEGORY_ID &&
+                    it.id != CONTINUE_WATCHING_CATEGORY_ID
+                }
+                firstRegularCategory?.id ?: categories.first().id
+            }
+            loadStreams(categoryToLoad)
         }
     }
 
@@ -182,7 +201,7 @@ class CategoryViewModel(
 
             // Handle virtual categories
             if (categoryId == CONTINUE_WATCHING_CATEGORY_ID) {
-                currentStreams = repository.getInProgressItems(contentType)
+                currentStreams = repository.getInProgressItemsSuspend(contentType)
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,
@@ -197,7 +216,7 @@ class CategoryViewModel(
             }
 
             if (categoryId == LAST_WATCHED_CATEGORY_ID) {
-                currentStreams = repository.getWatchHistoryForContentType(contentType)
+                currentStreams = repository.getWatchHistoryForContentTypeSuspend(contentType)
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,
@@ -212,7 +231,7 @@ class CategoryViewModel(
             }
 
             if (categoryId == FAVORITES_CATEGORY_ID) {
-                currentStreams = repository.getFavoritesForContentType(contentType)
+                currentStreams = repository.getFavoritesForContentTypeSuspend(contentType)
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,
@@ -241,6 +260,16 @@ class CategoryViewModel(
                         categoriesPayloadSize = getCategoriesPayloadSize(),
                         streamsPayloadSize = getPayloadSize(categoryId)
                     )
+                    // Retry once if initial load returned empty for a non-virtual category
+                    if (isInitialLoad && items.isEmpty() && !initialLoadRetried &&
+                        categoryId != CONTINUE_WATCHING_CATEGORY_ID &&
+                        categoryId != FAVORITES_CATEGORY_ID &&
+                        categoryId != LAST_WATCHED_CATEGORY_ID) {
+                        initialLoadRetried = true
+                        delay(1500)
+                        loadStreams(categoryId)
+                    }
+                    isInitialLoad = false
                 },
                 onFailure = {
                     currentStreams = emptyList()
@@ -254,6 +283,12 @@ class CategoryViewModel(
                         categoriesPayloadSize = getCategoriesPayloadSize(),
                         streamsPayloadSize = getPayloadSize(categoryId)
                     )
+                    // Retry once on initial load failure after a short delay
+                    if (isInitialLoad && !initialLoadRetried) {
+                        initialLoadRetried = true
+                        delay(2000)
+                        loadStreams(categoryId)
+                    }
                 }
             )
         }
@@ -332,7 +367,7 @@ class CategoryViewModel(
 
             // Handle virtual categories
             if (categoryId == CONTINUE_WATCHING_CATEGORY_ID) {
-                currentStreams = repository.getInProgressItems(contentType)
+                currentStreams = repository.getInProgressItemsSuspend(contentType)
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,
@@ -347,7 +382,7 @@ class CategoryViewModel(
             }
 
             if (categoryId == FAVORITES_CATEGORY_ID) {
-                currentStreams = repository.getFavoritesForContentType(contentType)
+                currentStreams = repository.getFavoritesForContentTypeSuspend(contentType)
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,
@@ -362,7 +397,7 @@ class CategoryViewModel(
             }
 
             if (categoryId == LAST_WATCHED_CATEGORY_ID) {
-                currentStreams = repository.getWatchHistoryForContentType(contentType)
+                currentStreams = repository.getWatchHistoryForContentTypeSuspend(contentType)
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,

@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -80,12 +79,14 @@ class ProviderViewModel(
         username: String,
         password: String,
         type: String = "XTREAM",
-        config: String = ""
+        config: String = "",
+        onComplete: () -> Unit = {}
     ) {
         viewModelScope.launch {
             try {
                 providerRepository.addProvider(name, url, username, password, type, config)
                 loadProviders()
+                onComplete()
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(e.message ?: "Failed to add provider")
             }
@@ -127,12 +128,14 @@ class ProviderViewModel(
         username: String,
         password: String,
         type: String? = null,
-        config: String? = null
+        config: String? = null,
+        onComplete: () -> Unit = {}
     ) {
         viewModelScope.launch {
             try {
                 providerRepository.updateProvider(id, name, url, username, password, type, config)
                 loadProviders()
+                onComplete()
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(e.message ?: "Failed to update provider")
             }

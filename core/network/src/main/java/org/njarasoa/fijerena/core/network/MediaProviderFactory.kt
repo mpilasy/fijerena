@@ -8,7 +8,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinMediaProvider
 import org.njarasoa.fijerena.core.network.local.LocalMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.smb.SmbClient
 import org.njarasoa.fijerena.core.network.smb.SmbMediaProvider
 import org.njarasoa.fijerena.core.player.domain.MediaProvider

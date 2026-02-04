@@ -3,9 +3,7 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -71,6 +69,9 @@ class MediaRepository(
         private const val KEY_LAST_CONTENT_TYPE = "last_content_type"
     }
 
+    private val usesServerUserData: Boolean
+        get() = provider?.capabilities?.supportsServerUserData == true
+
     fun setProvider(mediaProvider: MediaProvider) {
         provider = mediaProvider
     }
@@ -126,6 +127,10 @@ class MediaRepository(
             ?: kotlin.Result.failure(Exception("No provider set"))
     }
 
+    suspend fun search(query: String, contentType: String): kotlin.Result<List<MediaItem>>? {
+        return provider?.search(query, contentType)
+    }
+
     suspend fun getEpg(streamId: String): kotlin.Result<EpgResponse>? {
         return provider?.getEpg(streamId)
     }
@@ -160,7 +165,9 @@ class MediaRepository(
         }
         editor.putString(KEY_LAST_CONTENT_TYPE, contentType)
         editor.apply()
-        addToWatchHistory(itemId, itemName, categoryId, contentType)
+        if (!usesServerUserData) {
+            addToWatchHistory(itemId, itemName, categoryId, contentType)
+        }
     }
 
     fun getLastCategoryId(contentType: String): String? {
@@ -293,6 +300,7 @@ class MediaRepository(
         duration: Long
     ) {
         if (contentType == "LIVE_TV") return
+        if (usesServerUserData) return
         val progressPercent = if (duration > 0) {
             (position.toFloat() / duration.toFloat()) * 100f
         } else 0f
@@ -331,6 +339,71 @@ class MediaRepository(
                     }
                 )
             }
+    }
+
+    // --- Server-aware suspend methods (branch on supportsServerUserData) ---
+
+    suspend fun isFavoriteSuspend(itemId: String, contentType: String): Boolean {
+        if (usesServerUserData) {
+            return provider?.isFavorite(itemId) ?: false
+        }
+        return isFavorite(itemId, contentType)
+    }
+
+    suspend fun addFavoriteSuspend(
+        itemId: String,
+        itemName: String,
+        categoryId: String,
+        contentType: String
+    ): Boolean {
+        if (usesServerUserData) {
+            return provider?.setFavorite(itemId, true)?.isSuccess ?: false
+        }
+        return addFavorite(itemId, itemName, categoryId, contentType)
+    }
+
+    suspend fun removeFavoriteSuspend(itemId: String, contentType: String): Boolean {
+        if (usesServerUserData) {
+            return provider?.setFavorite(itemId, false)?.isSuccess ?: false
+        }
+        return removeFavorite(itemId, contentType)
+    }
+
+    suspend fun getFavoritesForContentTypeSuspend(contentType: String): List<MediaItem> {
+        if (usesServerUserData) {
+            return provider?.getFavoriteItems(contentType)?.getOrNull() ?: emptyList()
+        }
+        return getFavoritesForContentType(contentType)
+    }
+
+    suspend fun getInProgressItemsSuspend(contentType: String): List<MediaItem> {
+        if (usesServerUserData) {
+            return provider?.getResumeItems(contentType)?.getOrNull() ?: emptyList()
+        }
+        return getInProgressItems(contentType)
+    }
+
+    suspend fun getWatchHistoryForContentTypeSuspend(contentType: String): List<MediaItem> {
+        if (usesServerUserData) {
+            return provider?.getRecentlyPlayed(contentType)?.getOrNull() ?: emptyList()
+        }
+        return getWatchHistoryForContentType(contentType)
+    }
+
+    suspend fun getPlaybackPositionSuspend(itemId: String, contentType: String): WatchedItem? {
+        if (usesServerUserData) {
+            val (posMs, durMs) = provider?.getPlaybackPosition(itemId) ?: return null
+            return WatchedItem(
+                itemId = itemId,
+                itemName = "",
+                categoryId = "",
+                contentType = contentType,
+                playbackPosition = posMs,
+                duration = durMs,
+                isCompleted = false
+            )
+        }
+        return getPlaybackPosition(itemId, contentType)
     }
 
     fun clearPlaybackPosition(itemId: String, contentType: String) {

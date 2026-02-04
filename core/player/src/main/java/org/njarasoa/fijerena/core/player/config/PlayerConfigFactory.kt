@@ -3,8 +3,6 @@
 package org.njarasoa.fijerena.core.player.config
 
 import android.content.Context
-import androidx.media3.common.C
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import org.njarasoa.fijerena.core.player.device.DeviceDetector

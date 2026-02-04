@@ -68,6 +68,44 @@ class SearchViewModel(
 
                 _uiState.value = UiState.Loading
 
+                // Try server-side search first (e.g., Jellyfin)
+                val serverResult = repository.search(query, contentType)
+                if (serverResult != null) {
+                    serverResult.fold(
+                        onSuccess = { items ->
+                            val normalizedQuery = query.trim().lowercase()
+                            val results = items.map { item ->
+                                SearchResult(
+                                    itemId = item.id,
+                                    streamName = item.name,
+                                    categoryId = item.categoryId,
+                                    categoryName = "",
+                                    contentType = contentType
+                                )
+                            }.sortedWith(compareBy<SearchResult> {
+                                when {
+                                    it.streamName.lowercase() == normalizedQuery -> 0
+                                    it.streamName.lowercase().startsWith(normalizedQuery) -> 1
+                                    else -> 2
+                                }
+                            }.thenBy { it.streamName })
+
+                            _uiState.value = UiState.Success(
+                                allResults = results,
+                                filteredResults = results,
+                                query = query,
+                                isSearching = false,
+                                searchProgress = null
+                            )
+                        },
+                        onFailure = {
+                            _uiState.value = UiState.Error(it.message ?: "Search failed")
+                        }
+                    )
+                    return@launch
+                }
+
+                // Fall back to client-side category iteration
                 val categoriesResult = repository.getCategories(contentType)
                 val categories = categoriesResult.getOrElse {
                     _uiState.value = UiState.Error(it.message ?: "Failed to load categories")

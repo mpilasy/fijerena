@@ -38,7 +38,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.player.domain.ProviderType
-import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.ui.theme.*
@@ -66,21 +65,16 @@ fun MobileAddProviderScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
 
-    // Load existing provider data in edit mode
+    // Load existing provider data in edit mode directly from the repository
     LaunchedEffect(editId) {
         if (isEditMode) {
-            val uiState = viewModel.uiState.value
-            val providers = when (uiState) {
-                is ProviderUiState.SingleProvider -> listOf(uiState.provider)
-                is ProviderUiState.MultipleProviders -> uiState.providers
-                else -> emptyList()
-            }
-            val provider = providers.find { it.id == editId }
+            val providerRepo = org.njarasoa.fijerena.core.network.provider.ProviderRepository(context.applicationContext)
+            val provider = providerRepo.getProviderById(editId)
             if (provider != null) {
                 name = provider.name
                 url = provider.url
                 username = provider.username
-                password = viewModel.getPassword(editId) ?: ""
+                password = providerRepo.getPassword(editId) ?: ""
                 selectedType = try { ProviderType.valueOf(provider.type) } catch (_: Exception) { ProviderType.XTREAM }
                 if (provider.type == "SMB" && provider.config.isNotBlank()) {
                     try {
@@ -383,7 +377,8 @@ fun MobileAddProviderScreen(
                                 username = username.trim(),
                                 password = password.trim(),
                                 type = selectedType.name,
-                                config = saveConfig
+                                config = saveConfig,
+                                onComplete = onSuccess
                             )
                         } else {
                             viewModel.addProvider(
@@ -392,10 +387,10 @@ fun MobileAddProviderScreen(
                                 username = username.trim(),
                                 password = password.trim(),
                                 type = selectedType.name,
-                                config = saveConfig
+                                config = saveConfig,
+                                onComplete = onSuccess
                             )
                         }
-                        onSuccess()
                     }
                 },
                 enabled = !isSaving,

@@ -11,21 +11,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -34,7 +35,6 @@ import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.domain.MediaItem
-import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.ui.player.PlayerScreen
@@ -89,9 +89,12 @@ fun TvPlayerScreen(
     var currentStreamId by remember { mutableStateOf(streamId) }
     var currentStreamName by remember { mutableStateOf(streamName) }
 
-    // Favorite state
-    var isFavorite by remember(currentStreamId, contentType) {
-        mutableStateOf(mediaRepository.isFavorite(currentStreamId, contentType))
+    val coroutineScope = rememberCoroutineScope()
+
+    // Favorite state (async for server-backed providers)
+    var isFavorite by remember { mutableStateOf(false) }
+    LaunchedEffect(currentStreamId, contentType) {
+        isFavorite = mediaRepository.isFavoriteSuspend(currentStreamId, contentType)
     }
 
     // Configure player buffer profile based on content type
@@ -116,6 +119,9 @@ fun TvPlayerScreen(
                 position = position,
                 duration = duration
             )
+            coroutineScope.launch {
+                mediaRepository.onPlaybackProgress(currentStreamId, position, duration)
+            }
         }
     }
 
@@ -198,15 +204,20 @@ fun TvPlayerScreen(
         )
     }
 
-    // Fetch saved position if VOD content
-    val savedPosition = remember(currentStreamId, contentType) {
-        if (contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
-            mediaRepository.getPlaybackPosition(currentStreamId, contentType)
+    // Fetch saved position if VOD content (async for server-backed providers)
+    var savedPosition by remember { mutableStateOf<org.njarasoa.fijerena.core.network.WatchedItem?>(null) }
+    var positionLoaded by remember { mutableStateOf(false) }
+    LaunchedEffect(currentStreamId, contentType) {
+        positionLoaded = false
+        savedPosition = if (contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
+            mediaRepository.getPlaybackPositionSuspend(currentStreamId, contentType)
         } else null
+        positionLoaded = true
     }
 
     // Start playback when URL is ready or stream info changes
-    LaunchedEffect(streamUrl, currentStreamId, currentStreamName) {
+    LaunchedEffect(streamUrl, currentStreamId, currentStreamName, positionLoaded) {
+        if (!positionLoaded) return@LaunchedEffect
         streamUrl?.let { url ->
             // Save last played item
             // For TV shows, save the series info (not episode) so "Last Watched" works correctly
@@ -258,6 +269,28 @@ fun TvPlayerScreen(
             PlayerScreen(
                 viewModel = viewModel,
                 onBack = {
+                    // Save position before stopping (stop sets state to Idle)
+                    if (contentType != "LIVE_TV") {
+                        val ps = viewModel.playbackState.value
+                        val pos = when (ps) {
+                            is PlaybackState.Playing -> ps.position
+                            is PlaybackState.Paused -> ps.position
+                            else -> null
+                        }
+                        val dur = when (ps) {
+                            is PlaybackState.Playing -> ps.duration
+                            is PlaybackState.Paused -> ps.duration
+                            else -> null
+                        }
+                        if (pos != null && dur != null && dur > 0) {
+                            mediaRepository.savePlaybackPosition(
+                                currentStreamId, currentStreamName, categoryId, contentType, pos, dur
+                            )
+                            coroutineScope.launch {
+                                mediaRepository.onPlaybackProgress(currentStreamId, pos, dur)
+                            }
+                        }
+                    }
                     viewModel.stop()
                     onBack()
                 },
@@ -265,17 +298,19 @@ fun TvPlayerScreen(
                 onPreviousChannel = { switchToPreviousChannel() },
                 isFavorite = isFavorite,
                 onToggleFavorite = {
-                    if (isFavorite) {
-                        val removed = mediaRepository.removeFavorite(currentStreamId, contentType)
-                        if (removed) isFavorite = false
-                    } else {
-                        val added = mediaRepository.addFavorite(
-                            currentStreamId,
-                            currentStreamName,
-                            categoryId,
-                            contentType
-                        )
-                        if (added) isFavorite = true
+                    coroutineScope.launch {
+                        if (isFavorite) {
+                            val removed = mediaRepository.removeFavoriteSuspend(currentStreamId, contentType)
+                            if (removed) isFavorite = false
+                        } else {
+                            val added = mediaRepository.addFavoriteSuspend(
+                                currentStreamId,
+                                currentStreamName,
+                                categoryId,
+                                contentType
+                            )
+                            if (added) isFavorite = true
+                        }
                     }
                 }
             )

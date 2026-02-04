@@ -6,8 +6,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -15,11 +18,6 @@ import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
 import org.njarasoa.fijerena.core.player.model.VideoQualityInfo
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
-import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application
