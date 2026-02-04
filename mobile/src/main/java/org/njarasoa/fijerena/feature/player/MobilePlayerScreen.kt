@@ -36,6 +36,9 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -553,9 +556,9 @@ private fun MobileStatsOverlay(
     val totalFrames = serviceTotalFrames?.value ?: 0L
     val dropRate = if (totalFrames > 0) (droppedFrames.toFloat() / totalFrames * 100) else 0f
     val dropColor = when {
-        dropRate < 0.5f -> Color(0xFF4CAF50)
-        dropRate < 2.0f -> Color(0xFFFFC107)
-        else -> Color(0xFFF44336)
+        dropRate < 0.5f -> CinemaSuccess
+        dropRate < 2.0f -> CinemaWarning
+        else -> CinemaError
     }
 
     Box(

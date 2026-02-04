@@ -6,26 +6,31 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val CinemaColorScheme = darkColorScheme(
+    // Primary - Electric Blue
     primary = CinemaAccent,
-    onPrimary = Color.Black,
+    onPrimary = Color.White,
     primaryContainer = CinemaAccentDark,
     onPrimaryContainer = CinemaAccentLight,
 
-    secondary = CinemaAccent.copy(alpha = 0.8f),
-    onSecondary = Color.Black,
-    secondaryContainer = CinemaSurfaceVariant,
-    onSecondaryContainer = CinemaAccentLight,
+    // Secondary - Vivid Orange
+    secondary = CinemaOrange,
+    onSecondary = Color.White,
+    secondaryContainer = CinemaOrangeDark,
+    onSecondaryContainer = CinemaOrangeLight,
 
+    // Tertiary - Light Blue
     tertiary = CinemaAccentLight,
     onTertiary = Color.Black,
     tertiaryContainer = CinemaSurface,
     onTertiaryContainer = CinemaAccentLight,
 
+    // Error - Red
     error = CinemaError,
     onError = Color.White,
     errorContainer = CinemaError.copy(alpha = 0.2f),
     onErrorContainer = CinemaError.copy(alpha = 0.8f),
 
+    // Background & Surface - Deep Night palette
     background = CinemaBackground,
     onBackground = CinemaTextPrimary,
 
