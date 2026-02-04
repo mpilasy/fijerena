@@ -17,7 +17,7 @@ class ProviderViewModelFactory(
             val providerRepository = ProviderRepository(context.applicationContext)
             val accountManager = AccountManager(context.applicationContext)
             val appSettings = AppSettings(context.applicationContext)
-            return ProviderViewModel(providerRepository, accountManager, appSettings) as T
+            return ProviderViewModel(providerRepository, accountManager, appSettings, context.applicationContext) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

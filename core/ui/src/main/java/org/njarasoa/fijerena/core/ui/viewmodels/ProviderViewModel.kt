@@ -1,15 +1,64 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.api.XtreamApiService
+
+data class ParsedUrlCredentials(
+    val baseUrl: String,
+    val username: String?,
+    val password: String?
+)
+
+/**
+ * Parses a URL that may contain username/password query parameters.
+ * Extracts credentials from recognized parameter names and returns
+ * the base URL stripped of query parameters (and known API paths like .php endpoints).
+ * Returns null if no credentials were found in the URL.
+ */
+fun parseUrlCredentials(input: String): ParsedUrlCredentials? {
+    if ('?' !in input) return null
+    try {
+        val uri = Uri.parse(input)
+        if (uri.queryParameterNames.isNullOrEmpty()) return null
+
+        val username = (uri.getQueryParameter("username")
+            ?: uri.getQueryParameter("user"))?.takeIf { it.isNotEmpty() }
+        val password = (uri.getQueryParameter("password")
+            ?: uri.getQueryParameter("pass"))?.takeIf { it.isNotEmpty() }
+
+        if (username == null && password == null) return null
+
+        val builder = uri.buildUpon().clearQuery().fragment(null)
+
+        // Strip known API endpoint paths (e.g., /get.php, /player_api.php)
+        val path = uri.path
+        if (path != null && path.endsWith(".php")) {
+            val lastSlash = path.lastIndexOf('/')
+            val strippedPath = if (lastSlash > 0) path.substring(0, lastSlash) else ""
+            builder.path(strippedPath)
+        }
+
+        val baseUrl = builder.build().toString().trimEnd('/')
+
+        return ParsedUrlCredentials(baseUrl, username, password)
+    } catch (_: Exception) {
+        return null
+    }
+}
 
 sealed interface ProviderUiState {
     data object Loading : ProviderUiState
@@ -19,10 +68,18 @@ sealed interface ProviderUiState {
     data class Error(val message: String) : ProviderUiState
 }
 
+sealed interface SaveState {
+    data object Idle : SaveState
+    data object Validating : SaveState
+    data class ValidationFailed(val errorMessage: String) : SaveState
+    data object Saving : SaveState
+}
+
 class ProviderViewModel(
     private val providerRepository: ProviderRepository,
     private val accountManager: AccountManager,
-    private val appSettings: AppSettings
+    private val appSettings: AppSettings,
+    private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ProviderUiState>(ProviderUiState.Loading)
@@ -30,6 +87,13 @@ class ProviderViewModel(
 
     private val _activeProvider = MutableStateFlow<ProviderEntity?>(null)
     val activeProvider: StateFlow<ProviderEntity?> = _activeProvider.asStateFlow()
+
+    private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
+    val saveState: StateFlow<SaveState> = _saveState.asStateFlow()
+
+    fun resetSaveState() {
+        _saveState.value = SaveState.Idle
+    }
 
     init {
         viewModelScope.launch {
@@ -144,5 +208,118 @@ class ProviderViewModel(
 
     fun getPassword(providerId: Long): String? {
         return providerRepository.getPassword(providerId)
+    }
+
+    fun validateAndSave(
+        id: Long?,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String,
+        config: String,
+        onComplete: () -> Unit
+    ) {
+        viewModelScope.launch {
+            if (type == "LOCAL") {
+                performSave(id, name, url, username, password, type, config, onComplete)
+                return@launch
+            }
+            _saveState.value = SaveState.Validating
+            val result = testConnection(type, url, username, password, config)
+            if (result.isSuccess) {
+                performSave(id, name, url, username, password, type, config, onComplete)
+            } else {
+                _saveState.value = SaveState.ValidationFailed(
+                    result.exceptionOrNull()?.message ?: "Connection failed"
+                )
+            }
+        }
+    }
+
+    fun forceSave(
+        id: Long?,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String,
+        config: String,
+        onComplete: () -> Unit
+    ) {
+        viewModelScope.launch {
+            performSave(id, name, url, username, password, type, config, onComplete)
+        }
+    }
+
+    private suspend fun performSave(
+        id: Long?,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String,
+        config: String,
+        onComplete: () -> Unit
+    ) {
+        _saveState.value = SaveState.Saving
+        try {
+            if (id != null) {
+                providerRepository.updateProvider(id, name, url, username, password, type, config)
+            } else {
+                providerRepository.addProvider(name, url, username, password, type, config)
+            }
+            loadProviders()
+            _saveState.value = SaveState.Idle
+            onComplete()
+        } catch (e: Exception) {
+            _saveState.value = SaveState.Idle
+            _uiState.value = ProviderUiState.Error(e.message ?: "Failed to save provider")
+        }
+    }
+
+    private suspend fun testConnection(
+        type: String,
+        url: String,
+        username: String,
+        password: String,
+        config: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        when (type) {
+            "XTREAM" -> {
+                try {
+                    val service = XtreamApiService(url, username, password)
+                    val response = service.authenticate()
+                    if (response.userInfo.auth != 1) {
+                        Result.failure(Exception("Invalid credentials"))
+                    } else if (response.userInfo.status != "Active") {
+                        Result.failure(Exception("Account is not active: ${response.userInfo.status}"))
+                    } else {
+                        Result.success(Unit)
+                    }
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            }
+            "JELLYFIN", "SMB" -> {
+                val tempEntity = ProviderEntity(
+                    id = 0L,
+                    name = "validation",
+                    url = url,
+                    username = username,
+                    type = type,
+                    config = config
+                )
+                try {
+                    val provider = MediaProviderFactory.create(tempEntity, context, password)
+                    val result = provider.connect()
+                    try { provider.disconnect() } catch (_: Exception) {}
+                    result
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            }
+            else -> Result.success(Unit)
+        }
     }
 }

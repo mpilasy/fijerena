@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +44,9 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
+import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -68,7 +72,8 @@ fun TvAddProviderScreen(
     var shareName by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
     var error by remember { mutableStateOf<String?>(null) }
-    var isSaving by remember { mutableStateOf(false) }
+    val saveState by viewModel.saveState.collectAsState()
+    val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
 
     // Load existing provider data in edit mode directly from the repository
     LaunchedEffect(editId) {
@@ -201,8 +206,15 @@ fun TvAddProviderScreen(
                         // URL field
                         OutlinedTextField(
                             value = url,
-                            onValueChange = {
-                                url = it
+                            onValueChange = { newValue ->
+                                val parsed = parseUrlCredentials(newValue)
+                                if (parsed != null) {
+                                    url = parsed.baseUrl
+                                    parsed.username?.let { username = it }
+                                    parsed.password?.let { password = it }
+                                } else {
+                                    url = newValue
+                                }
                                 error = null
                             },
                             label = { Text("Server URL") },
@@ -282,8 +294,15 @@ fun TvAddProviderScreen(
                         // Server URL field
                         OutlinedTextField(
                             value = url,
-                            onValueChange = {
-                                url = it
+                            onValueChange = { newValue ->
+                                val parsed = parseUrlCredentials(newValue)
+                                if (parsed != null) {
+                                    url = parsed.baseUrl
+                                    parsed.username?.let { username = it }
+                                    parsed.password?.let { password = it }
+                                } else {
+                                    url = newValue
+                                }
                                 error = null
                             },
                             label = { Text("Server URL") },
@@ -487,7 +506,7 @@ fun TvAddProviderScreen(
                 ) {
                     CinemaSecondaryButton(
                         onClick = onBack,
-                        enabled = !isSaving,
+                        enabled = !isBusy,
                         text = "Cancel"
                     )
 
@@ -524,7 +543,6 @@ fun TvAddProviderScreen(
                             if (validationError != null) {
                                 error = validationError
                             } else {
-                                isSaving = true
                                 val saveUrl = if (selectedType == ProviderType.SMB) "" else url.trim()
                                 val saveUsername = username.trim()
                                 val savePassword = password.trim()
@@ -532,32 +550,73 @@ fun TvAddProviderScreen(
                                     """{"host":"${host.trim()}","share":"${shareName.trim()}"}"""
                                 } else ""
 
-                                if (isEditMode) {
-                                    viewModel.updateProvider(
-                                        editId,
-                                        name.trim(),
-                                        saveUrl,
-                                        saveUsername,
-                                        savePassword,
-                                        selectedType.name,
-                                        saveConfig,
-                                        onComplete = onSuccess
-                                    )
-                                } else {
-                                    viewModel.addProvider(
-                                        name.trim(),
-                                        saveUrl,
-                                        saveUsername,
-                                        savePassword,
-                                        selectedType.name,
-                                        saveConfig,
-                                        onComplete = onSuccess
-                                    )
-                                }
+                                viewModel.validateAndSave(
+                                    id = if (isEditMode) editId else null,
+                                    name = name.trim(),
+                                    url = saveUrl,
+                                    username = saveUsername,
+                                    password = savePassword,
+                                    type = selectedType.name,
+                                    config = saveConfig,
+                                    onComplete = onSuccess
+                                )
                             }
                         },
-                        enabled = !isSaving,
-                        text = if (isSaving) "Saving..." else if (isEditMode) "Update" else "Add"
+                        enabled = !isBusy,
+                        text = when (saveState) {
+                            is SaveState.Validating -> "Connecting..."
+                            is SaveState.Saving -> "Saving..."
+                            else -> if (isEditMode) "Update" else "Add"
+                        }
+                    )
+                }
+
+                // Validation failure dialog
+                val failedState = saveState as? SaveState.ValidationFailed
+                if (failedState != null) {
+                    val saveUrl = if (selectedType == ProviderType.SMB) "" else url.trim()
+                    val saveConfig = if (selectedType == ProviderType.SMB) {
+                        """{"host":"${host.trim()}","share":"${shareName.trim()}"}"""
+                    } else ""
+
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { viewModel.resetSaveState() },
+                        title = {
+                            Text(
+                                "Connection Failed",
+                                color = CinemaTextPrimary
+                            )
+                        },
+                        text = {
+                            Text(
+                                failedState.errorMessage,
+                                color = CinemaTextSecondary
+                            )
+                        },
+                        confirmButton = {
+                            CinemaDangerButton(
+                                onClick = {
+                                    viewModel.forceSave(
+                                        id = if (isEditMode) editId else null,
+                                        name = name.trim(),
+                                        url = saveUrl,
+                                        username = username.trim(),
+                                        password = password.trim(),
+                                        type = selectedType.name,
+                                        config = saveConfig,
+                                        onComplete = onSuccess
+                                    )
+                                },
+                                text = "Save Anyway"
+                            )
+                        },
+                        dismissButton = {
+                            CinemaSecondaryButton(
+                                onClick = { viewModel.resetSaveState() },
+                                text = "Go Back"
+                            )
+                        },
+                        containerColor = CinemaSurface
                     )
                 }
             }

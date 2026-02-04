@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
+import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,7 +66,8 @@ fun MobileAddProviderScreen(
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    var isSaving by remember { mutableStateOf(false) }
+    val saveState by viewModel.saveState.collectAsState()
+    val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
 
     // Load existing provider data in edit mode directly from the repository
     LaunchedEffect(editId) {
@@ -166,8 +170,15 @@ fun MobileAddProviderScreen(
 
                     OutlinedTextField(
                         value = url,
-                        onValueChange = {
-                            url = it
+                        onValueChange = { newValue ->
+                            val parsed = parseUrlCredentials(newValue)
+                            if (parsed != null) {
+                                url = parsed.baseUrl
+                                parsed.username?.let { username = it }
+                                parsed.password?.let { password = it }
+                            } else {
+                                url = newValue
+                            }
                             error = null
                         },
                         label = { Text("Server URL") },
@@ -211,8 +222,15 @@ fun MobileAddProviderScreen(
 
                     OutlinedTextField(
                         value = url,
-                        onValueChange = {
-                            url = it
+                        onValueChange = { newValue ->
+                            val parsed = parseUrlCredentials(newValue)
+                            if (parsed != null) {
+                                url = parsed.baseUrl
+                                parsed.username?.let { username = it }
+                                parsed.password?.let { password = it }
+                            } else {
+                                url = newValue
+                            }
                             error = null
                         },
                         label = { Text("Server URL") },
@@ -358,8 +376,6 @@ fun MobileAddProviderScreen(
                     if (validationError != null) {
                         error = validationError
                     } else {
-                        isSaving = true
-
                         val saveUrl = when (selectedType) {
                             ProviderType.SMB -> "smb://${host.trim()}/${shareName.trim()}"
                             else -> url.trim()
@@ -369,37 +385,71 @@ fun MobileAddProviderScreen(
                             else -> ""
                         }
 
-                        if (isEditMode) {
-                            viewModel.updateProvider(
-                                id = editId,
-                                name = name.trim(),
-                                url = saveUrl,
-                                username = username.trim(),
-                                password = password.trim(),
-                                type = selectedType.name,
-                                config = saveConfig,
-                                onComplete = onSuccess
-                            )
-                        } else {
-                            viewModel.addProvider(
-                                name = name.trim(),
-                                url = saveUrl,
-                                username = username.trim(),
-                                password = password.trim(),
-                                type = selectedType.name,
-                                config = saveConfig,
-                                onComplete = onSuccess
-                            )
-                        }
+                        viewModel.validateAndSave(
+                            id = if (isEditMode) editId else null,
+                            name = name.trim(),
+                            url = saveUrl,
+                            username = username.trim(),
+                            password = password.trim(),
+                            type = selectedType.name,
+                            config = saveConfig,
+                            onComplete = onSuccess
+                        )
                     }
                 },
-                enabled = !isSaving,
+                enabled = !isBusy,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    if (isSaving) "Saving..."
-                    else if (isEditMode) "Update Provider"
-                    else "Add Provider"
+                    when (saveState) {
+                        is SaveState.Validating -> "Connecting..."
+                        is SaveState.Saving -> "Saving..."
+                        else -> if (isEditMode) "Update Provider" else "Add Provider"
+                    }
+                )
+            }
+
+            // Validation failure dialog
+            val failedState = saveState as? SaveState.ValidationFailed
+            if (failedState != null) {
+                val saveUrl = when (selectedType) {
+                    ProviderType.SMB -> "smb://${host.trim()}/${shareName.trim()}"
+                    else -> url.trim()
+                }
+                val saveConfig = when (selectedType) {
+                    ProviderType.SMB -> """{"host":"${host.trim()}","share":"${shareName.trim()}"}"""
+                    else -> ""
+                }
+
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { viewModel.resetSaveState() },
+                    title = { Text("Connection Failed") },
+                    text = { Text(failedState.errorMessage) },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                viewModel.forceSave(
+                                    id = if (isEditMode) editId else null,
+                                    name = name.trim(),
+                                    url = saveUrl,
+                                    username = username.trim(),
+                                    password = password.trim(),
+                                    type = selectedType.name,
+                                    config = saveConfig,
+                                    onComplete = onSuccess
+                                )
+                            }
+                        ) {
+                            Text("Save Anyway")
+                        }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(
+                            onClick = { viewModel.resetSaveState() }
+                        ) {
+                            Text("Go Back")
+                        }
+                    }
                 )
             }
         }
