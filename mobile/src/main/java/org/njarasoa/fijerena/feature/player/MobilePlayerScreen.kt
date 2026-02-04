@@ -1,10 +1,13 @@
 package org.njarasoa.fijerena.feature.player
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,15 +26,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
-import org.njarasoa.fijerena.core.network.AccountManager
-import org.njarasoa.fijerena.core.network.Result
-import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -43,37 +48,104 @@ import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
- * Mobile player screen with touch controls and Stats for Nerds overlay.
+ * Mobile player screen with touch controls, audio/subtitle/quality selectors,
+ * favorites, playback resume, and Stats for Nerds overlay.
  */
 @Composable
 fun MobilePlayerScreen(
-    streamId: Int,
+    streamId: String,
     streamName: String,
     categoryId: String,
     contentType: String,
     onBack: () -> Unit,
     episodeId: String? = null,
     episodeExtension: String? = null,
-    seriesId: Int? = null,
+    seriesId: String? = null,
     seriesName: String? = null,
     viewModel: PlaybackViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val repository = remember {
-        val accountManager = AccountManager(context.applicationContext)
-        XtreamRepository(accountManager, context.applicationContext)
+    val activity = context as? Activity
+
+    // Unlock orientation for video playback, restore portrait on exit
+    DisposableEffect(Unit) {
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val mediaRepository = remember {
+        val appContext = context.applicationContext
+        val providerRepo = ProviderRepository(appContext)
+        val repo = MediaRepository(appContext, 0L)
+        kotlinx.coroutines.runBlocking {
+            val entity = providerRepo.getActiveProvider()
+            if (entity != null) {
+                val resolvedRepo = MediaRepository(appContext, entity.id)
+                val password = providerRepo.getPassword(entity.id) ?: ""
+                val provider = MediaProviderFactory.create(entity, appContext, password)
+                resolvedRepo.setProvider(provider)
+                resolvedRepo
+            } else repo
+        }
     }
 
     var streamUrl by remember { mutableStateOf<String?>(null) }
+    var streamHeaders by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var error by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showControls by remember { mutableStateOf(true) }
     var showStats by remember { mutableStateOf(false) }
+    var hasStartedPlaying by remember { mutableStateOf(false) }
+
+    // Selector dialogs
+    var showAudioTrackSelector by remember { mutableStateOf(false) }
+    var showSubtitleSelector by remember { mutableStateOf(false) }
+    var showQualitySelector by remember { mutableStateOf(false) }
+
+    // Favorites
+    var isFavorite by remember {
+        mutableStateOf(mediaRepository.isFavorite(streamId, contentType))
+    }
 
     val playbackState = viewModel.playbackState.collectAsState().value
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
+
+    // Track when video first starts playing so we stop showing the center spinner
+    LaunchedEffect(playbackState) {
+        if (playbackState is PlaybackState.Playing) {
+            hasStartedPlaying = true
+        }
+    }
+
+    // Save playback position periodically for VOD content
+    LaunchedEffect(playbackState) {
+        if (contentType != "LIVE_TV") {
+            while (true) {
+                delay(5000L)
+                val pos = when (playbackState) {
+                    is PlaybackState.Playing -> playbackState.position
+                    is PlaybackState.Paused -> playbackState.position
+                    else -> null
+                }
+                val dur = when (playbackState) {
+                    is PlaybackState.Playing -> playbackState.duration
+                    is PlaybackState.Paused -> playbackState.duration
+                    else -> null
+                }
+                if (pos != null && dur != null && dur > 0) {
+                    mediaRepository.savePlaybackPosition(streamId, streamName, categoryId, contentType, pos, dur)
+                }
+            }
+        }
+    }
 
     // Auto-hide controls after 5 seconds
     LaunchedEffect(showControls) {
@@ -97,31 +169,30 @@ fun MobilePlayerScreen(
     LaunchedEffect(streamId, episodeId) {
         isLoading = true
         error = null
-
-        when (val sessionResult = repository.restoreSession()) {
-            is Result.Success -> {
-                val urlResult = if (episodeId != null && episodeExtension != null) {
-                    repository.buildEpisodeStreamUrl(episodeId, episodeExtension)
-                } else {
-                    repository.buildStreamUrl(streamId, contentType, episodeExtension)
-                }
-
-                when (urlResult) {
-                    is Result.Success -> {
-                        streamUrl = urlResult.data
-                        isLoading = false
-                    }
-                    is Result.Error -> {
-                        error = urlResult.message ?: "Failed to load stream"
-                        isLoading = false
-                    }
-                }
-            }
-            is Result.Error -> {
-                error = sessionResult.message ?: "Session expired"
+        val result = mediaRepository.resolvePlayableStream(
+            itemId = streamId,
+            contentType = contentType,
+            episodeId = episodeId,
+            extension = episodeExtension
+        )
+        result.fold(
+            onSuccess = { playable ->
+                streamUrl = playable.uri
+                streamHeaders = playable.headers
+                isLoading = false
+            },
+            onFailure = { e ->
+                error = e.message ?: "Failed to load stream"
                 isLoading = false
             }
-        }
+        )
+    }
+
+    // Fetch saved position for VOD resume
+    val savedPosition = remember(streamId, contentType) {
+        if (contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
+            mediaRepository.getPlaybackPosition(streamId, contentType)
+        } else null
     }
 
     // Start playback when URL is ready
@@ -129,16 +200,27 @@ fun MobilePlayerScreen(
         streamUrl?.let { url ->
             val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else streamId
             val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else streamName
-            repository.saveLastPlayedStream(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
+            mediaRepository.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
+
+            // Determine resume position
+            val resumePosition = savedPosition?.let { saved ->
+                val progressPercent = if (saved.duration > 0) {
+                    (saved.playbackPosition.toFloat() / saved.duration.toFloat()) * 100f
+                } else 0f
+                // Only resume if 2-95% watched
+                if (progressPercent in 2.0..95.0 && !saved.isCompleted) {
+                    saved.playbackPosition
+                } else 0L
+            } ?: 0L
 
             val metadata = PlayerMetadata(
                 title = streamName,
-                channelName = "IPTV.atr",
+                channelName = appSettings.providerName,
                 streamUrl = url,
                 isLive = contentType == "LIVE_TV",
-                headers = emptyMap()
+                headers = streamHeaders
             )
-            viewModel.playStream(metadata)
+            viewModel.playStream(metadata, resumePosition)
         }
     }
 
@@ -181,6 +263,22 @@ fun MobilePlayerScreen(
                     playerView.player = service?.getPlayer()
 
                     onDispose {
+                        // Save final position before leaving
+                        if (contentType != "LIVE_TV") {
+                            val pos = when (val ps = viewModel.playbackState.value) {
+                                is PlaybackState.Playing -> ps.position
+                                is PlaybackState.Paused -> ps.position
+                                else -> null
+                            }
+                            val dur = when (val ps = viewModel.playbackState.value) {
+                                is PlaybackState.Playing -> ps.duration
+                                is PlaybackState.Paused -> ps.duration
+                                else -> null
+                            }
+                            if (pos != null && dur != null && dur > 0) {
+                                mediaRepository.savePlaybackPosition(streamId, streamName, categoryId, contentType, pos, dur)
+                            }
+                        }
                         playerView.player = null
                     }
                 }
@@ -192,7 +290,9 @@ fun MobilePlayerScreen(
                 ) {
                     when (playbackState) {
                         PlaybackState.Buffering -> {
-                            CircularProgressIndicator(color = Color.White)
+                            if (!hasStartedPlaying) {
+                                CircularProgressIndicator(color = Color.White)
+                            }
                         }
                         is PlaybackState.Error -> {
                             ErrorOverlay(
@@ -214,6 +314,10 @@ fun MobilePlayerScreen(
                     ControlsOverlay(
                         playbackState = playbackState,
                         metadata = currentMetadata,
+                        viewModel = viewModel,
+                        isLive = contentType == "LIVE_TV",
+                        isDeveloperMode = appSettings.isDevMode,
+                        isFavorite = isFavorite,
                         onPlayPause = {
                             if (playbackState is PlaybackState.Paused) {
                                 viewModel.resume()
@@ -225,7 +329,21 @@ fun MobilePlayerScreen(
                             viewModel.stop()
                             onBack()
                         },
-                        onStats = { showStats = true }
+                        onStats = { showStats = true },
+                        onAudioTrack = { showAudioTrackSelector = true },
+                        onSubtitle = { showSubtitleSelector = true },
+                        onQuality = { showQualitySelector = true },
+                        onToggleFavorite = {
+                            if (isFavorite) {
+                                if (mediaRepository.removeFavorite(streamId, contentType)) {
+                                    isFavorite = false
+                                }
+                            } else {
+                                if (mediaRepository.addFavorite(streamId, streamName, categoryId, contentType)) {
+                                    isFavorite = true
+                                }
+                            }
+                        }
                     )
                 }
 
@@ -241,6 +359,28 @@ fun MobilePlayerScreen(
                         onClose = { showStats = false }
                     )
                 }
+            }
+
+            // Selector dialogs (outside the clickable Box)
+            if (showAudioTrackSelector) {
+                AudioTrackSelectorDialog(
+                    viewModel = viewModel,
+                    onDismiss = { showAudioTrackSelector = false }
+                )
+            }
+
+            if (showSubtitleSelector) {
+                SubtitleSelectorDialog(
+                    viewModel = viewModel,
+                    onDismiss = { showSubtitleSelector = false }
+                )
+            }
+
+            if (showQualitySelector) {
+                QualitySelectorDialog(
+                    viewModel = viewModel,
+                    onDismiss = { showQualitySelector = false }
+                )
             }
         }
     }
@@ -340,10 +480,22 @@ private fun ErrorOverlay(
 private fun ControlsOverlay(
     playbackState: PlaybackState,
     metadata: PlayerMetadata,
+    viewModel: PlaybackViewModel,
+    isLive: Boolean,
+    isDeveloperMode: Boolean,
+    isFavorite: Boolean,
     onPlayPause: () -> Unit,
     onBack: () -> Unit,
-    onStats: () -> Unit
+    onStats: () -> Unit,
+    onAudioTrack: () -> Unit,
+    onSubtitle: () -> Unit,
+    onQuality: () -> Unit,
+    onToggleFavorite: () -> Unit
 ) {
+    val audioTrackCount = remember { viewModel.getAudioTracks().size }
+    val subtitleTrackCount = remember { viewModel.getSubtitleTracks().size }
+    val qualityCount = remember { viewModel.getVideoQualities().size }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -351,18 +503,16 @@ private fun ControlsOverlay(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
-            ) {
-                // Consume taps on the overlay background so they don't
-                // propagate to the parent Box and toggle controls off
-            }
+            ) { }
     ) {
-        // Top bar with back button and stats button
+        // Top bar with back button
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
                 Icon(
@@ -372,73 +522,53 @@ private fun ControlsOverlay(
                     modifier = Modifier.size(MobileDimensions.iconLarge)
                 )
             }
-            IconButton(onClick = onStats) {
+            // Title
+            Text(
+                text = metadata.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                maxLines = 1
+            )
+        }
+
+        // Center play/pause button
+        if (!isLive) {
+            IconButton(
+                onClick = onPlayPause,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(MobileDimensions.iconPlayContainer)
+            ) {
                 Icon(
-                    imageVector = Icons.Default.Analytics,
-                    contentDescription = "Stats for Nerds",
+                    imageVector = if (playbackState is PlaybackState.Paused) {
+                        Icons.Default.PlayArrow
+                    } else {
+                        Icons.Default.Pause
+                    },
+                    contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
                     tint = Color.White,
-                    modifier = Modifier.size(MobileDimensions.iconMedium)
+                    modifier = Modifier.size(MobileDimensions.iconPlayIcon)
                 )
             }
         }
 
-        // Center play/pause button
-        IconButton(
-            onClick = onPlayPause,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(MobileDimensions.iconPlayContainer)
-        ) {
-            Icon(
-                imageVector = if (playbackState is PlaybackState.Paused) {
-                    Icons.Default.PlayArrow
-                } else {
-                    Icons.Default.Pause
-                },
-                contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
-                tint = Color.White,
-                modifier = Modifier.size(MobileDimensions.iconPlayIcon)
-            )
-        }
-
-        // Bottom metadata
+        // Bottom section: progress + controls (scrollable for landscape)
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
                 .background(Color.Black.copy(alpha = CinemaAlpha.textMedium))
-                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Text(
-                text = metadata.title,
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White
-            )
-
-            if (metadata.isLive) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(MobileDimensions.liveDotSize)
-                            .background(Color.Red, shape = MaterialTheme.shapes.small)
-                    )
-                    Text(
-                        text = "LIVE",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White
-                    )
-                }
-            } else {
+            // VOD progress bar and time info
+            if (!isLive) {
                 val position = when (playbackState) {
                     is PlaybackState.Playing -> playbackState.position
                     is PlaybackState.Paused -> playbackState.position
                     else -> 0L
                 }
-
                 val duration = when (playbackState) {
                     is PlaybackState.Playing -> playbackState.duration
                     is PlaybackState.Paused -> playbackState.duration
@@ -448,9 +578,7 @@ private fun ControlsOverlay(
                 if (duration > 0) {
                     LinearProgressIndicator(
                         progress = { position.toFloat() / duration.toFloat() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
                     )
@@ -472,11 +600,390 @@ private fun ControlsOverlay(
                             color = Color.White
                         )
                     }
+
+                    // Remaining time and estimated end time
+                    val remainingTime = duration - position
+                    val estimatedEndTimeMillis = System.currentTimeMillis() + remainingTime
+                    val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Remaining: ${formatTime(remainingTime)}",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Ends at ${timeFormat.format(Date(estimatedEndTimeMillis))}",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            } else {
+                // Live indicator
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(MobileDimensions.liveDotSize)
+                            .background(Color.Red, shape = MaterialTheme.shapes.small)
+                    )
+                    Text(
+                        text = "LIVE",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White
+                    )
+                }
+            }
+
+            // Control buttons row (horizontally scrollable)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Pause/Resume for VOD
+                if (!isLive) {
+                    val isPaused = playbackState is PlaybackState.Paused
+                    FilledTonalButton(onClick = onPlayPause) {
+                        Text(if (isPaused) "Resume" else "Pause")
+                    }
+                }
+
+                // Audio track selector (only if multiple tracks)
+                if (audioTrackCount > 1) {
+                    FilledTonalButton(onClick = onAudioTrack) {
+                        Text("Audio")
+                    }
+                }
+
+                // Subtitle selector (only if subtitles available)
+                if (subtitleTrackCount > 0) {
+                    FilledTonalButton(onClick = onSubtitle) {
+                        Text("Subtitle")
+                    }
+                }
+
+                // Quality selector (only if multiple qualities)
+                if (qualityCount > 1) {
+                    FilledTonalButton(onClick = onQuality) {
+                        Text("Quality")
+                    }
+                }
+
+                // Favorite toggle
+                FilledTonalButton(
+                    onClick = onToggleFavorite,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = if (isFavorite)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text(if (isFavorite) "Favorited" else "Favorite")
+                }
+
+                // Stats (dev mode only)
+                if (isDeveloperMode) {
+                    FilledTonalButton(onClick = onStats) {
+                        Text("Stats")
+                    }
                 }
             }
         }
     }
 }
+
+// --- Audio Track Selector Dialog ---
+
+@Composable
+private fun AudioTrackSelectorDialog(
+    viewModel: PlaybackViewModel,
+    onDismiss: () -> Unit
+) {
+    val audioTracks = remember { viewModel.getAudioTracks() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Audio Track") },
+        text = {
+            if (audioTracks.isEmpty()) {
+                Text("No audio tracks available")
+            } else {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    audioTracks.forEachIndexed { _, track ->
+                        Surface(
+                            onClick = {
+                                viewModel.selectAudioTrack(track.groupIndex, track.trackIndex)
+                                onDismiss()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = if (track.isSelected)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(CinemaCornerRadius.small)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = track.label,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                    if (track.isSelected) {
+                                        Text(
+                                            text = "Active",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "${track.channelCount}ch - ${track.sampleRate / 1000}kHz",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
+}
+
+// --- Subtitle Selector Dialog ---
+
+@Composable
+private fun SubtitleSelectorDialog(
+    viewModel: PlaybackViewModel,
+    onDismiss: () -> Unit
+) {
+    val subtitleTracks = remember { viewModel.getSubtitleTracks() }
+    val hasActiveSubtitle = subtitleTracks.any { it.isSelected }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Subtitles") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // "Off" option
+                Surface(
+                    onClick = {
+                        viewModel.disableSubtitles()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (!hasActiveSubtitle)
+                        MaterialTheme.colorScheme.primaryContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Off",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (!hasActiveSubtitle) FontWeight.Bold else FontWeight.Normal
+                        )
+                        if (!hasActiveSubtitle) {
+                            Text(
+                                text = "Active",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                subtitleTracks.forEachIndexed { _, track ->
+                    Surface(
+                        onClick = {
+                            viewModel.selectSubtitleTrack(track.groupIndex, track.trackIndex)
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = if (track.isSelected)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(CinemaCornerRadius.small)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = track.label,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                                if (track.isSelected) {
+                                    Text(
+                                        text = "Active",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            Text(
+                                text = track.mimeType.substringAfterLast("/").uppercase(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
+}
+
+// --- Quality Selector Dialog ---
+
+@Composable
+private fun QualitySelectorDialog(
+    viewModel: PlaybackViewModel,
+    onDismiss: () -> Unit
+) {
+    val videoQualities = remember { viewModel.getVideoQualities() }
+    val hasManualSelection = videoQualities.any { it.isSelected }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Quality") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // "Auto" option
+                Surface(
+                    onClick = {
+                        viewModel.enableAutoQuality()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (!hasManualSelection)
+                        MaterialTheme.colorScheme.primaryContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Auto (Adaptive)",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (!hasManualSelection) FontWeight.Bold else FontWeight.Normal
+                            )
+                            if (!hasManualSelection) {
+                                Text(
+                                    text = "Active",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Adjust quality based on network",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                videoQualities.forEachIndexed { _, quality ->
+                    Surface(
+                        onClick = {
+                            viewModel.selectVideoQuality(quality.groupIndex, quality.trackIndex)
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = if (quality.isSelected)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(CinemaCornerRadius.small)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = quality.label,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (quality.isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                                if (quality.isSelected) {
+                                    Text(
+                                        text = "Active",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "${quality.width}x${quality.height} - ${quality.frameRate.toInt()}fps",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
+}
+
+// --- Stats Overlay ---
 
 @Composable
 private fun MobileStatsOverlay(
@@ -484,7 +991,6 @@ private fun MobileStatsOverlay(
     metadata: PlayerMetadata,
     onClose: () -> Unit
 ) {
-    // Collect stats from player
     var videoCodec by remember { mutableStateOf("N/A") }
     var videoResolution by remember { mutableStateOf("N/A") }
     var videoFrameRate by remember { mutableStateOf("N/A") }
@@ -503,7 +1009,6 @@ private fun MobileStatsOverlay(
     val serviceDroppedFrames = StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsState()
     val serviceTotalFrames = StreamingPlaybackService.getInstance()?.totalFrames?.collectAsState()
 
-    // Update stats every second
     LaunchedEffect(Unit) {
         while (true) {
             StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
@@ -514,9 +1019,7 @@ private fun MobileStatsOverlay(
                 val buffered = p.bufferedPosition
                 bufferHealth = if (buffered > currentPos) {
                     ((buffered - currentPos) / 1000).toInt().coerceIn(0, 100)
-                } else {
-                    0
-                }
+                } else 0
 
                 val tracks = p.currentTracks
                 var totalBitrate = 0
@@ -537,10 +1040,7 @@ private fun MobileStatsOverlay(
                         audioSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else "N/A"
                         audioChannels = if (format.channelCount > 0) {
                             when (format.channelCount) {
-                                1 -> "Mono"
-                                2 -> "Stereo"
-                                6 -> "5.1"
-                                8 -> "7.1"
+                                1 -> "Mono"; 2 -> "Stereo"; 6 -> "5.1"; 8 -> "7.1"
                                 else -> "${format.channelCount}ch"
                             }
                         } else "N/A"
@@ -548,10 +1048,8 @@ private fun MobileStatsOverlay(
                         if (format.bitrate > 0) totalBitrate += format.bitrate
                     }
                 }
-
                 networkSpeed = if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
             }
-
             delay(CinemaAnimation.statsUpdateMs)
         }
     }
@@ -581,9 +1079,7 @@ private fun MobileStatsOverlay(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
-            ) {
-                onClose()
-            }
+            ) { onClose() }
     ) {
         Surface(
             modifier = Modifier
@@ -599,7 +1095,6 @@ private fun MobileStatsOverlay(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -624,44 +1119,37 @@ private fun MobileStatsOverlay(
                     }
                 }
 
-                // Video
                 SectionHeader("VIDEO")
                 StatRow("Codec", videoCodec)
                 StatRow("Resolution", videoResolution)
                 StatRow("Frame Rate", videoFrameRate)
                 StatRow("Bitrate", videoBitrate)
 
-                // Audio
                 SectionHeader("AUDIO")
                 StatRow("Codec", audioCodec)
                 StatRow("Sample Rate", audioSampleRate)
                 StatRow("Channels", audioChannels)
                 StatRow("Bitrate", audioBitrate)
 
-                // Network
                 SectionHeader("NETWORK")
                 StatRow("Speed", networkSpeed)
                 StatRow("Buffer", "${bufferHealth}s")
                 StatRow("Buffered", formatTime(bufferedPosition))
 
-                // Playback
                 SectionHeader("PLAYBACK")
                 StatRow("Position", formatTime(position))
                 StatRow("Duration", if (duration > 0) formatTime(duration) else "Live")
 
-                // Performance
                 SectionHeader("PERFORMANCE")
                 StatRowColored("Dropped", "$droppedFrames / $totalFrames", dropColor)
                 if (totalFrames > 0) {
                     StatRowColored("Drop Rate", String.format("%.2f%%", dropRate), dropColor)
                 }
 
-                // Stream
                 SectionHeader("STREAM")
                 StatRow("Type", if (metadata.isLive) "Live" else "VOD")
                 StatRow("URL", metadata.streamUrl.substringAfterLast("/").take(25))
 
-                // Device
                 SectionHeader("DEVICE")
                 StatRow("Model", android.os.Build.MODEL)
                 StatRow("API", "${android.os.Build.VERSION.SDK_INT}")
@@ -669,6 +1157,8 @@ private fun MobileStatsOverlay(
         }
     }
 }
+
+// --- Shared Composables ---
 
 @Composable
 private fun SectionHeader(title: String) {

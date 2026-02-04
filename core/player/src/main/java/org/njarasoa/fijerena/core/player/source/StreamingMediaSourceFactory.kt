@@ -24,21 +24,24 @@ object StreamingMediaSourceFactory {
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(headers)
 
+        // Strip query parameters before checking extension
+        val urlPath = streamUrl.substringBefore("?").substringBefore("#")
+
         return when {
-            streamUrl.endsWith(".m3u8", ignoreCase = true) -> {
+            urlPath.endsWith(".m3u8", ignoreCase = true) -> {
                 HlsMediaSource.Factory(httpDataSourceFactory).createMediaSource(mediaItem)
             }
-            streamUrl.endsWith(".mpd", ignoreCase = true) -> {
+            urlPath.endsWith(".mpd", ignoreCase = true) -> {
                 DashMediaSource.Factory(httpDataSourceFactory).createMediaSource(mediaItem)
             }
-            streamUrl.endsWith(".ts", ignoreCase = true) ||
-            streamUrl.endsWith(".mpeg", ignoreCase = true) ||
-            streamUrl.endsWith(".mp4", ignoreCase = true) ||
-            streamUrl.endsWith(".mkv", ignoreCase = true) ||
-            streamUrl.endsWith(".avi", ignoreCase = true) ||
-            streamUrl.endsWith(".mov", ignoreCase = true) ||
-            streamUrl.endsWith(".flv", ignoreCase = true) ||
-            streamUrl.endsWith(".webm", ignoreCase = true) -> {
+            urlPath.endsWith(".ts", ignoreCase = true) ||
+            urlPath.endsWith(".mpeg", ignoreCase = true) ||
+            urlPath.endsWith(".mp4", ignoreCase = true) ||
+            urlPath.endsWith(".mkv", ignoreCase = true) ||
+            urlPath.endsWith(".avi", ignoreCase = true) ||
+            urlPath.endsWith(".mov", ignoreCase = true) ||
+            urlPath.endsWith(".flv", ignoreCase = true) ||
+            urlPath.endsWith(".webm", ignoreCase = true) -> {
                 ProgressiveMediaSource.Factory(httpDataSourceFactory).createMediaSource(mediaItem)
             }
             else -> {

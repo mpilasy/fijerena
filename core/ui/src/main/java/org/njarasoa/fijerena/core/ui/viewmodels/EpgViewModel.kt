@@ -6,17 +6,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.network.Result
-import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
-import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.TimeSlot
-import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import java.time.LocalDate
 import java.time.ZoneId
 
 class EpgViewModel(
-    private val repository: XtreamRepository,
+    private val repository: MediaRepository,
     private val categoryId: String
 ) : ViewModel() {
 
@@ -45,49 +44,46 @@ class EpgViewModel(
             _uiState.value = UiState.Loading
             currentDate = date
 
-            // Get streams for category
-            val streamsResult = repository.getStreams(categoryId)
-            val streams = when (streamsResult) {
-                is Result.Success -> streamsResult.data.take(50) // Limit to 50 channels for performance
-                is Result.Error -> {
-                    _uiState.value = UiState.Error("Failed to load channels: ${streamsResult.exception.message}")
-                    return@launch
-                }
+            // Check if provider supports EPG
+            val capabilities = repository.getCapabilities()
+            if (capabilities != null && !capabilities.supportsEpg) {
+                _uiState.value = UiState.Error("EPG is not supported by this provider")
+                return@launch
             }
 
-            if (streams.isEmpty()) {
+            // Get items for category
+            val itemsResult = repository.getItems(categoryId, "LIVE_TV")
+            val items = itemsResult.getOrElse {
+                _uiState.value = UiState.Error("Failed to load channels: ${it.message}")
+                return@launch
+            }.take(50)
+
+            if (items.isEmpty()) {
                 _uiState.value = UiState.Error("No channels found in this category")
                 return@launch
             }
 
-            // Get EPG for all streams
-            val streamIds = streams.map { it.streamId }
-            val epgResult = repository.getEpgForStreams(streamIds)
-            val epgData = when (epgResult) {
-                is Result.Success -> epgResult.data
-                is Result.Error -> {
-                    _uiState.value = UiState.Error("Failed to load EPG data: ${epgResult.exception.message}")
-                    return@launch
-                }
-            }
+            // Get EPG for all items
+            val streamIds = items.map { it.id }
+            val epgResult = repository.getEpgBulk(streamIds)
+            val epgData = epgResult?.getOrElse {
+                _uiState.value = UiState.Error("Failed to load EPG data: ${it.message}")
+                return@launch
+            } ?: emptyMap()
 
             if (epgData.isEmpty()) {
                 _uiState.value = UiState.Error("No EPG data available for these channels")
                 return@launch
             }
 
-            // Build channel rows with filtered programs for selected date
-            val channelRows = buildChannelRows(streams, epgData, date)
+            val channelRows = buildChannelRows(items, epgData, date)
 
             if (channelRows.isEmpty()) {
                 _uiState.value = UiState.Error("No EPG data available for $date")
                 return@launch
             }
 
-            // Generate time slots (48 x 30-minute slots = 24 hours)
             val timeSlots = generateTimeSlots(date)
-
-            // Calculate current time slot index
             val currentSlot = calculateCurrentTimeSlot(timeSlots)
 
             _uiState.value = UiState.Success(
@@ -106,23 +102,21 @@ class EpgViewModel(
     fun jumpToNow() = loadEpgData(LocalDate.now())
 
     private fun buildChannelRows(
-        streams: List<XtreamStream>,
-        epgData: Map<Int, org.njarasoa.fijerena.core.player.model.EpgResponse>,
+        items: List<MediaItem>,
+        epgData: Map<String, EpgResponse>,
         date: LocalDate
     ): List<EpgChannelRow> {
         val dayStart = date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
         val dayEnd = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
 
-        return streams.mapNotNull { stream ->
-            val programs = epgData[stream.streamId]?.listings?.filter {
-                // Include programs that start or end within the selected day
+        return items.mapNotNull { item ->
+            val programs = epgData[item.id]?.listings?.filter {
                 it.startTime in dayStart..dayEnd || it.endTime in dayStart..dayEnd ||
-                // Also include programs that span the entire day
                 (it.startTime < dayStart && it.endTime > dayEnd)
             }?.sortedBy { it.startTime } ?: emptyList()
 
             if (programs.isNotEmpty()) {
-                EpgChannelRow(stream, programs)
+                EpgChannelRow(item, programs)
             } else null
         }
     }

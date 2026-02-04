@@ -39,11 +39,11 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.Result
-import org.njarasoa.fijerena.core.network.XtreamRepository
-import org.njarasoa.fijerena.core.player.model.VodInfo
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -60,26 +60,35 @@ import org.njarasoa.fijerena.ui.theme.*
  * - Displays movie information (title, plot, cast, genre, rating, duration)
  * - Large Play button
  * - D-pad friendly navigation
- * - Loads movie data from XtreamRepository
+ * - Loads movie data from MediaRepository
  */
 @Composable
 fun MovieDetailsScreen(
-    movieId: Int,
+    movieId: String,
     movieName: String,
     categoryId: String,
-    onPlayMovie: (movieId: Int, movieName: String, extension: String) -> Unit,
+    onPlayMovie: (movieId: String, movieName: String, extension: String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = remember {
-        val accountManager = AccountManager(context.applicationContext)
-        XtreamRepository(accountManager, context.applicationContext)
+    val mediaRepository = remember {
+        val appContext = context.applicationContext
+        kotlinx.coroutines.runBlocking {
+            val providerRepo = ProviderRepository(appContext)
+            val entity = providerRepo.getActiveProvider()
+            val repo = MediaRepository(appContext, entity?.id ?: 0L)
+            if (entity != null) {
+                val password = providerRepo.getPassword(entity.id) ?: ""
+                val provider = MediaProviderFactory.create(entity, appContext, password)
+                repo.setProvider(provider)
+            }
+            repo
+        }
     }
 
-    var vodInfo by remember { mutableStateOf<VodInfo?>(null) }
+    var movieDetail by remember { mutableStateOf<MovieDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    var payloadSize by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
     fun refresh() {
@@ -91,30 +100,17 @@ fun MovieDetailsScreen(
         isLoading = true
         error = null
 
-        // Ensure session is restored first
-        when (val sessionResult = repository.restoreSession()) {
-            is Result.Success -> {
-                when (val infoResult = repository.getVodInfo(movieId)) {
-                    is Result.Success -> {
-                        vodInfo = infoResult.data
-                        payloadSize = repository.getPayloadSize("vod_$movieId")
-                        println("MovieDetailsScreen: Got VOD info: ${infoResult.data}")
-                        println("MovieDetailsScreen: Movie data: ${infoResult.data.movieData}")
-                        println("MovieDetailsScreen: Container extension: ${infoResult.data.movieData?.containerExtension}")
-                        println("MovieDetailsScreen: Payload size: $payloadSize")
-                        isLoading = false
-                    }
-                    is Result.Error -> {
-                        error = infoResult.message ?: "Failed to load movie info"
-                        isLoading = false
-                    }
-                }
-            }
-            is Result.Error -> {
-                error = sessionResult.message ?: "Session expired. Please login again."
+        val result = mediaRepository.getMovieDetail(movieId)
+        result.fold(
+            onSuccess = { detail ->
+                movieDetail = detail
+                isLoading = false
+            },
+            onFailure = { e ->
+                error = e.message ?: "Failed to load movie info"
                 isLoading = false
             }
-        }
+        )
     }
 
     when {
@@ -127,14 +123,11 @@ fun MovieDetailsScreen(
                 onBack = onBack
             )
         }
-        vodInfo != null -> {
-            val fetchTime = repository.getFetchTimeFormatted("vod_$movieId")
+        movieDetail != null -> {
             MovieDetailsContent(
-                vodInfo = vodInfo!!,
+                movieDetail = movieDetail!!,
                 movieId = movieId,
                 movieName = movieName,
-                payloadSize = payloadSize,
-                fetchTime = fetchTime,
                 onPlayMovie = onPlayMovie,
                 onRefresh = { refresh() },
                 onBack = onBack
@@ -145,20 +138,17 @@ fun MovieDetailsScreen(
 
 @Composable
 private fun MovieDetailsContent(
-    vodInfo: VodInfo,
-    movieId: Int,
+    movieDetail: MovieDetail,
+    movieId: String,
     movieName: String,
-    payloadSize: String?,
-    fetchTime: String?,
-    onPlayMovie: (movieId: Int, movieName: String, extension: String) -> Unit,
+    onPlayMovie: (movieId: String, movieName: String, extension: String) -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val providerName by remember { mutableStateOf(appSettings.providerName) }
-    val movieInfo = vodInfo.info
-    val extension = vodInfo.movieData?.containerExtension ?: "mp4"
+    val extension = movieDetail.extension ?: "mp4"
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
@@ -204,7 +194,7 @@ private fun MovieDetailsContent(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     Text(
-                        text = movieInfo?.name ?: movieName,
+                        text = movieDetail.name.ifEmpty { movieName },
                         style = MaterialTheme.typography.displaySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -227,23 +217,6 @@ private fun MovieDetailsContent(
                                 .rotate(rotation)
                         )
                     }
-                }
-                // Optionally show payload size and fetch time
-                val infoText = buildString {
-                    if (payloadSize != null) {
-                        append(payloadSize)
-                    }
-                    if (fetchTime != null) {
-                        if (payloadSize != null) append(" • ")
-                        append(fetchTime)
-                    }
-                }
-                if (infoText.isNotBlank()) {
-                    Text(
-                        text = infoText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = CinemaTextSecondary
-                    )
                 }
             }
             Spacer(modifier = Modifier.width(Spacing.md))
@@ -269,21 +242,21 @@ private fun MovieDetailsContent(
             horizontalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
             // Genre, Rating, Duration
-            movieInfo?.genre?.let { genre ->
+            movieDetail.metadata?.genre?.let { genre ->
                 Text(
                     text = genre,
                     style = MaterialTheme.typography.titleMedium,
                     color = CinemaAccent
                 )
             }
-            movieInfo?.rating?.let { rating ->
+            movieDetail.metadata?.rating?.let { rating ->
                 Text(
                     text = "★ $rating",
                     style = MaterialTheme.typography.titleMedium,
                     color = CinemaAccent
                 )
             }
-            movieInfo?.duration?.let { duration ->
+            movieDetail.metadata?.duration?.let { duration ->
                 Text(
                     text = formatDuration(duration),
                     style = MaterialTheme.typography.titleMedium,
@@ -295,9 +268,9 @@ private fun MovieDetailsContent(
         Spacer(modifier = Modifier.height(Spacing.md))
 
         // Release date
-        movieInfo?.releaseDate?.let { releaseDate ->
+        movieDetail.metadata?.year?.let { year ->
             Text(
-                text = "Released: $releaseDate",
+                text = "Released: $year",
                 style = MaterialTheme.typography.bodyLarge,
                 color = CinemaTextSecondary
             )
@@ -305,7 +278,7 @@ private fun MovieDetailsContent(
         }
 
         // Plot/Description
-        movieInfo?.plot?.let { plot ->
+        movieDetail.metadata?.plot?.let { plot ->
             Text(
                 text = plot,
                 style = MaterialTheme.typography.bodyLarge,
@@ -317,7 +290,7 @@ private fun MovieDetailsContent(
         }
 
         // Cast
-        movieInfo?.cast?.let { cast ->
+        movieDetail.metadata?.cast?.let { cast ->
             Text(
                 text = "Cast: $cast",
                 style = MaterialTheme.typography.bodyMedium,
@@ -329,7 +302,7 @@ private fun MovieDetailsContent(
         }
 
         // Director
-        movieInfo?.director?.let { director ->
+        movieDetail.metadata?.director?.let { director ->
             Text(
                 text = "Director: $director",
                 style = MaterialTheme.typography.bodyMedium,
@@ -343,7 +316,7 @@ private fun MovieDetailsContent(
         // Play button
         CinemaPrimaryButton(
             onClick = {
-                onPlayMovie(movieId, movieInfo?.name ?: movieName, extension)
+                onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension)
             },
             text = "▶ Play Movie",
             modifier = Modifier

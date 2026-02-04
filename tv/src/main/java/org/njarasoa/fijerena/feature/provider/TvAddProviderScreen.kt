@@ -12,7 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -31,6 +38,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.player.domain.ProviderType
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
@@ -55,26 +64,30 @@ fun TvAddProviderScreen(
     var url by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var host by remember { mutableStateOf("") }
+    var shareName by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
     var error by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
 
-    // Load existing provider data in edit mode
+    // Load existing provider data in edit mode directly from the repository
     LaunchedEffect(editId) {
         if (isEditMode) {
-            val uiState = viewModel.uiState.value
-            val providers = when (uiState) {
-                is org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState.SingleProvider ->
-                    listOf(uiState.provider)
-                is org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState.MultipleProviders ->
-                    uiState.providers
-                else -> emptyList()
-            }
-            val provider = providers.find { it.id == editId }
+            val providerRepo = ProviderRepository(context.applicationContext)
+            val provider = providerRepo.getProviderById(editId)
             if (provider != null) {
                 name = provider.name
                 url = provider.url
                 username = provider.username
-                password = viewModel.getPassword(editId) ?: ""
+                password = providerRepo.getPassword(editId) ?: ""
+                selectedType = try { ProviderType.valueOf(provider.type) } catch (_: Exception) { ProviderType.XTREAM }
+                if (provider.type == "SMB" && provider.config.isNotBlank()) {
+                    try {
+                        val json = org.json.JSONObject(provider.config)
+                        host = json.optString("host", "")
+                        shareName = json.optString("share", "")
+                    } catch (_: Exception) {}
+                }
             }
         }
     }
@@ -90,7 +103,9 @@ fun TvAddProviderScreen(
             contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier.width(TvDimensions.formFieldWidth),
+                modifier = Modifier
+                    .width(TvDimensions.formFieldWidth)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -101,7 +116,60 @@ fun TvAddProviderScreen(
 
                 Spacer(modifier = Modifier.height(Spacing.xl))
 
-                // Name field
+                // Provider type dropdown
+                var typeDropdownExpanded by remember { mutableStateOf(false) }
+                @OptIn(ExperimentalMaterial3Api::class)
+                ExposedDropdownMenuBox(
+                    expanded = typeDropdownExpanded,
+                    onExpandedChange = { typeDropdownExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = selectedType.displayName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Provider Type") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeDropdownExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            cursorColor = CinemaAccent,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaTextSecondary,
+                            focusedLabelColor = CinemaAccent,
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            focusedTrailingIconColor = CinemaAccent,
+                            unfocusedTrailingIconColor = CinemaTextSecondary
+                        )
+                    )
+                    ExposedDropdownMenu(
+                        expanded = typeDropdownExpanded,
+                        onDismissRequest = { typeDropdownExpanded = false },
+                        containerColor = CinemaSurface
+                    ) {
+                        ProviderType.entries.forEach { type ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = type.displayName,
+                                        color = if (type == selectedType) CinemaAccent else CinemaTextPrimary
+                                    )
+                                },
+                                onClick = {
+                                    selectedType = type
+                                    typeDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(Spacing.xl))
+
+                // Name field (all types)
                 OutlinedTextField(
                     value = name,
                     onValueChange = {
@@ -125,84 +193,280 @@ fun TvAddProviderScreen(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(Spacing.md))
+                // Type-specific fields
+                when (selectedType) {
+                    ProviderType.XTREAM -> {
+                        Spacer(modifier = Modifier.height(Spacing.md))
 
-                // URL field
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = {
-                        url = it
-                        error = null
-                    },
-                    label = { Text("Server URL") },
-                    placeholder = { Text("http://provider.example.com") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextSecondary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        focusedPlaceholderColor = CinemaTextSecondary,
-                        unfocusedPlaceholderColor = CinemaTextSecondary
-                    )
-                )
+                        // URL field
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = {
+                                url = it
+                                error = null
+                            },
+                            label = { Text("Server URL") },
+                            placeholder = { Text("http://provider.example.com") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
 
-                Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md))
 
-                // Username field
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = {
-                        username = it
-                        error = null
-                    },
-                    label = { Text("Username") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextSecondary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        focusedPlaceholderColor = CinemaTextSecondary,
-                        unfocusedPlaceholderColor = CinemaTextSecondary
-                    )
-                )
+                        // Username field
+                        OutlinedTextField(
+                            value = username,
+                            onValueChange = {
+                                username = it
+                                error = null
+                            },
+                            label = { Text("Username") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
 
-                Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md))
 
-                // Password field
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = {
-                        password = it
-                        error = null
-                    },
-                    label = { Text("Password") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextSecondary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        focusedPlaceholderColor = CinemaTextSecondary,
-                        unfocusedPlaceholderColor = CinemaTextSecondary
-                    )
-                )
+                        // Password field
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = {
+                                password = it
+                                error = null
+                            },
+                            label = { Text("Password") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
+                    }
+
+                    ProviderType.JELLYFIN -> {
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // Server URL field
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = {
+                                url = it
+                                error = null
+                            },
+                            label = { Text("Server URL") },
+                            placeholder = { Text("http://192.168.1.100:8096") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // Username field
+                        OutlinedTextField(
+                            value = username,
+                            onValueChange = {
+                                username = it
+                                error = null
+                            },
+                            label = { Text("Username") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // Password field
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = {
+                                password = it
+                                error = null
+                            },
+                            label = { Text("Password") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
+                    }
+
+                    ProviderType.SMB -> {
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // Host/IP field
+                        OutlinedTextField(
+                            value = host,
+                            onValueChange = {
+                                host = it
+                                error = null
+                            },
+                            label = { Text("Host / IP") },
+                            placeholder = { Text("192.168.1.100") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // Share Name field
+                        OutlinedTextField(
+                            value = shareName,
+                            onValueChange = {
+                                shareName = it
+                                error = null
+                            },
+                            label = { Text("Share Name") },
+                            placeholder = { Text("media") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // Username field (optional)
+                        OutlinedTextField(
+                            value = username,
+                            onValueChange = {
+                                username = it
+                                error = null
+                            },
+                            label = { Text("Username (optional)") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // Password field (optional)
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = {
+                                password = it
+                                error = null
+                            },
+                            label = { Text("Password (optional)") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
+                    }
+
+                    ProviderType.LOCAL -> {
+                        // LOCAL type only requires name - folder/file picker will be added later
+                    }
+                }
 
                 // Error message
                 error?.let { errorMsg ->
@@ -229,31 +493,66 @@ fun TvAddProviderScreen(
 
                     CinemaPrimaryButton(
                         onClick = {
-                            when {
-                                name.isBlank() -> error = "Provider name is required"
-                                url.isBlank() -> error = "Server URL is required"
-                                username.isBlank() -> error = "Username is required"
-                                password.isBlank() -> error = "Password is required"
-                                else -> {
-                                    isSaving = true
-                                    if (isEditMode) {
-                                        viewModel.updateProvider(
-                                            editId,
-                                            name.trim(),
-                                            url.trim(),
-                                            username.trim(),
-                                            password.trim()
-                                        )
-                                    } else {
-                                        viewModel.addProvider(
-                                            name.trim(),
-                                            url.trim(),
-                                            username.trim(),
-                                            password.trim()
-                                        )
-                                    }
-                                    onSuccess()
+                            // Validate based on selected provider type
+                            val validationError = when (selectedType) {
+                                ProviderType.XTREAM -> when {
+                                    name.isBlank() -> "Provider name is required"
+                                    url.isBlank() -> "Server URL is required"
+                                    username.isBlank() -> "Username is required"
+                                    password.isBlank() -> "Password is required"
+                                    else -> null
                                 }
+                                ProviderType.JELLYFIN -> when {
+                                    name.isBlank() -> "Provider name is required"
+                                    url.isBlank() -> "Server URL is required"
+                                    username.isBlank() -> "Username is required"
+                                    password.isBlank() -> "Password is required"
+                                    else -> null
+                                }
+                                ProviderType.SMB -> when {
+                                    name.isBlank() -> "Provider name is required"
+                                    host.isBlank() -> "Host / IP is required"
+                                    shareName.isBlank() -> "Share name is required"
+                                    else -> null
+                                }
+                                ProviderType.LOCAL -> when {
+                                    name.isBlank() -> "Provider name is required"
+                                    else -> null
+                                }
+                            }
+
+                            if (validationError != null) {
+                                error = validationError
+                            } else {
+                                isSaving = true
+                                val saveUrl = if (selectedType == ProviderType.SMB) "" else url.trim()
+                                val saveUsername = username.trim()
+                                val savePassword = password.trim()
+                                val saveConfig = if (selectedType == ProviderType.SMB) {
+                                    """{"host":"${host.trim()}","share":"${shareName.trim()}"}"""
+                                } else ""
+
+                                if (isEditMode) {
+                                    viewModel.updateProvider(
+                                        editId,
+                                        name.trim(),
+                                        saveUrl,
+                                        saveUsername,
+                                        savePassword,
+                                        selectedType.name,
+                                        saveConfig
+                                    )
+                                } else {
+                                    viewModel.addProvider(
+                                        name.trim(),
+                                        saveUrl,
+                                        saveUsername,
+                                        savePassword,
+                                        selectedType.name,
+                                        saveConfig
+                                    )
+                                }
+                                onSuccess()
                             }
                         },
                         enabled = !isSaving,

@@ -24,7 +24,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 @Composable
 fun MobileSearchScreen(
     contentType: String,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String, contentType: String) -> Unit,
+    onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String) -> Unit,
     onBack: () -> Unit,
     viewModel: SearchViewModel = viewModel(
         factory = SearchViewModelFactory(
@@ -99,7 +99,7 @@ fun MobileSearchScreen(
                             query = searchQuery,
                             onResultClick = { result ->
                                 onStreamSelected(
-                                    result.streamId,
+                                    result.itemId,
                                     result.streamName,
                                     result.categoryId,
                                     result.contentType
@@ -189,7 +189,7 @@ private fun SearchResults(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            items(results, key = { it.streamId }) { result ->
+            items(results, key = { it.itemId }) { result ->
                 SearchResultCard(
                     result = result,
                     onClick = { onResultClick(result) }

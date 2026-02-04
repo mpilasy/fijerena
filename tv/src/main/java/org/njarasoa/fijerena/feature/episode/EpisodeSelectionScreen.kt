@@ -47,12 +47,12 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.Result
-import org.njarasoa.fijerena.core.network.XtreamRepository
-import org.njarasoa.fijerena.core.player.model.Episode
-import org.njarasoa.fijerena.core.player.model.SeriesInfo
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
+import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -68,26 +68,35 @@ import org.njarasoa.fijerena.ui.theme.*
  * - Displays series information (title, plot)
  * - Lists all episodes grouped by season
  * - D-pad friendly navigation
- * - Loads episode data from XtreamRepository
+ * - Loads episode data from MediaRepository
  */
 @Composable
 fun EpisodeSelectionScreen(
-    seriesId: Int,
+    seriesId: String,
     seriesName: String,
     categoryId: String,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = remember {
-        val accountManager = AccountManager(context.applicationContext)
-        XtreamRepository(accountManager, context.applicationContext)
+    val mediaRepository = remember {
+        val appContext = context.applicationContext
+        kotlinx.coroutines.runBlocking {
+            val providerRepo = ProviderRepository(appContext)
+            val entity = providerRepo.getActiveProvider()
+            val repo = MediaRepository(appContext, entity?.id ?: 0L)
+            if (entity != null) {
+                val password = providerRepo.getPassword(entity.id) ?: ""
+                val provider = MediaProviderFactory.create(entity, appContext, password)
+                repo.setProvider(provider)
+            }
+            repo
+        }
     }
 
-    var seriesInfo by remember { mutableStateOf<SeriesInfo?>(null) }
+    var seriesDetail by remember { mutableStateOf<SeriesDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    var payloadSize by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
     fun refresh() {
@@ -99,27 +108,17 @@ fun EpisodeSelectionScreen(
         isLoading = true
         error = null
 
-        // Ensure session is restored first
-        when (val sessionResult = repository.restoreSession()) {
-            is Result.Success -> {
-                when (val infoResult = repository.getSeriesInfo(seriesId)) {
-                    is Result.Success -> {
-                        seriesInfo = infoResult.data
-                        payloadSize = repository.getPayloadSize("series_$seriesId")
-                        println("EpisodeSelectionScreen: Payload size: $payloadSize")
-                        isLoading = false
-                    }
-                    is Result.Error -> {
-                        error = infoResult.message ?: "Failed to load series info"
-                        isLoading = false
-                    }
-                }
-            }
-            is Result.Error -> {
-                error = sessionResult.message ?: "Session expired. Please login again."
+        val result = mediaRepository.getSeriesDetail(seriesId)
+        result.fold(
+            onSuccess = { detail ->
+                seriesDetail = detail
+                isLoading = false
+            },
+            onFailure = { e ->
+                error = e.message ?: "Failed to load series info"
                 isLoading = false
             }
-        }
+        )
     }
 
     when {
@@ -132,13 +131,10 @@ fun EpisodeSelectionScreen(
                 onBack = onBack
             )
         }
-        seriesInfo != null -> {
-            val fetchTime = repository.getFetchTimeFormatted("series_$seriesId")
+        seriesDetail != null -> {
             EpisodeListContent(
-                seriesInfo = seriesInfo!!,
+                seriesDetail = seriesDetail!!,
                 seriesName = seriesName,
-                payloadSize = payloadSize,
-                fetchTime = fetchTime,
                 onEpisodeSelected = onEpisodeSelected,
                 onRefresh = { refresh() },
                 onBack = onBack
@@ -149,10 +145,8 @@ fun EpisodeSelectionScreen(
 
 @Composable
 private fun EpisodeListContent(
-    seriesInfo: SeriesInfo,
+    seriesDetail: SeriesDetail,
     seriesName: String,
-    payloadSize: String?,
-    fetchTime: String?,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String) -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit
@@ -182,17 +176,17 @@ private fun EpisodeListContent(
     }
 
     // Flatten episodes from all seasons into a single list
-    val allEpisodes = remember(seriesInfo) {
-        seriesInfo.episodes.flatMap { (seasonNumber, episodes) ->
+    val allEpisodes = remember(seriesDetail) {
+        seriesDetail.episodes.flatMap { (seasonNumber, episodes) ->
             episodes.map { episode ->
-                EpisodeItem(
+                DisplayEpisodeItem(
                     seasonNumber = seasonNumber,
                     episode = episode
                 )
             }
         }.sortedWith(
-            compareBy<EpisodeItem> { it.seasonNumber.toIntOrNull() ?: 0 }
-                .thenBy { it.episode.episodeNum }
+            compareBy<DisplayEpisodeItem> { it.seasonNumber.toIntOrNull() ?: 0 }
+                .thenBy { it.episode.episodeNumber }
         )
     }
 
@@ -237,25 +231,14 @@ private fun EpisodeListContent(
                         )
                     }
                 }
-                // Always show episode count, optionally show payload size and fetch time
+                // Show episode count
                 val totalEpisodes = allEpisodes.size
-                val infoText = buildString {
-                    if (payloadSize != null) {
-                        append(payloadSize)
-                        append(" • ")
-                    }
-                    if (fetchTime != null) {
-                        append(fetchTime)
-                        append(" • ")
-                    }
-                    append("$totalEpisodes episodes")
-                }
                 Text(
-                    text = infoText,
+                    text = "$totalEpisodes episodes",
                     style = MaterialTheme.typography.labelSmall,
                     color = CinemaTextSecondary
                 )
-                seriesInfo.info?.plot?.let { plot ->
+                seriesDetail.metadata.plot?.let { plot ->
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
                         text = plot,
@@ -298,7 +281,7 @@ private fun EpisodeListContent(
                         onEpisodeSelected(
                             episodeItem.episode.id,
                             episodeItem.episode.title,
-                            episodeItem.episode.containerExtension
+                            episodeItem.episode.extension ?: "mp4"
                         )
                     }
                 )
@@ -310,7 +293,7 @@ private fun EpisodeListContent(
 @Composable
 private fun EpisodeCard(
     seasonNumber: String,
-    episode: Episode,
+    episode: DomainEpisodeItem,
     onClick: () -> Unit
 ) {
     Card(
@@ -356,7 +339,7 @@ private fun EpisodeCard(
                     color = CinemaTextSecondary
                 )
                 Text(
-                    text = "Episode ${episode.episodeNum}",
+                    text = "Episode ${episode.episodeNumber}",
                     style = MaterialTheme.typography.titleMedium,
                     color = CinemaTextPrimary
                 )
@@ -375,9 +358,9 @@ private fun EpisodeCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                episode.info?.overview?.let { overview ->
+                episode.metadata.plot?.let { plot ->
                     Text(
-                        text = overview,
+                        text = plot,
                         style = MaterialTheme.typography.bodySmall,
                         color = CinemaTextSecondary,
                         maxLines = 1,
@@ -387,7 +370,7 @@ private fun EpisodeCard(
             }
 
             // Duration
-            episode.info?.duration?.let { duration ->
+            episode.metadata.duration?.let { duration ->
                 Spacer(modifier = Modifier.width(Spacing.md))
                 Text(
                     text = duration,
@@ -455,7 +438,7 @@ private fun ErrorScreen(
     }
 }
 
-private data class EpisodeItem(
+private data class DisplayEpisodeItem(
     val seasonNumber: String,
-    val episode: Episode
+    val episode: DomainEpisodeItem
 )

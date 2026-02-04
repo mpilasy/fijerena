@@ -12,29 +12,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.njarasoa.fijerena.core.network.AccountManager
-import org.njarasoa.fijerena.core.network.Result
-import org.njarasoa.fijerena.core.network.XtreamRepository
-import org.njarasoa.fijerena.core.player.model.VodInfo
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileMovieDetailsScreen(
-    movieId: Int,
+    movieId: String,
     movieName: String,
     categoryId: String,
-    onPlayMovie: (movieId: Int, movieName: String, extension: String) -> Unit,
+    onPlayMovie: (movieId: String, movieName: String, extension: String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = remember {
-        val accountManager = AccountManager(context.applicationContext)
-        XtreamRepository(accountManager, context.applicationContext)
+    val mediaRepository = remember {
+        val appContext = context.applicationContext
+        val providerRepo = ProviderRepository(appContext)
+        kotlinx.coroutines.runBlocking {
+            val entity = providerRepo.getActiveProvider()
+            if (entity != null) {
+                val resolvedRepo = MediaRepository(appContext, entity.id)
+                val password = providerRepo.getPassword(entity.id) ?: ""
+                val provider = MediaProviderFactory.create(entity, appContext, password)
+                resolvedRepo.setProvider(provider)
+                resolvedRepo
+            } else MediaRepository(appContext, 0L)
+        }
     }
 
-    var vodInfo by remember { mutableStateOf<VodInfo?>(null) }
+    var movieDetail by remember { mutableStateOf<MovieDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -42,25 +52,17 @@ fun MobileMovieDetailsScreen(
     LaunchedEffect(movieId) {
         isLoading = true
         error = null
-
-        when (val sessionResult = repository.restoreSession()) {
-            is Result.Success -> {
-                when (val infoResult = repository.getVodInfo(movieId)) {
-                    is Result.Success -> {
-                        vodInfo = infoResult.data
-                        isLoading = false
-                    }
-                    is Result.Error -> {
-                        error = infoResult.message ?: "Failed to load movie info"
-                        isLoading = false
-                    }
-                }
-            }
-            is Result.Error -> {
-                error = sessionResult.message ?: "Session expired. Please login again."
+        val result = mediaRepository.getMovieDetail(movieId)
+        result.fold(
+            onSuccess = { detail ->
+                movieDetail = detail
+                isLoading = false
+            },
+            onFailure = { e ->
+                error = e.message ?: "Failed to load movie info"
                 isLoading = false
             }
-        }
+        )
     }
 
     Scaffold(
@@ -90,9 +92,9 @@ fun MobileMovieDetailsScreen(
                         onBack = onBack
                     )
                 }
-                vodInfo != null -> {
+                movieDetail != null -> {
                     MovieDetailsContent(
-                        vodInfo = vodInfo!!,
+                        movieDetail = movieDetail!!,
                         movieId = movieId,
                         movieName = movieName,
                         onPlayMovie = onPlayMovie
@@ -105,13 +107,12 @@ fun MobileMovieDetailsScreen(
 
 @Composable
 private fun MovieDetailsContent(
-    vodInfo: VodInfo,
-    movieId: Int,
+    movieDetail: MovieDetail,
+    movieId: String,
     movieName: String,
-    onPlayMovie: (movieId: Int, movieName: String, extension: String) -> Unit
+    onPlayMovie: (movieId: String, movieName: String, extension: String) -> Unit
 ) {
-    val movieInfo = vodInfo.info
-    val extension = vodInfo.movieData?.containerExtension ?: "mp4"
+    val extension = movieDetail.extension ?: "mp4"
 
     Column(
         modifier = Modifier
@@ -121,7 +122,7 @@ private fun MovieDetailsContent(
     ) {
         // Title
         Text(
-            text = movieInfo?.name ?: movieName,
+            text = movieDetail.name,
             style = MaterialTheme.typography.headlineLarge
         )
 
@@ -132,21 +133,21 @@ private fun MovieDetailsContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            movieInfo?.genre?.let { genre ->
+            movieDetail.metadata?.genre?.let { genre ->
                 Text(
                     text = genre,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-            movieInfo?.rating?.let { rating ->
+            movieDetail.metadata?.rating?.let { rating ->
                 Text(
                     text = "★ $rating",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.secondary
                 )
             }
-            movieInfo?.duration?.let { duration ->
+            movieDetail.metadata?.duration?.let { duration ->
                 Text(
                     text = formatDuration(duration),
                     style = MaterialTheme.typography.titleMedium
@@ -157,7 +158,7 @@ private fun MovieDetailsContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Release date
-        movieInfo?.releaseDate?.let { releaseDate ->
+        movieDetail.metadata?.releaseDate?.let { releaseDate ->
             Text(
                 text = "Released: $releaseDate",
                 style = MaterialTheme.typography.bodyMedium,
@@ -168,7 +169,7 @@ private fun MovieDetailsContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Plot/Description
-        movieInfo?.plot?.let { plot ->
+        movieDetail.metadata?.plot?.let { plot ->
             Text(
                 text = plot,
                 style = MaterialTheme.typography.bodyLarge
@@ -178,7 +179,7 @@ private fun MovieDetailsContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Cast
-        movieInfo?.cast?.let { cast ->
+        movieDetail.metadata?.cast?.let { cast ->
             Text(
                 text = "Cast: $cast",
                 style = MaterialTheme.typography.bodyMedium,
@@ -191,7 +192,7 @@ private fun MovieDetailsContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Director
-        movieInfo?.director?.let { director ->
+        movieDetail.metadata?.director?.let { director ->
             Text(
                 text = "Director: $director",
                 style = MaterialTheme.typography.bodyMedium,
@@ -204,7 +205,7 @@ private fun MovieDetailsContent(
         // Play button
         Button(
             onClick = {
-                onPlayMovie(movieId, movieInfo?.name ?: movieName, extension)
+                onPlayMovie(movieId, movieDetail.name, extension)
             },
             modifier = Modifier.fillMaxWidth()
         ) {

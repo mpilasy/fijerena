@@ -1,5 +1,5 @@
-# Xtream IPTV Client - Project Context
-A native Android application built with Kotlin and Jetpack Compose.
+# Fijerena - Multi-Provider Media Player
+A native Android media player built with Kotlin and Jetpack Compose supporting multiple provider types.
 Targeting: Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Bravia (Android TV).
 
 ## 🛠 Tech Stack
@@ -9,6 +9,7 @@ Targeting: Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Br
 - **Navigation:** Adaptive Navigation Suite (handles Mobile and TV D-Pad logic).
 - **Database:** Room (provider management). Per-provider EncryptedSharedPreferences for passwords.
 - **Theming:** Dynamic runtime theme switching via `CinemaThemeHolder` + `CinemaThemePalette`.
+- **SMB:** `com.hierynomus:smbj:0.13.0` for network share access.
 
 ## 🎬 Media3 Player Configuration
 
@@ -48,8 +49,10 @@ Hardware-accelerated codec selection based on device capabilities:
 Always use `StreamingMediaSourceFactory.createMediaSource()` for stream playback:
 - Automatically detects stream type (HLS/DASH/MPEG-TS)
 - Configures HTTP timeouts (30s connect, 60s read)
-- **Supports custom headers for authentication** (auth tokens, CDN headers, user-agents)
+- **Supports custom headers for authentication** (auth tokens, CDN headers, Jellyfin X-Emby-Token)
 - Enables cross-protocol redirects
+- Supports `smb://` URIs via custom `SmbDataSource` for SMB network shares
+- Supports `content://` URIs for local media files
 
 ### Audio Track Selection
 **Feature:** Multi-language and audio format selection during playback.
@@ -201,8 +204,12 @@ All screens must respect 56dp horizontal / 32dp vertical safe margins to account
 
 ## 🚀 Development Commands
 - **Build App:** `./gradlew assembleDebug`
+- **Build Release:** `./gradlew :mobile:assembleRelease` (or `:tv:assembleRelease`)
 - **Install on Shield/Sony:** `adb connect [TV_IP] && ./gradlew installDebug`
+- **Install mobile only on phone:** `adb -s emulator-5554 install -r mobile/build/outputs/apk/debug/mobile-debug.apk`
 - **Lint Check:** `./gradlew ktlintCheck`
+
+**Note:** TV and mobile modules share the same `applicationId`. When deploying to both a phone and TV emulator simultaneously, use `adb -s <device>` to target the correct device to avoid overwriting one APK with the other.
 
 ## 📱 App Navigation & Features
 
@@ -217,9 +224,11 @@ The app follows this streamlined navigation structure:
 5. **Settings** - Accessible from Content Type Selection via gear icon
 6. **Provider Management** - Accessible from Settings → "Manage Providers"
    - **Provider Selection:** List all providers, select/edit/delete
-   - **Add/Edit Provider:** Form with name, URL, username, password fields
+   - **Add/Edit Provider:** Type selector + type-specific form fields (Xtream: URL/user/pass, Jellyfin: server URL/user/pass, SMB: host/share/user/pass, Local: folder/M3U picker)
 
 **Note:** There is no login screen. Authentication happens automatically on startup via stored credentials, or after configuring a provider in Settings. Both TV and mobile use the same flow.
+
+**Mobile Orientation:** The mobile app is locked to portrait mode (`android:screenOrientation="portrait"`) for all screens except the player. `MobilePlayerScreen` unlocks orientation to sensor on enter and locks back to portrait on dispose.
 
 ### Settings Screen
 Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
@@ -259,12 +268,13 @@ When enabled, provides debugging and performance insights:
 - **Payload Size Tracking:** Monitor API response sizes in bytes (works with both network and cache)
 - **Network Statistics:** View request/response metrics
 - **Debug Info:** Additional diagnostics for network operations
+- **Provider Type Display:** Shows provider type in parentheses after provider name on Content Type Selection screen (e.g., "My Server (JELLYFIN)")
 
 ### Content Types
-The app supports three primary content types:
-- **Live TV:** Live television channels and streams
-- **Movies (VOD):** On-demand movie content
-- **TV Shows:** Series and episodes with episode selection support
+The app supports three primary content types (availability depends on provider capabilities):
+- **Live TV:** Live television channels and streams (Xtream, Local with M3U)
+- **Movies (VOD):** On-demand movie content (all providers)
+- **TV Shows:** Series and episodes with episode selection support (Xtream, Jellyfin)
 
 ### Virtual Categories
 The app provides two special virtual categories that load locally from device storage:
@@ -344,34 +354,71 @@ A dynamically generated category that displays:
 
 **Limitations:**
 - Live TV only (not available for Movies or TV Shows)
+- Only available when `provider.capabilities.supportsEpg` is true (currently Xtream only)
 - Max 50 channels displayed at once
 - Requires EPG data from IPTV provider
 - 30-minute cache refresh interval
 
-### Multiple Provider Management
-The app supports managing multiple IPTV providers:
+### Multi-Provider Architecture
+The app supports 4 provider types through a unified domain model abstraction. All providers map to generic types — screens never see provider-specific types.
+
+**Supported Provider Types:**
+
+| Provider | Live TV | Movies | TV Shows | EPG | Search | Auth | Progress Sync |
+|----------|---------|--------|----------|-----|--------|------|---------------|
+| **Xtream** | Yes | Yes | Yes | Yes | Yes | Yes | No |
+| **Jellyfin** | No | Yes | Yes | No | Yes | Yes | Yes |
+| **SMB** | No | Yes | No | No | Yes | Optional | No |
+| **Local** | M3U only | Yes | No | No | Yes | No | No |
+
+**Domain Models** (in `core/player/.../domain/`):
+- `MediaProvider` - Interface all providers implement
+- `MediaCategory`, `MediaItem` - Provider-agnostic content types
+- `SeriesDetail`, `MovieDetail` - Detail models
+- `PlayableStream` - Resolved stream URI with headers
+- `ProviderCapabilities` - What each provider supports
+- `ProviderType` - Enum of provider types
+
+**Key Architecture Files:**
+- `core/network/.../MediaRepository.kt` - Unified repository delegating to active `MediaProvider`
+- `core/network/.../MediaProviderFactory.kt` - Creates provider instances by type
+- `core/network/.../XtreamMediaProvider.kt` - Xtream adapter wrapping `XtreamApiService`
+- `core/network/.../XtreamMapper.kt` - Maps Xtream types to domain types
+- `core/network/.../jellyfin/JellyfinMediaProvider.kt` - Jellyfin REST API provider
+- `core/network/.../jellyfin/JellyfinApiService.kt` - Jellyfin HTTP client (Ktor)
+- `core/network/.../jellyfin/JellyfinModels.kt` - Jellyfin JSON models
+- `core/network/.../smb/SmbMediaProvider.kt` - SMB network share provider
+- `core/network/.../smb/SmbClient.kt` - SMB2/3 client wrapper (smbj)
+- `core/network/.../local/LocalMediaProvider.kt` - Local media/M3U provider
+- `core/network/.../local/LocalFileScanner.kt` - SAF directory scanner
+- `core/network/.../local/M3uParser.kt` - M3U/M3U8 playlist parser
 
 **Storage:**
-- **Room database** (`ProviderEntity`) stores provider metadata (name, URL, username, active flag)
+- **Room database** (`ProviderEntity`) stores provider metadata (name, URL, username, type, config, active flag)
 - **Per-provider EncryptedSharedPreferences** for passwords (keyed by provider ID)
 - **Per-provider cache SharedPreferences** files (`xtream_cache_{id}`)
+- `ProviderEntity.type` field: `XTREAM`, `JELLYFIN`, `SMB`, or `LOCAL`
+- `ProviderEntity.config` field: JSON blob for type-specific configuration
 
 **Screens:**
 - **Provider Selection** (`Screen.ProviderSelection`): List all providers with select/edit/delete
-- **Add/Edit Provider** (`Screen.AddProvider`): Form with name, URL, username, password
+- **Add/Edit Provider** (`Screen.AddProvider`): Type-specific form fields per provider type
+- **Content Type Selection**: Provider name clickable to open provider switcher dialog; shows provider type in dev mode
 
-**Migration:** On first launch after upgrade, existing single-provider credentials from `AccountManager` are automatically migrated to Room via `ProviderViewModel.migrateIfNeeded()`.
+**Navigation IDs:** All navigation uses `String` IDs (not `Int`) to support non-numeric IDs from Jellyfin/SMB/Local providers.
+
+**Migration:** On first launch after upgrade, existing single-provider credentials from `AccountManager` are automatically migrated to Room in both NavHosts before the `hasProvider` check.
 
 **Key Files:**
-- `core/network/.../provider/ProviderEntity.kt` - Room entity
+- `core/network/.../provider/ProviderEntity.kt` - Room entity (with `type` and `config` fields)
 - `core/network/.../provider/ProviderDao.kt` - Data access object
-- `core/network/.../provider/ProviderDatabase.kt` - Room database singleton
+- `core/network/.../provider/ProviderDatabase.kt` - Room database singleton (version 2 with migration)
 - `core/network/.../provider/ProviderRepository.kt` - Repository wrapping DAO + encrypted prefs
 - `core/ui/.../viewmodels/ProviderViewModel.kt` - ViewModel with migration logic
 - `tv/.../feature/provider/TvProviderSelectionScreen.kt` - TV provider list
-- `tv/.../feature/provider/TvAddProviderScreen.kt` - TV add/edit form
+- `tv/.../feature/provider/TvAddProviderScreen.kt` - TV add/edit form (type-specific fields)
 - `mobile/.../feature/provider/MobileProviderSelectionScreen.kt` - Mobile provider list
-- `mobile/.../feature/provider/MobileAddProviderScreen.kt` - Mobile add/edit form
+- `mobile/.../feature/provider/MobileAddProviderScreen.kt` - Mobile add/edit form (type-specific fields)
 
 ### Player UI Features
 
@@ -486,14 +533,24 @@ The app supports managing multiple IPTV providers:
 - Quality Button → Select video quality
 
 #### Player Controls
-**Available Controls:**
+**TV Controls (D-pad):**
 - **Pause/Resume:** Toggle playback
 - **Audio Track:** Open audio track selector
 - **Subtitle:** Enable/disable subtitles
 - **Quality:** Select video quality
+- **Favorite:** Toggle stream favorite
 - **Back:** Exit to category grid
 - **D-pad Up/Down:** Previous/Next channel (Live TV only)
 - **Double-tap OK:** Toggle stats overlay
+
+**Mobile Controls (touch):**
+- Same feature set as TV: audio/subtitle/quality selectors, favorite toggle
+- Tap screen to show/hide controls
+- Controls displayed as horizontally scrollable button row
+- VOD: remaining time and "Ends at" display
+- Auto-resume from saved playback position (2-95% range)
+- Periodic position save every 5 seconds
+- Orientation unlocks to sensor during playback, locks back to portrait on exit
 
 ## ⚠️ Workflow Rules
 - Read this file at the start of every session.

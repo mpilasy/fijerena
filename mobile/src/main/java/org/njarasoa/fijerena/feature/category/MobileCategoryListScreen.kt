@@ -25,7 +25,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 @Composable
 fun MobileCategoryListScreen(
     contentType: String,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String, contentType: String) -> Unit,
+    onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String) -> Unit,
     onSearchClick: () -> Unit = {},
     onBack: () -> Unit,
     viewModel: CategoryViewModel = viewModel(
@@ -86,11 +86,11 @@ fun MobileCategoryListScreen(
 
                         // Streams list
                         StreamsList(
-                            streams = state.streams,
+                            items = state.streams,
                             streamsLoading = state.streamsLoading,
                             selectedCategoryId = state.selectedCategoryId,
-                            onStreamSelected = { streamId, streamName, categoryId ->
-                                onStreamSelected(streamId, streamName, categoryId, contentType)
+                            onItemSelected = { itemId, itemName, categoryId ->
+                                onStreamSelected(itemId, itemName, categoryId, contentType)
                             }
                         )
                     }
@@ -127,7 +127,7 @@ fun MobileCategoryListScreen(
 
 @Composable
 private fun CategoryChipRow(
-    categories: List<org.njarasoa.fijerena.core.player.model.XtreamCategory>,
+    categories: List<org.njarasoa.fijerena.core.player.domain.MediaCategory>,
     selectedCategoryId: String?,
     onCategorySelected: (String) -> Unit
 ) {
@@ -141,13 +141,13 @@ private fun CategoryChipRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         categories.forEach { category ->
-            val isSelected = category.categoryId == selectedCategoryId
+            val isSelected = category.id == selectedCategoryId
             FilterChip(
                 selected = isSelected,
-                onClick = { onCategorySelected(category.categoryId) },
+                onClick = { onCategorySelected(category.id) },
                 label = {
                     Text(
-                        text = category.categoryName,
+                        text = category.name,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -163,10 +163,10 @@ private fun CategoryChipRow(
 
 @Composable
 private fun StreamsList(
-    streams: List<org.njarasoa.fijerena.core.player.model.XtreamStream>?,
+    items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
     streamsLoading: Boolean,
     selectedCategoryId: String?,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit
+    onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit
 ) {
     when {
         selectedCategoryId == null -> {
@@ -197,7 +197,7 @@ private fun StreamsList(
                 }
             }
         }
-        streams.isNullOrEmpty() -> {
+        items.isNullOrEmpty() -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -217,17 +217,17 @@ private fun StreamsList(
             ) {
                 item {
                     Text(
-                        text = "${streams.size} streams",
+                        text = "${items.size} streams",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
                     )
                 }
-                items(streams, key = { it.streamId }) { stream ->
+                items(items, key = { it.id }) { item ->
                     StreamCard(
-                        stream = stream,
+                        item = item,
                         onClick = {
-                            onStreamSelected(stream.streamId, stream.name, stream.categoryId)
+                            onItemSelected(item.id, item.name, item.categoryId)
                         }
                     )
                 }
@@ -238,7 +238,7 @@ private fun StreamsList(
 
 @Composable
 private fun StreamCard(
-    stream: org.njarasoa.fijerena.core.player.model.XtreamStream,
+    item: org.njarasoa.fijerena.core.player.domain.MediaItem,
     onClick: () -> Unit
 ) {
     Card(
@@ -249,7 +249,7 @@ private fun StreamCard(
         )
     ) {
         Text(
-            text = stream.name,
+            text = item.name,
             style = MaterialTheme.typography.bodyLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

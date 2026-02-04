@@ -33,13 +33,17 @@ class ProviderRepository(private val context: Context) {
         name: String,
         url: String,
         username: String,
-        password: String
+        password: String,
+        type: String = "XTREAM",
+        config: String = ""
     ): Long {
         dao.deactivateAll()
         val entity = ProviderEntity(
             name = name,
             url = url,
             username = username,
+            type = type,
+            config = config,
             isActive = true
         )
         val id = dao.insertProvider(entity)
@@ -55,14 +59,18 @@ class ProviderRepository(private val context: Context) {
         name: String,
         url: String,
         username: String,
-        password: String
+        password: String,
+        type: String? = null,
+        config: String? = null
     ) {
         val existing = dao.getProviderById(id) ?: return
         dao.updateProvider(
             existing.copy(
                 name = name,
                 url = url,
-                username = username
+                username = username,
+                type = type ?: existing.type,
+                config = config ?: existing.config
             )
         )
         savePassword(id, password)

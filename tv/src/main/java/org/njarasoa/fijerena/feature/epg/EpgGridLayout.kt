@@ -50,7 +50,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.TimeSlot
-import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -68,8 +68,8 @@ fun EpgGridLayout(
     timeSlots: List<TimeSlot>,
     currentTimeSlot: Int,
     selectedDate: LocalDate,
-    onProgramSelected: (EpgProgram, XtreamStream) -> Unit,
-    onChannelSelected: (Int, String, String) -> Unit,
+    onProgramSelected: (EpgProgram, MediaItem) -> Unit,
+    onChannelSelected: (String, String, String) -> Unit,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onJumpToNow: () -> Unit,
@@ -194,7 +194,7 @@ private fun EmptyEpgMessage() {
 @Composable
 private fun ChannelListColumn(
     channelRows: List<EpgChannelRow>,
-    onChannelSelected: (Int, String, String) -> Unit,
+    onChannelSelected: (String, String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberTvLazyListState()
@@ -207,12 +207,12 @@ private fun ChannelListColumn(
         items(channelRows.size) { index ->
             val row = channelRows[index]
             ChannelItem(
-                stream = row.stream,
+                channel = row.channel,
                 onClick = {
                     onChannelSelected(
-                        row.stream.streamId,
-                        row.stream.name,
-                        row.stream.categoryId
+                        row.channel.id,
+                        row.channel.name,
+                        row.channel.categoryId
                     )
                 }
             )
@@ -222,7 +222,7 @@ private fun ChannelListColumn(
 
 @Composable
 private fun ChannelItem(
-    stream: XtreamStream,
+    channel: MediaItem,
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -255,7 +255,7 @@ private fun ChannelItem(
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
-                text = stream.name,
+                text = channel.name,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -269,7 +269,7 @@ private fun TimeGridColumn(
     channelRows: List<EpgChannelRow>,
     timeSlots: List<TimeSlot>,
     currentTimeSlot: Int,
-    onProgramSelected: (EpgProgram, XtreamStream) -> Unit,
+    onProgramSelected: (EpgProgram, MediaItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val horizontalScrollState = rememberLazyListState()
@@ -310,7 +310,7 @@ private fun TimeGridColumn(
                     timeSlots = timeSlots,
                     scrollState = horizontalScrollState,
                     onProgramSelected = { program ->
-                        onProgramSelected(program, row.stream)
+                        onProgramSelected(program, row.channel)
                     }
                 )
             }

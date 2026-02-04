@@ -24,6 +24,15 @@ dependencies {
     api(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
+    // DocumentFile for local media scanning (SAF)
+    implementation("androidx.documentfile:documentfile:1.0.1")
+
+    // SMB2/3 client for network share access
+    implementation("com.hierynomus:smbj:0.13.0")
+
+    // Ktor HTTP client for Jellyfin API
+    implementation(libs.bundles.networking)
+
     // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

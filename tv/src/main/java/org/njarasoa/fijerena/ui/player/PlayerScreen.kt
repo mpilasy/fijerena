@@ -2172,6 +2172,7 @@ private fun ErrorContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(TvDimensions.statsOverlayPanelHeight)
+                                .focusable(false)
                                 .verticalScroll(rememberScrollState())
                         )
                     }

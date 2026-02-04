@@ -2,35 +2,44 @@
 
 package org.njarasoa.fijerena.feature.category
 
-import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.draw.rotate
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -39,21 +48,37 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
-import androidx.tv.material3.*
-import org.njarasoa.fijerena.core.network.AccountManager
+import androidx.tv.material3.Border
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.XtreamRepository
-import org.njarasoa.fijerena.core.player.model.XtreamCategory
-import org.njarasoa.fijerena.core.player.model.XtreamStream
-import org.njarasoa.fijerena.feature.common.StatsOverlay
+import org.njarasoa.fijerena.core.player.domain.MediaCategory
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
+import org.njarasoa.fijerena.feature.common.StatsOverlay
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaGlassBackground
+import org.njarasoa.fijerena.ui.theme.CinemaGlassBorder
+import org.njarasoa.fijerena.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.theme.CornerRadius
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
+import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * TV two-column layout: Categories on left, Streams on right.
@@ -69,7 +94,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 @Composable
 fun CategoryGridScreen(
     contentType: String,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit = {},
@@ -93,7 +118,7 @@ fun CategoryGridScreen(
             uiState = uiState,
             configuration = configuration,
             isDevMode = isDevMode,
-            viewModel = viewModel,
+            catViewModel = viewModel,
             onStreamSelected = onStreamSelected,
             onSearchClick = onSearchClick,
             onEpgClick = onEpgClick,
@@ -108,8 +133,8 @@ private fun CategoryGridContent(
     uiState: CategoryViewModel.UiState,
     configuration: android.content.res.Configuration,
     isDevMode: Boolean,
-    viewModel: CategoryViewModel,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    catViewModel: CategoryViewModel,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onSearchClick: () -> Unit,
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
     onBack: () -> Unit,
@@ -135,24 +160,25 @@ private fun CategoryGridContent(
                 }
                 is CategoryViewModel.UiState.Success -> {
                     TwoColumnLayout(
+                    categoryViewModel = catViewModel,
                     categories = state.categories,
                     selectedCategoryId = state.selectedCategoryId,
                     streams = state.streams,
                     streamsLoading = state.streamsLoading,
                     categoriesRefreshing = state.categoriesRefreshing,
-                    lastPlayedStreamId = state.lastPlayedStreamId,
+                    lastPlayedItemId = state.lastPlayedItemId,
                     contentType = contentType,
                     onCategorySelected = { categoryId ->
-                        viewModel.loadStreams(categoryId)
+                        catViewModel.loadStreams(categoryId)
                     },
                     onStreamSelected = { streamId, streamName, categoryId ->
                         onStreamSelected(streamId, streamName, categoryId)
                     },
                     onRefreshCategories = {
-                        viewModel.refreshCategories()
+                        catViewModel.refreshCategories()
                     },
                     onRefreshStreams = { categoryId ->
-                        viewModel.refreshStreams(categoryId)
+                        catViewModel.refreshStreams(categoryId)
                     },
                     onSearchClick = onSearchClick,
                     onEpgClick = onEpgClick,
@@ -162,7 +188,7 @@ private fun CategoryGridContent(
                 is CategoryViewModel.UiState.Error -> {
                     ErrorScreen(
                         message = state.message,
-                        onRetry = { viewModel.retry() }
+                        onRetry = { catViewModel.retry() }
                     )
                 }
             }
@@ -176,9 +202,9 @@ private fun CategoryGridContent(
                     state.categoriesPayloadSize?.let { put("Cat. Payload", it) }
                     state.streamsPayloadSize?.let { put("Streams Payload", it) }
                     // Fetch times
-                    viewModel.getCategoriesFetchTime()?.let { put("Cat. Time", it) }
+                    catViewModel.getCategoriesFetchTime()?.let { put("Cat. Time", it) }
                     state.selectedCategoryId?.let {
-                        viewModel.getFetchTime(it)?.let { time -> put("Streams Time", time) }
+                        catViewModel.getFetchTime(it)?.let { time -> put("Streams Time", time) }
                     }
                     // Counts
                     put("Categories", "${state.categories.size}")
@@ -198,15 +224,16 @@ private fun CategoryGridContent(
 
 @Composable
 private fun TwoColumnLayout(
-    categories: List<XtreamCategory>,
+    categoryViewModel: CategoryViewModel,
+    categories: List<MediaCategory>,
     selectedCategoryId: String?,
-    streams: List<XtreamStream>?,
+    streams: List<MediaItem>?,
     streamsLoading: Boolean,
     categoriesRefreshing: Boolean,
-    lastPlayedStreamId: Int?,
+    lastPlayedItemId: String?,
     contentType: String,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
     onSearchClick: () -> Unit,
@@ -216,9 +243,6 @@ private fun TwoColumnLayout(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val providerName by remember { mutableStateOf(appSettings.providerName) }
-    val repository = remember {
-        XtreamRepository(AccountManager(context.applicationContext), context.applicationContext)
-    }
 
     val scale = LocalUiScale.current
 
@@ -245,7 +269,7 @@ private fun TwoColumnLayout(
                 )
                 // EPG button - only for Live TV
                 if (contentType == "LIVE_TV" && selectedCategoryId != null) {
-                    val selectedCategoryName = categories.find { it.categoryId == selectedCategoryId }?.categoryName
+                    val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name
                     if (selectedCategoryName != null) {
                         CinemaSecondaryButton(
                             onClick = { onEpgClick(selectedCategoryId, selectedCategoryName) },
@@ -308,10 +332,10 @@ private fun TwoColumnLayout(
                 streams = streams,
                 streamsLoading = streamsLoading,
                 selectedCategoryId = selectedCategoryId,
-                selectedCategoryName = categories.find { it.categoryId == selectedCategoryId }?.categoryName,
-                lastPlayedStreamId = lastPlayedStreamId,
+                selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name,
+                lastPlayedItemId = lastPlayedItemId,
                 contentType = contentType,
-                repository = repository,
+                categoryViewModel = categoryViewModel,
                 onStreamSelected = onStreamSelected,
                 onRefreshStreams = onRefreshStreams,
                 modifier = Modifier
@@ -324,7 +348,7 @@ private fun TwoColumnLayout(
 
 @Composable
 private fun CategoryList(
-    categories: List<XtreamCategory>,
+    categories: List<MediaCategory>,
     selectedCategoryId: String?,
     categoriesRefreshing: Boolean,
     onCategorySelected: (String) -> Unit,
@@ -338,18 +362,18 @@ private fun CategoryList(
         CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID
     )
 
-    val virtualCategories = categories.filter { it.categoryId in virtualCategoryIds }
-    val regularCategories = categories.filter { it.categoryId !in virtualCategoryIds }
+    val virtualCategories = categories.filter { it.id in virtualCategoryIds }
+    val regularCategories = categories.filter { it.id !in virtualCategoryIds }
 
     val listState = rememberTvLazyListState()
     val focusRequesters = remember(categories) {
-        categories.associate { it.categoryId to FocusRequester() }
+        categories.associate { it.id to FocusRequester() }
     }
 
     // Auto-scroll and focus on selected category (only for regular categories)
     LaunchedEffect(regularCategories, selectedCategoryId) {
         if (regularCategories.isNotEmpty() && selectedCategoryId != null && selectedCategoryId !in virtualCategoryIds) {
-            val selectedIndex = regularCategories.indexOfFirst { it.categoryId == selectedCategoryId }
+            val selectedIndex = regularCategories.indexOfFirst { it.id == selectedCategoryId }
             if (selectedIndex != -1) {
                 listState.animateScrollToItem(selectedIndex)
                 // Request focus on the selected category
@@ -436,9 +460,9 @@ private fun CategoryList(
                         virtualCategories.forEach { category ->
                             CategoryItem(
                                 category = category,
-                                isSelected = category.categoryId == selectedCategoryId,
-                                onClick = { onCategorySelected(category.categoryId) },
-                                focusRequester = focusRequesters[category.categoryId]
+                                isSelected = category.id == selectedCategoryId,
+                                onClick = { onCategorySelected(category.id) },
+                                focusRequester = focusRequesters[category.id]
                             )
                         }
                     }
@@ -464,13 +488,13 @@ private fun CategoryList(
                 ) {
                     items(
                         items = regularCategories,
-                        key = { it.categoryId }
+                        key = { it.id }
                     ) { category ->
                         CategoryItem(
                             category = category,
-                            isSelected = category.categoryId == selectedCategoryId,
-                            onClick = { onCategorySelected(category.categoryId) },
-                            focusRequester = focusRequesters[category.categoryId]
+                            isSelected = category.id == selectedCategoryId,
+                            onClick = { onCategorySelected(category.id) },
+                            focusRequester = focusRequesters[category.id]
                         )
                     }
                 }
@@ -481,7 +505,7 @@ private fun CategoryList(
 
 @Composable
 private fun CategoryItem(
-    category: XtreamCategory,
+    category: MediaCategory,
     isSelected: Boolean,
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null
@@ -539,7 +563,7 @@ private fun CategoryItem(
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
-                text = category.categoryName,
+                text = category.name,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
                 ),
@@ -552,14 +576,14 @@ private fun CategoryItem(
 
 @Composable
 private fun StreamList(
-    streams: List<XtreamStream>?,
+    streams: List<MediaItem>?,
     streamsLoading: Boolean,
     selectedCategoryId: String?,
     selectedCategoryName: String?,
-    lastPlayedStreamId: Int?,
+    lastPlayedItemId: String?,
     contentType: String,
-    repository: XtreamRepository,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    categoryViewModel: CategoryViewModel,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -582,19 +606,19 @@ private fun StreamList(
     )
     val listState = rememberTvLazyListState()
     val focusRequesters = remember(streams) {
-        streams?.associate { it.streamId to FocusRequester() } ?: emptyMap()
+        streams?.associate { it.id to FocusRequester() } ?: emptyMap()
     }
 
     val scale = LocalUiScale.current
 
-    // Auto-scroll and focus on last played stream
-    LaunchedEffect(streams, lastPlayedStreamId) {
-        if (!streams.isNullOrEmpty() && lastPlayedStreamId != null) {
-            val lastPlayedIndex = streams.indexOfFirst { it.streamId == lastPlayedStreamId }
+    // Auto-scroll and focus on last played item
+    LaunchedEffect(streams, lastPlayedItemId) {
+        if (!streams.isNullOrEmpty() && lastPlayedItemId != null) {
+            val lastPlayedIndex = streams.indexOfFirst { it.id == lastPlayedItemId }
             if (lastPlayedIndex != -1) {
                 listState.animateScrollToItem(lastPlayedIndex)
-                // Request focus on the last played stream
-                focusRequesters[lastPlayedStreamId]?.requestFocus()
+                // Request focus on the last played item
+                focusRequesters[lastPlayedItemId]?.requestFocus()
             }
         }
     }
@@ -686,22 +710,22 @@ private fun StreamList(
                     ) {
                         items(
                             items = streams,
-                            key = { it.streamId }
-                        ) { stream ->
-                            // Get watch progress for this stream
-                            val watchedStream = repository.getPlaybackPosition(stream.streamId, contentType)
-                            val progress = watchedStream?.let {
+                            key = { it.id }
+                        ) { item ->
+                            // Get watch progress for this item
+                            val watchedItem = categoryViewModel.getPlaybackPosition(item.id, contentType)
+                            val progress = watchedItem?.let {
                                 if (it.duration > 0) {
                                     (it.playbackPosition.toFloat() / it.duration.toFloat()).coerceIn(0f, 1f)
                                 } else 0f
                             } ?: 0f
 
                             StreamItem(
-                                stream = stream,
-                                isFavorite = repository.isFavorite(stream.streamId, contentType),
+                                item = item,
+                                isFavorite = categoryViewModel.isFavorite(item.id, contentType),
                                 watchProgress = progress,
-                                onClick = { onStreamSelected(stream.streamId, stream.name, stream.categoryId) },
-                                focusRequester = focusRequesters[stream.streamId]
+                                onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
+                                focusRequester = focusRequesters[item.id]
                             )
                         }
                     }
@@ -713,7 +737,7 @@ private fun StreamList(
 
 @Composable
 private fun StreamItem(
-    stream: XtreamStream,
+    item: MediaItem,
     isFavorite: Boolean = false,
     watchProgress: Float = 0f,  // 0.0 to 1.0 (0% to 100%)
     onClick: () -> Unit,
@@ -781,7 +805,7 @@ private fun StreamItem(
                         }
 
                         Text(
-                            text = stream.name,
+                            text = item.name,
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
                             ),
@@ -789,7 +813,7 @@ private fun StreamItem(
                             maxLines = 1
                         )
                     }
-                    stream.streamIcon?.let { icon ->
+                    item.thumbnailUrl?.let { icon ->
                         if (icon.isNotBlank()) {
                             Text(
                                 text = "HD",

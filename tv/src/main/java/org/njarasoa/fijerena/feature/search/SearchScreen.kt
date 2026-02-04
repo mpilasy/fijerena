@@ -52,7 +52,7 @@ import org.njarasoa.fijerena.ui.theme.*
 @Composable
 fun SearchScreen(
     contentType: String,
-    onStreamSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -96,7 +96,7 @@ fun SearchScreen(
                         searchProgress = successState.searchProgress,
                         onQueryChange = { viewModel.updateSearchQuery(it) },
                         onResultClick = { result ->
-                            onStreamSelected(result.streamId, result.streamName, result.categoryId)
+                            onStreamSelected(result.itemId, result.streamName, result.categoryId)
                         }
                     )
                 }
@@ -299,7 +299,7 @@ private fun SearchResultsList(
     }
 
     val focusRequesters = remember(results) {
-        results.associate { it.streamId to FocusRequester() }
+        results.associate { it.itemId to FocusRequester() }
     }
 
     if (isSearching && results.isEmpty()) {
@@ -373,11 +373,11 @@ private fun SearchResultsList(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(results, key = { "${it.streamId}_${it.categoryId}" }) { result ->
+                items(results, key = { "${it.itemId}_${it.categoryId}" }) { result ->
                     SearchResultItem(
                         result = result,
                         onClick = { onResultClick(result) },
-                        focusRequester = focusRequesters[result.streamId]
+                        focusRequester = focusRequesters[result.itemId]
                     )
                 }
             }

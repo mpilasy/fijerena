@@ -74,10 +74,17 @@ class ProviderViewModel(
         loadProviders()
     }
 
-    fun addProvider(name: String, url: String, username: String, password: String) {
+    fun addProvider(
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String = "XTREAM",
+        config: String = ""
+    ) {
         viewModelScope.launch {
             try {
-                providerRepository.addProvider(name, url, username, password)
+                providerRepository.addProvider(name, url, username, password, type, config)
                 loadProviders()
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(e.message ?: "Failed to add provider")
@@ -113,10 +120,18 @@ class ProviderViewModel(
         }
     }
 
-    fun updateProvider(id: Long, name: String, url: String, username: String, password: String) {
+    fun updateProvider(
+        id: Long,
+        name: String,
+        url: String,
+        username: String,
+        password: String,
+        type: String? = null,
+        config: String? = null
+    ) {
         viewModelScope.launch {
             try {
-                providerRepository.updateProvider(id, name, url, username, password)
+                providerRepository.updateProvider(id, name, url, username, password, type, config)
                 loadProviders()
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(e.message ?: "Failed to update provider")

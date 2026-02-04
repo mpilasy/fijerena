@@ -21,7 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.player.model.EpgProgram
-import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -33,8 +33,8 @@ import org.njarasoa.fijerena.ui.theme.*
 fun EpgGuideScreen(
     categoryId: String,
     categoryName: String,
-    onProgramSelected: (program: EpgProgram, stream: XtreamStream) -> Unit,
-    onChannelSelected: (streamId: Int, streamName: String, categoryId: String) -> Unit,
+    onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
+    onChannelSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onBack: () -> Unit,
     viewModel: EpgViewModel = viewModel(
         factory = EpgViewModelFactory(

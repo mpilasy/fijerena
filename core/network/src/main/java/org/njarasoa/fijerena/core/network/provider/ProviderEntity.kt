@@ -9,6 +9,8 @@ data class ProviderEntity(
     val name: String,
     val url: String,
     val username: String,
+    val type: String = "XTREAM",
+    val config: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val lastUsedAt: Long = System.currentTimeMillis(),
     val isActive: Boolean = false

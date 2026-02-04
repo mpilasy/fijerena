@@ -12,35 +12,45 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.njarasoa.fijerena.core.network.AccountManager
-import org.njarasoa.fijerena.core.network.Result
-import org.njarasoa.fijerena.core.network.XtreamRepository
-import org.njarasoa.fijerena.core.player.model.Episode
-import org.njarasoa.fijerena.core.player.model.SeriesInfo
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
+import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 
-data class EpisodeItem(
+data class DisplayEpisodeItem(
     val seasonNumber: String,
-    val episode: Episode
+    val episode: DomainEpisodeItem
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileEpisodeSelectionScreen(
-    seriesId: Int,
+    seriesId: String,
     seriesName: String,
     categoryId: String,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = remember {
-        val accountManager = AccountManager(context.applicationContext)
-        XtreamRepository(accountManager, context.applicationContext)
+    val mediaRepository = remember {
+        val appContext = context.applicationContext
+        val providerRepo = ProviderRepository(appContext)
+        kotlinx.coroutines.runBlocking {
+            val entity = providerRepo.getActiveProvider()
+            if (entity != null) {
+                val resolvedRepo = MediaRepository(appContext, entity.id)
+                val password = providerRepo.getPassword(entity.id) ?: ""
+                val provider = MediaProviderFactory.create(entity, appContext, password)
+                resolvedRepo.setProvider(provider)
+                resolvedRepo
+            } else MediaRepository(appContext, 0L)
+        }
     }
 
-    var seriesInfo by remember { mutableStateOf<SeriesInfo?>(null) }
+    var seriesDetail by remember { mutableStateOf<SeriesDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -48,25 +58,17 @@ fun MobileEpisodeSelectionScreen(
     LaunchedEffect(seriesId) {
         isLoading = true
         error = null
-
-        when (val sessionResult = repository.restoreSession()) {
-            is Result.Success -> {
-                when (val infoResult = repository.getSeriesInfo(seriesId)) {
-                    is Result.Success -> {
-                        seriesInfo = infoResult.data
-                        isLoading = false
-                    }
-                    is Result.Error -> {
-                        error = infoResult.message ?: "Failed to load series info"
-                        isLoading = false
-                    }
-                }
-            }
-            is Result.Error -> {
-                error = sessionResult.message ?: "Session expired. Please login again."
+        val result = mediaRepository.getSeriesDetail(seriesId)
+        result.fold(
+            onSuccess = { detail ->
+                seriesDetail = detail
+                isLoading = false
+            },
+            onFailure = { e ->
+                error = e.message ?: "Failed to load series info"
                 isLoading = false
             }
-        }
+        )
     }
 
     Scaffold(
@@ -96,9 +98,9 @@ fun MobileEpisodeSelectionScreen(
                         onBack = onBack
                     )
                 }
-                seriesInfo != null -> {
+                seriesDetail != null -> {
                     EpisodeListContent(
-                        seriesInfo = seriesInfo!!,
+                        seriesDetail = seriesDetail!!,
                         onEpisodeSelected = onEpisodeSelected
                     )
                 }
@@ -109,21 +111,21 @@ fun MobileEpisodeSelectionScreen(
 
 @Composable
 private fun EpisodeListContent(
-    seriesInfo: SeriesInfo,
+    seriesDetail: SeriesDetail,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String) -> Unit
 ) {
     // Flatten episodes from all seasons into a single list
-    val allEpisodes = remember(seriesInfo) {
-        seriesInfo.episodes.flatMap { (seasonNumber, episodes) ->
+    val allEpisodes = remember(seriesDetail) {
+        seriesDetail.episodes.flatMap { (seasonNumber, episodes) ->
             episodes.map { episode ->
-                EpisodeItem(
+                DisplayEpisodeItem(
                     seasonNumber = seasonNumber,
                     episode = episode
                 )
             }
         }.sortedWith(
-            compareBy<EpisodeItem> { it.seasonNumber.toIntOrNull() ?: 0 }
-                .thenBy { it.episode.episodeNum }
+            compareBy<DisplayEpisodeItem> { it.seasonNumber.toIntOrNull() ?: 0 }
+                .thenBy { it.episode.episodeNumber }
         )
     }
 
@@ -131,7 +133,7 @@ private fun EpisodeListContent(
         modifier = Modifier.fillMaxSize()
     ) {
         // Series info
-        seriesInfo.info?.plot?.let { plot ->
+        seriesDetail.metadata.plot?.let { plot ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -172,7 +174,7 @@ private fun EpisodeListContent(
                         onEpisodeSelected(
                             episodeItem.episode.id,
                             episodeItem.episode.title,
-                            episodeItem.episode.containerExtension
+                            episodeItem.episode.extension ?: "mp4"
                         )
                     }
                 )
@@ -184,7 +186,7 @@ private fun EpisodeListContent(
 @Composable
 private fun EpisodeCard(
     seasonNumber: String,
-    episode: Episode,
+    episode: DomainEpisodeItem,
     onClick: () -> Unit
 ) {
     Card(
@@ -198,7 +200,7 @@ private fun EpisodeCard(
         ) {
             // Season and Episode number
             Text(
-                text = "S${seasonNumber.padStart(2, '0')} E${episode.episodeNum.toString().padStart(2, '0')}",
+                text = "S${seasonNumber.padStart(2, '0')} E${episode.episodeNumber.toString().padStart(2, '0')}",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -214,7 +216,7 @@ private fun EpisodeCard(
             )
 
             // Episode info (duration, rating, etc.)
-            episode.info?.duration?.let { duration ->
+            episode.metadata.duration?.let { duration ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = formatDuration(duration),

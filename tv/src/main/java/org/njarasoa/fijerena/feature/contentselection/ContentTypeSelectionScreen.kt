@@ -2,7 +2,12 @@
 
 package org.njarasoa.fijerena.feature.contentselection
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -14,8 +19,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import androidx.compose.foundation.BorderStroke
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
@@ -34,12 +43,38 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 @Composable
 fun ContentTypeSelectionScreen(
     onContentTypeSelected: (ContentType) -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    onProviderChanged: () -> Unit = {}
 ) {
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val providerName by remember { mutableStateOf(appSettings.providerName) }
+    var providerName by remember { mutableStateOf("") }
+    var providerType by remember { mutableStateOf("") }
+    var supportedContentTypes by remember { mutableStateOf<Set<String>>(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
+    var showProviderPicker by remember { mutableStateOf(false) }
+    var allProviders by remember { mutableStateOf<List<org.njarasoa.fijerena.core.network.provider.ProviderEntity>>(emptyList()) }
+    var activeProviderId by remember { mutableStateOf(0L) }
+    var refreshTrigger by remember { mutableStateOf(0) }
+
+    // Load active provider info from Room
+    LaunchedEffect(refreshTrigger) {
+        withContext(Dispatchers.IO) {
+            val providerRepo = ProviderRepository(context.applicationContext)
+            allProviders = providerRepo.getAllProvidersList()
+            val activeProvider = providerRepo.getActiveProvider()
+            if (activeProvider != null) {
+                providerName = activeProvider.name
+                providerType = activeProvider.type
+                activeProviderId = activeProvider.id
+                val password = providerRepo.getPassword(activeProvider.id) ?: ""
+                val mediaProvider = MediaProviderFactory.create(activeProvider, context.applicationContext, password)
+                supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
+            } else {
+                providerName = appSettings.providerName
+            }
+        }
+    }
 
     // 5% padding for TV overscan safety
     Box(
@@ -64,10 +99,14 @@ fun ContentTypeSelectionScreen(
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                val displayName = if (appSettings.isDevMode && providerType.isNotEmpty()) {
+                    "$providerName ($providerType)"
+                } else providerName
                 Text(
-                    text = providerName,
+                    text = displayName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textHigh)
+                    color = CinemaAccentLight,
+                    modifier = Modifier.clickable { showProviderPicker = true }
                 )
             }
 
@@ -88,22 +127,96 @@ fun ContentTypeSelectionScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    ContentTypeButton(
-                        text = "📺 ${ContentType.LIVE_TV.displayName}",
-                        onClick = { onContentTypeSelected(ContentType.LIVE_TV) }
-                    )
+                    if ("LIVE_TV" in supportedContentTypes) {
+                        ContentTypeButton(
+                            text = "📺 ${ContentType.LIVE_TV.displayName}",
+                            onClick = { onContentTypeSelected(ContentType.LIVE_TV) }
+                        )
+                    }
 
-                    ContentTypeButton(
-                        text = "🎬 ${ContentType.MOVIES.displayName}",
-                        onClick = { onContentTypeSelected(ContentType.MOVIES) }
-                    )
+                    if ("MOVIES" in supportedContentTypes) {
+                        ContentTypeButton(
+                            text = "🎬 ${ContentType.MOVIES.displayName}",
+                            onClick = { onContentTypeSelected(ContentType.MOVIES) }
+                        )
+                    }
 
-                    ContentTypeButton(
-                        text = "📺 ${ContentType.TV_SHOWS.displayName}",
-                        onClick = { onContentTypeSelected(ContentType.TV_SHOWS) }
-                    )
+                    if ("TV_SHOWS" in supportedContentTypes) {
+                        ContentTypeButton(
+                            text = "📺 ${ContentType.TV_SHOWS.displayName}",
+                            onClick = { onContentTypeSelected(ContentType.TV_SHOWS) }
+                        )
+                    }
                 }
             }
+        }
+
+        // Provider picker dialog
+        if (showProviderPicker && allProviders.size > 1) {
+            val coroutineScope = rememberCoroutineScope()
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showProviderPicker = false },
+                title = { androidx.compose.material3.Text("Switch Provider") },
+                text = {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        allProviders.forEach { provider ->
+                            val isActive = provider.id == activeProviderId
+                            val label = if (appSettings.isDevMode) {
+                                "${provider.name} (${provider.type})"
+                            } else provider.name
+                            androidx.compose.material3.Surface(
+                                onClick = {
+                                    if (!isActive) {
+                                        coroutineScope.launch {
+                                            val providerRepo = ProviderRepository(context.applicationContext)
+                                            providerRepo.setActiveProvider(provider.id)
+                                            showProviderPicker = false
+                                            refreshTrigger++
+                                            onProviderChanged()
+                                        }
+                                    } else {
+                                        showProviderPicker = false
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = if (isActive)
+                                    CinemaAccent.copy(alpha = 0.2f)
+                                else
+                                    CinemaSurfaceVariant,
+                                shape = RoundedCornerShape(CinemaCornerRadius.small)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    androidx.compose.material3.Text(
+                                        text = label,
+                                        color = if (isActive) CinemaAccent else CinemaTextPrimary
+                                    )
+                                    if (isActive) {
+                                        androidx.compose.material3.Text(
+                                            text = "Active",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CinemaAccent
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = { showProviderPicker = false }) {
+                        androidx.compose.material3.Text("Close")
+                    }
+                }
+            )
         }
 
         // Settings gear icon at bottom left

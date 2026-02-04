@@ -81,7 +81,7 @@ sealed interface Screen {
      */
     @Serializable
     data class EpisodeSelection(
-        val seriesId: Int,
+        val seriesId: String,
         val seriesName: String,
         val categoryId: String
     ) : Screen
@@ -96,7 +96,7 @@ sealed interface Screen {
      */
     @Serializable
     data class MovieDetails(
-        val movieId: Int,
+        val movieId: String,
         val movieName: String,
         val categoryId: String
     ) : Screen
@@ -139,13 +139,13 @@ sealed interface Screen {
      */
     @Serializable
     data class Player(
-        val streamId: Int,
+        val streamId: String,
         val streamName: String,
         val categoryId: String,
         val contentType: String,
         val episodeId: String? = null,
         val episodeExtension: String? = null,
-        val seriesId: Int? = null,
+        val seriesId: String? = null,
         val seriesName: String? = null
     ) : Screen
 }

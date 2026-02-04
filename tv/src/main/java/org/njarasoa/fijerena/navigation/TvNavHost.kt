@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
@@ -65,13 +66,24 @@ fun TvNavHost(
 ) {
     val context = LocalContext.current
     val accountManager = remember { AccountManager(context.applicationContext) }
-    val repository = remember {
-        XtreamRepository(accountManager, context.applicationContext)
-    }
     val coroutineScope = rememberCoroutineScope()
 
-    // Check if provider is configured on startup
-    val hasProvider = remember { accountManager.hasStoredCredentials() }
+    // Migrate legacy AccountManager credentials to Room if needed, then check
+    val hasProvider = remember {
+        kotlinx.coroutines.runBlocking {
+            val providerRepo = ProviderRepository(context.applicationContext)
+            if (providerRepo.getProviderCount() == 0) {
+                // Run one-time migration from AccountManager to Room
+                val legacyCreds = accountManager.exportForMigration()
+                if (legacyCreds != null) {
+                    val (url, username, password) = legacyCreds
+                    val name = org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext).providerName
+                    providerRepo.addProvider(name, url, username, password)
+                }
+            }
+            providerRepo.getProviderCount() > 0
+        }
+    }
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
     // Determine initial destination based on provider configuration
@@ -81,17 +93,23 @@ fun TvNavHost(
         Screen.Settings
     }
 
-    // Auto-restore session if credentials are stored but not authenticated
+    // Auto-restore Xtream session if the active provider is Xtream
     LaunchedEffect(hasProvider, isAuthenticated) {
         if (hasProvider && isAuthenticated == null) {
-            // Try to restore session from stored credentials
-            when (val result = repository.restoreSession()) {
-                is Result.Success -> {
-                    val url = repository.getCurrentUrl() ?: ""
-                    authViewModel.setAuthSession(result.data, url)
-                }
-                is Result.Error -> {
-                    // Silently fail - user will stay on Settings screen
+            val providerRepo = ProviderRepository(context.applicationContext)
+            val activeProvider = providerRepo.getActiveProvider()
+            if (activeProvider != null && activeProvider.type == "XTREAM") {
+                val repository = XtreamRepository(
+                    accountManager, context.applicationContext, activeProvider.id
+                )
+                when (val result = repository.restoreSession()) {
+                    is Result.Success -> {
+                        val url = repository.getCurrentUrl() ?: ""
+                        authViewModel.setAuthSession(result.data, url)
+                    }
+                    is Result.Error -> {
+                        // Silently fail - factories will handle connection
+                    }
                 }
             }
         }
@@ -134,13 +152,13 @@ fun TvNavHost(
                 val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
                 CategoryGridScreen(
                     contentType = categoryListScreen.contentType,
-                    onStreamSelected = { streamId, streamName, categoryId ->
+                    onStreamSelected = { itemId, streamName, categoryId ->
                         when (categoryListScreen.contentType) {
                             "TV_SHOWS" -> {
                                 // For TV shows, navigate to episode selection
                                 navController.navigate(
                                     Screen.EpisodeSelection(
-                                        seriesId = streamId,
+                                        seriesId = itemId,
                                         seriesName = streamName,
                                         categoryId = categoryId
                                     )
@@ -150,7 +168,7 @@ fun TvNavHost(
                                 // For movies, navigate to movie details
                                 navController.navigate(
                                     Screen.MovieDetails(
-                                        movieId = streamId,
+                                        movieId = itemId,
                                         movieName = streamName,
                                         categoryId = categoryId
                                     )
@@ -160,7 +178,7 @@ fun TvNavHost(
                                 // For Live TV, go directly to player
                                 navController.navigate(
                                     Screen.Player(
-                                        streamId = streamId,
+                                        streamId = itemId,
                                         streamName = streamName,
                                         categoryId = categoryId,
                                         contentType = categoryListScreen.contentType
@@ -195,26 +213,26 @@ fun TvNavHost(
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
                 SearchScreen(
                     contentType = searchScreen.contentType,
-                    onStreamSelected = { streamId, streamName, categoryId ->
+                    onStreamSelected = { itemId, streamName, categoryId ->
                         // Navigate based on content type
                         when (searchScreen.contentType) {
                             "TV_SHOWS" -> navController.navigate(
                                 Screen.EpisodeSelection(
-                                    seriesId = streamId,
+                                    seriesId = itemId,
                                     seriesName = streamName,
                                     categoryId = categoryId
                                 )
                             )
                             "MOVIES" -> navController.navigate(
                                 Screen.MovieDetails(
-                                    movieId = streamId,
+                                    movieId = itemId,
                                     movieName = streamName,
                                     categoryId = categoryId
                                 )
                             )
                             else -> navController.navigate(
                                 Screen.Player(
-                                    streamId = streamId,
+                                    streamId = itemId,
                                     streamName = streamName,
                                     categoryId = categoryId,
                                     contentType = searchScreen.contentType
@@ -260,7 +278,7 @@ fun TvNavHost(
                     onEpisodeSelected = { episodeId, episodeTitle, extension ->
                         navController.navigate(
                             Screen.Player(
-                                streamId = episodeId.hashCode(), // Use hash for navigation ID
+                                streamId = episodeId,
                                 streamName = episodeTitle,
                                 categoryId = episodeSelectionScreen.categoryId,
                                 contentType = "TV_SHOWS",
@@ -283,13 +301,13 @@ fun TvNavHost(
                 EpgGuideScreen(
                     categoryId = epgScreen.categoryId,
                     categoryName = epgScreen.categoryName,
-                    onProgramSelected = { program, stream ->
+                    onProgramSelected = { program, channel ->
                         // Navigate to player for the selected program
                         navController.navigate(
                             Screen.Player(
-                                streamId = stream.streamId,
-                                streamName = stream.name,
-                                categoryId = stream.categoryId,
+                                streamId = channel.id,
+                                streamName = channel.name,
+                                categoryId = channel.categoryId,
                                 contentType = "LIVE_TV"
                             )
                         )
@@ -347,19 +365,28 @@ fun TvNavHost(
             composable<Screen.ProviderSelection> {
                 TvProviderSelectionScreen(
                     onProviderSelected = { provider ->
-                        // Re-authenticate with selected provider and go to content selection
                         coroutineScope.launch {
-                            when (val result = repository.restoreSession()) {
-                                is Result.Success -> {
-                                    val url = repository.getCurrentUrl() ?: ""
-                                    authViewModel.setAuthSession(result.data, url)
-                                    navController.navigate(Screen.ContentTypeSelection) {
-                                        popUpTo(Screen.ProviderSelection) { inclusive = true }
+                            // Activate the selected provider in Room
+                            val providerRepo = ProviderRepository(context.applicationContext)
+                            providerRepo.setActiveProvider(provider.id)
+
+                            // For Xtream providers, restore session for backward compatibility
+                            if (provider.type == "XTREAM") {
+                                val xtreamRepo = XtreamRepository(
+                                    accountManager, context.applicationContext, provider.id
+                                )
+                                when (val result = xtreamRepo.restoreSession()) {
+                                    is Result.Success -> {
+                                        val url = xtreamRepo.getCurrentUrl() ?: ""
+                                        authViewModel.setAuthSession(result.data, url)
                                     }
+                                    is Result.Error -> { /* factories will handle connection */ }
                                 }
-                                is Result.Error -> {
-                                    // Stay on provider selection
-                                }
+                            }
+
+                            // Navigate to content selection for all provider types
+                            navController.navigate(Screen.ContentTypeSelection) {
+                                popUpTo(Screen.ProviderSelection) { inclusive = true }
                             }
                         }
                     },
@@ -386,19 +413,25 @@ fun TvNavHost(
                         navController.navigate(Screen.ProviderSelection)
                     },
                     onProviderChanged = {
-                        // Provider changed, try to re-authenticate and go to content selection
                         coroutineScope.launch {
-                            when (val result = repository.restoreSession()) {
-                                is Result.Success -> {
-                                    val url = repository.getCurrentUrl() ?: ""
-                                    authViewModel.setAuthSession(result.data, url)
-                                    navController.navigate(Screen.ContentTypeSelection) {
-                                        popUpTo(Screen.Settings) { inclusive = false }
+                            val providerRepo = ProviderRepository(context.applicationContext)
+                            val activeProvider = providerRepo.getActiveProvider()
+
+                            if (activeProvider != null && activeProvider.type == "XTREAM") {
+                                val xtreamRepo = XtreamRepository(
+                                    accountManager, context.applicationContext, activeProvider.id
+                                )
+                                when (val result = xtreamRepo.restoreSession()) {
+                                    is Result.Success -> {
+                                        val url = xtreamRepo.getCurrentUrl() ?: ""
+                                        authViewModel.setAuthSession(result.data, url)
                                     }
+                                    is Result.Error -> { /* factories will handle connection */ }
                                 }
-                                is Result.Error -> {
-                                    // Stay on settings if restore failed
-                                }
+                            }
+
+                            navController.navigate(Screen.ContentTypeSelection) {
+                                popUpTo(Screen.Settings) { inclusive = false }
                             }
                         }
                     },
