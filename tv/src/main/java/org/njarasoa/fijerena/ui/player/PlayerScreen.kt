@@ -1341,12 +1341,15 @@ private fun StatsOverlay(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Header
                 Text(
                     text = "📊 Stats for Nerds",
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 14.sp,
+                        fontFamily = FontFamily.Monospace
+                    ),
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
@@ -1371,7 +1374,7 @@ private fun StatsOverlay(
                     // Left Column
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         // Video stats
                         SectionHeader("VIDEO")
@@ -1397,7 +1400,7 @@ private fun StatsOverlay(
                     // Right Column
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         // Playback stats
                         SectionHeader("PLAYBACK")
@@ -1487,17 +1490,23 @@ private fun StatRow(label: String, value: String) {
 private fun CompactStatRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            ),
             color = Color.White.copy(alpha = 0.7f),
             modifier = Modifier.weight(1f, fill = false)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            ),
             color = Color.White,
             fontWeight = FontWeight.Bold
         )
@@ -1508,17 +1517,23 @@ private fun CompactStatRow(label: String, value: String) {
 private fun CompactStatRowColored(label: String, value: String, valueColor: Color) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            ),
             color = Color.White.copy(alpha = 0.7f),
             modifier = Modifier.weight(1f, fill = false)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            ),
             color = valueColor,
             fontWeight = FontWeight.Bold
         )
@@ -1529,10 +1544,13 @@ private fun CompactStatRowColored(label: String, value: String, valueColor: Colo
 private fun SectionHeader(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace
+        ),
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 6.dp)
+        modifier = Modifier.padding(top = 4.dp)
     )
 }
 
