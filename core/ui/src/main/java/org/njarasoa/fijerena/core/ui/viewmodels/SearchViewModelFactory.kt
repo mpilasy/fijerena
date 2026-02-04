@@ -1,4 +1,4 @@
-package org.njarasoa.fijerena.feature.category
+package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -7,19 +7,19 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.XtreamRepository
 
 /**
- * Factory for creating CategoryViewModel with XtreamRepository dependency.
+ * Factory for creating SearchViewModel with required dependencies
  */
-class CategoryViewModelFactory(
+class SearchViewModelFactory(
     private val context: Context,
     private val contentType: String
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(CategoryViewModel::class.java)) {
+        if (modelClass.isAssignableFrom(SearchViewModel::class.java)) {
             val accountManager = AccountManager(context.applicationContext)
             val repository = XtreamRepository(accountManager, context.applicationContext)
-            return CategoryViewModel(repository, contentType) as T
+            return SearchViewModel(repository, contentType) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

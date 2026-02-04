@@ -1,4 +1,4 @@
-package org.njarasoa.fijerena.feature.login
+package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
 import androidx.lifecycle.ViewModel

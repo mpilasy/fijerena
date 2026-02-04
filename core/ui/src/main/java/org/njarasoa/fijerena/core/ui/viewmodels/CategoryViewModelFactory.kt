@@ -1,4 +1,4 @@
-package org.njarasoa.fijerena.feature.login
+package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -7,22 +7,19 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.XtreamRepository
 
 /**
- * Factory for creating LoginViewModel with XtreamRepository dependency.
- *
- * Creates the repository with AccountManager for encrypted credential storage.
- *
- * For dependency injection (Hilt/Koin), use @HiltViewModel instead.
+ * Factory for creating CategoryViewModel with XtreamRepository dependency.
  */
-class LoginViewModelFactory(
-    private val context: Context
+class CategoryViewModelFactory(
+    private val context: Context,
+    private val contentType: String
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
+        if (modelClass.isAssignableFrom(CategoryViewModel::class.java)) {
             val accountManager = AccountManager(context.applicationContext)
             val repository = XtreamRepository(accountManager, context.applicationContext)
-            return LoginViewModel(repository) as T
+            return CategoryViewModel(repository, contentType) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

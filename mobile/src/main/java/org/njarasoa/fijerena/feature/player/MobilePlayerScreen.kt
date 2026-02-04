@@ -1,11 +1,20 @@
 package org.njarasoa.fijerena.feature.player
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.*
@@ -13,7 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
@@ -28,7 +39,7 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Mobile player screen with touch controls.
+ * Mobile player screen with touch controls and Stats for Nerds overlay.
  */
 @Composable
 fun MobilePlayerScreen(
@@ -53,13 +64,14 @@ fun MobilePlayerScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showControls by remember { mutableStateOf(true) }
+    var showStats by remember { mutableStateOf(false) }
 
     val playbackState = viewModel.playbackState.collectAsState().value
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
 
     // Auto-hide controls after 5 seconds
     LaunchedEffect(showControls) {
-        if (showControls) {
+        if (showControls && !showStats) {
             delay(5.seconds)
             showControls = false
         }
@@ -126,7 +138,13 @@ fun MobilePlayerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)
-                    .clickable { showControls = !showControls }
+                    .clickable {
+                        if (showStats) {
+                            showStats = false
+                        } else {
+                            showControls = !showControls
+                        }
+                    }
             ) {
                 // Video surface
                 val playerView = remember {
@@ -172,7 +190,11 @@ fun MobilePlayerScreen(
                 }
 
                 // Touch controls overlay
-                if (showControls && playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused) {
+                AnimatedVisibility(
+                    visible = showControls && !showStats && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
                     ControlsOverlay(
                         playbackState = playbackState,
                         metadata = currentMetadata,
@@ -186,7 +208,21 @@ fun MobilePlayerScreen(
                         onBack = {
                             viewModel.stop()
                             onBack()
-                        }
+                        },
+                        onStats = { showStats = true }
+                    )
+                }
+
+                // Stats overlay
+                AnimatedVisibility(
+                    visible = showStats,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    MobileStatsOverlay(
+                        playbackState = playbackState,
+                        metadata = currentMetadata,
+                        onClose = { showStats = false }
                     )
                 }
             }
@@ -289,26 +325,45 @@ private fun ControlsOverlay(
     playbackState: PlaybackState,
     metadata: PlayerMetadata,
     onPlayPause: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onStats: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.3f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                // Consume taps on the overlay background so they don't
+                // propagate to the parent Box and toggle controls off
+            }
     ) {
-        // Top bar with back button
-        IconButton(
-            onClick = onBack,
+        // Top bar with back button and stats button
+        Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(16.dp)
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = Color.White,
-                modifier = Modifier.size(32.dp)
-            )
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            IconButton(onClick = onStats) {
+                Icon(
+                    imageVector = Icons.Default.Analytics,
+                    contentDescription = "Stats for Nerds",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
 
         // Center play/pause button
@@ -407,6 +462,249 @@ private fun ControlsOverlay(
     }
 }
 
+@Composable
+private fun MobileStatsOverlay(
+    playbackState: PlaybackState,
+    metadata: PlayerMetadata,
+    onClose: () -> Unit
+) {
+    // Collect stats from player
+    var videoCodec by remember { mutableStateOf("N/A") }
+    var videoResolution by remember { mutableStateOf("N/A") }
+    var videoFrameRate by remember { mutableStateOf("N/A") }
+    var videoBitrate by remember { mutableStateOf("N/A") }
+
+    var audioCodec by remember { mutableStateOf("N/A") }
+    var audioSampleRate by remember { mutableStateOf("N/A") }
+    var audioChannels by remember { mutableStateOf("N/A") }
+    var audioBitrate by remember { mutableStateOf("N/A") }
+
+    var bufferedPosition by remember { mutableStateOf(0L) }
+    var droppedFrames by remember { mutableStateOf(0L) }
+    var networkSpeed by remember { mutableStateOf("N/A") }
+    var bufferHealth by remember { mutableStateOf(0) }
+
+    val serviceDroppedFrames = StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsState()
+    val serviceTotalFrames = StreamingPlaybackService.getInstance()?.totalFrames?.collectAsState()
+
+    // Update stats every second
+    LaunchedEffect(Unit) {
+        while (true) {
+            StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
+                bufferedPosition = p.bufferedPosition
+                droppedFrames = serviceDroppedFrames?.value ?: 0L
+
+                val currentPos = p.currentPosition
+                val buffered = p.bufferedPosition
+                bufferHealth = if (buffered > currentPos) {
+                    ((buffered - currentPos) / 1000).toInt().coerceIn(0, 100)
+                } else {
+                    0
+                }
+
+                val tracks = p.currentTracks
+                var totalBitrate = 0
+
+                for (i in 0 until tracks.groups.size) {
+                    val group = tracks.groups[i]
+                    if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO && group.length > 0) {
+                        val format = group.getTrackFormat(0)
+                        videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
+                        videoResolution = "${format.width} x ${format.height}"
+                        videoFrameRate = if (format.frameRate > 0) "${format.frameRate.toInt()} fps" else "N/A"
+                        videoBitrate = formatBitrate(format.bitrate)
+                        if (format.bitrate > 0) totalBitrate += format.bitrate
+                    }
+                    if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO && group.length > 0) {
+                        val format = group.getTrackFormat(0)
+                        audioCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
+                        audioSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else "N/A"
+                        audioChannels = if (format.channelCount > 0) {
+                            when (format.channelCount) {
+                                1 -> "Mono"
+                                2 -> "Stereo"
+                                6 -> "5.1"
+                                8 -> "7.1"
+                                else -> "${format.channelCount}ch"
+                            }
+                        } else "N/A"
+                        audioBitrate = formatBitrate(format.bitrate)
+                        if (format.bitrate > 0) totalBitrate += format.bitrate
+                    }
+                }
+
+                networkSpeed = if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
+            }
+
+            delay(1.seconds)
+        }
+    }
+
+    val position = when (playbackState) {
+        is PlaybackState.Playing -> playbackState.position
+        is PlaybackState.Paused -> playbackState.position
+        else -> 0L
+    }
+    val duration = when (playbackState) {
+        is PlaybackState.Playing -> playbackState.duration
+        is PlaybackState.Paused -> playbackState.duration
+        else -> 0L
+    }
+    val totalFrames = serviceTotalFrames?.value ?: 0L
+    val dropRate = if (totalFrames > 0) (droppedFrames.toFloat() / totalFrames * 100) else 0f
+    val dropColor = when {
+        dropRate < 0.5f -> Color(0xFF4CAF50)
+        dropRate < 2.0f -> Color(0xFFFFC107)
+        else -> Color(0xFFF44336)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                onClose()
+            }
+    ) {
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .widthIn(max = 320.dp),
+            color = Color.Black.copy(alpha = 0.85f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Stats for Nerds",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Video
+                SectionHeader("VIDEO")
+                StatRow("Codec", videoCodec)
+                StatRow("Resolution", videoResolution)
+                StatRow("Frame Rate", videoFrameRate)
+                StatRow("Bitrate", videoBitrate)
+
+                // Audio
+                SectionHeader("AUDIO")
+                StatRow("Codec", audioCodec)
+                StatRow("Sample Rate", audioSampleRate)
+                StatRow("Channels", audioChannels)
+                StatRow("Bitrate", audioBitrate)
+
+                // Network
+                SectionHeader("NETWORK")
+                StatRow("Speed", networkSpeed)
+                StatRow("Buffer", "${bufferHealth}s")
+                StatRow("Buffered", formatTime(bufferedPosition))
+
+                // Playback
+                SectionHeader("PLAYBACK")
+                StatRow("Position", formatTime(position))
+                StatRow("Duration", if (duration > 0) formatTime(duration) else "Live")
+
+                // Performance
+                SectionHeader("PERFORMANCE")
+                StatRowColored("Dropped", "$droppedFrames / $totalFrames", dropColor)
+                if (totalFrames > 0) {
+                    StatRowColored("Drop Rate", String.format("%.2f%%", dropRate), dropColor)
+                }
+
+                // Stream
+                SectionHeader("STREAM")
+                StatRow("Type", if (metadata.isLive) "Live" else "VOD")
+                StatRow("URL", metadata.streamUrl.substringAfterLast("/").take(25))
+
+                // Device
+                SectionHeader("DEVICE")
+                StatRow("Model", android.os.Build.MODEL)
+                StatRow("API", "${android.os.Build.VERSION.SDK_INT}")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 6.dp)
+    )
+}
+
+@Composable
+private fun StatRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            color = Color.White.copy(alpha = 0.7f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            color = Color.White,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun StatRowColored(label: String, value: String, valueColor: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            color = Color.White.copy(alpha = 0.7f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            color = valueColor,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
 private fun formatTime(millis: Long): String {
     val totalSeconds = millis / 1000
     val hours = totalSeconds / 3600
@@ -417,5 +715,18 @@ private fun formatTime(millis: Long): String {
         String.format("%d:%02d:%02d", hours, minutes, seconds)
     } else {
         String.format("%d:%02d", minutes, seconds)
+    }
+}
+
+private fun formatBitrate(bitrate: Int): String {
+    return if (bitrate > 0) {
+        val kbps = bitrate / 1000
+        if (kbps > 1000) {
+            String.format("%.1f Mbps", kbps / 1000f)
+        } else {
+            "$kbps Kbps"
+        }
+    } else {
+        "Unknown"
     }
 }

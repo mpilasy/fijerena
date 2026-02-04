@@ -1,10 +1,12 @@
 package org.njarasoa.fijerena.feature.search
 
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,8 +17,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.njarasoa.fijerena.core.network.AccountManager
-import org.njarasoa.fijerena.core.network.XtreamRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,10 +26,7 @@ fun MobileSearchScreen(
     onBack: () -> Unit,
     viewModel: SearchViewModel = viewModel(
         factory = SearchViewModelFactory(
-            repository = XtreamRepository(
-                AccountManager(LocalContext.current.applicationContext),
-                LocalContext.current.applicationContext
-            ),
+            context = LocalContext.current.applicationContext,
             contentType = contentType
         )
     )
@@ -43,7 +40,7 @@ fun MobileSearchScreen(
                 title = { Text("Search") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 }
             )

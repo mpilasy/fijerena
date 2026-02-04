@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.feature.login
 
+import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModelFactory
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions

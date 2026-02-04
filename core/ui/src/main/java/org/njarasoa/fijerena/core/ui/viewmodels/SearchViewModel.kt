@@ -1,4 +1,4 @@
-package org.njarasoa.fijerena.feature.search
+package org.njarasoa.fijerena.core.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

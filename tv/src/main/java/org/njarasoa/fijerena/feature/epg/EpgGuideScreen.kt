@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.feature.epg
 
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

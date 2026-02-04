@@ -23,7 +23,6 @@ import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelection
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
-import org.njarasoa.fijerena.feature.settings.MobileEditProviderScreen
 import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
 import org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen
 
@@ -53,17 +52,8 @@ fun MobileNavHost(
     // Check authentication status on startup
     val authResponse by authViewModel.authResponse.collectAsState()
 
-    // Wait for auth state to be determined before rendering NavHost
-    // This prevents flashing the login screen when already authenticated
-    if (authResponse == null) {
-        // Still loading auth state, show nothing or a splash screen
-        Surface(modifier = Modifier.fillMaxSize()) {
-            // Empty surface while loading
-        }
-        return
-    }
-
     // Determine initial destination based on auth status
+    // LoginScreen will attempt to restore session automatically
     val startDestination = if (authViewModel.isAuthenticated()) {
         Screen.ContentTypeSelection
     } else {
@@ -195,20 +185,17 @@ fun MobileNavHost(
                     onBack = {
                         navController.navigateUp()
                     },
-                    onEditProvider = {
-                        navController.navigate(Screen.EditProvider)
-                    }
-                )
-            }
-
-            // Edit Provider Screen
-            composable<Screen.EditProvider> {
-                MobileEditProviderScreen(
-                    onSaved = {
-                        navController.navigateUp()
+                    onProviderChanged = {
+                        // Navigate back to content type selection after provider change
+                        navController.navigate(Screen.ContentTypeSelection) {
+                            popUpTo(Screen.ContentTypeSelection) { inclusive = true }
+                        }
                     },
-                    onBack = {
-                        navController.navigateUp()
+                    onLogout = {
+                        authViewModel.clearAuthSession()
+                        navController.navigate(Screen.Login) {
+                            popUpTo(Screen.ContentTypeSelection) { inclusive = true }
+                        }
                     }
                 )
             }
