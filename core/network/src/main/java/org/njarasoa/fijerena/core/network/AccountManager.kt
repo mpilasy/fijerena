@@ -97,6 +97,20 @@ class AccountManager(context: Context) {
         }
     }
 
+    /**
+     * Store basic credentials without an auth response.
+     * Used by MediaProviderFactory to seed credentials for XtreamRepository.restoreSession().
+     */
+    fun storeBasicCredentials(url: String, username: String, password: String) {
+        prefs.edit().apply {
+            putString(KEY_URL, url)
+            putString(KEY_USERNAME, username)
+            putString(KEY_PASSWORD, password)
+            putBoolean(KEY_REMEMBER_ME, true)
+            apply()
+        }
+    }
+
     fun clearAuthResponse() {
         prefs.edit().remove(KEY_AUTH_RESPONSE).apply()
     }

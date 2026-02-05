@@ -8,6 +8,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinMediaProvider
 import org.njarasoa.fijerena.core.network.local.LocalMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.smb.SmbClient
 import org.njarasoa.fijerena.core.network.smb.SmbMediaProvider
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -75,10 +76,16 @@ object MediaProviderFactory {
         password: String
     ): MediaProvider {
         val accountManager = AccountManager(context.applicationContext)
+        val providerSettings = parseProviderSettings(entity.providerSettings)
+
+        // Store credentials so XtreamRepository.restoreSession() can find them
+        accountManager.storeBasicCredentials(entity.url, entity.username, password)
+
         val xtreamRepository = XtreamRepository(
             accountManager,
             context.applicationContext,
-            entity.id
+            entity.id,
+            providerSettings
         )
         return XtreamMediaProvider(entity.id, xtreamRepository)
     }
@@ -140,6 +147,19 @@ object MediaProviderFactory {
             jsonObj.mapValues { it.value.jsonPrimitive.content }
         } catch (_: Exception) {
             emptyMap()
+        }
+    }
+
+    /**
+     * Parse provider settings from JSON string.
+     * Returns default settings if parsing fails.
+     */
+    private fun parseProviderSettings(settingsJson: String): ProviderSettings {
+        if (settingsJson.isBlank() || settingsJson == "{}") return ProviderSettings.DEFAULT
+        return try {
+            json.decodeFromString<ProviderSettings>(settingsJson)
+        } catch (_: Exception) {
+            ProviderSettings.DEFAULT
         }
     }
 }

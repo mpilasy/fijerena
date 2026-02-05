@@ -19,7 +19,10 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.provider.CategoryFilters
+import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
@@ -32,8 +35,7 @@ fun MobileSettingsScreen(
     onBack: () -> Unit,
     onThemeChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
-    onProviderChanged: () -> Unit,
-    onLogout: () -> Unit
+    onProviderChanged: () -> Unit
 ) {
     val context = LocalContext.current
     val repository = remember {
@@ -48,19 +50,33 @@ fun MobileSettingsScreen(
     var providerName by remember { mutableStateOf("") }
     var currentUrl by remember { mutableStateOf("") }
     var currentUsername by remember { mutableStateOf("") }
+    var activeProviderId by remember { mutableStateOf<Long?>(null) }
+
+    // Provider-level settings
+    var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
 
     LaunchedEffect(Unit) {
         val activeProvider = providerRepo.getActiveProvider()
         providerName = activeProvider?.name ?: "No provider"
         currentUrl = activeProvider?.url ?: ""
         currentUsername = activeProvider?.username ?: ""
+        activeProviderId = activeProvider?.id
+        activeProvider?.id?.let { id ->
+            providerSettings = providerRepo.getProviderSettings(id)
+        }
     }
-    var watchHistorySize by remember { mutableStateOf(appSettings.watchHistorySize.toString()) }
+
+    // Provider-level settings state
+    var watchHistorySize by remember(providerSettings) { mutableStateOf(providerSettings.watchHistorySize.toString()) }
     var newWatchHistorySize by remember { mutableStateOf("") }
-    var favoritesMaxSize by remember { mutableStateOf(appSettings.favoritesMaxSize.toString()) }
+    var favoritesMaxSize by remember(providerSettings) { mutableStateOf(providerSettings.favoritesMaxSize.toString()) }
     var newFavoritesMaxSize by remember { mutableStateOf("") }
+    var autoResumeEnabled by remember(providerSettings) { mutableStateOf(providerSettings.autoResumeEnabled) }
+    var cachingEnabled by remember(providerSettings) { mutableStateOf(providerSettings.cachingEnabled) }
+    var categoryFilters by remember(providerSettings) { mutableStateOf(providerSettings.categoryFilters) }
+
+    // Global settings
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
-    var autoResumeEnabled by remember { mutableStateOf(appSettings.autoResumeEnabled) }
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
 
     var isEditingQueueSize by remember { mutableStateOf(false) }
@@ -69,6 +85,7 @@ fun MobileSettingsScreen(
     // Confirmation dialog states
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showClearProgressDialog by remember { mutableStateOf(false) }
+    var showCategoryFilterDialog by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showClearLiveTvCacheDialog by remember { mutableStateOf(false) }
     var showClearMoviesCacheDialog by remember { mutableStateOf(false) }
@@ -178,7 +195,13 @@ fun MobileSettingsScreen(
                         checked = autoResumeEnabled,
                         onCheckedChange = { enabled ->
                             autoResumeEnabled = enabled
-                            appSettings.autoResumeEnabled = enabled
+                            activeProviderId?.let { id ->
+                                coroutineScope.launch {
+                                    val newSettings = providerSettings.copy(autoResumeEnabled = enabled)
+                                    providerRepo.updateProviderSettings(id, newSettings)
+                                    providerSettings = newSettings
+                                }
+                            }
                         }
                     )
                 }
@@ -238,10 +261,16 @@ fun MobileSettingsScreen(
                             onClick = {
                                 val size = newWatchHistorySize.toIntOrNull()
                                 if (size != null && size in 1..100) {
-                                    appSettings.watchHistorySize = size
                                     watchHistorySize = size.toString()
                                     isEditingQueueSize = false
                                     newWatchHistorySize = ""
+                                    activeProviderId?.let { id ->
+                                        coroutineScope.launch {
+                                            val newSettings = providerSettings.copy(watchHistorySize = size)
+                                            providerRepo.updateProviderSettings(id, newSettings)
+                                            providerSettings = newSettings
+                                        }
+                                    }
                                 }
                             },
                             enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true
@@ -306,10 +335,16 @@ fun MobileSettingsScreen(
                             onClick = {
                                 val size = newFavoritesMaxSize.toIntOrNull()
                                 if (size != null && size in 10..500) {
-                                    appSettings.favoritesMaxSize = size
                                     favoritesMaxSize = size.toString()
                                     isEditingFavoritesSize = false
                                     newFavoritesMaxSize = ""
+                                    activeProviderId?.let { id ->
+                                        coroutineScope.launch {
+                                            val newSettings = providerSettings.copy(favoritesMaxSize = size)
+                                            providerRepo.updateProviderSettings(id, newSettings)
+                                            providerSettings = newSettings
+                                        }
+                                    }
                                 }
                             },
                             enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true
@@ -317,6 +352,68 @@ fun MobileSettingsScreen(
                             Text("Save")
                         }
                     }
+                }
+            }
+
+            // === Category Filters ===
+            SettingsSection(title = "Category Filters") {
+                Text(
+                    text = "Hide categories by prefix (e.g., 'Adult', 'XXX')",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Mode: ${categoryFilters.mode.name}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = if (categoryFilters.prefixes.isEmpty()) "No filters configured"
+                                   else "${categoryFilters.prefixes.size} prefix(es): ${categoryFilters.prefixes.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        )
+                    }
+                    OutlinedButton(onClick = { showCategoryFilterDialog = true }) {
+                        Text("Edit")
+                    }
+                }
+            }
+
+            // === Caching ===
+            SettingsSection(title = "Caching") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Enable caching for faster loading",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Switch(
+                        checked = cachingEnabled,
+                        onCheckedChange = { enabled ->
+                            cachingEnabled = enabled
+                            activeProviderId?.let { id ->
+                                coroutineScope.launch {
+                                    val newSettings = providerSettings.copy(cachingEnabled = enabled)
+                                    providerRepo.updateProviderSettings(id, newSettings)
+                                    providerSettings = newSettings
+                                }
+                            }
+                        }
+                    )
                 }
             }
 
@@ -473,18 +570,6 @@ fun MobileSettingsScreen(
                 }
             }
 
-            // === Logout ===
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = onLogout,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = CinemaError
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Logout")
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -572,6 +657,25 @@ fun MobileSettingsScreen(
             onDismiss = { showClearTvShowsCacheDialog = false }
         )
     }
+
+    // Category Filter Dialog
+    if (showCategoryFilterDialog) {
+        CategoryFilterDialog(
+            currentFilters = categoryFilters,
+            onSave = { newFilters ->
+                categoryFilters = newFilters
+                activeProviderId?.let { id ->
+                    coroutineScope.launch {
+                        val newSettings = providerSettings.copy(categoryFilters = newFilters)
+                        providerRepo.updateProviderSettings(id, newSettings)
+                        providerSettings = newSettings
+                    }
+                }
+                showCategoryFilterDialog = false
+            },
+            onDismiss = { showCategoryFilterDialog = false }
+        )
+    }
 }
 
 @Composable
@@ -656,6 +760,78 @@ private fun ConfirmationDialog(
                 )
             ) {
                 Text("Confirm")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun CategoryFilterDialog(
+    currentFilters: CategoryFilters,
+    onSave: (CategoryFilters) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var mode by remember { mutableStateOf(currentFilters.mode) }
+    var prefixesText by remember { mutableStateOf(currentFilters.prefixes.joinToString(", ")) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Category Filters") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = "Filter mode:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = mode == FilterMode.EXCLUDE,
+                        onClick = { mode = FilterMode.EXCLUDE },
+                        label = { Text("Exclude") }
+                    )
+                    FilterChip(
+                        selected = mode == FilterMode.INCLUDE,
+                        onClick = { mode = FilterMode.INCLUDE },
+                        label = { Text("Include Only") }
+                    )
+                }
+                Text(
+                    text = if (mode == FilterMode.EXCLUDE)
+                        "Categories starting with these prefixes will be hidden"
+                    else
+                        "Only categories starting with these prefixes will be shown",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                )
+                OutlinedTextField(
+                    value = prefixesText,
+                    onValueChange = { prefixesText = it },
+                    label = { Text("Prefixes (comma-separated)") },
+                    placeholder = { Text("Adult, XXX, 18+") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = false,
+                    minLines = 2
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val prefixes = prefixesText
+                        .split(",")
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                    onSave(CategoryFilters(mode = mode, prefixes = prefixes))
+                }
+            ) {
+                Text("Save")
             }
         },
         dismissButton = {

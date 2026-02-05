@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.network.provider.CategoryFilters
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -38,7 +40,8 @@ data class FavoriteItem(
 
 class MediaRepository(
     private val context: Context,
-    private val providerId: Long
+    private val providerId: Long,
+    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT
 ) {
     private var provider: MediaProvider? = null
 
@@ -47,7 +50,7 @@ class MediaRepository(
         cacheName,
         Context.MODE_PRIVATE
     )
-    private val appSettings = AppSettings(context)
+    private val appSettings = AppSettings(context)  // Keep for global settings (isDevMode)
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -80,6 +83,14 @@ class MediaRepository(
 
     fun getCapabilities(): ProviderCapabilities? = provider?.capabilities
 
+    fun getProviderSettings(): ProviderSettings = providerSettings
+
+    fun getCategoryFilters(): CategoryFilters = providerSettings.categoryFilters
+
+    fun isAutoResumeEnabled(): Boolean = providerSettings.autoResumeEnabled
+
+    fun isCachingEnabled(): Boolean = providerSettings.cachingEnabled
+
     // --- Provider-delegated operations ---
 
     suspend fun connect(): kotlin.Result<Unit> {
@@ -95,6 +106,24 @@ class MediaRepository(
     suspend fun getCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
         return provider?.getCategories(contentType)
             ?: kotlin.Result.failure(Exception("No provider set"))
+    }
+
+    /**
+     * Get categories filtered by provider's category filters.
+     * If no filters are set, returns all categories.
+     */
+    suspend fun getFilteredCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
+        val result = getCategories(contentType)
+        if (result.isFailure) return result
+
+        val filters = providerSettings.categoryFilters
+        if (filters.prefixes.isEmpty()) return result
+
+        return result.map { categories ->
+            categories.filter { category ->
+                filters.shouldShowCategory(category.name)
+            }
+        }
     }
 
     suspend fun getItems(categoryId: String, contentType: String): kotlin.Result<List<MediaItem>> {
@@ -206,7 +235,7 @@ class MediaRepository(
             System.currentTimeMillis(),
             playbackPosition, duration, isCompleted
         ))
-        val trimmed = history.take(appSettings.watchHistorySize)
+        val trimmed = history.take(providerSettings.watchHistorySize)
         cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(trimmed)).apply()
     }
 
@@ -248,7 +277,7 @@ class MediaRepository(
             return false
         }
         favorites.add(0, FavoriteItem(itemId, itemName, categoryId, contentType))
-        val trimmed = favorites.take(appSettings.favoritesMaxSize)
+        val trimmed = favorites.take(providerSettings.favoritesMaxSize)
         cache.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
         return true
     }

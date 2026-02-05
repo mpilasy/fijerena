@@ -38,10 +38,14 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.provider.CategoryFilters
+import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
@@ -71,8 +75,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onThemeChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
-    onProviderChanged: () -> Unit,
-    onLogout: () -> Unit
+    onProviderChanged: () -> Unit
 ) {
     val context = LocalContext.current
     val repository = remember {
@@ -87,24 +90,40 @@ fun SettingsScreen(
     var providerName by remember { mutableStateOf("") }
     var currentUrl by remember { mutableStateOf("") }
     var currentUsername by remember { mutableStateOf("") }
+    var activeProviderId by remember { mutableStateOf<Long?>(null) }
+
+    // Provider-level settings (loaded from ProviderSettings)
+    var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
 
     LaunchedEffect(Unit) {
         val activeProvider = providerRepo.getActiveProvider()
         providerName = activeProvider?.name ?: "No provider"
         currentUrl = activeProvider?.url ?: ""
         currentUsername = activeProvider?.username ?: ""
+        activeProviderId = activeProvider?.id
+        activeProvider?.id?.let { id ->
+            providerSettings = providerRepo.getProviderSettings(id)
+        }
     }
-    var watchHistorySize by remember { mutableStateOf(appSettings.watchHistorySize.toString()) }
+
+    // Provider-level settings state (from providerSettings)
+    var watchHistorySize by remember(providerSettings) { mutableStateOf(providerSettings.watchHistorySize.toString()) }
     var newWatchHistorySize by remember { mutableStateOf("") }
-    var favoritesMaxSize by remember { mutableStateOf(appSettings.favoritesMaxSize.toString()) }
+    var favoritesMaxSize by remember(providerSettings) { mutableStateOf(providerSettings.favoritesMaxSize.toString()) }
     var newFavoritesMaxSize by remember { mutableStateOf("") }
+    var autoResumeEnabled by remember(providerSettings) { mutableStateOf(providerSettings.autoResumeEnabled) }
+    var cachingEnabled by remember(providerSettings) { mutableStateOf(providerSettings.cachingEnabled) }
+    var cacheExpiryHours by remember(providerSettings) { mutableStateOf(providerSettings.cacheExpiryHours.toString()) }
+    var categoryFilters by remember(providerSettings) { mutableStateOf(providerSettings.categoryFilters) }
+
+    // Global settings (remain in AppSettings)
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
 
     var isEditingQueueSize by remember { mutableStateOf(false) }
     var isEditingFavoritesSize by remember { mutableStateOf(false) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
-    var autoResumeEnabled by remember { mutableStateOf(appSettings.autoResumeEnabled) }
     var showClearProgressDialog by remember { mutableStateOf(false) }
+    var showCategoryFilterDialog by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showClearLiveTvCacheDialog by remember { mutableStateOf(false) }
     var showClearMoviesCacheDialog by remember { mutableStateOf(false) }
@@ -277,7 +296,13 @@ fun SettingsScreen(
                         checked = autoResumeEnabled,
                         onCheckedChange = { enabled ->
                             autoResumeEnabled = enabled
-                            appSettings.autoResumeEnabled = enabled
+                            activeProviderId?.let { id ->
+                                coroutineScope.launch {
+                                    val newSettings = providerSettings.copy(autoResumeEnabled = enabled)
+                                    providerRepo.updateProviderSettings(id, newSettings)
+                                    providerSettings = newSettings
+                                }
+                            }
                         }
                     )
                 }
@@ -354,10 +379,16 @@ fun SettingsScreen(
                                 onClick = {
                                     val size = newWatchHistorySize.toIntOrNull()
                                     if (size != null && size in 1..100) {
-                                        appSettings.watchHistorySize = size
                                         watchHistorySize = size.toString()
                                         isEditingQueueSize = false
                                         newWatchHistorySize = ""
+                                        activeProviderId?.let { id ->
+                                            coroutineScope.launch {
+                                                val newSettings = providerSettings.copy(watchHistorySize = size)
+                                                providerRepo.updateProviderSettings(id, newSettings)
+                                                providerSettings = newSettings
+                                            }
+                                        }
                                     }
                                 },
                                 enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true,
@@ -439,10 +470,16 @@ fun SettingsScreen(
                                 onClick = {
                                     val size = newFavoritesMaxSize.toIntOrNull()
                                     if (size != null && size in 10..500) {
-                                        appSettings.favoritesMaxSize = size
                                         favoritesMaxSize = size.toString()
                                         isEditingFavoritesSize = false
                                         newFavoritesMaxSize = ""
+                                        activeProviderId?.let { id ->
+                                            coroutineScope.launch {
+                                                val newSettings = providerSettings.copy(favoritesMaxSize = size)
+                                                providerRepo.updateProviderSettings(id, newSettings)
+                                                providerSettings = newSettings
+                                            }
+                                        }
                                     }
                                 },
                                 enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true,
@@ -501,6 +538,93 @@ fun SettingsScreen(
                     CinemaDangerButton(
                         onClick = { showClearProgressDialog = true },
                         text = "Clear All Progress"
+                    )
+                }
+            }
+
+            // Category Filters
+            item {
+                Column {
+                    Text(
+                        text = "Category Filters",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                    Text(
+                        text = "Hide or show categories based on name prefixes",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Mode: ${if (categoryFilters.mode == FilterMode.EXCLUDE) "Exclude" else "Include"}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextPrimary
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
+                        Text(
+                            text = "Prefixes: ${if (categoryFilters.prefixes.isEmpty()) "None" else categoryFilters.prefixes.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextSecondary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                    CinemaPrimaryButton(
+                        onClick = { showCategoryFilterDialog = true },
+                        text = "Manage Filters"
+                    )
+                }
+            }
+
+            // Caching Enabled
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Enable Caching",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                        Text(
+                            text = "Cache categories and streams for faster loading",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
+                    Switch(
+                        checked = cachingEnabled,
+                        onCheckedChange = { enabled ->
+                            cachingEnabled = enabled
+                            activeProviderId?.let { id ->
+                                coroutineScope.launch {
+                                    val newSettings = providerSettings.copy(cachingEnabled = enabled)
+                                    providerRepo.updateProviderSettings(id, newSettings)
+                                    providerSettings = newSettings
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -771,20 +895,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Logout
-            item {
-                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    CinemaDangerButton(
-                        onClick = onLogout,
-                        text = "Logout",
-                        modifier = Modifier.fillMaxWidth(0.25f)
-                    )
-                }
-            }
         }
     }
 
@@ -1055,6 +1165,123 @@ fun SettingsScreen(
             dismissButton = {
                 Button(
                     onClick = { showClearTvShowsCacheDialog = false },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = CinemaSurface,
+            tonalElevation = 6.dp.scaled(scale)
+        )
+    }
+
+    // Category Filter Dialog
+    if (showCategoryFilterDialog) {
+        var filterMode by remember { mutableStateOf(categoryFilters.mode) }
+        var prefixesText by remember { mutableStateOf(categoryFilters.prefixes.joinToString(", ")) }
+
+        AlertDialog(
+            onDismissRequest = { showCategoryFilterDialog = false },
+            title = {
+                Text(
+                    "Category Filters",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
+                ) {
+                    Text(
+                        "Filter Mode:",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CinemaTextPrimary
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = { filterMode = FilterMode.EXCLUDE },
+                            colors = ButtonDefaults.colors(
+                                containerColor = if (filterMode == FilterMode.EXCLUDE) CinemaAccent else CinemaSurfaceVariant
+                            )
+                        ) {
+                            Text("Exclude")
+                        }
+                        Button(
+                            onClick = { filterMode = FilterMode.INCLUDE },
+                            colors = ButtonDefaults.colors(
+                                containerColor = if (filterMode == FilterMode.INCLUDE) CinemaAccent else CinemaSurfaceVariant
+                            )
+                        ) {
+                            Text("Include")
+                        }
+                    }
+                    Text(
+                        if (filterMode == FilterMode.EXCLUDE)
+                            "Hide categories that start with these prefixes"
+                        else
+                            "Show only categories that start with these prefixes",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaTextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                    Text(
+                        "Prefixes (comma-separated):",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CinemaTextPrimary
+                    )
+                    TextField(
+                        value = prefixesText,
+                        onValueChange = { prefixesText = it },
+                        placeholder = { Text("e.g., XXX, Adult, 18+") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = false,
+                        maxLines = 3
+                    )
+                    Text(
+                        "Examples: \"XXX\", \"Adult\", \"FR|\", \"EN|\"",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val prefixes = prefixesText
+                            .split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                        val newFilters = CategoryFilters(
+                            mode = filterMode,
+                            prefixes = prefixes
+                        )
+                        categoryFilters = newFilters
+                        activeProviderId?.let { id ->
+                            coroutineScope.launch {
+                                val newSettings = providerSettings.copy(categoryFilters = newFilters)
+                                providerRepo.updateProviderSettings(id, newSettings)
+                                providerSettings = newSettings
+                            }
+                        }
+                        showCategoryFilterDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = CinemaAccent,
+                        contentColor = CinemaTextPrimary
+                    )
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showCategoryFilterDialog = false },
                     colors = ButtonDefaults.colors(
                         containerColor = CinemaSurfaceVariant,
                         contentColor = CinemaTextPrimary

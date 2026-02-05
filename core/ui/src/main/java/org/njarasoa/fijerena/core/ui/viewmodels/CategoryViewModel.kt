@@ -104,7 +104,7 @@ class CategoryViewModel(
                 }
             }
 
-            val result = repository.getCategories(contentType)
+            val result = repository.getFilteredCategories(contentType)
 
             result.fold(
                 onSuccess = { fetchedCategories ->
@@ -112,7 +112,7 @@ class CategoryViewModel(
                     if (fetchedCategories.isEmpty() && !categoriesRetried) {
                         categoriesRetried = true
                         delay(1500)
-                        val retryResult = repository.getCategories(contentType)
+                        val retryResult = repository.getFilteredCategories(contentType)
                         retryResult.fold(
                             onSuccess = { buildAndShowCategories(it) },
                             onFailure = { buildAndShowCategories(emptyList()) }
@@ -311,7 +311,7 @@ class CategoryViewModel(
                 _uiState.value = currentState.copy(categoriesRefreshing = true)
             }
 
-            val result = repository.getCategories(contentType)
+            val result = repository.getFilteredCategories(contentType)
 
             result.fold(
                 onSuccess = { fetchedCategories ->

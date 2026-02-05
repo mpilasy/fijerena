@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 
 /**
@@ -106,6 +108,53 @@ class ProviderRepository(private val context: Context) {
      */
     fun getPassword(providerId: Long): String? {
         return getProviderPrefs(providerId)?.getString("password", null)
+    }
+
+    // --- Provider Settings ---
+
+    private val json = Json { ignoreUnknownKeys = true }
+
+    /**
+     * Get the settings for a provider.
+     * Returns default settings if provider not found or settings are invalid.
+     */
+    suspend fun getProviderSettings(providerId: Long): ProviderSettings {
+        val entity = dao.getProviderById(providerId) ?: return ProviderSettings.DEFAULT
+        return parseProviderSettings(entity.providerSettings)
+    }
+
+    /**
+     * Get provider settings synchronously (for use in non-suspend contexts).
+     * Note: This performs a blocking database call - use getProviderSettings() when possible.
+     */
+    fun getProviderSettingsSync(providerId: Long): ProviderSettings {
+        return kotlinx.coroutines.runBlocking {
+            getProviderSettings(providerId)
+        }
+    }
+
+    /**
+     * Update the settings for a provider.
+     */
+    suspend fun updateProviderSettings(providerId: Long, settings: ProviderSettings) {
+        val entity = dao.getProviderById(providerId) ?: return
+        val settingsJson = json.encodeToString(settings)
+        dao.updateProvider(entity.copy(providerSettings = settingsJson))
+        // Clear cached provider so it picks up new settings
+        MediaProviderFactory.clearCache(providerId)
+    }
+
+    /**
+     * Parse provider settings from JSON string.
+     * Returns default settings if parsing fails.
+     */
+    private fun parseProviderSettings(settingsJson: String): ProviderSettings {
+        if (settingsJson.isBlank() || settingsJson == "{}") return ProviderSettings.DEFAULT
+        return try {
+            json.decodeFromString<ProviderSettings>(settingsJson)
+        } catch (_: Exception) {
+            ProviderSettings.DEFAULT
+        }
     }
 
     // --- Private helpers ---

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [ProviderEntity::class], version = 2, exportSchema = false)
+@Database(entities = [ProviderEntity::class], version = 3, exportSchema = false)
 abstract class ProviderDatabase : RoomDatabase() {
 
     abstract fun providerDao(): ProviderDao
@@ -23,13 +23,20 @@ abstract class ProviderDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add providerSettings column for per-provider settings (JSON blob)
+                db.execSQL("ALTER TABLE providers ADD COLUMN providerSettings TEXT NOT NULL DEFAULT '{}'")
+            }
+        }
+
         fun getInstance(context: Context): ProviderDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     ProviderDatabase::class.java,
                     "providers.db"
-                ).addMigrations(MIGRATION_1_2)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build().also { INSTANCE = it }
             }
         }

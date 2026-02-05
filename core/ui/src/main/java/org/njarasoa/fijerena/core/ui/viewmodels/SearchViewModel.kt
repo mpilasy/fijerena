@@ -105,8 +105,8 @@ class SearchViewModel(
                     return@launch
                 }
 
-                // Fall back to client-side category iteration
-                val categoriesResult = repository.getCategories(contentType)
+                // Fall back to client-side category iteration (uses filtered categories)
+                val categoriesResult = repository.getFilteredCategories(contentType)
                 val categories = categoriesResult.getOrElse {
                     _uiState.value = UiState.Error(it.message ?: "Failed to load categories")
                     return@launch

@@ -431,11 +431,6 @@ fun TvNavHost(
                                 popUpTo(Screen.Settings) { inclusive = false }
                             }
                         }
-                    },
-                    onLogout = {
-                        // Clear auth session and stay on settings
-                        authViewModel.clearAuthSession()
-                        // Don't navigate anywhere, stay on settings screen
                     }
                 )
             }

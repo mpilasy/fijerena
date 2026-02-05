@@ -1,0 +1,78 @@
+package org.njarasoa.fijerena.core.network.provider
+
+import kotlinx.serialization.Serializable
+
+/**
+ * Per-provider settings that can be customized independently for each provider.
+ * Stored as JSON in ProviderEntity.providerSettings field.
+ */
+@Serializable
+data class ProviderSettings(
+    /** Maximum number of items in watch history for this provider (1-100) */
+    val watchHistorySize: Int = 25,
+
+    /** Maximum number of favorites for this provider (10-500) */
+    val favoritesMaxSize: Int = 100,
+
+    /** Whether to auto-resume playback from last position */
+    val autoResumeEnabled: Boolean = true,
+
+    /** Cache expiry time in hours (1-168, i.e., 1 hour to 1 week) */
+    val cacheExpiryHours: Int = 24,
+
+    /** Whether caching is enabled for this provider */
+    val cachingEnabled: Boolean = true,
+
+    /** Category filtering rules */
+    val categoryFilters: CategoryFilters = CategoryFilters()
+) {
+    /** Cache expiry time in milliseconds */
+    val cacheExpiryMs: Long get() = cacheExpiryHours.toLong() * 60 * 60 * 1000
+
+    companion object {
+        /** Default settings instance */
+        val DEFAULT = ProviderSettings()
+    }
+}
+
+/**
+ * Category filtering configuration.
+ * Allows hiding or showing categories based on name prefixes.
+ */
+@Serializable
+data class CategoryFilters(
+    /** Filter mode: EXCLUDE hides matching, INCLUDE shows only matching */
+    val mode: FilterMode = FilterMode.EXCLUDE,
+
+    /** List of prefixes to match against category names (case-insensitive) */
+    val prefixes: List<String> = emptyList()
+) {
+    /**
+     * Check if a category should be visible based on filter rules.
+     * @param categoryName The name of the category to check
+     * @return true if the category should be shown, false if it should be hidden
+     */
+    fun shouldShowCategory(categoryName: String): Boolean {
+        if (prefixes.isEmpty()) return true
+
+        val matchesAnyPrefix = prefixes.any { prefix ->
+            categoryName.startsWith(prefix, ignoreCase = true)
+        }
+
+        return when (mode) {
+            FilterMode.EXCLUDE -> !matchesAnyPrefix  // Hide matching categories
+            FilterMode.INCLUDE -> matchesAnyPrefix   // Show only matching categories
+        }
+    }
+}
+
+/**
+ * Filter mode for category filtering.
+ */
+@Serializable
+enum class FilterMode {
+    /** Hide categories that match the prefixes */
+    EXCLUDE,
+    /** Show only categories that match the prefixes */
+    INCLUDE
+}

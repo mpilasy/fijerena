@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 
 /**
  * Represents a watched stream in the history
@@ -49,7 +50,8 @@ data class FavoriteStream(
 class XtreamRepository(
     private val accountManager: AccountManager,
     context: Context,
-    providerId: Long = 0L
+    providerId: Long = 0L,
+    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT
 ) {
     private var apiService: XtreamApiService? = null
     private val cacheName = if (providerId > 0L) "xtream_cache_$providerId" else "xtream_cache"
@@ -57,11 +59,17 @@ class XtreamRepository(
         cacheName,
         Context.MODE_PRIVATE
     )
-    private val appSettings = AppSettings(context)
+    private val appSettings = AppSettings(context)  // Keep for global settings (isDevMode)
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
+
+    /** Whether caching is enabled for this provider */
+    private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
+
+    /** Cache expiry time in ms for this provider */
+    private val cacheExpiryMs: Long get() = providerSettings.cacheExpiryMs
 
     // Payload size tracking for dev mode
     private val payloadSizes = ConcurrentHashMap<String, Long>()
@@ -319,7 +327,7 @@ class XtreamRepository(
 
     private fun getCachedCategories(): List<XtreamCategory>? {
         val timestamp = cache.getLong(KEY_CATEGORIES_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > appSettings.cacheExpiryMs) {
+        if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
             return null // Cache expired
         }
 
@@ -344,7 +352,7 @@ class XtreamRepository(
 
     private fun getCachedVodCategories(): List<XtreamCategory>? {
         val timestamp = cache.getLong(KEY_VOD_CATEGORIES_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > appSettings.cacheExpiryMs) {
+        if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
             return null
         }
         val cached = cache.getString(KEY_VOD_CATEGORIES, null) ?: return null
@@ -367,7 +375,7 @@ class XtreamRepository(
 
     private fun getCachedSeriesCategories(): List<XtreamCategory>? {
         val timestamp = cache.getLong(KEY_SERIES_CATEGORIES_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > appSettings.cacheExpiryMs) {
+        if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
             return null
         }
         val cached = cache.getString(KEY_SERIES_CATEGORIES, null) ?: return null
@@ -519,7 +527,7 @@ class XtreamRepository(
 
     private fun getCachedStreams(categoryId: String): List<XtreamStream>? {
         val timestamp = cache.getLong(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId, 0L)
-        if (System.currentTimeMillis() - timestamp > appSettings.cacheExpiryMs) {
+        if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
             return null // Cache expired
         }
 
@@ -925,7 +933,7 @@ class XtreamRepository(
         ))
 
         // Keep only last N items based on settings
-        val trimmedHistory = history.take(appSettings.watchHistorySize)
+        val trimmedHistory = history.take(providerSettings.watchHistorySize)
 
         // Save to cache
         val historyJson = json.encodeToString(trimmedHistory)
@@ -966,7 +974,7 @@ class XtreamRepository(
         favorites.add(0, FavoriteStream(streamId, streamName, categoryId, contentType))
 
         // Trim to max size
-        val trimmed = favorites.take(appSettings.favoritesMaxSize)
+        val trimmed = favorites.take(providerSettings.favoritesMaxSize)
 
         // Save
         cache.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
