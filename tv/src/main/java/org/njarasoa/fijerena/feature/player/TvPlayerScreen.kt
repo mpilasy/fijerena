@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -90,6 +91,30 @@ fun TvPlayerScreen(
     var currentStreamName by remember { mutableStateOf(streamName) }
 
     val coroutineScope = rememberCoroutineScope()
+
+    // Stop playback when leaving the player screen
+    DisposableEffect(Unit) {
+        onDispose {
+            // Save final position before leaving (for VOD content)
+            if (contentType != "LIVE_TV") {
+                val ps = viewModel.playbackState.value
+                val pos = when (ps) {
+                    is PlaybackState.Playing -> ps.position
+                    is PlaybackState.Paused -> ps.position
+                    else -> null
+                }
+                val dur = when (ps) {
+                    is PlaybackState.Playing -> ps.duration
+                    is PlaybackState.Paused -> ps.duration
+                    else -> null
+                }
+                if (pos != null && dur != null && dur > 0) {
+                    mediaRepository.savePlaybackPosition(currentStreamId, currentStreamName, categoryId, contentType, pos, dur)
+                }
+            }
+            viewModel.stop()
+        }
+    }
 
     // Favorite state (async for server-backed providers)
     var isFavorite by remember { mutableStateOf(false) }

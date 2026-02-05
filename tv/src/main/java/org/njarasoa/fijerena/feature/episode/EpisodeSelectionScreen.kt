@@ -90,6 +90,7 @@ fun EpisodeSelectionScreen(
             if (entity != null) {
                 val password = providerRepo.getPassword(entity.id) ?: ""
                 val provider = MediaProviderFactory.create(entity, appContext, password)
+                provider.connect() // Authenticate before making API calls
                 repo.setProvider(provider)
             }
             repo

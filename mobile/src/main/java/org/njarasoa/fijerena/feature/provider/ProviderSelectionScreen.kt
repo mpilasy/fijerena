@@ -34,6 +34,11 @@ fun MobileProviderSelectionScreen(
     val uiState by viewModel.uiState.collectAsState()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
 
+    // Refresh provider list when screen is shown (e.g., after adding a provider)
+    LaunchedEffect(Unit) {
+        viewModel.loadProviders()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

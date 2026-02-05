@@ -35,6 +35,10 @@ dependencies {
     // Media3 (ExoPlayer) - Latest stable 1.9.1
     api(libs.bundles.media)
 
+    // FFmpeg extension for software decoding of AC3, EAC3, DTS, TrueHD, etc.
+    // Pre-built Media3 FFmpeg decoder from Jellyfin (Maven Central)
+    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.6.1+1")
+
     // Kotlinx Coroutines
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.coroutines.android)

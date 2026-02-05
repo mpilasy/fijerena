@@ -288,6 +288,8 @@ fun MobilePlayerScreen(
                                 mediaRepository.savePlaybackPosition(streamId, streamName, categoryId, contentType, pos, dur)
                             }
                         }
+                        // Stop playback when leaving the player screen
+                        viewModel.stop()
                         playerView.player = null
                     }
                 }

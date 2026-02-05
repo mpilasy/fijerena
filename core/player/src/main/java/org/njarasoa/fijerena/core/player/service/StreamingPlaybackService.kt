@@ -1,10 +1,14 @@
 package org.njarasoa.fijerena.core.player.service
 
 import android.os.PowerManager
+import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+// FFmpeg library from Jellyfin's pre-built Media3 decoder
+import androidx.media3.decoder.ffmpeg.FfmpegLibrary
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +49,26 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {
-        val player = androidx.media3.exoplayer.ExoPlayer.Builder(this)
+        // Check and log FFmpeg availability
+        val ffmpegAvailable = FfmpegLibrary.isAvailable()
+        Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
+
+        if (ffmpegAvailable) {
+            // Log supported decoders
+            val supportedDecoders = listOf("ac3", "eac3", "mlp", "truehd", "dts", "dts_express")
+            supportedDecoders.forEach { codec ->
+                val supported = FfmpegLibrary.supportsFormat(codec)
+                Log.i(TAG, "FFmpeg supports $codec: $supported")
+            }
+        }
+
+        // Create RenderersFactory that prioritizes extension decoders (FFmpeg) for audio
+        // EXTENSION_RENDERER_MODE_PREFER: Use FFmpeg decoders over platform decoders when available
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            .setEnableAudioFloatOutput(true) // Better audio quality if hardware supports it
+
+        val player = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)
             .setLoadControl(PlayerConfigFactory.createLoadControl(contentType))
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(
@@ -444,6 +467,8 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     companion object {
+        private const val TAG = "StreamingPlaybackService"
+
         @Volatile
         private var instance: StreamingPlaybackService? = null
 

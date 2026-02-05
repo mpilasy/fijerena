@@ -16,6 +16,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // JitPack for community builds
+        maven { url = uri("https://jitpack.io") }
+        // Jellyfin releases for pre-built FFmpeg extension
+        maven { url = uri("https://s01.oss.sonatype.org/content/repositories/releases/") }
     }
 }
 

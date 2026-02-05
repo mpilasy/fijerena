@@ -38,6 +38,7 @@ fun MobileMovieDetailsScreen(
                 val resolvedRepo = MediaRepository(appContext, entity.id)
                 val password = providerRepo.getPassword(entity.id) ?: ""
                 val provider = MediaProviderFactory.create(entity, appContext, password)
+                provider.connect() // Authenticate before making API calls
                 resolvedRepo.setProvider(provider)
                 resolvedRepo
             } else MediaRepository(appContext, 0L)
@@ -128,30 +129,38 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Movie metadata
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            movieDetail.metadata?.genre?.let { genre ->
-                Text(
-                    text = genre,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            movieDetail.metadata?.rating?.let { rating ->
-                Text(
-                    text = "★ $rating",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-            movieDetail.metadata?.duration?.let { duration ->
-                Text(
-                    text = formatDuration(duration),
-                    style = MaterialTheme.typography.titleMedium
-                )
+        // Movie metadata - genre on its own line
+        movieDetail.metadata?.genre?.let { genre ->
+            Text(
+                text = genre,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        // Rating and duration on same row
+        val hasRating = movieDetail.metadata?.rating != null
+        val hasDuration = movieDetail.metadata?.duration != null
+        if (hasRating || hasDuration) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                movieDetail.metadata?.rating?.let { rating ->
+                    Text(
+                        text = "★ $rating",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+                movieDetail.metadata?.duration?.let { duration ->
+                    Text(
+                        text = formatDuration(duration),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1
+                    )
+                }
             }
         }
 

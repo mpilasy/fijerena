@@ -41,6 +41,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
@@ -78,12 +79,21 @@ fun SettingsScreen(
         val accountManager = AccountManager(context.applicationContext)
         XtreamRepository(accountManager, context.applicationContext)
     }
+    val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
-    var providerName by remember { mutableStateOf(appSettings.providerName) }
-    var currentUrl by remember { mutableStateOf(repository.getCurrentUrl() ?: "") }
-    var currentUsername by remember { mutableStateOf(repository.getCurrentUsername() ?: "") }
+    // Get active provider info from ProviderEntity (not legacy AppSettings)
+    var providerName by remember { mutableStateOf("") }
+    var currentUrl by remember { mutableStateOf("") }
+    var currentUsername by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        val activeProvider = providerRepo.getActiveProvider()
+        providerName = activeProvider?.name ?: "No provider"
+        currentUrl = activeProvider?.url ?: ""
+        currentUsername = activeProvider?.username ?: ""
+    }
     var watchHistorySize by remember { mutableStateOf(appSettings.watchHistorySize.toString()) }
     var newWatchHistorySize by remember { mutableStateOf("") }
     var favoritesMaxSize by remember { mutableStateOf(appSettings.favoritesMaxSize.toString()) }

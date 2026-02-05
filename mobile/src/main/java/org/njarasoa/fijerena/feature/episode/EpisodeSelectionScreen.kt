@@ -45,6 +45,7 @@ fun MobileEpisodeSelectionScreen(
                 val resolvedRepo = MediaRepository(appContext, entity.id)
                 val password = providerRepo.getPassword(entity.id) ?: ""
                 val provider = MediaProviderFactory.create(entity, appContext, password)
+                provider.connect() // Authenticate before making API calls
                 resolvedRepo.setProvider(provider)
                 resolvedRepo
             } else MediaRepository(appContext, 0L)
