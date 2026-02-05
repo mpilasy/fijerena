@@ -38,8 +38,10 @@ ksp = "2.3.4"
 # Media3 (ExoPlayer)
 media3 = "1.9.1"
 
-# Firebase
-firebaseBom = "33.7.0"
+# Google Play Services
+playServicesAuth = "21.3.0"
+googleApiClient = "2.7.0"
+googleApiServicesDrive = "v3-rev20241206-2.0.0"
 
 [libraries]
 # Core Android
@@ -104,10 +106,10 @@ media3-session = { group = "androidx.media3", name = "media3-session", version.r
 media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 media3-ui-compose = { group = "androidx.media3", name = "media3-ui-compose-material3", version.ref = "media3" }
 
-# Firebase
-firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-database = { group = "com.google.firebase", name = "firebase-database" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+# Google Play Services & Drive API
+play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
+google-api-client-android = { group = "com.google.api-client", name = "google-api-client-android", version.ref = "googleApiClient" }
+google-api-services-drive = { group = "com.google.apis", name = "google-api-services-drive", version.ref = "googleApiServicesDrive" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -116,7 +118,6 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-google-services = { id = "com.google.gms.google-services", version = "4.4.2" }
 
 [bundles]
 networking = ["ktor-client-core", "ktor-client-android", "ktor-client-okhttp", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json", "kotlinx-serialization-json"]

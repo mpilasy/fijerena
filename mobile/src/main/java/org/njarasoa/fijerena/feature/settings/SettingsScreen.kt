@@ -8,7 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,8 +23,9 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
-import org.njarasoa.fijerena.core.network.sync.FirebaseSettingsSync
-import org.njarasoa.fijerena.core.network.sync.SettingsSyncManager
+import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
@@ -47,12 +47,26 @@ fun MobileSettingsScreen(
     }
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val syncManager = remember { SettingsSyncManager(context.applicationContext, providerRepo) }
+    val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Sync state
+    // Drive sync state
     val syncStatus by syncManager.syncStatus.collectAsState()
-    var isSyncEnabled by remember { mutableStateOf(syncManager.isSyncEnabled) }
+    val signedInEmail by syncManager.signedInEmail.collectAsState()
+
+    // Google Sign-In launcher
+    val signInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        coroutineScope.launch {
+            syncManager.handleSignInResult(result.data)
+        }
+    }
+
+    // Initialize sync on startup
+    LaunchedEffect(Unit) {
+        syncManager.initialize()
+    }
 
     // Get active provider info from ProviderEntity (not legacy AppSettings)
     var providerName by remember { mutableStateOf("") }
@@ -208,6 +222,7 @@ fun MobileSettingsScreen(
                                     val newSettings = providerSettings.copy(autoResumeEnabled = enabled)
                                     providerRepo.updateProviderSettings(id, newSettings)
                                     providerSettings = newSettings
+                                    syncManager.syncProviderSettings(id)
                                 }
                             }
                         }
@@ -277,6 +292,7 @@ fun MobileSettingsScreen(
                                             val newSettings = providerSettings.copy(watchHistorySize = size)
                                             providerRepo.updateProviderSettings(id, newSettings)
                                             providerSettings = newSettings
+                                            syncManager.syncProviderSettings(id)
                                         }
                                     }
                                 }
@@ -351,6 +367,7 @@ fun MobileSettingsScreen(
                                             val newSettings = providerSettings.copy(favoritesMaxSize = size)
                                             providerRepo.updateProviderSettings(id, newSettings)
                                             providerSettings = newSettings
+                                            syncManager.syncProviderSettings(id)
                                         }
                                     }
                                 }
@@ -418,6 +435,7 @@ fun MobileSettingsScreen(
                                     val newSettings = providerSettings.copy(cachingEnabled = enabled)
                                     providerRepo.updateProviderSettings(id, newSettings)
                                     providerSettings = newSettings
+                                    syncManager.syncProviderSettings(id)
                                 }
                             }
                         }
@@ -578,46 +596,70 @@ fun MobileSettingsScreen(
                 }
             }
 
-            // === Cloud Sync ===
+            // === Cloud Sync (Google Drive) ===
             SettingsSection(title = "Cloud Sync") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Sync settings across devices via Firebase",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        val statusText = when (syncStatus) {
-                            is FirebaseSettingsSync.SyncStatus.Unavailable -> "Firebase not configured"
-                            is FirebaseSettingsSync.SyncStatus.SignedOut -> "Not syncing"
-                            is FirebaseSettingsSync.SyncStatus.Syncing -> "Syncing..."
-                            is FirebaseSettingsSync.SyncStatus.Synced -> "Synced"
-                            is FirebaseSettingsSync.SyncStatus.Error -> "Error: ${(syncStatus as FirebaseSettingsSync.SyncStatus.Error).message}"
-                        }
-                        Text(
-                            text = "Status: $statusText",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = when (syncStatus) {
-                                is FirebaseSettingsSync.SyncStatus.Synced -> MaterialTheme.colorScheme.primary
-                                is FirebaseSettingsSync.SyncStatus.Error -> CinemaError
-                                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                            }
-                        )
+                Text(
+                    text = "Sync provider settings across devices using your Google account",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (signedInEmail != null) {
+                    // Signed in: show account + sync controls
+                    Text(
+                        text = signedInEmail ?: "",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val statusText = when (syncStatus) {
+                        is DriveSettingsSyncManager.SyncStatus.Syncing -> "Syncing..."
+                        is DriveSettingsSyncManager.SyncStatus.Synced -> "Synced"
+                        is DriveSettingsSyncManager.SyncStatus.Error ->
+                            "Error: ${(syncStatus as DriveSettingsSyncManager.SyncStatus.Error).message}"
+                        else -> "Ready"
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Switch(
-                        checked = isSyncEnabled,
-                        enabled = syncManager.isSyncAvailable,
-                        onCheckedChange = { enabled ->
-                            isSyncEnabled = enabled
-                            syncManager.isSyncEnabled = enabled
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = when (syncStatus) {
+                            is DriveSettingsSyncManager.SyncStatus.Synced -> MaterialTheme.colorScheme.primary
+                            is DriveSettingsSyncManager.SyncStatus.Error -> CinemaError
+                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                         }
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                coroutineScope.launch { syncManager.syncNow() }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Sync Now")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch { syncManager.signOut() }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Sign Out")
+                        }
+                    }
+                } else {
+                    // Not signed in: show sign-in button
+                    Button(
+                        onClick = {
+                            signInLauncher.launch(syncManager.getSignInIntent())
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Sign in with Google")
+                    }
                 }
             }
 
@@ -720,6 +762,7 @@ fun MobileSettingsScreen(
                         val newSettings = providerSettings.copy(categoryFilters = newFilters)
                         providerRepo.updateProviderSettings(id, newSettings)
                         providerSettings = newSettings
+                        syncManager.syncProviderSettings(id)
                     }
                 }
                 showCategoryFilterDialog = false
