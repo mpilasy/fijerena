@@ -14,13 +14,21 @@ import org.njarasoa.fijerena.core.player.domain.MediaProvider
 
 /**
  * Resolves the correct [MediaProvider] implementation based on the provider entity type.
+ *
+ * Caches provider instances by ID to ensure the same authenticated provider is reused
+ * across all screens, preventing session conflicts (especially for Jellyfin).
  */
 object MediaProviderFactory {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    // Cache of provider instances by provider ID
+    // Prevents multiple auth sessions that can invalidate each other
+    private val providerCache = mutableMapOf<Long, MediaProvider>()
+
     /**
-     * Create a [MediaProvider] for the given [ProviderEntity].
+     * Get or create a [MediaProvider] for the given [ProviderEntity].
+     * Reuses cached instances to avoid creating duplicate auth sessions.
      *
      * @param entity The provider entity from Room database
      * @param context Application context
@@ -31,13 +39,34 @@ object MediaProviderFactory {
         context: Context,
         password: String
     ): MediaProvider {
-        return when (entity.type) {
+        // Return cached provider if available
+        providerCache[entity.id]?.let { return it }
+
+        val provider = when (entity.type) {
             "XTREAM" -> createXtream(entity, context, password)
             "JELLYFIN" -> createJellyfin(entity, password, context)
             "SMB" -> createSmb(entity, password)
             "LOCAL" -> createLocal(entity, context)
             else -> createXtream(entity, context, password)
         }
+
+        // Cache the provider instance
+        providerCache[entity.id] = provider
+        return provider
+    }
+
+    /**
+     * Clear cached provider for a specific ID (e.g., when credentials change).
+     */
+    fun clearCache(providerId: Long) {
+        providerCache.remove(providerId)
+    }
+
+    /**
+     * Clear all cached providers (e.g., on logout or provider switch).
+     */
+    fun clearAllCaches() {
+        providerCache.clear()
     }
 
     private fun createXtream(

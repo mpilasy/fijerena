@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.Flow
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
 
 /**
  * Manages provider CRUD and per-provider encrypted password storage.
@@ -74,6 +75,8 @@ class ProviderRepository(private val context: Context) {
             )
         )
         savePassword(id, password)
+        // Clear cached provider instance since credentials may have changed
+        MediaProviderFactory.clearCache(id)
     }
 
     /**
@@ -84,6 +87,8 @@ class ProviderRepository(private val context: Context) {
         dao.deleteProvider(entity)
         clearProviderPassword(id)
         clearProviderCache(id)
+        // Clear cached provider instance
+        MediaProviderFactory.clearCache(id)
     }
 
     /**
@@ -92,6 +97,8 @@ class ProviderRepository(private val context: Context) {
     suspend fun setActiveProvider(id: Long) {
         dao.deactivateAll()
         dao.activateProvider(id)
+        // Clear all cached providers to ensure fresh session on provider switch
+        MediaProviderFactory.clearAllCaches()
     }
 
     /**

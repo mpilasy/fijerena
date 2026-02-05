@@ -33,6 +33,8 @@ class JellyfinMediaProvider(
     )
 
     override suspend fun connect(): Result<Unit> {
+        // Don't re-authenticate if already connected
+        if (isConnected()) return Result.success(Unit)
         return api.authenticate(username, password).map { }
     }
 

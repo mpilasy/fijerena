@@ -609,11 +609,27 @@ private fun ControlsOverlay(
                 }
 
                 if (duration > 0) {
-                    LinearProgressIndicator(
-                        progress = { position.toFloat() / duration.toFloat() },
+                    // Seek position state for dragging
+                    var isSeeking by remember { mutableStateOf(false) }
+                    var seekPosition by remember { mutableStateOf(0f) }
+
+                    Slider(
+                        value = if (isSeeking) seekPosition else position.toFloat() / duration.toFloat(),
+                        onValueChange = { newValue ->
+                            isSeeking = true
+                            seekPosition = newValue
+                        },
+                        onValueChangeFinished = {
+                            val newPositionMs = (seekPosition * duration).toLong()
+                            viewModel.seekTo(newPositionMs)
+                            isSeeking = false
+                        },
                         modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                        )
                     )
 
                     Row(

@@ -261,11 +261,50 @@ fun PlayerScreen(
                                 false
                             }
                         }
-                        Key.DirectionLeft, Key.DirectionRight -> {
-                            // Don't consume LEFT/RIGHT - let them navigate
-                            // Stats overlay will handle repositioning when visible
-                            // Control buttons will handle focus navigation when visible
-                            false
+                        Key.DirectionLeft -> {
+                            // When controls are NOT visible and it's VOD content, seek backward
+                            if (!showControls && !currentMetadata.isLive) {
+                                val position = when (val ps = playbackState) {
+                                    is PlaybackState.Playing -> ps.position
+                                    is PlaybackState.Paused -> ps.position
+                                    else -> null
+                                }
+                                if (position != null) {
+                                    val newPosition = (position - 10_000L).coerceAtLeast(0L)
+                                    viewModel.seekTo(newPosition)
+                                    // Show stream info briefly to indicate seeking
+                                    showStreamInfo = true
+                                }
+                                true
+                            } else {
+                                // When controls are visible, let D-pad navigate between buttons
+                                false
+                            }
+                        }
+                        Key.DirectionRight -> {
+                            // When controls are NOT visible and it's VOD content, seek forward
+                            if (!showControls && !currentMetadata.isLive) {
+                                val position = when (val ps = playbackState) {
+                                    is PlaybackState.Playing -> ps.position
+                                    is PlaybackState.Paused -> ps.position
+                                    else -> null
+                                }
+                                val duration = when (val ps = playbackState) {
+                                    is PlaybackState.Playing -> ps.duration
+                                    is PlaybackState.Paused -> ps.duration
+                                    else -> null
+                                }
+                                if (position != null && duration != null) {
+                                    val newPosition = (position + 10_000L).coerceAtMost(duration)
+                                    viewModel.seekTo(newPosition)
+                                    // Show stream info briefly to indicate seeking
+                                    showStreamInfo = true
+                                }
+                                true
+                            } else {
+                                // When controls are visible, let D-pad navigate between buttons
+                                false
+                            }
                         }
                         Key.Back -> {
                             // Close any visible overlays first, then exit
