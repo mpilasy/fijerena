@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +24,8 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.sync.FirebaseSettingsSync
+import org.njarasoa.fijerena.core.network.sync.SettingsSyncManager
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
@@ -44,7 +47,12 @@ fun MobileSettingsScreen(
     }
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val appSettings = remember { AppSettings(context.applicationContext) }
+    val syncManager = remember { SettingsSyncManager(context.applicationContext, providerRepo) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Sync state
+    val syncStatus by syncManager.syncStatus.collectAsState()
+    var isSyncEnabled by remember { mutableStateOf(syncManager.isSyncEnabled) }
 
     // Get active provider info from ProviderEntity (not legacy AppSettings)
     var providerName by remember { mutableStateOf("") }
@@ -565,6 +573,49 @@ fun MobileSettingsScreen(
                         onCheckedChange = { enabled ->
                             isDevMode = enabled
                             appSettings.isDevMode = enabled
+                        }
+                    )
+                }
+            }
+
+            // === Cloud Sync ===
+            SettingsSection(title = "Cloud Sync") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Sync settings across devices via Firebase",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val statusText = when (syncStatus) {
+                            is FirebaseSettingsSync.SyncStatus.Unavailable -> "Firebase not configured"
+                            is FirebaseSettingsSync.SyncStatus.SignedOut -> "Not syncing"
+                            is FirebaseSettingsSync.SyncStatus.Syncing -> "Syncing..."
+                            is FirebaseSettingsSync.SyncStatus.Synced -> "Synced"
+                            is FirebaseSettingsSync.SyncStatus.Error -> "Error: ${(syncStatus as FirebaseSettingsSync.SyncStatus.Error).message}"
+                        }
+                        Text(
+                            text = "Status: $statusText",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when (syncStatus) {
+                                is FirebaseSettingsSync.SyncStatus.Synced -> MaterialTheme.colorScheme.primary
+                                is FirebaseSettingsSync.SyncStatus.Error -> CinemaError
+                                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Switch(
+                        checked = isSyncEnabled,
+                        enabled = syncManager.isSyncAvailable,
+                        onCheckedChange = { enabled ->
+                            isSyncEnabled = enabled
+                            syncManager.isSyncEnabled = enabled
                         }
                     )
                 }

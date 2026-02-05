@@ -19,6 +19,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,8 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.sync.FirebaseSettingsSync
+import org.njarasoa.fijerena.core.network.sync.SettingsSyncManager
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
@@ -84,7 +87,12 @@ fun SettingsScreen(
     }
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val appSettings = remember { AppSettings(context.applicationContext) }
+    val syncManager = remember { SettingsSyncManager(context.applicationContext, providerRepo) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Sync state
+    val syncStatus by syncManager.syncStatus.collectAsState()
+    var isSyncEnabled by remember { mutableStateOf(syncManager.isSyncEnabled) }
 
     // Get active provider info from ProviderEntity (not legacy AppSettings)
     var providerName by remember { mutableStateOf("") }
@@ -890,6 +898,61 @@ fun SettingsScreen(
                         onCheckedChange = { enabled ->
                             isDevMode = enabled
                             appSettings.isDevMode = enabled
+                        }
+                    )
+                }
+            }
+
+            // Cloud Sync
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Cloud Sync",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                        Text(
+                            text = "Sync settings across devices via Firebase",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                        val statusText = when (syncStatus) {
+                            is FirebaseSettingsSync.SyncStatus.Unavailable -> "Firebase not configured"
+                            is FirebaseSettingsSync.SyncStatus.SignedOut -> "Not syncing"
+                            is FirebaseSettingsSync.SyncStatus.Syncing -> "Syncing..."
+                            is FirebaseSettingsSync.SyncStatus.Synced -> "Synced"
+                            is FirebaseSettingsSync.SyncStatus.Error -> "Error: ${(syncStatus as FirebaseSettingsSync.SyncStatus.Error).message}"
+                        }
+                        Text(
+                            text = "Status: $statusText",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = when (syncStatus) {
+                                is FirebaseSettingsSync.SyncStatus.Synced -> CinemaAccent
+                                is FirebaseSettingsSync.SyncStatus.Error -> CinemaError
+                                else -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
+                    Switch(
+                        checked = isSyncEnabled,
+                        enabled = syncManager.isSyncAvailable,
+                        onCheckedChange = { enabled ->
+                            isSyncEnabled = enabled
+                            syncManager.isSyncEnabled = enabled
                         }
                     )
                 }
