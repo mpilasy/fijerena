@@ -226,7 +226,7 @@ The app follows this streamlined navigation structure:
 6. **Settings** - Accessible from Content Type Selection via gear icon
 7. **Provider Management** - Accessible from Settings → "Manage Providers"
    - **Provider Selection:** List all providers, select/edit/delete
-   - **Add/Edit Provider:** Type selector + type-specific form fields (Xtream: URL/user/pass, Jellyfin: server URL/user/pass, SMB: host/share/user/pass, Local: folder/M3U picker)
+   - **Add/Edit Provider:** Type selector + type-specific form fields (Xtream: URL/user/pass, Jellyfin: server URL/user/pass, SMB: host/share/user/pass, Local: folder/M3U picker). Edit mode includes inline provider settings (auto-resume, watch history size, favorites max size, clear buttons, category filters, caching toggle).
 
 **Note:** There is no login screen and no logout button anywhere in the app. Authentication happens automatically on startup via stored credentials, or after configuring a provider in Settings. To switch or remove a provider, use Settings → Manage Providers. Both TV and mobile use the same flow.
 
@@ -239,11 +239,7 @@ Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
 - **Active Provider Display:** Shows current provider name and URL
 - **Manage Providers:** Navigate to provider selection/management screen (add, edit, delete, switch providers)
 - **Theme Selection:** Choose from 4 dark themes (Deep Night, AMOLED Black, Emerald, Crimson) — persists across app restarts
-- **Auto-Resume:** Toggle automatic playback resume for VOD content (default: enabled)
-- **Last Watched Queue Size:** Configure the number of items to keep in the "Last Watched" virtual category (range: 1-100, default: 25)
-- **Favorites Max Size:** Configure maximum number of favorites to store (range: 10-500, default: 100)
-- **Clear All Favorites:** Remove all favorited streams from all content types
-- **Clear Playback Progress:** Remove all saved positions (clears Continue Watching category)
+- **External EPG Source (XMLTV):** Global EPG URL editor with edit/save/clear buttons — used for external XMLTV EPG data across all providers (stored in `AppSettings.epgUrl`)
 - **Cache Management:** View cache statistics and clear cached data
   - Total cache size display
   - Per-content-type breakdown (Live TV, Movies, TV Shows)
@@ -260,10 +256,20 @@ Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
   - Payload size tracking works even when loading from cache
   - Debug information for troubleshooting
 
+### Provider Settings (Inline in Edit Provider)
+Per-provider settings are configured inline on the Edit Provider screen (not visible when adding a new provider):
+- **Auto-Resume:** Toggle automatic playback resume for VOD content (default: enabled)
+- **Last Watched Queue Size:** Configure the number of items to keep in the "Last Watched" virtual category (range: 1-100, default: 25)
+- **Favorites Max Size:** Configure maximum number of favorites to store (range: 10-500, default: 100)
+- **Clear All Favorites:** Remove all favorited streams from all content types
+- **Clear Playback Progress:** Remove all saved positions (clears Continue Watching category)
+- **Category Filters:** Configure category filtering rules (Xtream only) — include/exclude by name/regex
+- **Enable Caching:** Toggle response caching (Xtream only, default: enabled)
+
 ### Watch History Tracking
 Content-type specific watch history system:
 - Tracks recently watched streams across all content types (Live TV, Movies, TV Shows)
-- Configurable queue size via Settings (1-100 items)
+- Configurable queue size via Edit Provider settings (1-100 items)
 - Maintains watch history per content type (separate tracking for each type)
 - Enables "Last Watched" virtual category for quick access to recently viewed content
 
@@ -316,7 +322,7 @@ A user-curated collection of favorite streams:
 - Loads instantly from local storage (no network call)
 - Filtered by content type (separate favorites for Live TV, Movies, TV Shows)
 - Pinned at top of category list for quick access
-- Size configurable via Settings (range: 10-500, default: 100)
+- Size configurable via Edit Provider settings (range: 10-500, default: 100)
 
 #### Last Watched Virtual Category
 A dynamically generated category that displays:
@@ -326,7 +332,7 @@ A dynamically generated category that displays:
 - Loads instantly from local storage (no network call)
 - Filtered by content type (separate history for each type)
 - Pinned at top of category list below Favorites
-- Size configurable via Settings (range: 1-100, default: 25)
+- Size configurable via Edit Provider settings (range: 1-100, default: 25)
 
 ### EPG (Electronic Program Guide)
 **Feature:** Full TV Guide with grid view for Live TV channels displaying 24-hour program schedules.
@@ -432,7 +438,7 @@ The app supports 4 provider types through a unified domain model abstraction. Al
 
 **Screens:**
 - **Provider Selection** (`Screen.ProviderSelection`): List all providers with select/edit/delete
-- **Add/Edit Provider** (`Screen.AddProvider`): Type-specific form fields per provider type
+- **Add/Edit Provider** (`Screen.AddProvider`): Type-specific form fields per provider type; edit mode includes inline provider settings (auto-resume, history/favorites sizes, clear buttons, category filters, caching toggle)
 - **Content Type Selection**: Provider name clickable to open provider switcher dialog (dark-themed `AlertDialog` with `CinemaSurface` background); shows provider type in dev mode
 
 **Navigation IDs:** All navigation uses `String` IDs (not `Int`) to support non-numeric IDs from Jellyfin/SMB/Local providers.
