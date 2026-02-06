@@ -56,7 +56,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -112,7 +111,7 @@ fun SearchScreen(
                 )
         ) {
             // Header with back button
-            HeaderRow(onBack = onBack, contentType = contentType)
+            HeaderRow(contentType = contentType)
 
             Spacer(modifier = Modifier.height(Spacing.lg))
 
@@ -144,7 +143,6 @@ fun SearchScreen(
 
 @Composable
 private fun HeaderRow(
-    onBack: () -> Unit,
     contentType: String
 ) {
     Row(
@@ -152,26 +150,17 @@ private fun HeaderRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CinemaSecondaryButton(
-                onClick = onBack,
-                text = "← Back"
+        Column {
+            Text(
+                text = "Search",
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Column {
-                Text(
-                    text = "Search",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = contentType.replace("_", " "),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CinemaAccent
-                )
-            }
+            Text(
+                text = contentType.replace("_", " "),
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaAccent
+            )
         }
     }
 }

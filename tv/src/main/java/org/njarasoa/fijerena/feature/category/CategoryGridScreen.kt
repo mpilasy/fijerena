@@ -265,10 +265,6 @@ private fun TwoColumnLayout(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CinemaSecondaryButton(
-                    onClick = onBack,
-                    text = "← Back"
-                )
-                CinemaSecondaryButton(
                     onClick = onSearchClick,
                     text = "Search"
                 )

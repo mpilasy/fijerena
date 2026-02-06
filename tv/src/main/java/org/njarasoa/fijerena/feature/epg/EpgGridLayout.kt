@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
@@ -89,7 +88,6 @@ fun EpgGridLayout(
             onPreviousDay = onPreviousDay,
             onNextDay = onNextDay,
             onJumpToNow = onJumpToNow,
-            onBack = onBack,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = Spacing.md)
@@ -133,7 +131,6 @@ private fun EpgHeader(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onJumpToNow: () -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -141,13 +138,6 @@ private fun EpgHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Back button
-        Button(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Text("Back")
-        }
-
         // Title and date
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
