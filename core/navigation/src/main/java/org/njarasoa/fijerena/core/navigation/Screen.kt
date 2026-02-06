@@ -68,7 +68,8 @@ sealed interface Screen {
      */
     @Serializable
     data class CategoryList(
-        val contentType: String
+        val contentType: String,
+        val initialCategoryId: String? = null
     ) : Screen
 
     /**

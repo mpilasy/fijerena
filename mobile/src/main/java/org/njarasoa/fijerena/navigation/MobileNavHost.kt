@@ -163,6 +163,7 @@ fun MobileNavHost(
                 val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
                 MobileCategoryListScreen(
                     contentType = categoryListScreen.contentType,
+                    initialCategoryId = categoryListScreen.initialCategoryId,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         when (categoryListScreen.contentType) {
                             "TV_SHOWS" -> {
@@ -340,6 +341,14 @@ fun MobileNavHost(
                                 )
                             )
                         }
+                    },
+                    onCategorySelected = { categoryId, contentType ->
+                        navController.navigate(
+                            Screen.CategoryList(
+                                contentType = contentType,
+                                initialCategoryId = categoryId
+                            )
+                        )
                     },
                     onBack = { navController.navigateUp() }
                 )

@@ -48,6 +48,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -75,6 +76,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 fun SearchScreen(
     contentType: String,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -113,12 +115,16 @@ fun SearchScreen(
                     println("SearchScreen: Rendering with ${successState.filteredResults.size} results, query='${successState.query}', isSearching=${successState.isSearching}")
                     SearchContent(
                         query = successState.query,
+                        categoryResults = successState.categoryResults,
                         results = successState.filteredResults,
                         isSearching = successState.isSearching,
                         searchProgress = successState.searchProgress,
                         onQueryChange = { viewModel.updateSearchQuery(it) },
                         onResultClick = { result ->
                             onStreamSelected(result.itemId, result.streamName, result.categoryId)
+                        },
+                        onCategoryClick = { catResult ->
+                            onCategorySelected(catResult.categoryId, catResult.contentType)
                         }
                     )
                 }
@@ -212,11 +218,13 @@ private fun ErrorView(message: String) {
 @Composable
 private fun SearchContent(
     query: String,
+    categoryResults: List<CategorySearchResult>,
     results: List<SearchResult>,
     isSearching: Boolean,
     searchProgress: String?,
     onQueryChange: (String) -> Unit,
-    onResultClick: (SearchResult) -> Unit
+    onResultClick: (SearchResult) -> Unit,
+    onCategoryClick: (CategorySearchResult) -> Unit
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     // Local state for text field - manages user input independently
@@ -249,18 +257,20 @@ private fun SearchContent(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Enter search term to find streams across all categories",
+                    text = "Search categories and streams across all categories",
                     style = MaterialTheme.typography.bodyLarge,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
             }
         } else {
             SearchResultsList(
+                categoryResults = categoryResults,
                 results = results,
                 query = localQuery,
                 isSearching = isSearching,
                 searchProgress = searchProgress,
-                onResultClick = onResultClick
+                onResultClick = onResultClick,
+                onCategoryClick = onCategoryClick
             )
         }
     }
@@ -309,11 +319,13 @@ private fun SearchTextField(
 
 @Composable
 private fun SearchResultsList(
+    categoryResults: List<CategorySearchResult>,
     results: List<SearchResult>,
     query: String,
     isSearching: Boolean,
     searchProgress: String?,
-    onResultClick: (SearchResult) -> Unit
+    onResultClick: (SearchResult) -> Unit,
+    onCategoryClick: (CategorySearchResult) -> Unit
 ) {
     println("SearchResultsList: Received ${results.size} results, query='$query', isSearching=$isSearching")
     if (results.isNotEmpty()) {
@@ -324,7 +336,7 @@ private fun SearchResultsList(
         results.associate { it.itemId to FocusRequester() }
     }
 
-    if (isSearching && results.isEmpty()) {
+    if (isSearching && categoryResults.isEmpty() && results.isEmpty()) {
         // Show loading state while searching
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -345,7 +357,7 @@ private fun SearchResultsList(
                 )
             }
         }
-    } else if (results.isEmpty()) {
+    } else if (categoryResults.isEmpty() && results.isEmpty()) {
         // No results found after search completed
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -359,6 +371,7 @@ private fun SearchResultsList(
         }
     } else {
         Column {
+            val totalResults = categoryResults.size + results.size
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -367,7 +380,7 @@ private fun SearchResultsList(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${results.size} results",
+                    text = "$totalResults results",
                     style = MaterialTheme.typography.titleMedium,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
@@ -395,14 +408,99 @@ private fun SearchResultsList(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(results, key = { "${it.itemId}_${it.categoryId}" }) { result ->
-                    SearchResultItem(
-                        result = result,
-                        onClick = { onResultClick(result) },
-                        focusRequester = focusRequesters[result.itemId]
-                    )
+                if (categoryResults.isNotEmpty()) {
+                    item(key = "category_header") {
+                        Text(
+                            text = "Categories",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = CinemaAccent,
+                            modifier = Modifier.padding(
+                                horizontal = 16.dp,
+                                vertical = Spacing.xs
+                            )
+                        )
+                    }
+                    items(categoryResults, key = { "cat_${it.categoryId}" }) { catResult ->
+                        CategoryResultItem(
+                            result = catResult,
+                            onClick = { onCategoryClick(catResult) }
+                        )
+                    }
+                }
+                if (results.isNotEmpty()) {
+                    item(key = "stream_header") {
+                        Text(
+                            text = "Streams",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = CinemaAccent,
+                            modifier = Modifier.padding(
+                                horizontal = 16.dp,
+                                vertical = Spacing.xs
+                            )
+                        )
+                    }
+                    items(results, key = { "${it.itemId}_${it.categoryId}" }) { result ->
+                        SearchResultItem(
+                            result = result,
+                            onClick = { onResultClick(result) },
+                            focusRequester = focusRequesters[result.itemId]
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CategoryResultItem(
+    result: CategorySearchResult,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .height(TvDimensions.cardHeight),
+        colors = CardDefaults.colors(
+            containerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+            contentColor = CinemaTextPrimary,
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
+            focusedContentColor = CinemaTextPrimary
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = CinemaAccentLight)
+            )
+        ),
+        shape = CardDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(CornerRadius.medium)),
+        scale = CardDefaults.scale(
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScale,
+            pressedScale = TvFocusTokens.pressedScaleSubtle
+        ),
+        glow = CardDefaults.glow(
+            focusedGlow = androidx.tv.material3.Glow(
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
+                elevation = TvFocusTokens.glowElevation
+            )
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = result.categoryName,
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaTextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

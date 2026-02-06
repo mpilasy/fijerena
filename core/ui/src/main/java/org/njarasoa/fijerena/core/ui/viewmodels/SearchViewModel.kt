@@ -20,6 +20,7 @@ class SearchViewModel(
     sealed class UiState {
         data object Loading : UiState()
         data class Success(
+            val categoryResults: List<CategorySearchResult> = emptyList(),
             val allResults: List<SearchResult>,
             val filteredResults: List<SearchResult>,
             val query: String,
@@ -32,6 +33,12 @@ class SearchViewModel(
     data class SearchResult(
         val itemId: String,
         val streamName: String,
+        val categoryId: String,
+        val categoryName: String,
+        val contentType: String
+    )
+
+    data class CategorySearchResult(
         val categoryId: String,
         val categoryName: String,
         val contentType: String
@@ -90,7 +97,15 @@ class SearchViewModel(
                                 }
                             }.thenBy { it.streamName })
 
+                            // Also search categories for server-side providers
+                            val serverCategories = repository.getFilteredCategories(contentType)
+                            val matchingCategories = serverCategories.getOrDefault(emptyList())
+                                .filter { !it.isVirtual }
+                                .filter { it.name.lowercase().contains(normalizedQuery) }
+                                .map { CategorySearchResult(it.id, it.name, contentType) }
+
                             _uiState.value = UiState.Success(
+                                categoryResults = matchingCategories,
                                 allResults = results,
                                 filteredResults = results,
                                 query = query,
@@ -118,7 +133,13 @@ class SearchViewModel(
                 val normalizedQuery = query.trim().lowercase()
                 val targetResults = 200
 
+                // Filter categories by name match
+                val matchingCategories = realCategories
+                    .filter { it.name.lowercase().contains(normalizedQuery) }
+                    .map { CategorySearchResult(it.id, it.name, contentType) }
+
                 _uiState.value = UiState.Success(
+                    categoryResults = matchingCategories,
                     allResults = emptyList(),
                     filteredResults = emptyList(),
                     query = query,
@@ -161,6 +182,7 @@ class SearchViewModel(
                             val finalResults = sortedResults.take(targetResults)
 
                             _uiState.value = UiState.Success(
+                                categoryResults = matchingCategories,
                                 allResults = finalResults,
                                 filteredResults = finalResults,
                                 query = query,
@@ -185,6 +207,7 @@ class SearchViewModel(
                 val finalResults = sortedFinalResults.take(targetResults)
 
                 _uiState.value = UiState.Success(
+                    categoryResults = matchingCategories,
                     allResults = finalResults,
                     filteredResults = finalResults,
                     query = query,

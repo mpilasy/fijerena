@@ -6,6 +6,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -94,6 +95,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 @Composable
 fun CategoryGridScreen(
     contentType: String,
+    initialCategoryId: String? = null,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
@@ -101,7 +103,8 @@ fun CategoryGridScreen(
     viewModel: CategoryViewModel = viewModel(
         factory = CategoryViewModelFactory(
             context = LocalContext.current.applicationContext,
-            contentType = contentType
+            contentType = contentType,
+            initialCategoryId = initialCategoryId
         )
     )
 ) {
@@ -568,7 +571,8 @@ private fun CategoryItem(
                     fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
                 ),
                 color = CinemaTextPrimary,
-                maxLines = 2
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
             )
         }
     }
@@ -810,7 +814,8 @@ private fun StreamItem(
                                 fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
                             ),
                             color = CinemaTextPrimary,
-                            maxLines = 1
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
                         )
                     }
                     item.thumbnailUrl?.let { icon ->

@@ -13,7 +13,8 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 
 class CategoryViewModel(
     private val repository: MediaRepository,
-    private val contentType: String
+    private val contentType: String,
+    private val initialCategoryId: String? = null
 ) : ViewModel() {
 
     companion object {
@@ -167,7 +168,10 @@ class CategoryViewModel(
 
         if (categories.isNotEmpty()) {
             val lastCategoryId = repository.getLastCategoryId(contentType)
-            val categoryToLoad = if (lastCategoryId != null &&
+            val categoryToLoad = if (initialCategoryId != null &&
+                categories.any { it.id == initialCategoryId }) {
+                initialCategoryId
+            } else if (lastCategoryId != null &&
                 categories.any { it.id == lastCategoryId }) {
                 lastCategoryId
             } else {

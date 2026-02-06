@@ -149,6 +149,7 @@ fun TvNavHost(
                 val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
                 CategoryGridScreen(
                     contentType = categoryListScreen.contentType,
+                    initialCategoryId = categoryListScreen.initialCategoryId,
                     onStreamSelected = { itemId, streamName, categoryId ->
                         when (categoryListScreen.contentType) {
                             "TV_SHOWS" -> {
@@ -236,6 +237,14 @@ fun TvNavHost(
                                 )
                             )
                         }
+                    },
+                    onCategorySelected = { categoryId, contentType ->
+                        navController.navigate(
+                            Screen.CategoryList(
+                                contentType = contentType,
+                                initialCategoryId = categoryId
+                            )
+                        )
                     },
                     onBack = { navController.navigateUp() }
                 )

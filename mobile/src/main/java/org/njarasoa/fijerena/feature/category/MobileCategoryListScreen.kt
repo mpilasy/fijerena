@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.category
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,7 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -50,13 +50,15 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 @Composable
 fun MobileCategoryListScreen(
     contentType: String,
+    initialCategoryId: String? = null,
     onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String) -> Unit,
     onSearchClick: () -> Unit = {},
     onBack: () -> Unit,
     viewModel: CategoryViewModel = viewModel(
         factory = CategoryViewModelFactory(
             context = LocalContext.current.applicationContext,
-            contentType = contentType
+            contentType = contentType,
+            initialCategoryId = initialCategoryId
         )
     )
 ) {
@@ -192,7 +194,7 @@ private fun CategoryChipRow(
                     Text(
                         text = category.name,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        modifier = Modifier.basicMarquee()
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(
@@ -295,8 +297,9 @@ private fun StreamCard(
             text = item.name,
             style = MaterialTheme.typography.bodyLarge,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .basicMarquee()
         )
     }
 }
