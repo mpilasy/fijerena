@@ -326,6 +326,7 @@ class XtreamRepository(
     }
 
     private fun getCachedCategories(): List<XtreamCategory>? {
+        if (!cachingEnabled) return null
         val timestamp = cache.getLong(KEY_CATEGORIES_TIMESTAMP, 0L)
         if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
             return null // Cache expired
@@ -344,6 +345,7 @@ class XtreamRepository(
 
     private fun cacheCategories(categories: List<XtreamCategory>) {
         trackPayloadSize("live_categories", categories)
+        if (!cachingEnabled) return
         cache.edit()
             .putString(KEY_CATEGORIES, json.encodeToString(categories))
             .putLong(KEY_CATEGORIES_TIMESTAMP, System.currentTimeMillis())
@@ -351,6 +353,7 @@ class XtreamRepository(
     }
 
     private fun getCachedVodCategories(): List<XtreamCategory>? {
+        if (!cachingEnabled) return null
         val timestamp = cache.getLong(KEY_VOD_CATEGORIES_TIMESTAMP, 0L)
         if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
             return null
@@ -367,6 +370,7 @@ class XtreamRepository(
 
     private fun cacheVodCategories(categories: List<XtreamCategory>) {
         trackPayloadSize("vod_categories", categories)
+        if (!cachingEnabled) return
         cache.edit()
             .putString(KEY_VOD_CATEGORIES, json.encodeToString(categories))
             .putLong(KEY_VOD_CATEGORIES_TIMESTAMP, System.currentTimeMillis())
@@ -374,6 +378,7 @@ class XtreamRepository(
     }
 
     private fun getCachedSeriesCategories(): List<XtreamCategory>? {
+        if (!cachingEnabled) return null
         val timestamp = cache.getLong(KEY_SERIES_CATEGORIES_TIMESTAMP, 0L)
         if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
             return null
@@ -390,6 +395,7 @@ class XtreamRepository(
 
     private fun cacheSeriesCategories(categories: List<XtreamCategory>) {
         trackPayloadSize("series_categories", categories)
+        if (!cachingEnabled) return
         cache.edit()
             .putString(KEY_SERIES_CATEGORIES, json.encodeToString(categories))
             .putLong(KEY_SERIES_CATEGORIES_TIMESTAMP, System.currentTimeMillis())
@@ -526,6 +532,7 @@ class XtreamRepository(
     }
 
     private fun getCachedStreams(categoryId: String): List<XtreamStream>? {
+        if (!cachingEnabled) return null
         val timestamp = cache.getLong(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId, 0L)
         if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
             return null // Cache expired
@@ -543,6 +550,7 @@ class XtreamRepository(
 
     private fun cacheStreams(categoryId: String, streams: List<XtreamStream>) {
         trackPayloadSize("category_$categoryId", streams)
+        if (!cachingEnabled) return
         try {
             // Only cache if stream list is reasonable size (< 500 items to avoid OOM)
             if (streams.size > 500) {
@@ -1242,6 +1250,7 @@ class XtreamRepository(
      * Get cached EPG data for a stream
      */
     private fun getCachedEpg(streamId: Int): EpgResponse? {
+        if (!cachingEnabled) return null
         val timestamp = cache.getLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, 0L)
         if (System.currentTimeMillis() - timestamp > EPG_CACHE_EXPIRY_MS) {
             return null
@@ -1258,6 +1267,7 @@ class XtreamRepository(
      * Cache EPG data for a stream
      */
     private fun cacheEpg(streamId: Int, epg: EpgResponse) {
+        if (!cachingEnabled) return
         cache.edit()
             .putString(KEY_EPG_PREFIX + streamId, json.encodeToString(epg))
             .putLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, System.currentTimeMillis())
