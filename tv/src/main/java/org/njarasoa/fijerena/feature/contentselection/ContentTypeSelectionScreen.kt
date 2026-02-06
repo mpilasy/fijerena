@@ -136,21 +136,36 @@ fun ContentTypeSelectionScreen(
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                // Provider name in glass pill badge
-                val displayName = if (appSettings.isDevMode && providerType.isNotEmpty()) {
-                    "$providerName ($providerType)"
-                } else providerName
-                GlassPanel(
-                    modifier = Modifier.clickable { showProviderPicker = true }
+                // Provider name in glass pill badge + settings gear
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
-                    Text(
-                        text = displayName,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = CinemaAccentLight,
-                        modifier = Modifier.padding(
-                            horizontal = Spacing.md,
-                            vertical = Spacing.xs
+                    val displayName = if (appSettings.isDevMode && providerType.isNotEmpty()) {
+                        "$providerName ($providerType)"
+                    } else providerName
+                    GlassPanel(
+                        modifier = Modifier.clickable { showProviderPicker = true }
+                    ) {
+                        Text(
+                            text = displayName,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = CinemaAccentLight,
+                            modifier = Modifier.padding(
+                                horizontal = Spacing.md,
+                                vertical = Spacing.xs
+                            )
                         )
+                    }
+                    CinemaIconButton(
+                        onClick = onSettings,
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                tint = CinemaAccentLight
+                            )
+                        }
                     )
                 }
             }
@@ -273,20 +288,6 @@ fun ContentTypeSelectionScreen(
             )
         }
 
-        // Settings gear icon at bottom left
-        CinemaIconButton(
-            onClick = onSettings,
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = CinemaAccentLight
-                )
-            },
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(Spacing.md)
-        )
     }
 }
 
