@@ -41,7 +41,6 @@ fun MobileSettingsScreen(
     onBack: () -> Unit,
     onThemeChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
-    onProviderSettings: () -> Unit = {},
     onProviderChanged: () -> Unit
 ) {
     val context = LocalContext.current
@@ -97,6 +96,11 @@ fun MobileSettingsScreen(
     // Global settings
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
+
+    // EPG URL state
+    var epgUrl by remember { mutableStateOf(appSettings.epgUrl) }
+    var isEditingEpgUrl by remember { mutableStateOf(false) }
+    var newEpgUrl by remember { mutableStateOf("") }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -134,13 +138,6 @@ fun MobileSettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Manage Providers")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onProviderSettings,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Provider Settings")
                 }
             }
 
@@ -180,6 +177,89 @@ fun MobileSettingsScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+
+            // === EPG URL ===
+            SettingsSection(title = "External EPG Source (XMLTV)") {
+                Text(
+                    text = "Provide an XMLTV URL for TV Guide data (overrides provider EPG)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                )
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+
+                if (!isEditingEpgUrl) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (epgUrl.isBlank()) "Not configured" else epgUrl,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (epgUrl.isBlank())
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 2
+                        )
+                        Spacer(modifier = Modifier.width(CinemaSpacing.sm))
+                        OutlinedButton(onClick = {
+                            isEditingEpgUrl = true
+                            newEpgUrl = epgUrl
+                        }) {
+                            Text("Edit")
+                        }
+                    }
+                    if (epgUrl.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                        Button(
+                            onClick = {
+                                epgUrl = ""
+                                appSettings.epgUrl = ""
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = CinemaError
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Clear EPG URL")
+                        }
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = newEpgUrl,
+                        onValueChange = { newEpgUrl = it },
+                        label = { Text("XMLTV URL") },
+                        placeholder = { Text("https://epg.example.com/guide.xml.gz") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm, Alignment.End)
+                    ) {
+                        OutlinedButton(onClick = {
+                            isEditingEpgUrl = false
+                            newEpgUrl = ""
+                        }) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                val url = newEpgUrl.trim()
+                                epgUrl = url
+                                isEditingEpgUrl = false
+                                newEpgUrl = ""
+                                appSettings.epgUrl = url
+                            },
+                            enabled = newEpgUrl.isNotBlank()
+                        ) {
+                            Text("Save")
                         }
                     }
                 }

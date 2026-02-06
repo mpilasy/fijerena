@@ -78,6 +78,18 @@ fun MobileNavHost(
                     providerRepo.addProvider(name, url, username, password)
                 }
             }
+            // One-time migration: copy provider epgUrl to global AppSettings.epgUrl
+            val appSettingsMigration = org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext)
+            if (appSettingsMigration.epgUrl.isBlank()) {
+                val activeProvider = providerRepo.getActiveProvider()
+                if (activeProvider != null) {
+                    val ps = providerRepo.getProviderSettings(activeProvider.id)
+                    if (ps.epgUrl.isNotBlank()) {
+                        appSettingsMigration.epgUrl = ps.epgUrl
+                    }
+                }
+            }
+
             providerRepo.getProviderCount() > 0
         }
     }
@@ -278,15 +290,6 @@ fun MobileNavHost(
                 )
             }
 
-            // Provider Settings Screen
-            composable<Screen.ProviderSettings> {
-                org.njarasoa.fijerena.feature.settings.MobileProviderSettingsScreen(
-                    onBack = {
-                        navController.navigateUp()
-                    }
-                )
-            }
-
             // Settings Screen
             composable<Screen.Settings> {
                 MobileSettingsScreen(
@@ -296,9 +299,6 @@ fun MobileNavHost(
                     onThemeChanged = onThemeChanged,
                     onManageProviders = {
                         navController.navigate(Screen.ProviderSelection)
-                    },
-                    onProviderSettings = {
-                        navController.navigate(Screen.ProviderSettings)
                     },
                     onProviderChanged = {
                         coroutineScope.launch {

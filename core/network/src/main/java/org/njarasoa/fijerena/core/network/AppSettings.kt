@@ -21,6 +21,7 @@ class AppSettings(context: Context) {
         private const val KEY_CACHE_EXPIRY_HOURS = "cache_expiry_hours"
         private const val KEY_UI_SCALE = "ui_scale"
         private const val KEY_THEME_ID = "theme_id"
+        private const val KEY_EPG_URL = "epg_url"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
@@ -100,4 +101,12 @@ class AppSettings(context: Context) {
     var themeId: String
         get() = prefs.getString(KEY_THEME_ID, "deep_night") ?: "deep_night"
         set(value) = prefs.edit().putString(KEY_THEME_ID, value).apply()
+
+    /**
+     * Get or set the external XMLTV EPG URL (global setting, applies to all providers).
+     * Empty string means no external EPG is configured.
+     */
+    var epgUrl: String
+        get() = prefs.getString(KEY_EPG_URL, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_EPG_URL, value.trim()).apply()
 }

@@ -178,7 +178,7 @@ class MediaRepository(
     }
 
     suspend fun getEpgBulkForItems(items: List<MediaItem>): kotlin.Result<Map<String, EpgResponse>> {
-        val epgUrl = providerSettings.epgUrl
+        val epgUrl = appSettings.epgUrl
         if (epgUrl.isNotBlank()) {
             try {
                 val xmltvResult = xmltvEpgService.getEpgForChannels(items, epgUrl)

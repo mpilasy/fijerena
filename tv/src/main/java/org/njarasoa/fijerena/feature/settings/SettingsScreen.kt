@@ -87,7 +87,6 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onThemeChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
-    onProviderSettings: () -> Unit = {},
     onProviderChanged: () -> Unit
 ) {
     val context = LocalContext.current
@@ -144,6 +143,11 @@ fun SettingsScreen(
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
     var uiScale by remember { mutableStateOf(appSettings.uiScale) }
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
+
+    // EPG URL state
+    var epgUrl by remember { mutableStateOf(appSettings.epgUrl) }
+    var isEditingEpgUrl by remember { mutableStateOf(false) }
+    var newEpgUrl by remember { mutableStateOf("") }
 
     androidx.compose.runtime.CompositionLocalProvider(LocalUiScale provides uiScale) {
     val scale = LocalUiScale.current
@@ -214,11 +218,6 @@ fun SettingsScreen(
                             onClick = onManageProviders,
                             text = "Manage Providers"
                         )
-                        Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                        CinemaPrimaryButton(
-                            onClick = onProviderSettings,
-                            text = "Provider Settings"
-                        )
                     }
                 }
                 }
@@ -283,6 +282,99 @@ fun SettingsScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+                }
+            }
+
+            // EPG URL
+            item {
+                GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
+                Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
+                    Text(
+                        text = "External EPG Source (XMLTV)",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
+                        color = CinemaAccent
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                    Text(
+                        text = "Provide an XMLTV URL for TV Guide data (overrides provider EPG)",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+
+                    if (!isEditingEpgUrl) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (epgUrl.isBlank()) "Not configured" else epgUrl,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                                ),
+                                color = if (epgUrl.isBlank()) CinemaTextSecondary else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 2
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
+                            CinemaSecondaryButton(
+                                onClick = {
+                                    isEditingEpgUrl = true
+                                    newEpgUrl = epgUrl
+                                },
+                                text = "Edit"
+                            )
+                            if (epgUrl.isNotBlank()) {
+                                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                                CinemaDangerButton(
+                                    onClick = {
+                                        epgUrl = ""
+                                        appSettings.epgUrl = ""
+                                    },
+                                    text = "Clear"
+                                )
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextField(
+                                value = newEpgUrl,
+                                onValueChange = { newEpgUrl = it },
+                                label = { Text("XMLTV URL") },
+                                placeholder = { Text("https://epg.example.com/guide.xml.gz") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
+                            CinemaSecondaryButton(
+                                onClick = {
+                                    isEditingEpgUrl = false
+                                    newEpgUrl = ""
+                                },
+                                text = "Cancel"
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                            CinemaPrimaryButton(
+                                onClick = {
+                                    val url = newEpgUrl.trim()
+                                    epgUrl = url
+                                    isEditingEpgUrl = false
+                                    newEpgUrl = ""
+                                    appSettings.epgUrl = url
+                                },
+                                enabled = newEpgUrl.isNotBlank(),
+                                text = "Save"
+                            )
                         }
                     }
                 }
