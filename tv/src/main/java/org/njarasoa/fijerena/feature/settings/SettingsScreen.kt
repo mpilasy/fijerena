@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TextField
@@ -49,6 +50,7 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -606,6 +608,14 @@ fun SettingsScreen(
                             color = CinemaTextSecondary
                         )
                     }
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                    Text(
+                        text = "Scripts: ${if (categoryFilters.allowedScripts.isEmpty()) "All" else categoryFilters.allowedScripts.joinToString(", ") { it.displayName }}",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary
+                    )
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                     CinemaPrimaryButton(
                         onClick = { showCategoryFilterDialog = true },
@@ -1289,6 +1299,7 @@ fun SettingsScreen(
     if (showCategoryFilterDialog) {
         var filterMode by remember { mutableStateOf(categoryFilters.mode) }
         var prefixesText by remember { mutableStateOf(categoryFilters.prefixes.joinToString(", ")) }
+        var selectedScripts by remember { mutableStateOf(categoryFilters.allowedScripts) }
 
         AlertDialog(
             onDismissRequest = { showCategoryFilterDialog = false },
@@ -1355,6 +1366,39 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                    Text(
+                        "Language Script Filter:",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CinemaTextPrimary
+                    )
+                    Text(
+                        "Show only categories in selected scripts (none = show all)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaTextSecondary
+                    )
+                    ScriptType.entries.forEach { script ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = script in selectedScripts,
+                                onCheckedChange = { checked ->
+                                    selectedScripts = if (checked) {
+                                        selectedScripts + script
+                                    } else {
+                                        selectedScripts - script
+                                    }
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                            Text(
+                                text = script.displayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CinemaTextPrimary
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -1366,7 +1410,8 @@ fun SettingsScreen(
                             .filter { it.isNotEmpty() }
                         val newFilters = CategoryFilters(
                             mode = filterMode,
-                            prefixes = prefixes
+                            prefixes = prefixes,
+                            allowedScripts = selectedScripts
                         )
                         categoryFilters = newFilters
                         activeProviderId?.let { id ->

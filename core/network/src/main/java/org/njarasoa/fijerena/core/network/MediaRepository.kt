@@ -117,7 +117,7 @@ class MediaRepository(
         if (result.isFailure) return result
 
         val filters = providerSettings.categoryFilters
-        if (filters.prefixes.isEmpty()) return result
+        if (filters.prefixes.isEmpty() && filters.allowedScripts.isEmpty()) return result
 
         return result.map { categories ->
             categories.filter { category ->

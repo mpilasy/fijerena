@@ -45,24 +45,34 @@ data class CategoryFilters(
     val mode: FilterMode = FilterMode.EXCLUDE,
 
     /** List of prefixes to match against category names (case-insensitive) */
-    val prefixes: List<String> = emptyList()
+    val prefixes: List<String> = emptyList(),
+
+    /** Allowed Unicode scripts — empty means show all */
+    val allowedScripts: Set<ScriptType> = emptySet()
 ) {
     /**
      * Check if a category should be visible based on filter rules.
+     * Both prefix and script filters must pass (AND logic).
      * @param categoryName The name of the category to check
      * @return true if the category should be shown, false if it should be hidden
      */
     fun shouldShowCategory(categoryName: String): Boolean {
-        if (prefixes.isEmpty()) return true
-
-        val matchesAnyPrefix = prefixes.any { prefix ->
-            categoryName.startsWith(prefix, ignoreCase = true)
+        // Prefix filter
+        if (prefixes.isNotEmpty()) {
+            val matchesAnyPrefix = prefixes.any { prefix ->
+                categoryName.startsWith(prefix, ignoreCase = true)
+            }
+            val passesPrefix = when (mode) {
+                FilterMode.EXCLUDE -> !matchesAnyPrefix
+                FilterMode.INCLUDE -> matchesAnyPrefix
+            }
+            if (!passesPrefix) return false
         }
-
-        return when (mode) {
-            FilterMode.EXCLUDE -> !matchesAnyPrefix  // Hide matching categories
-            FilterMode.INCLUDE -> matchesAnyPrefix   // Show only matching categories
+        // Script filter
+        if (allowedScripts.isNotEmpty()) {
+            if (ScriptDetector.detectScript(categoryName) !in allowedScripts) return false
         }
+        return true
     }
 }
 

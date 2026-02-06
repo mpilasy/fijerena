@@ -23,6 +23,7 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -401,6 +402,11 @@ fun MobileSettingsScreen(
                         Text(
                             text = if (categoryFilters.prefixes.isEmpty()) "No filters configured"
                                    else "${categoryFilters.prefixes.size} prefix(es): ${categoryFilters.prefixes.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        )
+                        Text(
+                            text = "Scripts: ${if (categoryFilters.allowedScripts.isEmpty()) "All" else categoryFilters.allowedScripts.joinToString(", ") { it.displayName }}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                         )
@@ -872,6 +878,7 @@ private fun CategoryFilterDialog(
 ) {
     var mode by remember { mutableStateOf(currentFilters.mode) }
     var prefixesText by remember { mutableStateOf(currentFilters.prefixes.joinToString(", ")) }
+    var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -913,6 +920,36 @@ private fun CategoryFilterDialog(
                     singleLine = false,
                     minLines = 2
                 )
+                Text(
+                    text = "Language Script Filter:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "Show only categories in selected scripts (none = show all)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                )
+                ScriptType.entries.forEach { script ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = script in selectedScripts,
+                            onCheckedChange = { checked ->
+                                selectedScripts = if (checked) {
+                                    selectedScripts + script
+                                } else {
+                                    selectedScripts - script
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = script.displayName,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
@@ -922,7 +959,11 @@ private fun CategoryFilterDialog(
                         .split(",")
                         .map { it.trim() }
                         .filter { it.isNotEmpty() }
-                    onSave(CategoryFilters(mode = mode, prefixes = prefixes))
+                    onSave(CategoryFilters(
+                        mode = mode,
+                        prefixes = prefixes,
+                        allowedScripts = selectedScripts
+                    ))
                 }
             ) {
                 Text("Save")
