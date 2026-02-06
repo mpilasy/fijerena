@@ -221,13 +221,16 @@ The app follows this streamlined navigation structure:
    - **Provider Configured:** Auto-restores session → Content Type Selection
 2. **Content Type Selection** (main landing page) - Choose Live TV, Movies, or TV Shows
 3. **Category Grid** - Browse categories and streams/episodes
-4. **Player Screen** - Video playback
-5. **Settings** - Accessible from Content Type Selection via gear icon
-6. **Provider Management** - Accessible from Settings → "Manage Providers"
+4. **Movie Details** (Movies) / **Episode Selection → Episode Details** (TV Shows) - Info screen before playback
+5. **Player Screen** - Video playback
+6. **Settings** - Accessible from Content Type Selection via gear icon
+7. **Provider Management** - Accessible from Settings → "Manage Providers"
    - **Provider Selection:** List all providers, select/edit/delete
    - **Add/Edit Provider:** Type selector + type-specific form fields (Xtream: URL/user/pass, Jellyfin: server URL/user/pass, SMB: host/share/user/pass, Local: folder/M3U picker)
 
 **Note:** There is no login screen and no logout button anywhere in the app. Authentication happens automatically on startup via stored credentials, or after configuring a provider in Settings. To switch or remove a provider, use Settings → Manage Providers. Both TV and mobile use the same flow.
+
+**TV Back Navigation:** TV screens do not have explicit "Back" buttons — the remote's back button handles all backward navigation. Only error/fallback screens retain on-screen Back buttons.
 
 **Mobile Orientation:** The mobile app is locked to portrait mode (`android:screenOrientation="portrait"`) for all screens except the player. `MobilePlayerScreen` unlocks orientation to sensor on enter and locks back to portrait on dispose.
 
@@ -276,6 +279,32 @@ The app supports three primary content types (availability depends on provider c
 - **Live TV:** Live television channels and streams (Xtream, Local with M3U)
 - **Movies (VOD):** On-demand movie content (all providers)
 - **TV Shows:** Series and episodes with episode selection support (Xtream, Jellyfin)
+
+### Episode Details (Inline)
+When selecting an episode from the episode list, an inline detail panel is shown before playback (same pattern as the Movie Details screen). This avoids a separate navigation route since all episode data is already loaded in `SeriesDetail`.
+
+**Features:**
+- Episode thumbnail, title, "Season X · Episode Y" label
+- Metadata row: rating (episode or series fallback), duration, "Ends at" time
+- Genre (from series)
+- Play / Resume buttons (resume shows saved position timestamp)
+- Plot description, cast, director (with series-level fallback)
+- Back button (mobile) or remote back (TV) returns to the episode list
+
+**Collapsible Seasons:**
+- Multi-season shows display collapsible season headers with chevron indicators
+- Tapping/clicking a season header toggles its episode list
+- On load, the season containing the **next unwatched/in-progress episode** is auto-expanded (checks watch status via `mediaRepository.getPlaybackPositionSuspend()`)
+- Single-season shows skip the header entirely
+
+**Resume Logic:**
+- Uses `mediaRepository.getPlaybackPositionSuspend(episodeId, "TV_SHOWS")`
+- Shows Resume button if progress is between 2% and 95%
+- `startFromBeginning` parameter passed through to Player screen
+
+**Files:**
+- `tv/.../feature/episode/EpisodeSelectionScreen.kt` - TV version with GlassPanel, D-pad focus
+- `mobile/.../feature/episode/EpisodeSelectionScreen.kt` - Mobile version with scrollable layout
 
 ### Virtual Categories
 The app provides two special virtual categories that load locally from device storage:
@@ -404,7 +433,7 @@ The app supports 4 provider types through a unified domain model abstraction. Al
 **Screens:**
 - **Provider Selection** (`Screen.ProviderSelection`): List all providers with select/edit/delete
 - **Add/Edit Provider** (`Screen.AddProvider`): Type-specific form fields per provider type
-- **Content Type Selection**: Provider name clickable to open provider switcher dialog; shows provider type in dev mode
+- **Content Type Selection**: Provider name clickable to open provider switcher dialog (dark-themed `AlertDialog` with `CinemaSurface` background); shows provider type in dev mode
 
 **Navigation IDs:** All navigation uses `String` IDs (not `Int`) to support non-numeric IDs from Jellyfin/SMB/Local providers.
 
