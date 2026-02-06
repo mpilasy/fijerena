@@ -45,6 +45,9 @@ fun EpgGuideScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -61,6 +64,12 @@ fun EpgGuideScreen(
                     onPreviousDay = { viewModel.selectPreviousDay() },
                     onNextDay = { viewModel.selectNextDay() },
                     onJumpToNow = { viewModel.jumpToNow() },
+                    onRefresh = { viewModel.forceRefresh() },
+                    isRefreshing = isRefreshing,
+                    searchQuery = searchQuery,
+                    searchResults = searchResults,
+                    onSearchQueryChanged = { viewModel.searchPrograms(it) },
+                    onClearSearch = { viewModel.clearSearch() },
                     onBack = onBack
                 )
             }

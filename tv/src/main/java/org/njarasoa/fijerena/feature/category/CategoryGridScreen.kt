@@ -58,6 +58,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -111,6 +112,7 @@ fun CategoryGridScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val nowPlaying by viewModel.nowPlaying.collectAsState()
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -121,6 +123,7 @@ fun CategoryGridScreen(
     CompositionLocalProvider(LocalUiScale provides uiScale) {
         CategoryGridContent(
             uiState = uiState,
+            nowPlaying = nowPlaying,
             configuration = configuration,
             isDevMode = isDevMode,
             catViewModel = viewModel,
@@ -136,6 +139,7 @@ fun CategoryGridScreen(
 @Composable
 private fun CategoryGridContent(
     uiState: CategoryViewModel.UiState,
+    nowPlaying: Map<String, EpgProgram>,
     configuration: android.content.res.Configuration,
     isDevMode: Boolean,
     catViewModel: CategoryViewModel,
@@ -172,6 +176,7 @@ private fun CategoryGridContent(
                     streamsLoading = state.streamsLoading,
                     categoriesRefreshing = state.categoriesRefreshing,
                     lastPlayedItemId = state.lastPlayedItemId,
+                    nowPlaying = nowPlaying,
                     contentType = contentType,
                     onCategorySelected = { categoryId ->
                         catViewModel.loadStreams(categoryId)
@@ -236,6 +241,7 @@ private fun TwoColumnLayout(
     streamsLoading: Boolean,
     categoriesRefreshing: Boolean,
     lastPlayedItemId: String?,
+    nowPlaying: Map<String, EpgProgram>,
     contentType: String,
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
@@ -335,6 +341,7 @@ private fun TwoColumnLayout(
                 selectedCategoryId = selectedCategoryId,
                 selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name,
                 lastPlayedItemId = lastPlayedItemId,
+                nowPlaying = nowPlaying,
                 contentType = contentType,
                 categoryViewModel = categoryViewModel,
                 onStreamSelected = onStreamSelected,
@@ -578,6 +585,7 @@ private fun StreamList(
     selectedCategoryId: String?,
     selectedCategoryName: String?,
     lastPlayedItemId: String?,
+    nowPlaying: Map<String, EpgProgram>,
     contentType: String,
     categoryViewModel: CategoryViewModel,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
@@ -721,6 +729,7 @@ private fun StreamList(
                                 item = item,
                                 isFavorite = categoryViewModel.isFavorite(item.id, contentType),
                                 watchProgress = progress,
+                                nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
                                 focusRequester = focusRequesters[item.id]
                             )
@@ -737,6 +746,7 @@ private fun StreamItem(
     item: MediaItem,
     isFavorite: Boolean = false,
     watchProgress: Float = 0f,
+    nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null
 ) {
@@ -828,6 +838,18 @@ private fun StreamItem(
                             ),
                             color = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
                             maxLines = 1
+                        )
+                    }
+                    // "What's On Now" for Live TV
+                    nowPlayingProgram?.let { program ->
+                        Text(
+                            text = "Now: ${program.title}",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = org.njarasoa.fijerena.ui.theme.CinemaOrangeLight,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
                         )
                     }
                 }

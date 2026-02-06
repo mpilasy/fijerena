@@ -32,4 +32,9 @@ object MobileDimensions {
     val posterHeight: Dp = 56.dp
     val posterHeightLarge: Dp = 200.dp
     val streamCardHeight: Dp = 80.dp
+
+    // EPG
+    val epgProgramMinWidth: Dp = 140.dp
+    val epgProgramHeight: Dp = 64.dp
+    val epgChannelHeaderHeight: Dp = 44.dp
 }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -50,6 +51,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -61,6 +63,7 @@ fun MobileCategoryListScreen(
     initialCategoryId: String? = null,
     onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String) -> Unit,
     onSearchClick: () -> Unit = {},
+    onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
     viewModel: CategoryViewModel = viewModel(
         factory = CategoryViewModelFactory(
@@ -71,6 +74,7 @@ fun MobileCategoryListScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val nowPlaying by viewModel.nowPlaying.collectAsState()
 
     Scaffold(
         topBar = {
@@ -82,6 +86,19 @@ fun MobileCategoryListScreen(
                     }
                 },
                 actions = {
+                    // EPG button - only for Live TV when a category is selected
+                    if (contentType == "LIVE_TV") {
+                        val state = uiState
+                        if (state is CategoryViewModel.UiState.Success) {
+                            val selectedCatId = state.selectedCategoryId
+                            val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
+                            if (selectedCatId != null && selectedCatName != null) {
+                                IconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) }) {
+                                    Icon(Icons.Default.DateRange, "TV Guide")
+                                }
+                            }
+                        }
+                    }
                     IconButton(onClick = onSearchClick) {
                         Icon(Icons.Default.Search, "Search")
                     }
@@ -131,6 +148,7 @@ fun MobileCategoryListScreen(
                                 items = state.streams,
                                 streamsLoading = state.streamsLoading,
                                 selectedCategoryId = state.selectedCategoryId,
+                                nowPlaying = nowPlaying,
                                 onItemSelected = { itemId, itemName, categoryId ->
                                     onStreamSelected(itemId, itemName, categoryId, contentType)
                                 }
@@ -219,6 +237,7 @@ private fun StreamsList(
     items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
     streamsLoading: Boolean,
     selectedCategoryId: String?,
+    nowPlaying: Map<String, EpgProgram> = emptyMap(),
     onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit
 ) {
     when {
@@ -279,6 +298,7 @@ private fun StreamsList(
                 items(items, key = { it.id }) { item ->
                     StreamCard(
                         item = item,
+                        nowPlayingProgram = nowPlaying[item.id],
                         onClick = {
                             onItemSelected(item.id, item.name, item.categoryId)
                         }
@@ -292,6 +312,7 @@ private fun StreamsList(
 @Composable
 private fun StreamCard(
     item: org.njarasoa.fijerena.core.player.domain.MediaItem,
+    nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit
 ) {
     Card(
@@ -335,6 +356,16 @@ private fun StreamCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textMedium),
                         maxLines = 1
+                    )
+                }
+                // "What's On Now" for Live TV
+                nowPlayingProgram?.let { program ->
+                    Text(
+                        text = "Now: ${program.title}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
                     )
                 }
             }

@@ -168,6 +168,10 @@ class MediaRepository(
         return provider?.getEpgBulk(streamIds)
     }
 
+    suspend fun clearEpgCache() {
+        provider?.clearEpgCache()
+    }
+
     // --- Progress sync hook ---
 
     suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long) {

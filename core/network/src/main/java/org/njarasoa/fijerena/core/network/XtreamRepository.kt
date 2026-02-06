@@ -109,7 +109,7 @@ class XtreamRepository(
         // EPG caching
         private const val KEY_EPG_PREFIX = "epg_"
         private const val KEY_EPG_TIMESTAMP_PREFIX = "epg_timestamp_"
-        private const val EPG_CACHE_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
+        private const val EPG_CACHE_EXPIRY_MS = 10 * 60 * 1000L // 10 minutes
 
         private fun computeCacheSize(cache: SharedPreferences): Long {
             var totalSize = 0L

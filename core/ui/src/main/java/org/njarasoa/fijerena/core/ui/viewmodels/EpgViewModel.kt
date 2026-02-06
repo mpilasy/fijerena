@@ -8,7 +8,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import org.njarasoa.fijerena.core.player.model.EpgUtils
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import java.time.LocalDate
@@ -32,6 +34,21 @@ class EpgViewModel(
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    data class EpgSearchResult(
+        val program: EpgProgram,
+        val channel: MediaItem,
+        val isCurrent: Boolean
+    )
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _searchResults = MutableStateFlow<List<EpgSearchResult>>(emptyList())
+    val searchResults: StateFlow<List<EpgSearchResult>> = _searchResults.asStateFlow()
 
     private var currentDate = LocalDate.now()
 
@@ -95,11 +112,47 @@ class EpgViewModel(
         }
     }
 
+    fun forceRefresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            repository.clearEpgCache()
+            loadEpgData(currentDate)
+            _isRefreshing.value = false
+        }
+    }
+
     fun selectPreviousDay() = loadEpgData(currentDate.minusDays(1))
 
     fun selectNextDay() = loadEpgData(currentDate.plusDays(1))
 
     fun jumpToNow() = loadEpgData(LocalDate.now())
+
+    fun searchPrograms(query: String) {
+        _searchQuery.value = query
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
+            return
+        }
+        val state = _uiState.value
+        if (state !is UiState.Success) return
+        val lowerQuery = query.lowercase()
+        _searchResults.value = state.channelRows.flatMap { row ->
+            row.programs
+                .filter { it.title.lowercase().contains(lowerQuery) }
+                .map { program ->
+                    EpgSearchResult(
+                        program = program,
+                        channel = row.channel,
+                        isCurrent = EpgUtils.isCurrentProgram(program)
+                    )
+                }
+        }.sortedByDescending { it.isCurrent }
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
+        _searchResults.value = emptyList()
+    }
 
     private fun buildChannelRows(
         items: List<MediaItem>,

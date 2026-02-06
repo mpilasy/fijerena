@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 
 class CategoryViewModel(
     private val repository: MediaRepository,
@@ -80,6 +81,9 @@ class CategoryViewModel(
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    private val _nowPlaying = MutableStateFlow<Map<String, EpgProgram>>(emptyMap())
+    val nowPlaying: StateFlow<Map<String, EpgProgram>> = _nowPlaying.asStateFlow()
 
     private var categories: List<MediaCategory> = emptyList()
     private var currentStreams: List<MediaItem> = emptyList()
@@ -264,6 +268,8 @@ class CategoryViewModel(
                         categoriesPayloadSize = getCategoriesPayloadSize(),
                         streamsPayloadSize = getPayloadSize(categoryId)
                     )
+                    // Load "What's On Now" for Live TV channels
+                    loadNowPlaying(items)
                     // Retry once if initial load returned empty for a non-virtual category
                     if (isInitialLoad && items.isEmpty() && !initialLoadRetried &&
                         categoryId != CONTINUE_WATCHING_CATEGORY_ID &&
@@ -295,6 +301,21 @@ class CategoryViewModel(
                     }
                 }
             )
+        }
+    }
+
+    private fun loadNowPlaying(items: List<MediaItem>) {
+        if (contentType != "LIVE_TV") return
+        viewModelScope.launch {
+            val caps = repository.getCapabilities()
+            if (caps?.supportsEpg != true) return@launch
+            val epgData = repository.getEpgBulk(
+                items.take(50).map { it.id }
+            )?.getOrNull() ?: return@launch
+            val now = System.currentTimeMillis() / 1000
+            _nowPlaying.value = epgData.mapValues { (_, resp) ->
+                resp.listings.firstOrNull { now in it.startTime..it.endTime }
+            }.filterValues { it != null }.mapValues { it.value!! }
         }
     }
 

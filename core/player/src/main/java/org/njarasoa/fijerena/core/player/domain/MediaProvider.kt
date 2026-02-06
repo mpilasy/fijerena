@@ -25,6 +25,7 @@ interface MediaProvider {
 
     suspend fun getEpg(streamId: String): Result<EpgResponse>? = null
     suspend fun getEpgBulk(streamIds: List<String>): Result<Map<String, EpgResponse>>? = null
+    suspend fun clearEpgCache() {}
 
     suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long) {}
 

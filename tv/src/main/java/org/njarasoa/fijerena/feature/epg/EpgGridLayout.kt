@@ -20,9 +20,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,16 +52,14 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.EpgUtils
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
-import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -69,9 +74,16 @@ fun EpgGridLayout(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onJumpToNow: () -> Unit,
+    onRefresh: () -> Unit = {},
+    isRefreshing: Boolean = false,
+    searchQuery: String = "",
+    searchResults: List<EpgViewModel.EpgSearchResult> = emptyList(),
+    onSearchQueryChanged: (String) -> Unit = {},
+    onClearSearch: () -> Unit = {},
     onBack: () -> Unit
 ) {
     val configuration = LocalConfiguration.current
+    var isSearchActive by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -88,12 +100,27 @@ fun EpgGridLayout(
             onPreviousDay = onPreviousDay,
             onNextDay = onNextDay,
             onJumpToNow = onJumpToNow,
+            onRefresh = onRefresh,
+            isRefreshing = isRefreshing,
+            isSearchActive = isSearchActive,
+            onSearchToggle = {
+                isSearchActive = !isSearchActive
+                if (!isSearchActive) onClearSearch()
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = Spacing.md)
         )
 
-        if (channelRows.isEmpty()) {
+        if (isSearchActive) {
+            // Search mode
+            EpgSearchContent(
+                searchQuery = searchQuery,
+                searchResults = searchResults,
+                onSearchQueryChanged = onSearchQueryChanged,
+                onProgramSelected = onProgramSelected
+            )
+        } else if (channelRows.isEmpty()) {
             EmptyEpgMessage()
         } else {
             // Two-pane grid
@@ -131,6 +158,10 @@ private fun EpgHeader(
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onJumpToNow: () -> Unit,
+    onRefresh: () -> Unit = {},
+    isRefreshing: Boolean = false,
+    isSearchActive: Boolean = false,
+    onSearchToggle: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -150,7 +181,7 @@ private fun EpgHeader(
             )
         }
 
-        // Date navigation
+        // Date navigation + refresh
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Button(onClick = onPreviousDay) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous Day")
@@ -160,6 +191,26 @@ private fun EpgHeader(
             }
             Button(onClick = onNextDay) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next Day")
+            }
+            Button(
+                onClick = onRefresh,
+                enabled = !isRefreshing
+            ) {
+                if (isRefreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(TvDimensions.iconSmall),
+                        strokeWidth = TvDimensions.borderDefault,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                }
+            }
+            Button(onClick = onSearchToggle) {
+                Icon(
+                    if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
+                    contentDescription = if (isSearchActive) "Close Search" else "Search"
+                )
             }
         }
     }
@@ -336,7 +387,7 @@ private fun TimeHeaderRow(
                     contentAlignment = Alignment.Center
                 ) {
                 Text(
-                    text = formatTime(slot.startTime),
+                    text = EpgUtils.formatTime(slot.startTime),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
                 )
@@ -376,7 +427,7 @@ private fun ProgramCell(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val isCurrent = isCurrentProgram(program)
+    val isCurrent = EpgUtils.isCurrentProgram(program)
 
     Card(
         onClick = onClick,
@@ -408,7 +459,7 @@ private fun ProgramCell(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = formatTime(program.startTime),
+                text = EpgUtils.formatTime(program.startTime),
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1
             )
@@ -422,20 +473,132 @@ private fun ProgramCell(
     }
 }
 
+@Composable
+private fun EpgSearchContent(
+    searchQuery: String,
+    searchResults: List<EpgViewModel.EpgSearchResult>,
+    onSearchQueryChanged: (String) -> Unit,
+    onProgramSelected: (EpgProgram, MediaItem) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChanged,
+            label = { Text("Search programs") },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = Spacing.sm)
+        )
+
+        if (searchQuery.isNotBlank() && searchResults.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No programs found matching \"$searchQuery\"",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        } else {
+            TvLazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+            ) {
+                items(searchResults.size) { index ->
+                    val result = searchResults[index]
+                    SearchResultItem(
+                        result = result,
+                        onClick = { onProgramSelected(result.program, result.channel) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResultItem(
+    result: EpgViewModel.EpgSearchResult,
+    onClick: () -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused },
+        colors = CardDefaults.colors(
+            containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
+            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint)
+        ),
+        scale = CardDefaults.scale(
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScaleContent,
+            pressedScale = TvFocusTokens.pressedScaleSubtle
+        ),
+        glow = CardDefaults.glow(
+            focusedGlow = androidx.tv.material3.Glow(
+                elevationColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                elevation = TvFocusTokens.focusShadowElevation
+            )
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = result.program.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = result.channel.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1
+                )
+                Text(
+                    text = EpgUtils.formatTimeRange(
+                        result.program.startTime,
+                        result.program.endTime
+                    ),
+                    style = MaterialTheme.typography.labelSmall
+                )
+                result.program.description?.let { desc ->
+                    if (desc.isNotBlank()) {
+                        Text(
+                            text = desc,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+            if (result.isCurrent) {
+                Text(
+                    text = "NOW",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
+                )
+            }
+        }
+    }
+}
+
 // Helper functions
 private fun calculateProgramWidth(durationSeconds: Long): androidx.compose.ui.unit.Dp {
     // 2dp per minute
     val minutes = durationSeconds / 60
     return (minutes * 2).coerceAtLeast(120).toInt().dp
-}
-
-private fun isCurrentProgram(program: EpgProgram): Boolean {
-    val now = System.currentTimeMillis() / 1000
-    return now in program.startTime..program.endTime
-}
-
-private fun formatTime(timestampSeconds: Long): String {
-    val instant = Instant.ofEpochSecond(timestampSeconds)
-    val localTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
-    return localTime.format(DateTimeFormatter.ofPattern("HH:mm"))
 }

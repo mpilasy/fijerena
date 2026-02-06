@@ -157,4 +157,8 @@ class XtreamMediaProvider(
                 kotlin.Result.failure(result.exception)
         }
     }
+
+    override suspend fun clearEpgCache() {
+        repository.clearAllEpgCache()
+    }
 }
