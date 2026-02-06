@@ -27,7 +27,9 @@ class EpgViewModel(
             val channelRows: List<EpgChannelRow>,
             val timeSlots: List<TimeSlot>,
             val currentTimeSlot: Int,
-            val selectedDate: LocalDate
+            val selectedDate: LocalDate,
+            val epgLoadTime: String? = null,
+            val epgMatchInfo: String? = null
         ) : UiState()
         data class Error(val message: String) : UiState()
     }
@@ -60,6 +62,7 @@ class EpgViewModel(
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             currentDate = date
+            val startTime = System.currentTimeMillis()
 
             // Check if provider supports EPG (allow if external XMLTV URL is configured)
             val capabilities = repository.getCapabilities()
@@ -102,12 +105,15 @@ class EpgViewModel(
 
             val timeSlots = generateTimeSlots(date)
             val currentSlot = calculateCurrentTimeSlot(timeSlots)
+            val elapsed = System.currentTimeMillis() - startTime
 
             _uiState.value = UiState.Success(
                 channelRows = channelRows,
                 timeSlots = timeSlots,
                 currentTimeSlot = currentSlot,
-                selectedDate = date
+                selectedDate = date,
+                epgLoadTime = "${elapsed}ms",
+                epgMatchInfo = "${epgData.size}/${items.size} channels matched"
             )
         }
     }

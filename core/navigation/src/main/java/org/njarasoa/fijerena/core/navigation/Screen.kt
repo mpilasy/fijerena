@@ -61,6 +61,13 @@ sealed interface Screen {
     data object Settings : Screen
 
     /**
+     * Provider-specific settings screen destination.
+     * Shows settings that vary by provider type (auto-resume, caching, filters, EPG, etc.).
+     */
+    @Serializable
+    data object ProviderSettings : Screen
+
+    /**
      * Category list screen destination.
      * Shows available categories for the selected content type.
      *

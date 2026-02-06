@@ -45,9 +45,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgUtils
+import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
@@ -74,11 +76,18 @@ fun MobileEpgGuideScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     var isSearchActive by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val epgDevStats = (uiState as? EpgViewModel.UiState.Success)?.let { state ->
+        if (appSettings.isDevMode && state.epgLoadTime != null) {
+            " | ${state.epgMatchInfo} | ${state.epgLoadTime}"
+        } else ""
+    } ?: ""
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("TV Guide - $categoryName") },
+                title = { Text("TV Guide - $categoryName$epgDevStats") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -329,7 +338,7 @@ private fun MobileSearchResultCard(
                     maxLines = 1
                 )
                 Text(
-                    text = EpgUtils.formatTimeRange(
+                    text = TimeFormat.formatTimeRange(
                         result.program.startTime,
                         result.program.endTime
                     ),

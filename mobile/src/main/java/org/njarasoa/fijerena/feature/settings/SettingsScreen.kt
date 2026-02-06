@@ -41,6 +41,7 @@ fun MobileSettingsScreen(
     onBack: () -> Unit,
     onThemeChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
+    onProviderSettings: () -> Unit = {},
     onProviderChanged: () -> Unit
 ) {
     val context = LocalContext.current
@@ -85,44 +86,17 @@ fun MobileSettingsScreen(
     var currentUsername by remember { mutableStateOf("") }
     var activeProviderId by remember { mutableStateOf<Long?>(null) }
 
-    // Provider-level settings
-    var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
-
     LaunchedEffect(Unit) {
         val activeProvider = providerRepo.getActiveProvider()
         providerName = activeProvider?.name ?: "No provider"
         currentUrl = activeProvider?.url ?: ""
         currentUsername = activeProvider?.username ?: ""
         activeProviderId = activeProvider?.id
-        activeProvider?.id?.let { id ->
-            providerSettings = providerRepo.getProviderSettings(id)
-        }
     }
-
-    // Provider-level settings state
-    var watchHistorySize by remember(providerSettings) { mutableStateOf(providerSettings.watchHistorySize.toString()) }
-    var newWatchHistorySize by remember { mutableStateOf("") }
-    var favoritesMaxSize by remember(providerSettings) { mutableStateOf(providerSettings.favoritesMaxSize.toString()) }
-    var newFavoritesMaxSize by remember { mutableStateOf("") }
-    var autoResumeEnabled by remember(providerSettings) { mutableStateOf(providerSettings.autoResumeEnabled) }
-    var cachingEnabled by remember(providerSettings) { mutableStateOf(providerSettings.cachingEnabled) }
-    var categoryFilters by remember(providerSettings) { mutableStateOf(providerSettings.categoryFilters) }
 
     // Global settings
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
-
-    var epgUrl by remember(providerSettings) { mutableStateOf(providerSettings.epgUrl) }
-    var isEditingEpgUrl by remember { mutableStateOf(false) }
-    var newEpgUrl by remember { mutableStateOf("") }
-
-    var isEditingQueueSize by remember { mutableStateOf(false) }
-    var isEditingFavoritesSize by remember { mutableStateOf(false) }
-
-    // Confirmation dialog states
-    var showClearFavoritesDialog by remember { mutableStateOf(false) }
-    var showClearProgressDialog by remember { mutableStateOf(false) }
-    var showCategoryFilterDialog by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -160,6 +134,13 @@ fun MobileSettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Manage Providers")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onProviderSettings,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Provider Settings")
                 }
             }
 
@@ -201,391 +182,6 @@ fun MobileSettingsScreen(
                             }
                         }
                     }
-                }
-            }
-
-            // === Auto-Resume ===
-            SettingsSection(title = "Auto-Resume") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Resume VOD content from where you left off",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Switch(
-                        checked = autoResumeEnabled,
-                        onCheckedChange = { enabled ->
-                            autoResumeEnabled = enabled
-                            activeProviderId?.let { id ->
-                                coroutineScope.launch {
-                                    val newSettings = providerSettings.copy(autoResumeEnabled = enabled)
-                                    providerRepo.updateProviderSettings(id, newSettings)
-                                    providerSettings = newSettings
-                                    syncManager.syncProviderSettings(id)
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-
-            // === Watch History Size ===
-            SettingsSection(title = "Last Watched Queue Size") {
-                Text(
-                    text = "Items to keep in Last Watched category (1-100)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (!isEditingQueueSize) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = watchHistorySize,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        OutlinedButton(onClick = {
-                            isEditingQueueSize = true
-                            newWatchHistorySize = watchHistorySize
-                        }) {
-                            Text("Edit")
-                        }
-                    }
-                } else {
-                    OutlinedTextField(
-                        value = newWatchHistorySize,
-                        onValueChange = { newValue ->
-                            if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
-                                newWatchHistorySize = newValue
-                            }
-                        },
-                        label = { Text("Queue Size") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-                    ) {
-                        OutlinedButton(onClick = {
-                            isEditingQueueSize = false
-                            newWatchHistorySize = ""
-                        }) {
-                            Text("Cancel")
-                        }
-                        Button(
-                            onClick = {
-                                val size = newWatchHistorySize.toIntOrNull()
-                                if (size != null && size in 1..100) {
-                                    watchHistorySize = size.toString()
-                                    isEditingQueueSize = false
-                                    newWatchHistorySize = ""
-                                    activeProviderId?.let { id ->
-                                        coroutineScope.launch {
-                                            val newSettings = providerSettings.copy(watchHistorySize = size)
-                                            providerRepo.updateProviderSettings(id, newSettings)
-                                            providerSettings = newSettings
-                                            syncManager.syncProviderSettings(id)
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true
-                        ) {
-                            Text("Save")
-                        }
-                    }
-                }
-            }
-
-            // === Favorites Max Size ===
-            SettingsSection(title = "Favorites Max Size") {
-                Text(
-                    text = "Maximum number of favorites to store (10-500)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (!isEditingFavoritesSize) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = favoritesMaxSize,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        OutlinedButton(onClick = {
-                            isEditingFavoritesSize = true
-                            newFavoritesMaxSize = favoritesMaxSize
-                        }) {
-                            Text("Edit")
-                        }
-                    }
-                } else {
-                    OutlinedTextField(
-                        value = newFavoritesMaxSize,
-                        onValueChange = { newValue ->
-                            if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
-                                newFavoritesMaxSize = newValue
-                            }
-                        },
-                        label = { Text("Max Size") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-                    ) {
-                        OutlinedButton(onClick = {
-                            isEditingFavoritesSize = false
-                            newFavoritesMaxSize = ""
-                        }) {
-                            Text("Cancel")
-                        }
-                        Button(
-                            onClick = {
-                                val size = newFavoritesMaxSize.toIntOrNull()
-                                if (size != null && size in 10..500) {
-                                    favoritesMaxSize = size.toString()
-                                    isEditingFavoritesSize = false
-                                    newFavoritesMaxSize = ""
-                                    activeProviderId?.let { id ->
-                                        coroutineScope.launch {
-                                            val newSettings = providerSettings.copy(favoritesMaxSize = size)
-                                            providerRepo.updateProviderSettings(id, newSettings)
-                                            providerSettings = newSettings
-                                            syncManager.syncProviderSettings(id)
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true
-                        ) {
-                            Text("Save")
-                        }
-                    }
-                }
-            }
-
-            // === Category Filters ===
-            SettingsSection(title = "Category Filters") {
-                Text(
-                    text = "Hide categories by prefix (e.g., 'Adult', 'XXX')",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Mode: ${categoryFilters.mode.name}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = if (categoryFilters.prefixes.isEmpty()) "No filters configured"
-                                   else "${categoryFilters.prefixes.size} prefix(es): ${categoryFilters.prefixes.joinToString(", ")}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                        )
-                        Text(
-                            text = "Scripts: ${if (categoryFilters.allowedScripts.isEmpty()) "All" else categoryFilters.allowedScripts.joinToString(", ") { it.displayName }}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                        )
-                    }
-                    OutlinedButton(onClick = { showCategoryFilterDialog = true }) {
-                        Text("Edit")
-                    }
-                }
-            }
-
-            // === External EPG Source ===
-            SettingsSection(title = "External EPG Source (XMLTV)") {
-                Text(
-                    text = "Provide an XMLTV URL for TV Guide data (overrides provider EPG)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (!isEditingEpgUrl) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (epgUrl.isBlank()) "Not configured" else epgUrl,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (epgUrl.isBlank())
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                            else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 2
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        OutlinedButton(onClick = {
-                            isEditingEpgUrl = true
-                            newEpgUrl = epgUrl
-                        }) {
-                            Text("Edit")
-                        }
-                    }
-                    if (epgUrl.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                epgUrl = ""
-                                activeProviderId?.let { id ->
-                                    coroutineScope.launch {
-                                        val newSettings = providerSettings.copy(epgUrl = "")
-                                        providerRepo.updateProviderSettings(id, newSettings)
-                                        providerSettings = newSettings
-                                        syncManager.syncProviderSettings(id)
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = CinemaError
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Clear EPG URL")
-                        }
-                    }
-                } else {
-                    OutlinedTextField(
-                        value = newEpgUrl,
-                        onValueChange = { newEpgUrl = it },
-                        label = { Text("XMLTV URL") },
-                        placeholder = { Text("https://epg.example.com/guide.xml.gz") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
-                    ) {
-                        OutlinedButton(onClick = {
-                            isEditingEpgUrl = false
-                            newEpgUrl = ""
-                        }) {
-                            Text("Cancel")
-                        }
-                        Button(
-                            onClick = {
-                                val url = newEpgUrl.trim()
-                                epgUrl = url
-                                isEditingEpgUrl = false
-                                newEpgUrl = ""
-                                activeProviderId?.let { id ->
-                                    coroutineScope.launch {
-                                        val newSettings = providerSettings.copy(epgUrl = url)
-                                        providerRepo.updateProviderSettings(id, newSettings)
-                                        providerSettings = newSettings
-                                        syncManager.syncProviderSettings(id)
-                                    }
-                                }
-                            },
-                            enabled = newEpgUrl.isNotBlank()
-                        ) {
-                            Text("Save")
-                        }
-                    }
-                }
-            }
-
-            // === Caching ===
-            SettingsSection(title = "Caching") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Enable caching for faster loading",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Switch(
-                        checked = cachingEnabled,
-                        onCheckedChange = { enabled ->
-                            cachingEnabled = enabled
-                            activeProviderId?.let { id ->
-                                coroutineScope.launch {
-                                    val newSettings = providerSettings.copy(cachingEnabled = enabled)
-                                    providerRepo.updateProviderSettings(id, newSettings)
-                                    providerSettings = newSettings
-                                    syncManager.syncProviderSettings(id)
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-
-            // === Clear Favorites ===
-            SettingsSection(title = "Clear All Favorites") {
-                Text(
-                    text = "Remove all favorited streams from all content types",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = { showClearFavoritesDialog = true },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = CinemaError
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Clear All Favorites")
-                }
-            }
-
-            // === Clear Playback Progress ===
-            SettingsSection(title = "Clear Playback Progress") {
-                Text(
-                    text = "Remove all saved positions (Continue Watching will be empty)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = { showClearProgressDialog = true },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = CinemaError
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Clear All Progress")
                 }
             }
 
@@ -710,53 +306,6 @@ fun MobileSettingsScreen(
         }
     }
 
-    // === Dialogs ===
-
-    // Clear Favorites Dialog
-    if (showClearFavoritesDialog) {
-        ConfirmationDialog(
-            title = "Clear All Favorites?",
-            message = "This will remove all favorited streams from all content types (Live TV, Movies, TV Shows). This action cannot be undone.",
-            onConfirm = {
-                repository.clearFavorites()
-                showClearFavoritesDialog = false
-            },
-            onDismiss = { showClearFavoritesDialog = false }
-        )
-    }
-
-    // Clear Progress Dialog
-    if (showClearProgressDialog) {
-        ConfirmationDialog(
-            title = "Clear All Playback Progress?",
-            message = "This will remove all saved playback positions. You will start from the beginning when playing any VOD content.",
-            onConfirm = {
-                repository.clearWatchHistory()
-                showClearProgressDialog = false
-            },
-            onDismiss = { showClearProgressDialog = false }
-        )
-    }
-
-    // Category Filter Dialog
-    if (showCategoryFilterDialog) {
-        CategoryFilterDialog(
-            currentFilters = categoryFilters,
-            onSave = { newFilters ->
-                categoryFilters = newFilters
-                activeProviderId?.let { id ->
-                    coroutineScope.launch {
-                        val newSettings = providerSettings.copy(categoryFilters = newFilters)
-                        providerRepo.updateProviderSettings(id, newSettings)
-                        providerSettings = newSettings
-                        syncManager.syncProviderSettings(id)
-                    }
-                }
-                showCategoryFilterDialog = false
-            },
-            onDismiss = { showCategoryFilterDialog = false }
-        )
-    }
 }
 
 @Composable

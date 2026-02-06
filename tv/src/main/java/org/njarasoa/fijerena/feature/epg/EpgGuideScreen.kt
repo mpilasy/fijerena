@@ -14,10 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
@@ -48,13 +50,18 @@ fun EpgGuideScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
+    val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
             is EpgViewModel.UiState.Loading -> LoadingScreen()
             is EpgViewModel.UiState.Success -> {
+                val epgCategoryName = if (appSettings.isDevMode && state.epgLoadTime != null) {
+                    "$categoryName | ${state.epgMatchInfo} | ${state.epgLoadTime}"
+                } else categoryName
                 EpgGridLayout(
-                    categoryName = categoryName,
+                    categoryName = epgCategoryName,
                     channelRows = state.channelRows,
                     timeSlots = state.timeSlots,
                     currentTimeSlot = state.currentTimeSlot,

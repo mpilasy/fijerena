@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -43,6 +44,8 @@ fun MobileSearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
 
     Scaffold(
         topBar = {
@@ -116,12 +119,15 @@ fun MobileSearchScreen(
                         ErrorView(message = state.message)
                     }
                     is SearchViewModel.UiState.Success -> {
+                        val devStats = if (appSettings.isDevMode && state.searchDataSize != null) {
+                            " | ${state.searchDataSize} in ${state.searchDuration}"
+                        } else ""
                         SearchResults(
                             categoryResults = state.categoryResults,
                             results = state.filteredResults,
                             query = searchQuery,
                             isSearching = state.isSearching,
-                            searchProgress = state.searchProgress,
+                            searchProgress = (state.searchProgress ?: "") + devStats,
                             onResultClick = { result ->
                                 onStreamSelected(
                                     result.itemId,

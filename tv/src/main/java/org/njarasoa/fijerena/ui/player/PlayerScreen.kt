@@ -126,6 +126,22 @@ fun PlayerScreen(
     var showStreamInfo by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
+    // Live position polling for smooth VOD timer updates
+    var livePosition by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    var liveDuration by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+
+    LaunchedEffect(playbackState) {
+        if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused) {
+            while (true) {
+                StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
+                    livePosition = player.currentPosition
+                    liveDuration = player.duration.coerceAtLeast(0L)
+                }
+                delay(500L)
+            }
+        }
+    }
+
     // Keep last displayed metadata to show during channel transitions
     var displayedMetadata by remember { mutableStateOf(currentMetadata) }
 
@@ -410,7 +426,8 @@ fun PlayerScreen(
                 exit = fadeOut()
             ) {
                 StreamInfoDisplay(
-                    playbackState = playbackState,
+                    livePosition = livePosition,
+                    liveDuration = liveDuration,
                     metadata = displayedMetadata
                 )
             }
@@ -1833,20 +1850,12 @@ private fun MetadataOverlay(
 
 @Composable
 private fun StreamInfoDisplay(
-    playbackState: PlaybackState,
+    livePosition: Long,
+    liveDuration: Long,
     metadata: PlayerMetadata
 ) {
-    val position = when (playbackState) {
-        is PlaybackState.Playing -> playbackState.position
-        is PlaybackState.Paused -> playbackState.position
-        else -> 0L
-    }
-
-    val duration = when (playbackState) {
-        is PlaybackState.Playing -> playbackState.duration
-        is PlaybackState.Paused -> playbackState.duration
-        else -> 0L
-    }
+    val position = livePosition
+    val duration = liveDuration
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -1902,15 +1911,6 @@ private fun StreamInfoDisplay(
                 // Calculate end time - add remaining milliseconds to current time
                 val currentTimeMillis = System.currentTimeMillis()
                 val estimatedEndTimeMillis = currentTimeMillis + remainingTime
-                val tvContext = LocalContext.current
-                val is24h = android.text.format.DateFormat.is24HourFormat(tvContext)
-                val timeFormat = SimpleDateFormat(if (is24h) "HH:mm" else "h:mm a", Locale.getDefault())
-
-                // Debug logging
-                println("PlayerScreen VOD Time: position=$position, duration=$duration, remaining=$remainingTime")
-                println("PlayerScreen VOD Time: currentTime=$currentTimeMillis, endTime=$estimatedEndTimeMillis")
-                println("PlayerScreen VOD Time: Formatted end time = ${timeFormat.format(java.util.Date(estimatedEndTimeMillis))}")
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -1921,7 +1921,7 @@ private fun StreamInfoDisplay(
                         color = CinemaAccent
                     )
                     Text(
-                        text = "Ends at ${timeFormat.format(java.util.Date(estimatedEndTimeMillis))}",
+                        text = "Ends at ${org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(java.util.Date(estimatedEndTimeMillis))}",
                         style = MaterialTheme.typography.bodySmall,
                         color = CinemaAccent
                     )

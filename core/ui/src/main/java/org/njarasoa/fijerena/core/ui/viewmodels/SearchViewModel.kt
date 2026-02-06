@@ -25,7 +25,9 @@ class SearchViewModel(
             val filteredResults: List<SearchResult>,
             val query: String,
             val isSearching: Boolean = false,
-            val searchProgress: String? = null
+            val searchProgress: String? = null,
+            val searchDataSize: String? = null,
+            val searchDuration: String? = null
         ) : UiState()
         data class Error(val message: String) : UiState()
     }
@@ -63,9 +65,20 @@ class SearchViewModel(
         searchQuery.value = query
     }
 
+    private fun formatBytes(bytes: Long): String {
+        return when {
+            bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
+            bytes >= 1024 -> "%.1f KB".format(bytes / 1024.0)
+            else -> "$bytes B"
+        }
+    }
+
     private fun performIncrementalSearch(query: String) {
         viewModelScope.launch {
             try {
+                val startTime = System.currentTimeMillis()
+                var totalBytes = 0L
+
                 if (!repository.isConnected()) {
                     val connectResult = repository.connect()
                     if (connectResult.isFailure) {
@@ -81,6 +94,8 @@ class SearchViewModel(
                 if (serverResult != null) {
                     serverResult.fold(
                         onSuccess = { items ->
+                            val elapsed = System.currentTimeMillis() - startTime
+                            totalBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
                             val normalizedQuery = query.trim().lowercase()
                             val results = items.map { item ->
                                 SearchResult(
@@ -114,7 +129,9 @@ class SearchViewModel(
                                 filteredResults = results,
                                 query = query,
                                 isSearching = false,
-                                searchProgress = "Search complete"
+                                searchProgress = "Search complete",
+                                searchDataSize = formatBytes(totalBytes),
+                                searchDuration = "${elapsed}ms"
                             )
                         },
                         onFailure = {
@@ -161,6 +178,7 @@ class SearchViewModel(
 
                     itemsResult.fold(
                         onSuccess = { items ->
+                            totalBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
                             val matchingItems = items
                                 .filter { it.name.lowercase().contains(normalizedQuery) }
                                 .map { item ->
@@ -187,6 +205,7 @@ class SearchViewModel(
                                 .thenBy { it.streamName })
 
                             val finalResults = sortedResults.take(targetResults)
+                            val elapsed = System.currentTimeMillis() - startTime
 
                             _uiState.value = UiState.Success(
                                 categoryResults = matchingCategories,
@@ -194,7 +213,9 @@ class SearchViewModel(
                                 filteredResults = finalResults,
                                 query = query,
                                 isSearching = true,
-                                searchProgress = "Found ${finalResults.size} results (searched $categoriesSearched/${realCategories.size} categories)"
+                                searchProgress = "Found ${finalResults.size} results (searched $categoriesSearched/${realCategories.size} categories)",
+                                searchDataSize = formatBytes(totalBytes),
+                                searchDuration = "${elapsed}ms"
                             )
                         },
                         onFailure = {
@@ -215,13 +236,16 @@ class SearchViewModel(
 
                 val finalResults = sortedFinalResults.take(targetResults)
 
+                val elapsed = System.currentTimeMillis() - startTime
                 _uiState.value = UiState.Success(
                     categoryResults = matchingCategories,
                     allResults = finalResults,
                     filteredResults = finalResults,
                     query = query,
                     isSearching = false,
-                    searchProgress = "Search complete"
+                    searchProgress = "Search complete",
+                    searchDataSize = formatBytes(totalBytes),
+                    searchDuration = "${elapsed}ms"
                 )
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to search")

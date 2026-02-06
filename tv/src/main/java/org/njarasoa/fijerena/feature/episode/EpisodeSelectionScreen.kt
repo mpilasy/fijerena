@@ -509,8 +509,9 @@ private fun EpisodeDetailPanel(
                             )
                         }
                         // "Ends at" based on remaining duration
+                        val endsAtContext = LocalContext.current
                         val endsAtText = remember(episode.metadata.duration, resumePositionMs) {
-                            computeEndsAt(episode.metadata.duration, resumePositionMs)
+                            computeEndsAt(endsAtContext, episode.metadata.duration, resumePositionMs)
                         }
                         if (endsAtText != null) {
                             Text(
@@ -824,7 +825,7 @@ private fun parseDurationToSeconds(duration: String): Long? {
 /**
  * Computes "Ends at" time based on duration and optional resume position.
  */
-private fun computeEndsAt(duration: String?, resumePositionMs: Long): String? {
+private fun computeEndsAt(context: android.content.Context, duration: String?, resumePositionMs: Long): String? {
     if (duration == null) return null
     val totalSeconds = parseDurationToSeconds(duration) ?: return null
     if (totalSeconds <= 0) return null
@@ -832,7 +833,7 @@ private fun computeEndsAt(duration: String?, resumePositionMs: Long): String? {
     val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
     val calendar = java.util.Calendar.getInstance()
     calendar.add(java.util.Calendar.MILLISECOND, remainingMs.toInt())
-    return java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(calendar.time)
+    return org.njarasoa.fijerena.core.player.model.TimeFormat.formatClockTime(context, calendar.time)
 }
 
 /**

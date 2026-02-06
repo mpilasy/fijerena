@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgUtils
+import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -387,7 +388,7 @@ private fun TimeHeaderRow(
                     contentAlignment = Alignment.Center
                 ) {
                 Text(
-                    text = EpgUtils.formatTime(slot.startTime),
+                    text = TimeFormat.formatTime(slot.startTime),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
                 )
@@ -459,7 +460,7 @@ private fun ProgramCell(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = EpgUtils.formatTime(program.startTime),
+                text = TimeFormat.formatTime(program.startTime),
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1
             )
@@ -567,7 +568,7 @@ private fun SearchResultItem(
                     maxLines = 1
                 )
                 Text(
-                    text = EpgUtils.formatTimeRange(
+                    text = TimeFormat.formatTimeRange(
                         result.program.startTime,
                         result.program.endTime
                     ),

@@ -344,6 +344,7 @@ private fun TwoColumnLayout(
                 nowPlaying = nowPlaying,
                 contentType = contentType,
                 categoryViewModel = categoryViewModel,
+                isDevMode = appSettings.isDevMode,
                 onStreamSelected = onStreamSelected,
                 onRefreshStreams = onRefreshStreams,
                 modifier = Modifier
@@ -588,6 +589,7 @@ private fun StreamList(
     nowPlaying: Map<String, EpgProgram>,
     contentType: String,
     categoryViewModel: CategoryViewModel,
+    isDevMode: Boolean,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -616,14 +618,16 @@ private fun StreamList(
 
     val scale = LocalUiScale.current
 
-    // Auto-scroll and focus on last played item
+    // Auto-scroll and focus on last played item (only on initial load)
+    var hasAutoFocusedStream by remember { mutableStateOf(false) }
+
     LaunchedEffect(streams, lastPlayedItemId) {
-        if (!streams.isNullOrEmpty() && lastPlayedItemId != null) {
+        if (!hasAutoFocusedStream && !streams.isNullOrEmpty() && lastPlayedItemId != null) {
             val lastPlayedIndex = streams.indexOfFirst { it.id == lastPlayedItemId }
             if (lastPlayedIndex != -1) {
                 listState.animateScrollToItem(lastPlayedIndex)
-                // Request focus on the last played item
                 focusRequesters[lastPlayedItemId]?.requestFocus()
+                hasAutoFocusedStream = true
             }
         }
     }
@@ -661,8 +665,19 @@ private fun StreamList(
             }
             // Show stream count
             if (streams != null) {
+                val streamCountText = buildString {
+                    append("${streams.size} streams")
+                    if (isDevMode && selectedCategoryId != null) {
+                        categoryViewModel.getPayloadSize(selectedCategoryId)?.let {
+                            append(" | $it")
+                        }
+                        categoryViewModel.getFetchTime(selectedCategoryId)?.let {
+                            append(" in $it")
+                        }
+                    }
+                }
                 Text(
-                    text = "${streams.size} streams",
+                    text = streamCountText,
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
                     ),

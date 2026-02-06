@@ -278,6 +278,15 @@ fun MobileNavHost(
                 )
             }
 
+            // Provider Settings Screen
+            composable<Screen.ProviderSettings> {
+                org.njarasoa.fijerena.feature.settings.MobileProviderSettingsScreen(
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
             // Settings Screen
             composable<Screen.Settings> {
                 MobileSettingsScreen(
@@ -287,6 +296,9 @@ fun MobileNavHost(
                     onThemeChanged = onThemeChanged,
                     onManageProviders = {
                         navController.navigate(Screen.ProviderSelection)
+                    },
+                    onProviderSettings = {
+                        navController.navigate(Screen.ProviderSettings)
                     },
                     onProviderChanged = {
                         coroutineScope.launch {

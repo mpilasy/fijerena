@@ -123,6 +123,24 @@ fun MobilePlayerScreen(
     var showStats by remember { mutableStateOf(false) }
     var hasStartedPlaying by remember { mutableStateOf(false) }
 
+    // Live position polling for smooth VOD timer updates
+    var livePosition by remember { mutableLongStateOf(0L) }
+    var liveDuration by remember { mutableLongStateOf(0L) }
+
+    val playbackState = viewModel.playbackState.collectAsState().value
+
+    LaunchedEffect(playbackState) {
+        if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused) {
+            while (true) {
+                StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
+                    livePosition = player.currentPosition
+                    liveDuration = player.duration.coerceAtLeast(0L)
+                }
+                delay(500L)
+            }
+        }
+    }
+
     val coroutineScope = rememberCoroutineScope()
 
     // Load stream list for channel switching (Live TV only)
@@ -180,7 +198,6 @@ fun MobilePlayerScreen(
         isFavorite = mediaRepository.isFavoriteSuspend(currentStreamId, contentType)
     }
 
-    val playbackState = viewModel.playbackState.collectAsState().value
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
 
     // Track when video first starts playing so we stop showing the center spinner
@@ -415,6 +432,8 @@ fun MobilePlayerScreen(
                         isLive = contentType == "LIVE_TV",
                         isDeveloperMode = appSettings.isDevMode,
                         isFavorite = isFavorite,
+                        livePosition = livePosition,
+                        liveDuration = liveDuration,
                         onPlayPause = {
                             if (playbackState is PlaybackState.Paused) {
                                 viewModel.resume()
@@ -613,6 +632,8 @@ private fun ControlsOverlay(
     isLive: Boolean,
     isDeveloperMode: Boolean,
     isFavorite: Boolean,
+    livePosition: Long,
+    liveDuration: Long,
     onPlayPause: () -> Unit,
     onBack: () -> Unit,
     onStats: () -> Unit,
@@ -686,16 +707,8 @@ private fun ControlsOverlay(
         ) {
             // VOD progress bar and time info
             if (!isLive) {
-                val position = when (playbackState) {
-                    is PlaybackState.Playing -> playbackState.position
-                    is PlaybackState.Paused -> playbackState.position
-                    else -> 0L
-                }
-                val duration = when (playbackState) {
-                    is PlaybackState.Playing -> playbackState.duration
-                    is PlaybackState.Paused -> playbackState.duration
-                    else -> 0L
-                }
+                val position = livePosition
+                val duration = liveDuration
 
                 if (duration > 0) {
                     // Seek position state for dragging
@@ -742,10 +755,6 @@ private fun ControlsOverlay(
                     // Remaining time and estimated end time
                     val remainingTime = duration - position
                     val estimatedEndTimeMillis = System.currentTimeMillis() + remainingTime
-                    val mobileContext = LocalContext.current
-                    val is24h = android.text.format.DateFormat.is24HourFormat(mobileContext)
-                    val timeFormat = SimpleDateFormat(if (is24h) "HH:mm" else "h:mm a", Locale.getDefault())
-
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -758,7 +767,7 @@ private fun ControlsOverlay(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "Ends at ${timeFormat.format(Date(estimatedEndTimeMillis))}",
+                            text = "Ends at ${org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date(estimatedEndTimeMillis))}",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                             color = MaterialTheme.colorScheme.primary
                         )

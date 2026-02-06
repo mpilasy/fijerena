@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgUtils
+import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -142,7 +143,7 @@ private fun ProgramChip(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = EpgUtils.formatTimeRange(program.startTime, program.endTime),
+            text = TimeFormat.formatTimeRange(program.startTime, program.endTime),
             style = MaterialTheme.typography.labelSmall,
             color = textColor.copy(alpha = CinemaAlpha.textMedium),
             maxLines = 1

@@ -120,12 +120,15 @@ fun SearchScreen(
                 is SearchViewModel.UiState.Error -> ErrorView((uiState as SearchViewModel.UiState.Error).message)
                 is SearchViewModel.UiState.Success -> {
                     val successState = uiState as SearchViewModel.UiState.Success
+                    val devStats = if (appSettings.isDevMode && successState.searchDataSize != null) {
+                        " | ${successState.searchDataSize} in ${successState.searchDuration}"
+                    } else ""
                     SearchContent(
                         query = successState.query,
                         categoryResults = successState.categoryResults,
                         results = successState.filteredResults,
                         isSearching = successState.isSearching,
-                        searchProgress = successState.searchProgress,
+                        searchProgress = (successState.searchProgress ?: "") + devStats,
                         onSearchSubmit = { viewModel.updateSearchQuery(it) },
                         onResultClick = { result ->
                             onStreamSelected(result.itemId, result.streamName, result.categoryId)

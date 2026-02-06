@@ -414,6 +414,15 @@ fun TvNavHost(
                 )
             }
 
+            // Provider Settings Screen
+            composable<Screen.ProviderSettings> {
+                org.njarasoa.fijerena.feature.settings.TvProviderSettingsScreen(
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
             // Settings Screen
             composable<Screen.Settings> {
                 // Prevent back from exiting if Settings is the start destination (no provider)
@@ -425,6 +434,9 @@ fun TvNavHost(
                     onThemeChanged = onThemeChanged,
                     onManageProviders = {
                         navController.navigate(Screen.ProviderSelection)
+                    },
+                    onProviderSettings = {
+                        navController.navigate(Screen.ProviderSettings)
                     },
                     onProviderChanged = {
                         coroutineScope.launch {
