@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.core.player.service
 
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import androidx.media3.common.AudioAttributes
@@ -40,6 +42,10 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private var onPositionSaveListener: ((Long, Long) -> Unit)? = null
 
+    // Live stream auto-retry
+    private var liveRetryCount = 0
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var pendingRetry: Runnable? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -85,6 +91,10 @@ class StreamingPlaybackService : MediaSessionService() {
 
         playerListener = PlayerListener(
             onStateChanged = { newState ->
+                // Reset retry counter on successful playback
+                if (newState is PlaybackState.Playing) {
+                    liveRetryCount = 0
+                }
                 _playbackState.value = newState
             },
             onWakeLockRequired = {
@@ -93,6 +103,9 @@ class StreamingPlaybackService : MediaSessionService() {
             player = player,
             onPositionSave = { position, duration ->
                 onPositionSaveListener?.invoke(position, duration)
+            },
+            onStreamEndedOrError = { errorMessage ->
+                handleStreamEndedOrError(errorMessage)
             }
         )
         player.addListener(playerListener!!)
@@ -124,8 +137,11 @@ class StreamingPlaybackService : MediaSessionService() {
 
     fun playStream(metadata: PlayerMetadata) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
-        // Reset error state on new stream
+        // Cancel any pending retry
+        cancelPendingRetry()
+        // Reset error state and retry counter on new stream
         playerListener?.resetErrorState()
+        liveRetryCount = 0
         _currentMetadata.value = metadata
 
         // Use StreamingMediaSourceFactory for proper HLS/DASH/MPEG-TS detection
@@ -139,6 +155,63 @@ class StreamingPlaybackService : MediaSessionService() {
         player.playWhenReady = true
         player.prepare()
         _playbackState.value = PlaybackState.Buffering
+    }
+
+    private fun attemptLiveRetry() {
+        val metadata = _currentMetadata.value
+        if (!metadata.isLive || liveRetryCount >= MAX_LIVE_RETRIES) {
+            // Exceeded max retries, show error to user
+            if (metadata.isLive && liveRetryCount >= MAX_LIVE_RETRIES) {
+                _playbackState.value = PlaybackState.Error(
+                    "Live stream unavailable after $MAX_LIVE_RETRIES retries. " +
+                    "The channel may be offline."
+                )
+            }
+            return
+        }
+
+        liveRetryCount++
+        val delayMs = LIVE_RETRY_BASE_DELAY_MS * liveRetryCount
+        Log.i(TAG, "Live stream retry $liveRetryCount/$MAX_LIVE_RETRIES in ${delayMs}ms")
+
+        _playbackState.value = PlaybackState.Buffering
+
+        val retryRunnable = Runnable {
+            val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@Runnable
+            playerListener?.resetErrorState()
+
+            val mediaSource = StreamingMediaSourceFactory.createMediaSource(
+                context = this,
+                streamUrl = metadata.streamUrl,
+                headers = metadata.headers
+            )
+
+            player.setMediaSource(mediaSource)
+            player.playWhenReady = true
+            player.prepare()
+        }
+        pendingRetry = retryRunnable
+        mainHandler.postDelayed(retryRunnable, delayMs)
+    }
+
+    private fun cancelPendingRetry() {
+        pendingRetry?.let { mainHandler.removeCallbacks(it) }
+        pendingRetry = null
+    }
+
+    private fun handleStreamEndedOrError(errorMessage: String?) {
+        val metadata = _currentMetadata.value
+        if (metadata.isLive) {
+            // Live stream: attempt auto-retry
+            attemptLiveRetry()
+        } else {
+            // VOD: show ended or error state to user
+            if (errorMessage != null) {
+                _playbackState.value = PlaybackState.Error(errorMessage)
+            } else {
+                _playbackState.value = PlaybackState.Ended
+            }
+        }
     }
 
     fun pause() {
@@ -155,6 +228,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     fun stop() {
+        cancelPendingRetry()
         mediaSession?.player?.stop()
         _playbackState.value = PlaybackState.Idle
         releaseWakeLock()
@@ -297,6 +371,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        cancelPendingRetry()
         // Save final position before cleanup
         mediaSession?.player?.let {
             if (it.isPlaying || it.playbackState == Player.STATE_READY) {
@@ -323,7 +398,8 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onStateChanged: (PlaybackState) -> Unit,
         private val onWakeLockRequired: () -> Unit,
         private val player: Player,
-        private val onPositionSave: ((Long, Long) -> Unit)? = null
+        private val onPositionSave: ((Long, Long) -> Unit)? = null,
+        private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {}
     ) : Player.Listener {
         private var isInErrorState = false
         private var lastSavedPosition = 0L
@@ -366,7 +442,7 @@ class StreamingPlaybackService : MediaSessionService() {
         override fun onPlayerError(error: PlaybackException) {
             isInErrorState = true
             val errorMessage = parsePlaybackError(error)
-            onStateChanged(PlaybackState.Error(errorMessage, error))
+            onStreamEndedOrError(errorMessage)
         }
 
         private fun parsePlaybackError(error: PlaybackException): String {
@@ -434,7 +510,11 @@ class StreamingPlaybackService : MediaSessionService() {
                         )
                     }
                 }
-                Player.STATE_ENDED -> PlaybackState.Ended
+                Player.STATE_ENDED -> {
+                    // For live streams, attempt auto-retry instead of showing "ended"
+                    onStreamEndedOrError(null)
+                    return
+                }
                 else -> PlaybackState.Idle
             }
             onStateChanged(state)
@@ -468,6 +548,8 @@ class StreamingPlaybackService : MediaSessionService() {
 
     companion object {
         private const val TAG = "StreamingPlaybackService"
+        private const val MAX_LIVE_RETRIES = 3
+        private const val LIVE_RETRY_BASE_DELAY_MS = 2000L
 
         @Volatile
         private var instance: StreamingPlaybackService? = null

@@ -204,19 +204,15 @@ fun PlayerScreen(
                             if (showControls) {
                                 false
                             } else if (!showStats) {
-                                // For VOD: Show controls AND toggle pause/resume
-                                // For Live TV: Just show controls
+                                // Show controls and toggle pause/resume for all content types
                                 val newState = !showControls
                                 showControls = newState
                                 showStreamInfo = newState
 
-                                // VOD only: Also toggle pause/resume when showing controls
-                                if (!currentMetadata.isLive) {
-                                    when (playbackState) {
-                                        is PlaybackState.Playing -> viewModel.pause()
-                                        is PlaybackState.Paused -> viewModel.resume()
-                                        else -> {}
-                                    }
+                                when (playbackState) {
+                                    is PlaybackState.Playing -> viewModel.pause()
+                                    is PlaybackState.Paused -> viewModel.resume()
+                                    else -> {}
                                 }
                                 true
                             } else {
@@ -1766,12 +1762,6 @@ private fun MetadataOverlay(
                         }
                     }
                 }
-
-                item {
-                    Button(onClick = onBack) {
-                        Text("⬅ Back")
-                    }
-                }
             }
 
             // Hint text
@@ -1931,25 +1921,17 @@ private fun ControlButtonsRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Back button first
-            CinemaSecondaryButton(
-                onClick = onBack,
-                text = "⬅ Back"
-            )
-
-            // Pause/Resume for VOD content only, after back button
-            if (!isLive) {
-                if (isPaused) {
-                    CinemaPrimaryButton(
-                        onClick = { onResume?.invoke() },
-                        text = "▶ Resume"
-                    )
-                } else {
-                    CinemaPrimaryButton(
-                        onClick = { onPause?.invoke() },
-                        text = "⏸ Pause"
-                    )
-                }
+            // Pause/Resume for all content types
+            if (isPaused) {
+                CinemaPrimaryButton(
+                    onClick = { onResume?.invoke() },
+                    text = "▶ Resume"
+                )
+            } else {
+                CinemaPrimaryButton(
+                    onClick = { onPause?.invoke() },
+                    text = "⏸ Pause"
+                )
             }
 
             // Only show audio button if multiple audio tracks available

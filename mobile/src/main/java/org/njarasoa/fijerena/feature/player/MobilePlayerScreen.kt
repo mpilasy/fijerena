@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -629,7 +628,7 @@ private fun ControlsOverlay(
                 indication = null
             ) { }
     ) {
-        // Top bar with back button
+        // Top bar with title
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -638,43 +637,33 @@ private fun ControlsOverlay(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White,
-                    modifier = Modifier.size(MobileDimensions.iconLarge)
-                )
-            }
             // Title
             Text(
                 text = metadata.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 maxLines = 1
             )
         }
 
         // Center play/pause button
-        if (!isLive) {
-            IconButton(
-                onClick = onPlayPause,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(MobileDimensions.iconPlayContainer)
-            ) {
-                Icon(
-                    imageVector = if (playbackState is PlaybackState.Paused) {
-                        Icons.Default.PlayArrow
-                    } else {
-                        Icons.Default.Pause
-                    },
-                    contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
-                    tint = Color.White,
-                    modifier = Modifier.size(MobileDimensions.iconPlayIcon)
-                )
-            }
+        IconButton(
+            onClick = onPlayPause,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(MobileDimensions.iconPlayContainer)
+        ) {
+            Icon(
+                imageVector = if (playbackState is PlaybackState.Paused) {
+                    Icons.Default.PlayArrow
+                } else {
+                    Icons.Default.Pause
+                },
+                contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
+                tint = Color.White,
+                modifier = Modifier.size(MobileDimensions.iconPlayIcon)
+            )
         }
 
         // Bottom section: progress + controls (scrollable for landscape)
