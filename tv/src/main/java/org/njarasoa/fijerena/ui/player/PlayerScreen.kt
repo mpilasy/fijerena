@@ -22,7 +22,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -1706,43 +1716,81 @@ private fun MetadataOverlay(
 
             // Controls - using TvLazyRow for better D-pad focus navigation
             TvLazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 item {
                     if (isPaused) {
                         Button(onClick = { onResume?.invoke() }) {
-                            Text("▶ Resume")
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                                Text("Resume")
+                            }
                         }
                     } else {
                         Button(onClick = { onPause?.invoke() }) {
-                            Text("⏸ Pause")
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Filled.Pause, contentDescription = null)
+                                Text("Pause")
+                            }
                         }
                     }
                 }
 
                 item {
                     Button(onClick = { onAudioTrack?.invoke() }) {
-                        Text("🔊 Audio")
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Filled.VolumeUp, contentDescription = null)
+                            Text("Audio")
+                        }
                     }
                 }
 
                 item {
                     Button(onClick = { onSubtitle?.invoke() }) {
-                        Text("💬 Subtitle")
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Filled.Subtitles, contentDescription = null)
+                            Text("Subtitle")
+                        }
                     }
                 }
 
                 item {
                     Button(onClick = { onQuality?.invoke() }) {
-                        Text("⚙️ Quality")
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Filled.Tune, contentDescription = null)
+                            Text("Quality")
+                        }
                     }
                 }
 
-                item {
-                    Button(onClick = { onStats?.invoke() }) {
-                        Text("📊 Stats")
+                if (onStats != null) {
+                    item {
+                        Button(onClick = { onStats.invoke() }) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Filled.BarChart, contentDescription = null)
+                                Text("Stats")
+                            }
+                        }
                     }
                 }
 
@@ -1758,7 +1806,16 @@ private fun MetadataOverlay(
                                     MaterialTheme.colorScheme.surface.copy(alpha = CinemaAlpha.textMedium)
                             )
                         ) {
-                            Text(if (isFavorite) "★ Favorited" else "☆ Favorite")
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    contentDescription = null
+                                )
+                                Text(if (isFavorite) "Favorited" else "Favorite")
+                            }
                         }
                     }
                 }
@@ -1923,47 +1980,77 @@ private fun ControlButtonsRow(
         ) {
             // Pause/Resume for all content types
             if (isPaused) {
-                CinemaPrimaryButton(
-                    onClick = { onResume?.invoke() },
-                    text = "▶ Resume"
-                )
+                Button(onClick = { onResume?.invoke() }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                        Text("Resume")
+                    }
+                }
             } else {
-                CinemaPrimaryButton(
-                    onClick = { onPause?.invoke() },
-                    text = "⏸ Pause"
-                )
+                Button(onClick = { onPause?.invoke() }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Pause, contentDescription = null)
+                        Text("Pause")
+                    }
+                }
             }
 
             // Only show audio button if multiple audio tracks available
             if (hasMultipleAudioTracks) {
-                CinemaSecondaryButton(
-                    onClick = { onAudioTrack?.invoke() },
-                    text = "🔊 Audio"
-                )
+                Button(onClick = { onAudioTrack?.invoke() }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.VolumeUp, contentDescription = null)
+                        Text("Audio")
+                    }
+                }
             }
 
             // Only show subtitle button if subtitles are available
             if (hasSubtitles) {
-                CinemaSecondaryButton(
-                    onClick = { onSubtitle?.invoke() },
-                    text = "💬 Subtitle"
-                )
+                Button(onClick = { onSubtitle?.invoke() }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Subtitles, contentDescription = null)
+                        Text("Subtitle")
+                    }
+                }
             }
 
             // Only show quality button if multiple qualities available
             if (hasMultipleQualities) {
-                CinemaSecondaryButton(
-                    onClick = { onQuality?.invoke() },
-                    text = "⚙️ Quality"
-                )
+                Button(onClick = { onQuality?.invoke() }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.Tune, contentDescription = null)
+                        Text("Quality")
+                    }
+                }
             }
 
             // Only show stats button if dev mode is enabled
             if (onStats != null) {
-                CinemaSecondaryButton(
-                    onClick = { onStats.invoke() },
-                    text = "📊 Stats"
-                )
+                Button(onClick = { onStats.invoke() }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.BarChart, contentDescription = null)
+                        Text("Stats")
+                    }
+                }
             }
 
             // Favorite toggle button
@@ -1977,10 +2064,16 @@ private fun ControlButtonsRow(
                             CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
                     )
                 ) {
-                    Text(
-                        text = if (isFavorite) "★ Favorited" else "☆ Favorite",
-                        textAlign = TextAlign.Center
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = null
+                        )
+                        Text(if (isFavorite) "Favorited" else "Favorite")
+                    }
                 }
             }
         }

@@ -16,9 +16,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -780,60 +786,48 @@ private fun ControlsOverlay(
                 }
             }
 
-            // Control buttons row (horizontally scrollable)
+            // Control buttons row (horizontally scrollable icons)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Pause/Resume for VOD
-                if (!isLive) {
-                    val isPaused = playbackState is PlaybackState.Paused
-                    FilledTonalButton(onClick = onPlayPause) {
-                        Text(if (isPaused) "Resume" else "Pause")
-                    }
-                }
-
                 // Audio track selector (only if multiple tracks)
                 if (audioTrackCount > 1) {
-                    FilledTonalButton(onClick = onAudioTrack) {
-                        Text("Audio")
+                    IconButton(onClick = onAudioTrack) {
+                        Icon(Icons.Filled.VolumeUp, "Audio", tint = Color.White)
                     }
                 }
 
                 // Subtitle selector (only if subtitles available)
                 if (subtitleTrackCount > 0) {
-                    FilledTonalButton(onClick = onSubtitle) {
-                        Text("Subtitle")
+                    IconButton(onClick = onSubtitle) {
+                        Icon(Icons.Filled.Subtitles, "Subtitles", tint = Color.White)
                     }
                 }
 
                 // Quality selector (only if multiple qualities)
                 if (qualityCount > 1) {
-                    FilledTonalButton(onClick = onQuality) {
-                        Text("Quality")
+                    IconButton(onClick = onQuality) {
+                        Icon(Icons.Filled.Tune, "Quality", tint = Color.White)
                     }
                 }
 
                 // Favorite toggle
-                FilledTonalButton(
-                    onClick = onToggleFavorite,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = if (isFavorite)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant
+                IconButton(onClick = onToggleFavorite) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.White
                     )
-                ) {
-                    Text(if (isFavorite) "Favorited" else "Favorite")
                 }
 
                 // Stats (dev mode only)
                 if (isDeveloperMode) {
-                    FilledTonalButton(onClick = onStats) {
-                        Text("Stats")
+                    IconButton(onClick = onStats) {
+                        Icon(Icons.Filled.BarChart, "Stats", tint = Color.White)
                     }
                 }
             }
