@@ -32,7 +32,6 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 fun MobileContentTypeSelectionScreen(
     onContentTypeSelected: (contentType: String) -> Unit,
     onSettings: () -> Unit = {},
-    onLogout: () -> Unit = {},
     onProviderChanged: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -131,14 +130,6 @@ fun MobileContentTypeSelectionScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            OutlinedButton(
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Logout")
-            }
         }
     }
 

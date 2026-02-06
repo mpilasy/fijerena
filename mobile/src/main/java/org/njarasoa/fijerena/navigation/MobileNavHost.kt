@@ -148,12 +148,6 @@ fun MobileNavHost(
                     },
                     onSettings = {
                         navController.navigate(Screen.Settings)
-                    },
-                    onLogout = {
-                        authViewModel.clearAuthSession()
-                        navController.navigate(Screen.Settings) {
-                            popUpTo(Screen.ContentTypeSelection) { inclusive = true }
-                        }
                     }
                 )
             }
