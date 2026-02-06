@@ -47,6 +47,13 @@ object TvDimensions {
     val liveDotSmall: Dp = 10.dp
     val statsDotSize: Dp = 12.dp
 
+    // Poster / Thumbnail
+    val posterWidth: Dp = 160.dp
+    val posterHeight: Dp = 90.dp
+    val posterHeightLarge: Dp = 240.dp
+    val contentTypeCardWidth: Dp = 300.dp
+    val contentTypeCardHeight: Dp = 180.dp
+
     // Borders
     val borderDefault: Dp = 1.dp
     val borderFocused: Dp = 2.dp

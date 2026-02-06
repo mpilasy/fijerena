@@ -26,4 +26,10 @@ object MobileDimensions {
     val statsOverlayMaxWidth: Dp = 320.dp
     val dividerThin: Dp = 0.5.dp
     val strokeWidth: Dp = 2.dp
+
+    // Poster / Thumbnail
+    val posterWidth: Dp = 100.dp
+    val posterHeight: Dp = 56.dp
+    val posterHeightLarge: Dp = 200.dp
+    val streamCardHeight: Dp = 80.dp
 }

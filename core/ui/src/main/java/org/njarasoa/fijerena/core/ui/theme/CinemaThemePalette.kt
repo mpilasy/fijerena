@@ -56,7 +56,7 @@ val DeepNightPalette = CinemaThemePalette(
     surfaceVariant = Color(0xFF1E2228),
     surfaceLight = Color(0xFF2A3038),
     glassBackground = Color(0xBF0F1014),
-    glassBorder = Color(0x262979FF)
+    glassBorder = Color(0x142979FF)
 )
 
 val AmoledBlackPalette = CinemaThemePalette(
@@ -73,7 +73,7 @@ val AmoledBlackPalette = CinemaThemePalette(
     surfaceVariant = Color(0xFF121212),
     surfaceLight = Color(0xFF1A1A1A),
     glassBackground = Color(0xBF000000),
-    glassBorder = Color(0x262979FF)
+    glassBorder = Color(0x142979FF)
 )
 
 val EmeraldPalette = CinemaThemePalette(
@@ -90,7 +90,7 @@ val EmeraldPalette = CinemaThemePalette(
     surfaceVariant = Color(0xFF1E2228),
     surfaceLight = Color(0xFF2A3038),
     glassBackground = Color(0xBF0F1014),
-    glassBorder = Color(0x2600C853)
+    glassBorder = Color(0x1400C853)
 )
 
 val CrimsonPalette = CinemaThemePalette(
@@ -107,7 +107,7 @@ val CrimsonPalette = CinemaThemePalette(
     surfaceVariant = Color(0xFF1E2228),
     surfaceLight = Color(0xFF2A3038),
     glassBackground = Color(0xBF0F1014),
-    glassBorder = Color(0x26FF1744)
+    glassBorder = Color(0x14FF1744)
 )
 
 // --- All palettes ---

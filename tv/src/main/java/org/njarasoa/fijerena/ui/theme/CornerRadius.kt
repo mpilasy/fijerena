@@ -11,4 +11,5 @@ object CornerRadius {
     val small: Dp = CinemaCornerRadius.small
     val medium: Dp = CinemaCornerRadius.medium
     val large: Dp = CinemaCornerRadius.large
+    val xLarge: Dp = CinemaCornerRadius.xLarge
 }

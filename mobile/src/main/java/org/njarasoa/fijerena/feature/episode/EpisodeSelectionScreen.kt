@@ -12,14 +12,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 data class DisplayEpisodeItem(
     val seasonNumber: String,
@@ -149,18 +150,15 @@ private fun EpisodeListContent(
     ) {
         // Series info
         seriesDetail.metadata.plot?.let { plot ->
-            Card(
+            GlassPanel(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                    .padding(CinemaSpacing.md)
             ) {
                 Text(
                     text = plot,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(CinemaSpacing.md),
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -171,14 +169,14 @@ private fun EpisodeListContent(
         Text(
             text = "${allEpisodes.size} episodes",
             style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
         )
 
         // Episodes list
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             modifier = Modifier.fillMaxSize()
         ) {
             items(allEpisodes, key = { it.episode.id }) { episodeItem ->
@@ -211,7 +209,7 @@ private fun EpisodeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(CinemaSpacing.md)
         ) {
             // Season and Episode number
             Text(
@@ -220,7 +218,7 @@ private fun EpisodeCard(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
 
             // Episode title
             Text(
@@ -232,7 +230,7 @@ private fun EpisodeCard(
 
             // Episode info (duration, rating, etc.)
             episode.metadata.duration?.let { duration ->
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                 Text(
                     text = formatDuration(duration),
                     style = MaterialTheme.typography.bodySmall,
@@ -251,7 +249,7 @@ private fun LoadingScreen() {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)
         ) {
             CircularProgressIndicator()
             Text("Loading episodes...")
@@ -270,8 +268,8 @@ private fun ErrorScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(32.dp)
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+            modifier = Modifier.padding(CinemaSpacing.xl)
         ) {
             Text(
                 text = "Error Loading Episodes",

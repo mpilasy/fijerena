@@ -17,4 +17,6 @@ object TvFocusTokens {
     val borderDefault: Dp = 1.dp
     val borderThin: Dp = 0.5.dp
     val glowElevation: Dp = 8.dp
+    val focusShadowElevation: Dp = 12.dp
+    const val focusedScaleContent = 1.05f
 }

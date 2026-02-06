@@ -63,6 +63,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.feature.common.StatsOverlay
+import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -518,7 +520,7 @@ private fun CategoryItem(
     Card(
         onClick = onClick,
         modifier = Modifier
-            .padding(horizontal = 16.dp.scaled(scale))
+            .padding(horizontal = Spacing.md.scaled(scale))
             .fillMaxWidth()
             .then(
                 if (focusRequester != null) {
@@ -529,7 +531,7 @@ private fun CategoryItem(
             ),
         colors = CardDefaults.colors(
             containerColor = if (isSelected) {
-                CinemaAccent.copy(alpha = CinemaAlpha.focusedTint)
+                CinemaAccent.copy(alpha = CinemaAlpha.glassBorder)
             } else {
                 CinemaSurface
             },
@@ -538,24 +540,19 @@ private fun CategoryItem(
             } else {
                 CinemaTextPrimary
             },
-            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
             focusedContentColor = CinemaTextPrimary
-        ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
-            )
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
-            pressedScale = TvFocusTokens.pressedScale
+            focusedScale = TvFocusTokens.focusedScaleContent,
+            pressedScale = TvFocusTokens.pressedScaleSubtle
         ),
         glow = CardDefaults.glow(
             focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
-                elevation = TvFocusTokens.glowElevation
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                elevation = TvFocusTokens.focusShadowElevation
             )
         )
     ) {
@@ -743,7 +740,7 @@ private fun StreamList(
 private fun StreamItem(
     item: MediaItem,
     isFavorite: Boolean = false,
-    watchProgress: Float = 0f,  // 0.0 to 1.0 (0% to 100%)
+    watchProgress: Float = 0f,
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null
 ) {
@@ -752,7 +749,7 @@ private fun StreamItem(
     Card(
         onClick = onClick,
         modifier = Modifier
-            .padding(horizontal = 16.dp.scaled(scale))
+            .padding(horizontal = Spacing.md.scaled(scale))
             .fillMaxWidth()
             .then(
                 if (focusRequester != null) {
@@ -764,47 +761,55 @@ private fun StreamItem(
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
             focusedContentColor = CinemaTextPrimary
-        ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
-            )
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
-            pressedScale = TvFocusTokens.pressedScale
+            focusedScale = TvFocusTokens.focusedScaleContent,
+            pressedScale = TvFocusTokens.pressedScaleSubtle
         ),
         glow = CardDefaults.glow(
             focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
-                elevation = TvFocusTokens.glowElevation
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                elevation = TvFocusTokens.focusShadowElevation
             )
         )
     ) {
-        Column {  // Wrap in Column for progress bar
+        Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(Spacing.md.scaled(scale)),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(Spacing.sm.scaled(scale)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
             ) {
+                // Poster thumbnail
+                CinemaThumbnail(
+                    url = item.thumbnailUrl,
+                    fallbackLetter = item.name.firstOrNull(),
+                    contentType = ThumbnailContentType.DEFAULT,
+                    modifier = Modifier
+                        .size(
+                            width = TvDimensions.posterWidth.scaled(scale),
+                            height = TvDimensions.posterHeight.scaled(scale)
+                        )
+                )
+
+                // Text info
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Favorite star indicator (gold color)
                         if (isFavorite) {
                             Text(
-                                text = "★",
+                                text = "\u2605",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
                                 ),
-                                color = Color(0xFFFFD700)  // Gold star
+                                color = CinemaAccent
                             )
                         }
 
@@ -832,13 +837,13 @@ private fun StreamItem(
                 }
             }
 
-            // Progress bar (only show if > 0%)
+            // Progress bar
             if (watchProgress > 0f) {
                 androidx.compose.material3.LinearProgressIndicator(
                     progress = { watchProgress },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp.scaled(scale)),
+                        .height(TvDimensions.borderFocused.scaled(scale)),
                     color = CinemaAccent,
                     trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint)
                 )

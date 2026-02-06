@@ -35,7 +35,8 @@ class SearchViewModel(
         val streamName: String,
         val categoryId: String,
         val categoryName: String,
-        val contentType: String
+        val contentType: String,
+        val thumbnailUrl: String? = null
     )
 
     data class CategorySearchResult(
@@ -87,7 +88,8 @@ class SearchViewModel(
                                     streamName = item.name,
                                     categoryId = item.categoryId,
                                     categoryName = "",
-                                    contentType = contentType
+                                    contentType = contentType,
+                                    thumbnailUrl = item.thumbnailUrl
                                 )
                             }.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
                                 .thenBy {
@@ -167,7 +169,8 @@ class SearchViewModel(
                                         streamName = item.name,
                                         categoryId = category.id,
                                         categoryName = category.name,
-                                        contentType = contentType
+                                        contentType = contentType,
+                                        thumbnailUrl = item.thumbnailUrl
                                     )
                                 }
 

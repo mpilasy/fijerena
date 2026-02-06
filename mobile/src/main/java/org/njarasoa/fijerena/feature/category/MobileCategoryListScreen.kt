@@ -18,6 +18,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,6 +45,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -288,18 +295,40 @@ private fun StreamCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(MobileDimensions.streamCardHeight),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(CinemaCornerRadius.medium)
     ) {
-        Text(
-            text = item.name,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
+        Row(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 14.dp)
-                .basicMarquee()
-        )
+                .fillMaxSize()
+                .padding(CinemaSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+        ) {
+            // Poster thumbnail
+            CinemaThumbnail(
+                url = item.thumbnailUrl,
+                fallbackLetter = item.name.firstOrNull(),
+                contentType = ThumbnailContentType.DEFAULT,
+                modifier = Modifier.size(
+                    width = MobileDimensions.posterWidth,
+                    height = MobileDimensions.posterHeight
+                )
+            )
+            // Stream name
+            Text(
+                text = item.name,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 2,
+                modifier = Modifier
+                    .weight(1f)
+                    .basicMarquee()
+            )
+        }
     }
 }

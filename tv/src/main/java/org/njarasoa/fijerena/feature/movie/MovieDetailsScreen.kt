@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,6 +45,9 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -238,6 +243,27 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(Spacing.xl))
 
+        // Movie content: poster + metadata
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xl)
+        ) {
+            // Cover image
+            CinemaThumbnail(
+                url = movieDetail.coverUrl,
+                fallbackLetter = movieDetail.name.firstOrNull(),
+                contentType = ThumbnailContentType.MOVIE,
+                modifier = Modifier
+                    .width(TvDimensions.posterWidth)
+                    .height(TvDimensions.posterHeightLarge)
+            )
+
+            // Metadata in glass panel
+            GlassPanel(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(Spacing.lg)) {
+
         // Movie metadata
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -326,6 +352,9 @@ private fun MovieDetailsContent(
                 .height(TvDimensions.moviePosterHeight)
                 .focusRequester(playButtonFocusRequester)
         )
+            } // GlassPanel Column
+            } // GlassPanel
+        } // Outer Row (poster + metadata)
     }
 }
 

@@ -11,10 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
@@ -61,7 +62,7 @@ fun MobileProviderSelectionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(CinemaSpacing.md)
         ) {
             when (val state = uiState) {
                 is ProviderUiState.Loading -> {
@@ -147,20 +148,12 @@ private fun MobileProviderList(
     onDelete: (ProviderEntity) -> Unit
 ) {
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         modifier = Modifier.fillMaxSize()
     ) {
         items(providers, key = { it.id }) { provider ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (provider.isActive)
-                        MaterialTheme.colorScheme.primaryContainer
-                    else
-                        MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+            GlassPanel(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = provider.name,
@@ -191,10 +184,10 @@ private fun MobileProviderList(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm, Alignment.End)
                     ) {
                         if (!provider.isActive) {
                             Button(onClick = { onSelect(provider) }) {

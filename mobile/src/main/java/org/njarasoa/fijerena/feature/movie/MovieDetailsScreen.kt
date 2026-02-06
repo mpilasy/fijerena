@@ -11,13 +11,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,15 +123,27 @@ private fun MovieDetailsContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(CinemaSpacing.md)
     ) {
+        // Cover image
+        CinemaThumbnail(
+            url = movieDetail.coverUrl,
+            fallbackLetter = movieDetail.name.firstOrNull(),
+            contentType = ThumbnailContentType.MOVIE,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(MobileDimensions.posterHeightLarge)
+        )
+
+        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
         // Title
         Text(
             text = movieDetail.name,
             style = MaterialTheme.typography.headlineLarge
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
         // Movie metadata - genre on its own line
         movieDetail.metadata?.genre?.let { genre ->
@@ -142,9 +158,9 @@ private fun MovieDetailsContent(
         val hasRating = movieDetail.metadata?.rating != null
         val hasDuration = movieDetail.metadata?.duration != null
         if (hasRating || hasDuration) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 movieDetail.metadata?.rating?.let { rating ->
@@ -164,7 +180,7 @@ private fun MovieDetailsContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
         // Release date
         movieDetail.metadata?.releaseDate?.let { releaseDate ->
@@ -175,7 +191,7 @@ private fun MovieDetailsContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
         // Plot/Description
         movieDetail.metadata?.plot?.let { plot ->
@@ -185,7 +201,7 @@ private fun MovieDetailsContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
         // Cast
         movieDetail.metadata?.cast?.let { cast ->
@@ -198,7 +214,7 @@ private fun MovieDetailsContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
         // Director
         movieDetail.metadata?.director?.let { director ->
@@ -209,7 +225,7 @@ private fun MovieDetailsContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
         // Play button
         Button(
@@ -231,7 +247,7 @@ private fun LoadingScreen() {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)
         ) {
             CircularProgressIndicator()
             Text("Loading movie details...")
@@ -250,8 +266,8 @@ private fun ErrorScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(32.dp)
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+            modifier = Modifier.padding(CinemaSpacing.xl)
         ) {
             Text(
                 text = "Error Loading Movie",

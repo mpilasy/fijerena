@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -24,8 +25,10 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -36,13 +39,16 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
@@ -96,6 +102,13 @@ fun MobilePlayerScreen(
         }
     }
 
+    // Channel switching state (Live TV only)
+    var currentStreamId by remember { mutableStateOf(streamId) }
+    var currentStreamName by remember { mutableStateOf(streamName) }
+    var streamList by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var currentStreamIndex by remember { mutableStateOf(0) }
+    var showChannelToast by remember { mutableStateOf(false) }
+
     var streamUrl by remember { mutableStateOf<String?>(null) }
     var streamHeaders by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -106,6 +119,50 @@ fun MobilePlayerScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
+    // Load stream list for channel switching (Live TV only)
+    LaunchedEffect(categoryId, contentType) {
+        if (contentType == "LIVE_TV") {
+            val result = mediaRepository.getItems(categoryId, contentType)
+            result.fold(
+                onSuccess = { items ->
+                    streamList = items
+                    currentStreamIndex = items.indexOfFirst { it.id == streamId }
+                    if (currentStreamIndex == -1) currentStreamIndex = 0
+                },
+                onFailure = { /* Keep empty list, disable channel switching */ }
+            )
+        }
+    }
+
+    // Channel switching functions
+    fun switchToNextChannel() {
+        if (streamList.isEmpty()) return
+        val nextIndex = (currentStreamIndex + 1) % streamList.size
+        val nextStream = streamList[nextIndex]
+        currentStreamIndex = nextIndex
+        currentStreamId = nextStream.id
+        currentStreamName = nextStream.name
+        showChannelToast = true
+    }
+
+    fun switchToPreviousChannel() {
+        if (streamList.isEmpty()) return
+        val prevIndex = if (currentStreamIndex == 0) streamList.size - 1 else currentStreamIndex - 1
+        val prevStream = streamList[prevIndex]
+        currentStreamIndex = prevIndex
+        currentStreamId = prevStream.id
+        currentStreamName = prevStream.name
+        showChannelToast = true
+    }
+
+    // Auto-hide channel toast
+    LaunchedEffect(showChannelToast) {
+        if (showChannelToast) {
+            delay(CinemaAnimation.toastDismissMs)
+            showChannelToast = false
+        }
+    }
+
     // Selector dialogs
     var showAudioTrackSelector by remember { mutableStateOf(false) }
     var showSubtitleSelector by remember { mutableStateOf(false) }
@@ -113,8 +170,8 @@ fun MobilePlayerScreen(
 
     // Favorites (async for server-backed providers)
     var isFavorite by remember { mutableStateOf(false) }
-    LaunchedEffect(streamId, contentType) {
-        isFavorite = mediaRepository.isFavoriteSuspend(streamId, contentType)
+    LaunchedEffect(currentStreamId, contentType) {
+        isFavorite = mediaRepository.isFavoriteSuspend(currentStreamId, contentType)
     }
 
     val playbackState = viewModel.playbackState.collectAsState().value
@@ -144,8 +201,8 @@ fun MobilePlayerScreen(
                     else -> null
                 }
                 if (pos != null && dur != null && dur > 0) {
-                    mediaRepository.savePlaybackPosition(streamId, streamName, categoryId, contentType, pos, dur)
-                    mediaRepository.onPlaybackProgress(streamId, pos, dur)
+                    mediaRepository.savePlaybackPosition(currentStreamId, currentStreamName, categoryId, contentType, pos, dur)
+                    mediaRepository.onPlaybackProgress(currentStreamId, pos, dur)
                 }
             }
         }
@@ -170,11 +227,11 @@ fun MobilePlayerScreen(
     }
 
     // Load stream URL
-    LaunchedEffect(streamId, episodeId) {
+    LaunchedEffect(currentStreamId, episodeId) {
         isLoading = true
         error = null
         val result = mediaRepository.resolvePlayableStream(
-            itemId = streamId,
+            itemId = currentStreamId,
             contentType = contentType,
             episodeId = episodeId,
             extension = episodeExtension
@@ -195,20 +252,20 @@ fun MobilePlayerScreen(
     // Fetch saved position for VOD resume (async for server-backed providers)
     var savedPosition by remember { mutableStateOf<org.njarasoa.fijerena.core.network.WatchedItem?>(null) }
     var positionLoaded by remember { mutableStateOf(false) }
-    LaunchedEffect(streamId, contentType) {
+    LaunchedEffect(currentStreamId, contentType) {
         positionLoaded = false
         savedPosition = if (contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
-            mediaRepository.getPlaybackPositionSuspend(streamId, contentType)
+            mediaRepository.getPlaybackPositionSuspend(currentStreamId, contentType)
         } else null
         positionLoaded = true
     }
 
-    // Start playback when URL is ready
-    LaunchedEffect(streamUrl, positionLoaded) {
+    // Start playback when URL is ready or channel changes
+    LaunchedEffect(streamUrl, currentStreamId, currentStreamName, positionLoaded) {
         if (!positionLoaded) return@LaunchedEffect
         streamUrl?.let { url ->
-            val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else streamId
-            val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else streamName
+            val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
+            val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
             mediaRepository.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
 
             // Determine resume position
@@ -223,7 +280,7 @@ fun MobilePlayerScreen(
             } ?: 0L
 
             val metadata = PlayerMetadata(
-                title = streamName,
+                title = currentStreamName,
                 channelName = appSettings.providerName,
                 streamUrl = url,
                 isLive = contentType == "LIVE_TV",
@@ -252,6 +309,29 @@ fun MobilePlayerScreen(
                             showControls = !showControls
                         }
                     }
+                    .then(
+                        if (contentType == "LIVE_TV" && streamList.size > 1) {
+                            Modifier.pointerInput(streamList) {
+                                var totalDrag = 0f
+                                detectVerticalDragGestures(
+                                    onDragStart = { totalDrag = 0f },
+                                    onVerticalDrag = { _, dragAmount ->
+                                        totalDrag += dragAmount
+                                    },
+                                    onDragEnd = {
+                                        val threshold = 100f
+                                        if (totalDrag < -threshold) {
+                                            // Swipe up = next channel
+                                            switchToNextChannel()
+                                        } else if (totalDrag > threshold) {
+                                            // Swipe down = previous channel
+                                            switchToPreviousChannel()
+                                        }
+                                    }
+                                )
+                            }
+                        } else Modifier
+                    )
             ) {
                 // Video surface
                 val playerView = remember {
@@ -285,7 +365,7 @@ fun MobilePlayerScreen(
                                 else -> null
                             }
                             if (pos != null && dur != null && dur > 0) {
-                                mediaRepository.savePlaybackPosition(streamId, streamName, categoryId, contentType, pos, dur)
+                                mediaRepository.savePlaybackPosition(currentStreamId, currentStreamName, categoryId, contentType, pos, dur)
                             }
                         }
                         // Stop playback when leaving the player screen
@@ -351,9 +431,9 @@ fun MobilePlayerScreen(
                                     else -> null
                                 }
                                 if (pos != null && dur != null && dur > 0) {
-                                    mediaRepository.savePlaybackPosition(streamId, streamName, categoryId, contentType, pos, dur)
+                                    mediaRepository.savePlaybackPosition(currentStreamId, currentStreamName, categoryId, contentType, pos, dur)
                                     coroutineScope.launch {
-                                        mediaRepository.onPlaybackProgress(streamId, pos, dur)
+                                        mediaRepository.onPlaybackProgress(currentStreamId, pos, dur)
                                     }
                                 }
                             }
@@ -367,11 +447,11 @@ fun MobilePlayerScreen(
                         onToggleFavorite = {
                             coroutineScope.launch {
                                 if (isFavorite) {
-                                    if (mediaRepository.removeFavoriteSuspend(streamId, contentType)) {
+                                    if (mediaRepository.removeFavoriteSuspend(currentStreamId, contentType)) {
                                         isFavorite = false
                                     }
                                 } else {
-                                    if (mediaRepository.addFavoriteSuspend(streamId, streamName, categoryId, contentType)) {
+                                    if (mediaRepository.addFavoriteSuspend(currentStreamId, currentStreamName, categoryId, contentType)) {
                                         isFavorite = true
                                     }
                                 }
@@ -391,6 +471,16 @@ fun MobilePlayerScreen(
                         metadata = currentMetadata,
                         onClose = { showStats = false }
                     )
+                }
+
+                // Channel switch toast (Live TV only)
+                AnimatedVisibility(
+                    visible = showChannelToast,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.TopCenter)
+                ) {
+                    ChannelToast(channelName = currentStreamName)
                 }
             }
 
@@ -587,13 +677,16 @@ private fun ControlsOverlay(
         }
 
         // Bottom section: progress + controls (scrollable for landscape)
-        Column(
+        GlassPanel(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .background(Color.Black.copy(alpha = CinemaAlpha.textMedium))
+        ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm)
         ) {
             // VOD progress bar and time info
             if (!isLive) {
@@ -653,7 +746,9 @@ private fun ControlsOverlay(
                     // Remaining time and estimated end time
                     val remainingTime = duration - position
                     val estimatedEndTimeMillis = System.currentTimeMillis() + remainingTime
-                    val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                    val mobileContext = LocalContext.current
+                    val is24h = android.text.format.DateFormat.is24HourFormat(mobileContext)
+                    val timeFormat = SimpleDateFormat(if (is24h) "HH:mm" else "h:mm a", Locale.getDefault())
 
                     Row(
                         modifier = Modifier
@@ -752,6 +847,7 @@ private fun ControlsOverlay(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -1130,19 +1226,17 @@ private fun MobileStatsOverlay(
                 indication = null
             ) { onClose() }
     ) {
-        Surface(
+        GlassPanel(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(16.dp)
-                .widthIn(max = MobileDimensions.statsOverlayMaxWidth),
-            color = Color.Black.copy(alpha = CinemaAlpha.overlayHeavy),
-            shape = RoundedCornerShape(CinemaCornerRadius.medium)
+                .padding(CinemaSpacing.md)
+                .widthIn(max = MobileDimensions.statsOverlayMaxWidth)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(16.dp)
+                    .padding(CinemaSpacing.md)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1270,6 +1364,35 @@ private fun formatTime(millis: Long): String {
         String.format("%d:%02d:%02d", hours, minutes, seconds)
     } else {
         String.format("%d:%02d", minutes, seconds)
+    }
+}
+
+@Composable
+private fun ChannelToast(channelName: String) {
+    GlassPanel(
+        modifier = Modifier.padding(top = CinemaSpacing.xl)
+    ) {
+        Column(
+            modifier = Modifier.padding(
+                horizontal = CinemaSpacing.lg,
+                vertical = CinemaSpacing.sm
+            ),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Now Playing",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = channelName,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

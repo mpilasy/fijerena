@@ -14,4 +14,6 @@ object CinemaAnimation {
     const val hintsDismissMs = 7_000L
     const val statsUpdateMs = 1_000L
     const val loadingDebounceMs = 600L
+    const val imageLoadCrossfadeMs = 300
+    const val shimmerDurationMs = 1200
 }

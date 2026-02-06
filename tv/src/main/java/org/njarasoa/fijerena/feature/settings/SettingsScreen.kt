@@ -56,8 +56,10 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -203,7 +205,8 @@ fun SettingsScreen(
         ) {
             // Provider Details
             item {
-                Column {
+                GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
+                Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                     Text(
                         text = "Provider",
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -238,11 +241,13 @@ fun SettingsScreen(
                         )
                     }
                 }
+                }
             }
 
             // Theme Selection
             item {
-                Column {
+                GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
+                Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                     Text(
                         text = "Theme",
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -300,6 +305,7 @@ fun SettingsScreen(
                             }
                         }
                     }
+                }
                 }
             }
 
@@ -765,7 +771,8 @@ fun SettingsScreen(
 
             // Cloud Sync (Google Drive)
             item {
-                Column {
+                GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
+                Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                     Text(
                         text = "Cloud Sync",
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -850,6 +857,46 @@ fun SettingsScreen(
                                 color = CinemaError
                             )
                         }
+                    }
+                }
+                }
+            }
+
+            // About this app
+            item {
+                GlassPanel(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
+                        Text(
+                            text = "About",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                            ),
+                            color = CinemaAccent
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        Text(
+                            text = "Fijerena v${org.njarasoa.fijerena.BuildConfig.VERSION_NAME}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                        Text(
+                            text = "Build: ${org.njarasoa.fijerena.BuildConfig.GIT_HASH}",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                        Text(
+                            text = "Built: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME}",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                        )
                     }
                 }
             }

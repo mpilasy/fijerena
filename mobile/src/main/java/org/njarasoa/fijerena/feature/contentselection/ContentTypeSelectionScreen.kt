@@ -1,22 +1,21 @@
 package org.njarasoa.fijerena.feature.contentselection
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
@@ -24,7 +23,17 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
+import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaOrange
+import org.njarasoa.fijerena.ui.theme.CinemaOrangeDark
+import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,7 +54,6 @@ fun MobileContentTypeSelectionScreen(
     var activeProviderId by remember { mutableStateOf(0L) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
-    // Load active provider capabilities
     LaunchedEffect(refreshTrigger) {
         withContext(Dispatchers.IO) {
             val providerRepo = ProviderRepository(context.applicationContext)
@@ -93,43 +101,42 @@ fun MobileContentTypeSelectionScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+                .padding(CinemaSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Select Content Type",
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 24.dp)
+                modifier = Modifier.padding(bottom = CinemaSpacing.lg)
             )
 
             if ("LIVE_TV" in supportedContentTypes) {
-                ContentTypeCard(
+                GradientContentCard(
                     title = "Live TV",
                     description = "Watch live television channels",
-                    icon = Icons.Default.Tv,
+                    gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
                     onClick = { onContentTypeSelected("LIVE_TV") }
                 )
             }
 
             if ("MOVIES" in supportedContentTypes) {
-                ContentTypeCard(
+                GradientContentCard(
                     title = "Movies",
                     description = "Browse on-demand movies",
-                    icon = Icons.Default.Movie,
+                    gradientColors = listOf(CinemaAccent, CinemaAccentDark),
                     onClick = { onContentTypeSelected("MOVIES") }
                 )
             }
 
             if ("TV_SHOWS" in supportedContentTypes) {
-                ContentTypeCard(
+                GradientContentCard(
                     title = "TV Shows",
                     description = "Watch series and episodes",
-                    icon = Icons.Default.VideoLibrary,
+                    gradientColors = listOf(CinemaAccentLight, CinemaAccent),
                     onClick = { onContentTypeSelected("TV_SHOWS") }
                 )
             }
-
         }
     }
 
@@ -141,7 +148,7 @@ fun MobileContentTypeSelectionScreen(
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
                 ) {
                     allProviders.forEach { provider ->
                         val isActive = provider.id == activeProviderId
@@ -172,7 +179,7 @@ fun MobileContentTypeSelectionScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
+                                    .padding(CinemaSpacing.md),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -201,41 +208,45 @@ fun MobileContentTypeSelectionScreen(
     }
 }
 
+/**
+ * Full-width gradient card for content type selection (mobile).
+ */
 @Composable
-private fun ContentTypeCard(
+private fun GradientContentCard(
     title: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    gradientColors: List<androidx.compose.ui.graphics.Color>,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(MobileDimensions.contentTypeCardHeight)
+            .height(MobileDimensions.contentTypeCardHeight),
+        shape = RoundedCornerShape(CinemaCornerRadius.large)
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .background(
+                    Brush.horizontalGradient(colors = gradientColors),
+                    shape = RoundedCornerShape(CinemaCornerRadius.large)
+                ),
+            contentAlignment = Alignment.CenterStart
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier.size(MobileDimensions.iconXLarge),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Column {
+            Column(
+                modifier = Modifier.padding(CinemaSpacing.lg)
+            ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge,
+                    color = CinemaTextPrimary,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
                 )
             }
         }

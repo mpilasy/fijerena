@@ -47,7 +47,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ProviderType
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
@@ -132,7 +134,7 @@ fun MobileAddProviderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(CinemaSpacing.md)
                 .verticalScroll(rememberScrollState())
         ) {
             // Provider type selector
@@ -142,13 +144,13 @@ fun MobileAddProviderScreen(
                 color = CinemaTextSecondary
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
             ) {
                 ProviderType.entries.forEach { type ->
                     FilterChip(
@@ -166,7 +168,7 @@ fun MobileAddProviderScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
             // Name field (common to all types)
             OutlinedTextField(
@@ -189,7 +191,7 @@ fun MobileAddProviderScreen(
             // Type-specific fields
             when (selectedType) {
                 ProviderType.XTREAM -> {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = url,
@@ -211,7 +213,7 @@ fun MobileAddProviderScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = username,
@@ -224,7 +226,7 @@ fun MobileAddProviderScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = password,
@@ -241,7 +243,7 @@ fun MobileAddProviderScreen(
                 }
 
                 ProviderType.JELLYFIN -> {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = url,
@@ -263,7 +265,7 @@ fun MobileAddProviderScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = username,
@@ -276,7 +278,7 @@ fun MobileAddProviderScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = password,
@@ -293,7 +295,7 @@ fun MobileAddProviderScreen(
                 }
 
                 ProviderType.SMB -> {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = host,
@@ -307,7 +309,7 @@ fun MobileAddProviderScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = shareName,
@@ -321,7 +323,7 @@ fun MobileAddProviderScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = username,
@@ -334,7 +336,7 @@ fun MobileAddProviderScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     OutlinedTextField(
                         value = password,
@@ -357,20 +359,22 @@ fun MobileAddProviderScreen(
 
             // Cache Management (edit mode only)
             if (isEditMode) {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
+                GlassPanel(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                 Text(
                     text = "Cache Management",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                 Text(
                     text = "Clear cached data to free up storage space",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                 cacheStats?.let { stats ->
                     // Total cache size
@@ -398,11 +402,11 @@ fun MobileAddProviderScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.divider)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     // Live TV
                     Row(
@@ -429,7 +433,7 @@ fun MobileAddProviderScreen(
                         ) { Text("Clear") }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     // Movies
                     Row(
@@ -456,7 +460,7 @@ fun MobileAddProviderScreen(
                         ) { Text("Clear") }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     // TV Shows
                     Row(
@@ -483,7 +487,7 @@ fun MobileAddProviderScreen(
                         ) { Text("Clear") }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     // EPG & Other
                     Text(
@@ -497,10 +501,12 @@ fun MobileAddProviderScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                     )
                 }
+                } // Column
+                } // GlassPanel
             }
 
             error?.let { errorMsg ->
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Text(
                     text = errorMsg,
                     style = MaterialTheme.typography.bodyMedium,
@@ -508,7 +514,7 @@ fun MobileAddProviderScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
             Button(
                 onClick = {

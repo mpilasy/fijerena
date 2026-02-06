@@ -3,7 +3,6 @@
 package org.njarasoa.fijerena.feature.epg
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,7 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
-import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -49,7 +47,9 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.TimeSlot
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import java.time.Instant
@@ -92,7 +92,7 @@ fun EpgGridLayout(
             onBack = onBack,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = Spacing.md)
         )
 
         if (channelRows.isEmpty()) {
@@ -109,7 +109,7 @@ fun EpgGridLayout(
                         .fillMaxHeight()
                 )
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(Spacing.md))
 
                 // Right: Scrollable time grid (80% width)
                 TimeGridColumn(
@@ -144,7 +144,7 @@ private fun EpgHeader(
         // Back button
         Button(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(Spacing.sm))
             Text("Back")
         }
 
@@ -161,7 +161,7 @@ private fun EpgHeader(
         }
 
         // Date navigation
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Button(onClick = onPreviousDay) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous Day")
             }
@@ -196,23 +196,25 @@ private fun ChannelListColumn(
 ) {
     val listState = rememberTvLazyListState()
 
-    TvLazyColumn(
-        state = listState,
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        items(channelRows.size) { index ->
-            val row = channelRows[index]
-            ChannelItem(
-                channel = row.channel,
-                onClick = {
-                    onChannelSelected(
-                        row.channel.id,
-                        row.channel.name,
-                        row.channel.categoryId
-                    )
-                }
-            )
+    GlassPanel(modifier = modifier) {
+        TvLazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
+        ) {
+            items(channelRows.size) { index ->
+                val row = channelRows[index]
+                ChannelItem(
+                    channel = row.channel,
+                    onClick = {
+                        onChannelSelected(
+                            row.channel.id,
+                            row.channel.name,
+                            row.channel.categoryId
+                        )
+                    }
+                )
+            }
         }
     }
 }
@@ -232,23 +234,24 @@ private fun ChannelItem(
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
-            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.focusedTint)
-        ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = androidx.compose.foundation.BorderStroke(TvFocusTokens.focusBorderWidth, org.njarasoa.fijerena.ui.theme.CinemaAccentLight)
-            )
+            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint)
         ),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
-            pressedScale = TvFocusTokens.pressedScale
+            focusedScale = TvFocusTokens.focusedScaleContent,
+            pressedScale = TvFocusTokens.pressedScaleSubtle
+        ),
+        glow = CardDefaults.glow(
+            focusedGlow = androidx.tv.material3.Glow(
+                elevationColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                elevation = TvFocusTokens.focusShadowElevation
+            )
         )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(Spacing.sm),
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
@@ -292,13 +295,13 @@ private fun TimeGridColumn(
                 .height(TvDimensions.epgTimeHeaderHeight)
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(Spacing.xxs))
 
         // Program grid
         TvLazyColumn(
             state = verticalScrollState,
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
         ) {
             items(channelRows.size) { rowIndex ->
                 val row = channelRows[rowIndex]
@@ -322,31 +325,32 @@ private fun TimeHeaderRow(
     currentTimeSlot: Int,
     modifier: Modifier = Modifier
 ) {
-    LazyRow(
-        state = scrollState,
-        modifier = modifier,
-        userScrollEnabled = false // Synchronized with program rows
-    ) {
-        items(timeSlots.size) { index ->
-            val slot = timeSlots[index]
-            val isCurrent = index == currentTimeSlot
+    GlassPanel(modifier = modifier) {
+        LazyRow(
+            state = scrollState,
+            modifier = Modifier.fillMaxSize(),
+            userScrollEnabled = false // Synchronized with program rows
+        ) {
+            items(timeSlots.size) { index ->
+                val slot = timeSlots[index]
+                val isCurrent = index == currentTimeSlot
 
-            Box(
-                modifier = Modifier
-                    .width(TvDimensions.epgTimeSlotWidth) // 2dp per minute * 60 minutes
-                    .fillMaxHeight()
-                    .background(
-                        if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark
-                        else org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
-                    )
-                    .border(TvDimensions.borderThin, org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight),
-                contentAlignment = Alignment.Center
-            ) {
+                Box(
+                    modifier = Modifier
+                        .width(TvDimensions.epgTimeSlotWidth)
+                        .fillMaxHeight()
+                        .background(
+                            if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark
+                            else androidx.compose.ui.graphics.Color.Transparent
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                 Text(
                     text = formatTime(slot.startTime),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
                 )
+                }
             }
         }
     }
@@ -363,8 +367,7 @@ private fun ProgramRow(
         state = scrollState,
         modifier = Modifier
             .fillMaxWidth()
-            .height(TvDimensions.epgRowHeight)
-            .border(TvDimensions.borderThin, org.njarasoa.fijerena.ui.theme.CinemaSurfaceLight),
+            .height(TvDimensions.epgRowHeight),
         userScrollEnabled = false // Synchronized with header row
     ) {
         items(channelRow.programs.size) { index ->
@@ -390,33 +393,27 @@ private fun ProgramCell(
         modifier = Modifier
             .width(calculateProgramWidth(program.duration))
             .fillMaxHeight()
-            .padding(2.dp)
-            .onFocusChanged { isFocused = it.isFocused }
-            .background(
-                if (isCurrent) {
-                    org.njarasoa.fijerena.ui.theme.CinemaAccentDark
-                } else {
-                    org.njarasoa.fijerena.ui.theme.CinemaSurface
-                }
-            ),
+            .padding(Spacing.xxs)
+            .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark else org.njarasoa.fijerena.ui.theme.CinemaSurface,
             focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint)
         ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = androidx.compose.foundation.BorderStroke(TvFocusTokens.focusBorderWidth, org.njarasoa.fijerena.ui.theme.CinemaAccentLight)
-            )
-        ),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleSubtle,
-            pressedScale = TvFocusTokens.pressedScale
+            focusedScale = TvFocusTokens.focusedScaleContent,
+            pressedScale = TvFocusTokens.pressedScaleSubtle
+        ),
+        glow = CardDefaults.glow(
+            focusedGlow = androidx.tv.material3.Glow(
+                elevationColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                elevation = TvFocusTokens.focusShadowElevation
+            )
         )
     ) {
         Column(
             modifier = Modifier
-                .padding(8.dp)
+                .padding(Spacing.sm)
                 .fillMaxSize(),
             verticalArrangement = Arrangement.Center
         ) {

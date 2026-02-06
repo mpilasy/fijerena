@@ -5,7 +5,6 @@ package org.njarasoa.fijerena.feature.episode
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +37,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -49,6 +47,8 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -304,24 +304,19 @@ private fun EpisodeCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(TvDimensions.cardHeight),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight)
-            )
-        ),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
-            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedTint)
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint)
         ),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
-            pressedScale = TvFocusTokens.pressedScale
+            focusedScale = TvFocusTokens.focusedScaleContent,
+            pressedScale = TvFocusTokens.pressedScaleSubtle
         ),
         glow = CardDefaults.glow(
             focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
-                elevation = TvFocusTokens.glowElevation
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                elevation = TvFocusTokens.focusShadowElevation
             )
         )
     ) {
@@ -331,6 +326,17 @@ private fun EpisodeCard(
                 .padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Episode thumbnail
+            CinemaThumbnail(
+                url = episode.thumbnailUrl,
+                fallbackLetter = episode.title.firstOrNull(),
+                contentType = ThumbnailContentType.TV_SHOW,
+                modifier = Modifier.size(
+                    width = TvDimensions.posterWidth,
+                    height = TvDimensions.posterHeight
+                )
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
             // Season and episode number
             Column(
                 modifier = Modifier.width(TvDimensions.epgTimeSlotWidth),

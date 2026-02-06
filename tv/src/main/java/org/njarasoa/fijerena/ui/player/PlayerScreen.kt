@@ -69,6 +69,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -500,21 +501,15 @@ private fun ControlHintsOverlay(
             .background(Color.Black.copy(alpha = CinemaAlpha.glass)),
         contentAlignment = Center
     ) {
-        Surface(
+        GlassPanel(
             modifier = Modifier
                 .width(TvDimensions.dialogWidthLarge)
-                .padding(32.dp),
-            color = CinemaSurface,
-            shape = RoundedCornerShape(CinemaCornerRadius.large),
-            border = androidx.compose.foundation.BorderStroke(
-                TvFocusTokens.focusBorderWidth,
-                MaterialTheme.colorScheme.primary
-            )
+                .padding(Spacing.xxl)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                    .padding(Spacing.xxl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.lg)
             ) {
                 // Header
                 Text(
@@ -627,18 +622,16 @@ private fun AudioTrackSelectorDialog(
             .background(Color.Black.copy(alpha = CinemaAlpha.overlayHeavy)),
         contentAlignment = Center
     ) {
-        Surface(
+        GlassPanel(
             modifier = Modifier
                 .width(TvDimensions.dialogWidth)
-                .padding(32.dp),
-            color = CinemaSurface,
-            shape = RoundedCornerShape(CinemaCornerRadius.large)
+                .padding(Spacing.xxl)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(32.dp)
+                    .padding(Spacing.xxl)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 // Header
                 Text(
@@ -790,18 +783,16 @@ private fun SubtitleSelectorDialog(
             .background(Color.Black.copy(alpha = CinemaAlpha.overlayHeavy)),
         contentAlignment = Center
     ) {
-        Surface(
+        GlassPanel(
             modifier = Modifier
                 .width(TvDimensions.dialogWidth)
-                .padding(32.dp),
-            color = CinemaSurface,
-            shape = RoundedCornerShape(CinemaCornerRadius.large)
+                .padding(Spacing.xxl)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(32.dp)
+                    .padding(Spacing.xxl)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 // Header
                 Text(
@@ -998,18 +989,16 @@ private fun QualitySelectorDialog(
             .background(Color.Black.copy(alpha = CinemaAlpha.overlayHeavy)),
         contentAlignment = Center
     ) {
-        Surface(
+        GlassPanel(
             modifier = Modifier
                 .width(TvDimensions.dialogWidth)
-                .padding(32.dp),
-            color = CinemaSurface,
-            shape = RoundedCornerShape(CinemaCornerRadius.large)
+                .padding(Spacing.xxl)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(32.dp)
+                    .padding(Spacing.xxl)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 // Header
                 Text(
@@ -1866,7 +1855,9 @@ private fun StreamInfoDisplay(
                 // Calculate end time - add remaining milliseconds to current time
                 val currentTimeMillis = System.currentTimeMillis()
                 val estimatedEndTimeMillis = currentTimeMillis + remainingTime
-                val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                val tvContext = LocalContext.current
+                val is24h = android.text.format.DateFormat.is24HourFormat(tvContext)
+                val timeFormat = SimpleDateFormat(if (is24h) "HH:mm" else "h:mm a", Locale.getDefault())
 
                 // Debug logging
                 println("PlayerScreen VOD Time: position=$position, duration=$duration, remaining=$remainingTime")
@@ -2031,12 +2022,9 @@ private fun StreamInfoOverlay(
             .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
         contentAlignment = Alignment.TopCenter
     ) {
+        GlassPanel {
         Column(
             modifier = Modifier
-                .background(
-                    color = CinemaSurface.copy(alpha = CinemaAlpha.overlayMedium),
-                    shape = RoundedCornerShape(CornerRadius.small)
-                )
                 .padding(Spacing.lg),
             horizontalAlignment = CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.xs)
@@ -2072,6 +2060,7 @@ private fun StreamInfoOverlay(
                     )
                 }
             }
+        }
         }
     }
 }

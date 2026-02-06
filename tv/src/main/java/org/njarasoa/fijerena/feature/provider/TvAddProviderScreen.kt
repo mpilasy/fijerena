@@ -46,6 +46,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
@@ -126,10 +127,12 @@ fun TvAddProviderScreen(
                 ),
             contentAlignment = Alignment.Center
         ) {
+            GlassPanel(modifier = Modifier.width(TvDimensions.formFieldWidth)) {
             Column(
                 modifier = Modifier
-                    .width(TvDimensions.formFieldWidth)
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(Spacing.lg),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -896,6 +899,7 @@ fun TvAddProviderScreen(
                     )
                 }
             }
+            } // GlassPanel
         }
     }
 }

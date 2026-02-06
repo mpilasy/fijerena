@@ -55,9 +55,9 @@ fun CinemaPrimaryButton(
         enabled = enabled,
         colors = ButtonDefaults.colors(
             containerColor = CinemaAccent,
-            contentColor = CinemaBackground,
+            contentColor = CinemaTextPrimary,
             focusedContainerColor = CinemaAccentLight,
-            focusedContentColor = CinemaBackground,
+            focusedContentColor = CinemaTextPrimary,
             pressedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
             disabledContainerColor = CinemaSurfaceVariant,
             disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint)
@@ -228,7 +228,7 @@ fun CinemaIconButton(
         colors = ButtonDefaults.colors(
             containerColor = CinemaSurfaceVariant,
             contentColor = CinemaAccent,
-            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedTint),
+            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
             focusedContentColor = CinemaAccentLight,
             pressedContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textMedium),
             disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),

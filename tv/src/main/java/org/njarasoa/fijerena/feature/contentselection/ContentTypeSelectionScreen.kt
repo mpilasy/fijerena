@@ -2,7 +2,7 @@
 
 package org.njarasoa.fijerena.feature.contentselection
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,13 +28,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.BorderStroke
 import androidx.tv.material3.Border
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -45,19 +48,26 @@ import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaOrange
+import org.njarasoa.fijerena.ui.theme.CinemaOrangeDark
 import org.njarasoa.fijerena.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
- * Content type selection screen - allows users to choose between Live TV, Movies, or TV Shows.
+ * Content type selection screen — hero card redesign with gradient backgrounds.
  */
 @Composable
 fun ContentTypeSelectionScreen(
@@ -76,7 +86,6 @@ fun ContentTypeSelectionScreen(
     var activeProviderId by remember { mutableStateOf(0L) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
-    // Load active provider info from Room
     LaunchedEffect(refreshTrigger) {
         withContext(Dispatchers.IO) {
             val providerRepo = ProviderRepository(context.applicationContext)
@@ -95,41 +104,58 @@ fun ContentTypeSelectionScreen(
         }
     }
 
-    // 5% padding for TV overscan safety
+    // Subtle background gradient wash
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        CinemaBackground,
+                        CinemaAccentDark.copy(alpha = CinemaAlpha.ghost),
+                        CinemaBackground
+                    )
+                )
+            )
             .padding(
                 horizontal = Spacing.tvSafeMarginHorizontal,
                 vertical = Spacing.tvSafeMarginVertical
             )
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header with provider name
+            // Header with provider name in glass pill
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = Spacing.xxl),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "IPTV.atr",
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                // Provider name in glass pill badge
                 val displayName = if (appSettings.isDevMode && providerType.isNotEmpty()) {
                     "$providerName ($providerType)"
                 } else providerName
-                Text(
-                    text = displayName,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = CinemaAccentLight,
+                GlassPanel(
                     modifier = Modifier.clickable { showProviderPicker = true }
-                )
+                ) {
+                    Text(
+                        text = displayName,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CinemaAccentLight,
+                        modifier = Modifier.padding(
+                            horizontal = Spacing.md,
+                            vertical = Spacing.xs
+                        )
+                    )
+                }
             }
 
-            // Content type selection
+            // Content type hero cards
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -142,27 +168,33 @@ fun ContentTypeSelectionScreen(
                     modifier = Modifier.padding(bottom = Spacing.xxl)
                 )
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xl),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     if ("LIVE_TV" in supportedContentTypes) {
-                        ContentTypeButton(
-                            text = "📺 ${ContentType.LIVE_TV.displayName}",
+                        ContentTypeHeroCard(
+                            title = "Live TV",
+                            subtitle = "Watch live channels",
+                            gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
                             onClick = { onContentTypeSelected(ContentType.LIVE_TV) }
                         )
                     }
 
                     if ("MOVIES" in supportedContentTypes) {
-                        ContentTypeButton(
-                            text = "🎬 ${ContentType.MOVIES.displayName}",
+                        ContentTypeHeroCard(
+                            title = "Movies",
+                            subtitle = "Browse on-demand",
+                            gradientColors = listOf(CinemaAccent, CinemaAccentDark),
                             onClick = { onContentTypeSelected(ContentType.MOVIES) }
                         )
                     }
 
                     if ("TV_SHOWS" in supportedContentTypes) {
-                        ContentTypeButton(
-                            text = "📺 ${ContentType.TV_SHOWS.displayName}",
+                        ContentTypeHeroCard(
+                            title = "TV Shows",
+                            subtitle = "Series & episodes",
+                            gradientColors = listOf(CinemaAccentLight, CinemaAccent),
                             onClick = { onContentTypeSelected(ContentType.TV_SHOWS) }
                         )
                     }
@@ -179,7 +211,7 @@ fun ContentTypeSelectionScreen(
                 text = {
                     Column(
                         modifier = Modifier.verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
                     ) {
                         allProviders.forEach { provider ->
                             val isActive = provider.id == activeProviderId
@@ -202,7 +234,7 @@ fun ContentTypeSelectionScreen(
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 color = if (isActive)
-                                    CinemaAccent.copy(alpha = 0.2f)
+                                    CinemaAccent.copy(alpha = CinemaAlpha.focusedTint)
                                 else
                                     CinemaSurfaceVariant,
                                 shape = RoundedCornerShape(CinemaCornerRadius.small)
@@ -210,7 +242,7 @@ fun ContentTypeSelectionScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
+                                        .padding(Spacing.md),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -255,37 +287,71 @@ fun ContentTypeSelectionScreen(
     }
 }
 
+/**
+ * Hero card with gradient background for content type selection.
+ */
 @Composable
-private fun ContentTypeButton(
-    text: String,
+private fun ContentTypeHeroCard(
+    title: String,
+    subtitle: String,
+    gradientColors: List<androidx.compose.ui.graphics.Color>,
     onClick: () -> Unit
 ) {
-    Button(
+    Card(
         onClick = onClick,
         modifier = Modifier
-            .width(TvDimensions.formFieldWidth)
-            .height(TvDimensions.buttonHeight),
-        colors = ButtonDefaults.colors(
-            containerColor = CinemaSurfaceVariant,
+            .width(TvDimensions.contentTypeCardWidth)
+            .height(TvDimensions.contentTypeCardHeight),
+        colors = CardDefaults.colors(
+            containerColor = CinemaSurface,
             contentColor = CinemaTextPrimary,
             focusedContainerColor = CinemaSurface,
             focusedContentColor = CinemaTextPrimary
         ),
-        border = ButtonDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = CinemaAccentLight)
-            )
-        ),
-        scale = ButtonDefaults.scale(
+        scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
-            pressedScale = TvFocusTokens.pressedScale
+            focusedScale = TvFocusTokens.defaultScale,
+            pressedScale = TvFocusTokens.pressedScaleSubtle
+        ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.xLarge)),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(
+                    TvFocusTokens.focusBorderWidth,
+                    CinemaTextPrimary
+                ),
+                shape = RoundedCornerShape(CinemaCornerRadius.xLarge)
+            )
         )
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(colors = gradientColors),
+                    shape = RoundedCornerShape(CinemaCornerRadius.xLarge)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.displaySmall,
+                    color = CinemaTextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = Spacing.xs)
+                )
+            }
+        }
     }
 }

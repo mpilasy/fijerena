@@ -23,6 +23,11 @@ object CinemaAlpha {
     const val divider = 0.1f           // Divider opacity
     const val ghost = 0.05f            // Barely visible tints
 
+    // Image overlays
+    const val imageOverlay = 0.8f      // Gradient over poster for text legibility
+    const val imageOverlayLight = 0.4f // Lighter partial overlay
+    const val cardElevationShadow = 0.3f // Shadow around focused cards
+
     // Focus/Interaction
     const val focusedGlow = 0.4f       // Glow elevation color
 }

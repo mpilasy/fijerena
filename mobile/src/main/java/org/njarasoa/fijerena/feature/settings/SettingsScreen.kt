@@ -27,8 +27,10 @@ import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -134,8 +136,8 @@ fun MobileSettingsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(CinemaSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)
         ) {
             // === Provider ===
             SettingsSection(title = "Provider") {
@@ -583,6 +585,26 @@ fun MobileSettingsScreen(
                 }
             }
 
+            // === About ===
+            SettingsSection(title = "About") {
+                Text(
+                    text = "Fijerena v${org.njarasoa.fijerena.BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                Text(
+                    text = "Build: ${org.njarasoa.fijerena.BuildConfig.GIT_HASH}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                )
+                Text(
+                    text = "Built: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -641,21 +663,16 @@ private fun SettingsSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
+    GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(CinemaSpacing.md)
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             content()
         }
     }

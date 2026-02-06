@@ -2,12 +2,12 @@
 
 package org.njarasoa.fijerena.feature.search
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,6 +52,9 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
+import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
@@ -288,34 +291,36 @@ private fun SearchTextField(
     onQueryChange: (String) -> Unit,
     focusRequester: FocusRequester
 ) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        label = { Text("Search") },
-        placeholder = { Text("Enter stream name...") },
-        singleLine = true,
-        modifier = Modifier
-            .width(TvDimensions.formFieldWidth)
-            .focusRequester(focusRequester),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = CinemaTextPrimary,
-            unfocusedTextColor = CinemaTextPrimary,
-            cursorColor = CinemaAccent,
-            focusedBorderColor = CinemaAccent,
-            unfocusedBorderColor = CinemaTextSecondary,
-            focusedLabelColor = CinemaAccent,
-            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            focusedPlaceholderColor = CinemaTextSecondary,
-            unfocusedPlaceholderColor = CinemaTextSecondary
-        ),
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Text,
-            imeAction = ImeAction.Search
-        ),
-        keyboardActions = KeyboardActions(
-            onSearch = { /* Focus stays on field for continued searching */ }
+    GlassPanel {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            label = { Text("Search") },
+            placeholder = { Text("Enter stream name...") },
+            singleLine = true,
+            modifier = Modifier
+                .width(TvDimensions.formFieldWidth)
+                .focusRequester(focusRequester),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = CinemaTextPrimary,
+                unfocusedTextColor = CinemaTextPrimary,
+                cursorColor = CinemaAccent,
+                focusedBorderColor = CinemaAccent,
+                unfocusedBorderColor = CinemaTextSecondary,
+                focusedLabelColor = CinemaAccent,
+                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                focusedPlaceholderColor = CinemaTextSecondary,
+                unfocusedPlaceholderColor = CinemaTextSecondary
+            ),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Search
+            ),
+            keyboardActions = KeyboardActions(
+                onSearch = { /* Focus stays on field for continued searching */ }
+            )
         )
-    )
+    }
 
     // Auto-focus on screen open
     LaunchedEffect(Unit) {
@@ -475,21 +480,16 @@ private fun CategoryResultItem(
             focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
             focusedContentColor = CinemaTextPrimary
         ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = CinemaAccentLight)
-            )
-        ),
         shape = CardDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(CornerRadius.medium)),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
+            focusedScale = TvFocusTokens.focusedScaleContent,
             pressedScale = TvFocusTokens.pressedScaleSubtle
         ),
         glow = CardDefaults.glow(
             focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
-                elevation = TvFocusTokens.glowElevation
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                elevation = TvFocusTokens.focusShadowElevation
             )
         )
     ) {
@@ -500,6 +500,16 @@ private fun CategoryResultItem(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Accent gradient strip on left edge
+            Box(
+                modifier = Modifier
+                    .width(TvDimensions.borderFocused)
+                    .height(TvDimensions.cardHeight)
+                    .padding(vertical = Spacing.sm)
+                    .then(
+                        Modifier.fillMaxHeight()
+                    )
+            )
             Text(
                 text = result.categoryName,
                 style = MaterialTheme.typography.titleMedium,
@@ -530,42 +540,52 @@ private fun SearchResultItem(
             focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
             focusedContentColor = CinemaTextPrimary
         ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth, color = CinemaAccentLight)
-            )
-        ),
         shape = CardDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(CornerRadius.medium)),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
+            focusedScale = TvFocusTokens.focusedScaleContent,
             pressedScale = TvFocusTokens.pressedScaleSubtle
         ),
         glow = CardDefaults.glow(
             focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
-                elevation = TvFocusTokens.glowElevation
+                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                elevation = TvFocusTokens.focusShadowElevation
             )
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(Spacing.md),
-            verticalArrangement = Arrangement.Center
+                .padding(Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = result.streamName,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            // Poster thumbnail
+            CinemaThumbnail(
+                url = result.thumbnailUrl,
+                fallbackLetter = result.streamName.firstOrNull(),
+                contentType = ThumbnailContentType.DEFAULT,
+                modifier = Modifier.size(
+                    width = TvDimensions.posterWidth,
+                    height = TvDimensions.posterHeight
+                )
             )
-            Text(
-                text = "Category: ${result.categoryName}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary
-            )
+            Column(
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = result.streamName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CinemaTextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Category: ${result.categoryName}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CinemaTextSecondary
+                )
+            }
         }
     }
 }

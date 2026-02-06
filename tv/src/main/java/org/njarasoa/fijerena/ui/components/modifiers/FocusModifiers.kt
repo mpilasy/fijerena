@@ -16,6 +16,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -87,3 +89,34 @@ fun Modifier.tvFocusableNoScale(
     borderColor = borderColor,
     cornerRadius = cornerRadius
 )
+
+/**
+ * Content-First Focus Modifier (borderless)
+ * For image-based cards where the content is the star:
+ * - 1.05x scale on focus (gentler than standard)
+ * - Shadow elevation glow (12dp accent)
+ * - Subtle 1dp border at low opacity only when focused
+ * - No bright border, no 1.1x scale
+ */
+fun Modifier.tvFocusableContent(
+    cornerRadius: Dp = CornerRadius.medium
+): Modifier = composed {
+    var isFocused by remember { mutableStateOf(false) }
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isFocused) TvFocusTokens.focusedScaleContent else TvFocusTokens.defaultScale,
+        animationSpec = tween(durationMillis = CinemaAnimation.focusDurationMs),
+        label = "content_focus_scale"
+    )
+
+    this
+        .focusable()
+        .onFocusChanged { focusState ->
+            isFocused = focusState.isFocused
+        }
+        .scale(animatedScale)
+        .border(
+            width = if (isFocused) TvFocusTokens.focusBorderWidth else 0.dp,
+            color = if (isFocused) CinemaAccentLight else Color.Transparent,
+            shape = RoundedCornerShape(cornerRadius)
+        )
+}
