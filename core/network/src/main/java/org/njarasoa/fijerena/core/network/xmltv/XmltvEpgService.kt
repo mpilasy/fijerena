@@ -14,6 +14,7 @@ import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import java.io.File
 import java.io.InputStream
 import java.util.zip.GZIPInputStream
 
@@ -23,16 +24,21 @@ class XmltvEpgService(
 ) {
     companion object {
         private const val TAG = "XmltvEpgService"
-        private const val CACHE_TTL_MS = 12L * 60 * 60 * 1000 // 12 hours
+        private const val PARSED_CACHE_TTL_MS = 12L * 60 * 60 * 1000 // 12 hours
+        private const val FILE_CACHE_TTL_MS = 24L * 60 * 60 * 1000   // 24 hours
         private const val KEY_CACHED_EPG = "xmltv_epg_data"
         private const val KEY_CACHE_TIMESTAMP = "xmltv_cache_timestamp"
         private const val KEY_CACHED_URL = "xmltv_cached_url"
+        private const val KEY_FILE_TIMESTAMP = "xmltv_file_timestamp"
+        private const val KEY_FILE_URL = "xmltv_file_url"
     }
 
     private val cache: SharedPreferences = context.getSharedPreferences(
         "xmltv_cache_$providerId",
         Context.MODE_PRIVATE
     )
+
+    private val xmltvFile = File(context.cacheDir, "xmltv_$providerId.xml")
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -42,7 +48,7 @@ class XmltvEpgService(
     private val client = HttpClient(Android) {
         engine {
             connectTimeout = 30_000
-            socketTimeout = 120_000
+            socketTimeout = 300_000 // 5 minutes for large XMLTV files (500MB+)
         }
     }
 
@@ -50,18 +56,25 @@ class XmltvEpgService(
         channels: List<MediaItem>,
         xmltvUrl: String
     ): Map<String, EpgResponse> = withContext(Dispatchers.IO) {
-        // Check cache
-        val cachedResult = getCachedEpg(xmltvUrl, channels)
+        // Layer 1: Check parsed results cache (instant)
+        val cachedResult = getCachedEpg(xmltvUrl)
         if (cachedResult != null) {
             Log.d(TAG, "Returning cached XMLTV EPG for ${cachedResult.size} channels")
             return@withContext cachedResult
         }
 
-        // Download and parse
-        Log.d(TAG, "Downloading XMLTV from: $xmltvUrl")
-        val xmltvData = downloadAndParse(xmltvUrl)
+        // Layer 2: Ensure local file exists (download only if needed)
+        val localFile = ensureLocalFile(xmltvUrl)
+        if (localFile == null) {
+            Log.w(TAG, "Failed to obtain XMLTV file")
+            return@withContext emptyMap()
+        }
+
+        // Layer 3: Parse from local file with channel + time filters
+        Log.d(TAG, "Parsing XMLTV from local file: ${localFile.length() / (1024 * 1024)}MB")
+        val xmltvData = parseFromFile(localFile, channels)
         if (xmltvData == null) {
-            Log.w(TAG, "Failed to download/parse XMLTV data")
+            Log.w(TAG, "Failed to parse XMLTV data from file")
             return@withContext emptyMap()
         }
 
@@ -70,7 +83,7 @@ class XmltvEpgService(
         // Match channels and convert
         val result = matchAndConvert(channels, xmltvData)
 
-        // Cache the matched results
+        // Cache the parsed results
         cacheEpg(xmltvUrl, result)
 
         Log.d(TAG, "Matched XMLTV EPG for ${result.size} of ${channels.size} channels")
@@ -79,17 +92,15 @@ class XmltvEpgService(
 
     fun clearCache() {
         cache.edit().clear().apply()
+        xmltvFile.delete()
     }
 
-    private fun getCachedEpg(
-        xmltvUrl: String,
-        channels: List<MediaItem>
-    ): Map<String, EpgResponse>? {
+    private fun getCachedEpg(xmltvUrl: String): Map<String, EpgResponse>? {
         val cachedUrl = cache.getString(KEY_CACHED_URL, null)
         if (cachedUrl != xmltvUrl) return null
 
         val timestamp = cache.getLong(KEY_CACHE_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > CACHE_TTL_MS) return null
+        if (System.currentTimeMillis() - timestamp > PARSED_CACHE_TTL_MS) return null
 
         val cachedJson = cache.getString(KEY_CACHED_EPG, null) ?: return null
         return try {
@@ -113,8 +124,26 @@ class XmltvEpgService(
         }
     }
 
-    private suspend fun downloadAndParse(url: String): XmltvData? {
+    /**
+     * Ensure the XMLTV file is available locally. Downloads only if the cached file
+     * is missing, stale (>24h), or the URL changed. Downloads to a temp file first
+     * and renames atomically to avoid partial files from interrupted downloads.
+     */
+    private suspend fun ensureLocalFile(url: String): File? {
+        // Check if local file is fresh
+        val fileUrl = cache.getString(KEY_FILE_URL, null)
+        val fileTimestamp = cache.getLong(KEY_FILE_TIMESTAMP, 0L)
+        if (fileUrl == url && xmltvFile.exists() &&
+            System.currentTimeMillis() - fileTimestamp < FILE_CACHE_TTL_MS
+        ) {
+            Log.d(TAG, "Using cached XMLTV file: ${xmltvFile.length() / (1024 * 1024)}MB")
+            return xmltvFile
+        }
+
+        // Download to temp file
+        val tempFile = File(xmltvFile.parent, "xmltv_${providerId}_tmp")
         return try {
+            Log.d(TAG, "Downloading XMLTV from: $url")
             val response = client.get(url)
             val channel = response.bodyAsChannel()
             val rawStream: InputStream = channel.toInputStream()
@@ -125,11 +154,62 @@ class XmltvEpgService(
                 rawStream
             }
 
-            inputStream.use { stream ->
-                XmltvParser.parse(stream)
+            inputStream.use { input ->
+                tempFile.outputStream().buffered().use { output ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalBytes = 0L
+                    var lastLoggedMb = 0L
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        totalBytes += bytesRead
+                        val currentMb = totalBytes / (1024 * 1024)
+                        if (currentMb >= lastLoggedMb + 10) {
+                            Log.d(TAG, "XMLTV download: ${currentMb}MB")
+                            lastLoggedMb = currentMb
+                        }
+                    }
+                    Log.d(TAG, "XMLTV download complete: ${totalBytes / (1024 * 1024)}MB")
+                }
+            }
+
+            // Atomic rename — old file replaced only after full download succeeds
+            xmltvFile.delete()
+            tempFile.renameTo(xmltvFile)
+
+            cache.edit()
+                .putString(KEY_FILE_URL, url)
+                .putLong(KEY_FILE_TIMESTAMP, System.currentTimeMillis())
+                .apply()
+
+            xmltvFile
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to download XMLTV: ${e.message}", e)
+            tempFile.delete()
+            // Fall back to existing file if available (stale data is better than none)
+            if (xmltvFile.exists()) {
+                Log.d(TAG, "Falling back to stale XMLTV file")
+                xmltvFile
+            } else {
+                null
+            }
+        }
+    }
+
+    /** Parse XMLTV from a local file with channel + time filters applied during parse. */
+    private fun parseFromFile(file: File, mediaItems: List<MediaItem>): XmltvData? {
+        return try {
+            val channelFilter: (Map<String, XmltvChannel>) -> Set<String> = { xmltvChannels ->
+                mediaItems.mapNotNull { item -> matchChannel(item, xmltvChannels) }.toSet()
+            }
+            val nowSeconds = System.currentTimeMillis() / 1000
+            val timeWindow = Pair(nowSeconds - 24 * 3600, nowSeconds + 24 * 3600)
+
+            file.inputStream().buffered().use { stream ->
+                XmltvParser.parse(stream, channelFilter, timeWindow)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to download/parse XMLTV: ${e.message}", e)
+            Log.e(TAG, "Failed to parse XMLTV file: ${e.message}", e)
             null
         }
     }

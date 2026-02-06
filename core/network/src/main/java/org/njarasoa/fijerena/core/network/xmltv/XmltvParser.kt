@@ -12,14 +12,32 @@ object XmltvParser {
 
     private const val TAG = "XmltvParser"
 
-    fun parse(inputStream: InputStream): XmltvData {
+    /**
+     * Parse XMLTV data with optional filtering to handle large files (500MB+).
+     *
+     * @param channelFilter Called after all channels are parsed (before programmes).
+     *   Receives the channel map, returns the set of XMLTV channel IDs to keep.
+     *   Programmes for other channels are skipped without allocating objects.
+     * @param timeWindowSeconds If provided, programmes outside this (start, end) epoch
+     *   range are discarded. Typically ±24h from now.
+     */
+    fun parse(
+        inputStream: InputStream,
+        channelFilter: ((Map<String, XmltvChannel>) -> Set<String>)? = null,
+        timeWindowSeconds: Pair<Long, Long>? = null
+    ): XmltvData {
         val channels = mutableMapOf<String, XmltvChannel>()
         val programmes = mutableMapOf<String, MutableList<XmltvProgramme>>()
+        var wantedChannelIds: Set<String>? = null
+        var filterResolved = channelFilter == null
 
         val factory = XmlPullParserFactory.newInstance()
         factory.isNamespaceAware = false
         val parser = factory.newPullParser()
         parser.setInput(inputStream, null)
+
+        var skippedChannels = 0
+        var skippedTime = 0
 
         var eventType = parser.eventType
         while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -32,10 +50,41 @@ object XmltvParser {
                         }
                     }
                     "programme" -> {
-                        val programme = parseProgramme(parser)
-                        if (programme != null) {
-                            programmes.getOrPut(programme.channelId) { mutableListOf() }
-                                .add(programme)
+                        // Resolve channel filter on first programme element
+                        // (XMLTV DTD guarantees all <channel> come before <programme>)
+                        if (!filterResolved) {
+                            wantedChannelIds = channelFilter!!.invoke(channels)
+                            filterResolved = true
+                            Log.d(TAG, "Filter: keeping ${wantedChannelIds.size} of ${channels.size} channels")
+                        }
+
+                        // Read attributes from current START_TAG (does not advance parser)
+                        val channelId = parser.getAttributeValue(null, "channel")
+
+                        // Skip unwanted channels entirely (no object allocation)
+                        if (wantedChannelIds != null && channelId != null && channelId !in wantedChannelIds) {
+                            skipElement(parser)
+                            skippedChannels++
+                        } else {
+                            // Time window pre-check on attributes before full child parse
+                            val startStr = parser.getAttributeValue(null, "start")
+                            val stopStr = parser.getAttributeValue(null, "stop")
+                            val outsideWindow = if (timeWindowSeconds != null && startStr != null && stopStr != null) {
+                                val startEpoch = parseTimestamp(startStr)
+                                val endEpoch = parseTimestamp(stopStr)
+                                endEpoch < timeWindowSeconds.first || startEpoch > timeWindowSeconds.second
+                            } else false
+
+                            if (outsideWindow) {
+                                skipElement(parser)
+                                skippedTime++
+                            } else {
+                                val programme = parseProgramme(parser)
+                                if (programme != null) {
+                                    programmes.getOrPut(programme.channelId) { mutableListOf() }
+                                        .add(programme)
+                                }
+                            }
                         }
                     }
                 }
@@ -43,7 +92,22 @@ object XmltvParser {
             eventType = parser.next()
         }
 
+        val kept = programmes.values.sumOf { it.size }
+        Log.d(TAG, "Parse complete: kept $kept programmes, skipped $skippedChannels (channel) + $skippedTime (time)")
+
         return XmltvData(channels = channels, programmes = programmes)
+    }
+
+    /** Skip the current element and all its children without allocating strings. */
+    private fun skipElement(parser: XmlPullParser) {
+        var depth = 1
+        while (depth > 0) {
+            when (parser.next()) {
+                XmlPullParser.START_TAG -> depth++
+                XmlPullParser.END_TAG -> depth--
+                XmlPullParser.END_DOCUMENT -> break
+            }
+        }
     }
 
     private fun parseChannel(parser: XmlPullParser): XmltvChannel? {
