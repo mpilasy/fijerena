@@ -61,9 +61,10 @@ class EpgViewModel(
             _uiState.value = UiState.Loading
             currentDate = date
 
-            // Check if provider supports EPG
+            // Check if provider supports EPG (allow if external XMLTV URL is configured)
             val capabilities = repository.getCapabilities()
-            if (capabilities != null && !capabilities.supportsEpg) {
+            val hasExternalEpg = repository.getProviderSettings().epgUrl.isNotBlank()
+            if (capabilities != null && !capabilities.supportsEpg && !hasExternalEpg) {
                 _uiState.value = UiState.Error("EPG is not supported by this provider")
                 return@launch
             }
@@ -80,13 +81,12 @@ class EpgViewModel(
                 return@launch
             }
 
-            // Get EPG for all items
-            val streamIds = items.map { it.id }
-            val epgResult = repository.getEpgBulk(streamIds)
-            val epgData = epgResult?.getOrElse {
+            // Get EPG for all items (uses XMLTV if configured, falls back to provider EPG)
+            val epgResult = repository.getEpgBulkForItems(items)
+            val epgData = epgResult.getOrElse {
                 _uiState.value = UiState.Error("Failed to load EPG data: ${it.message}")
                 return@launch
-            } ?: emptyMap()
+            }
 
             if (epgData.isEmpty()) {
                 _uiState.value = UiState.Error("No EPG data available for these channels")
@@ -116,6 +116,7 @@ class EpgViewModel(
         viewModelScope.launch {
             _isRefreshing.value = true
             repository.clearEpgCache()
+            repository.clearXmltvCache()
             loadEpgData(currentDate)
             _isRefreshing.value = false
         }

@@ -8,6 +8,7 @@ data class M3uEntry(
     val name: String,
     val groupTitle: String,
     val logo: String?,
+    val tvgId: String?,
     val url: String,
     val isLive: Boolean
 )
@@ -30,6 +31,7 @@ object M3uParser {
                 val name = extractName(infoLine)
                 val groupTitle = extractAttribute(infoLine, "group-title") ?: "Uncategorized"
                 val logo = extractAttribute(infoLine, "tvg-logo")
+                val tvgId = extractAttribute(infoLine, "tvg-id")
 
                 // Next non-empty, non-comment line should be the URL
                 i++
@@ -40,7 +42,7 @@ object M3uParser {
                     val url = lines[i].trim()
                     if (url.isNotBlank()) {
                         val isLive = isLiveUrl(url)
-                        entries.add(M3uEntry(name, groupTitle, logo, url, isLive))
+                        entries.add(M3uEntry(name, groupTitle, logo, tvgId, url, isLive))
                     }
                 }
             }
@@ -71,7 +73,10 @@ object M3uParser {
                 mediaType = if (entry.isLive) MediaType.LIVE_CHANNEL else MediaType.VIDEO_FILE,
                 categoryId = category?.id ?: "local_cat_0",
                 thumbnailUrl = entry.logo,
-                streamUri = entry.url
+                streamUri = entry.url,
+                providerData = buildMap {
+                    entry.tvgId?.let { put("epgChannelId", it) }
+                }
             )
         }
     }

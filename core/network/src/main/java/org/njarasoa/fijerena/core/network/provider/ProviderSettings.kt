@@ -24,7 +24,10 @@ data class ProviderSettings(
     val cachingEnabled: Boolean = true,
 
     /** Category filtering rules */
-    val categoryFilters: CategoryFilters = CategoryFilters()
+    val categoryFilters: CategoryFilters = CategoryFilters(),
+
+    /** External XMLTV EPG URL for this provider (empty = use provider's native EPG) */
+    val epgUrl: String = ""
 ) {
     /** Cache expiry time in milliseconds */
     val cacheExpiryMs: Long get() = cacheExpiryHours.toLong() * 60 * 60 * 1000

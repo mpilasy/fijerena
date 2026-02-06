@@ -308,10 +308,11 @@ class CategoryViewModel(
         if (contentType != "LIVE_TV") return
         viewModelScope.launch {
             val caps = repository.getCapabilities()
-            if (caps?.supportsEpg != true) return@launch
-            val epgData = repository.getEpgBulk(
-                items.take(50).map { it.id }
-            )?.getOrNull() ?: return@launch
+            val hasExternalEpg = repository.getProviderSettings().epgUrl.isNotBlank()
+            if (caps?.supportsEpg != true && !hasExternalEpg) return@launch
+            val epgData = repository.getEpgBulkForItems(
+                items.take(50)
+            ).getOrNull() ?: return@launch
             val now = System.currentTimeMillis() / 1000
             _nowPlaying.value = epgData.mapValues { (_, resp) ->
                 resp.listings.firstOrNull { now in it.startTime..it.endTime }

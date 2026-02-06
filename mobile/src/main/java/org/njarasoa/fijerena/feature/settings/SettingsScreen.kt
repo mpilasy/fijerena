@@ -112,6 +112,10 @@ fun MobileSettingsScreen(
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
 
+    var epgUrl by remember(providerSettings) { mutableStateOf(providerSettings.epgUrl) }
+    var isEditingEpgUrl by remember { mutableStateOf(false) }
+    var newEpgUrl by remember { mutableStateOf("") }
+
     var isEditingQueueSize by remember { mutableStateOf(false) }
     var isEditingFavoritesSize by remember { mutableStateOf(false) }
 
@@ -414,6 +418,103 @@ fun MobileSettingsScreen(
                     }
                     OutlinedButton(onClick = { showCategoryFilterDialog = true }) {
                         Text("Edit")
+                    }
+                }
+            }
+
+            // === External EPG Source ===
+            SettingsSection(title = "External EPG Source (XMLTV)") {
+                Text(
+                    text = "Provide an XMLTV URL for TV Guide data (overrides provider EPG)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (!isEditingEpgUrl) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (epgUrl.isBlank()) "Not configured" else epgUrl,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (epgUrl.isBlank())
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 2
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedButton(onClick = {
+                            isEditingEpgUrl = true
+                            newEpgUrl = epgUrl
+                        }) {
+                            Text("Edit")
+                        }
+                    }
+                    if (epgUrl.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                epgUrl = ""
+                                activeProviderId?.let { id ->
+                                    coroutineScope.launch {
+                                        val newSettings = providerSettings.copy(epgUrl = "")
+                                        providerRepo.updateProviderSettings(id, newSettings)
+                                        providerSettings = newSettings
+                                        syncManager.syncProviderSettings(id)
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = CinemaError
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Clear EPG URL")
+                        }
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = newEpgUrl,
+                        onValueChange = { newEpgUrl = it },
+                        label = { Text("XMLTV URL") },
+                        placeholder = { Text("https://epg.example.com/guide.xml.gz") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                    ) {
+                        OutlinedButton(onClick = {
+                            isEditingEpgUrl = false
+                            newEpgUrl = ""
+                        }) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                val url = newEpgUrl.trim()
+                                epgUrl = url
+                                isEditingEpgUrl = false
+                                newEpgUrl = ""
+                                activeProviderId?.let { id ->
+                                    coroutineScope.launch {
+                                        val newSettings = providerSettings.copy(epgUrl = url)
+                                        providerRepo.updateProviderSettings(id, newSettings)
+                                        providerSettings = newSettings
+                                        syncManager.syncProviderSettings(id)
+                                    }
+                                }
+                            },
+                            enabled = newEpgUrl.isNotBlank()
+                        ) {
+                            Text("Save")
+                        }
                     }
                 }
             }

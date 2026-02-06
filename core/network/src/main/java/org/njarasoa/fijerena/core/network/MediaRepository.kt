@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.player.domain.PlayableStream
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import java.util.concurrent.ConcurrentHashMap
 
 @Serializable
@@ -54,6 +55,10 @@ class MediaRepository(
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+    }
+
+    private val xmltvEpgService: XmltvEpgService by lazy {
+        XmltvEpgService(context, providerId)
     }
 
     private val payloadSizes = ConcurrentHashMap<String, Long>()
@@ -170,6 +175,28 @@ class MediaRepository(
 
     suspend fun clearEpgCache() {
         provider?.clearEpgCache()
+    }
+
+    suspend fun getEpgBulkForItems(items: List<MediaItem>): kotlin.Result<Map<String, EpgResponse>> {
+        val epgUrl = providerSettings.epgUrl
+        if (epgUrl.isNotBlank()) {
+            try {
+                val xmltvResult = xmltvEpgService.getEpgForChannels(items, epgUrl)
+                if (xmltvResult.isNotEmpty()) {
+                    return kotlin.Result.success(xmltvResult)
+                }
+            } catch (_: Exception) {
+                // Fall through to provider EPG
+            }
+        }
+        // Fallback to provider's native EPG
+        val streamIds = items.map { it.id }
+        return provider?.getEpgBulk(streamIds)
+            ?: kotlin.Result.success(emptyMap())
+    }
+
+    fun clearXmltvCache() {
+        xmltvEpgService.clearCache()
     }
 
     // --- Progress sync hook ---
