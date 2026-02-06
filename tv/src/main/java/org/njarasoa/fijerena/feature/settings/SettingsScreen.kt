@@ -2,6 +2,8 @@
 
 package org.njarasoa.fijerena.feature.settings
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +19,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextField
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -97,12 +101,20 @@ fun SettingsScreen(
     val syncStatus by syncManager.syncStatus.collectAsState()
     val signedInEmail by syncManager.signedInEmail.collectAsState()
 
+    // Sign-in error state
+    var signInError by remember { mutableStateOf<String?>(null) }
+
     // Google Sign-In launcher
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         coroutineScope.launch {
-            syncManager.handleSignInResult(result.data)
+            val success = syncManager.handleSignInResult(result.data)
+            if (!success) {
+                signInError = "Sign-in failed. Check Google Play Services."
+            } else {
+                signInError = null
+            }
         }
     }
 
@@ -149,19 +161,8 @@ fun SettingsScreen(
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showClearProgressDialog by remember { mutableStateOf(false) }
     var showCategoryFilterDialog by remember { mutableStateOf(false) }
-    var showClearCacheDialog by remember { mutableStateOf(false) }
-    var showClearLiveTvCacheDialog by remember { mutableStateOf(false) }
-    var showClearMoviesCacheDialog by remember { mutableStateOf(false) }
-    var showClearTvShowsCacheDialog by remember { mutableStateOf(false) }
-    var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
-    var cacheRefreshTrigger by remember { mutableStateOf(0) }
     var uiScale by remember { mutableStateOf(appSettings.uiScale) }
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
-
-    // Load cache stats
-    LaunchedEffect(cacheRefreshTrigger) {
-        cacheStats = repository.getCacheStats()
-    }
 
     androidx.compose.runtime.CompositionLocalProvider(LocalUiScale provides uiScale) {
     val scale = LocalUiScale.current
@@ -260,32 +261,42 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
                     val selectedThemeFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRestorer { selectedThemeFocusRequester },
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                     ) {
-                        AllPalettes.forEach { palette ->
-                            val isSelected = selectedThemeId == palette.id
-                            if (isSelected) {
-                                CinemaPrimaryButton(
-                                    onClick = { },
-                                    text = palette.displayName,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .focusRequester(selectedThemeFocusRequester)
-                                )
-                            } else {
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        selectedThemeId = palette.id
-                                        appSettings.themeId = palette.id
-                                        onThemeChanged(palette.id)
-                                    },
-                                    text = palette.displayName,
-                                    modifier = Modifier.weight(1f)
-                                )
+                        AllPalettes.chunked(2).forEachIndexed { rowIndex, rowPalettes ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                            ) {
+                                rowPalettes.forEach { palette ->
+                                    val isSelected = selectedThemeId == palette.id
+                                    if (isSelected) {
+                                        CinemaPrimaryButton(
+                                            onClick = { },
+                                            text = palette.displayName,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .then(
+                                                    if (rowIndex == 0) Modifier.focusRequester(selectedThemeFocusRequester)
+                                                    else Modifier
+                                                )
+                                        )
+                                    } else {
+                                        CinemaSecondaryButton(
+                                            onClick = {
+                                                selectedThemeId = palette.id
+                                                appSettings.themeId = palette.id
+                                                onThemeChanged(palette.id)
+                                            },
+                                            text = palette.displayName,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -666,193 +677,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Cache Management
-            item {
-                Column {
-                    Text(
-                        text = "Cache Management",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-                    Text(
-                        text = "Clear cached data to free up storage space",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                        ),
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-                    // Cache stats
-                    cacheStats?.let { stats ->
-                        // Total cache size
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Total Cache Size",
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
-                                    ),
-                                    color = CinemaTextPrimary
-                                )
-                                Text(
-                                    text = formatBytes(stats.totalSize),
-                                    style = MaterialTheme.typography.headlineSmall.copy(
-                                        fontSize = MaterialTheme.typography.headlineSmall.fontSize.scaled(scale)
-                                    ),
-                                    color = CinemaAccent
-                                )
-                            }
-                            CinemaDangerButton(
-                                onClick = { showClearCacheDialog = true },
-                                text = "Clear All"
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-                        HorizontalDivider(color = CinemaTextSecondary.copy(alpha = CinemaAlpha.focusedTint))
-                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-                        // Live TV Cache
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Live TV",
-                                    style = MaterialTheme.typography.titleSmall.copy(
-                                        fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
-                                    ),
-                                    color = CinemaTextPrimary
-                                )
-                                Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-                                Text(
-                                    text = formatBytes(stats.liveTv.size),
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                                    ),
-                                    color = CinemaAccent
-                                )
-                                Text(
-                                    text = "${if (stats.liveTv.categoryCached) "1 category" else "No categories"}, ${stats.liveTv.streamListsCount} stream lists",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                                )
-                            }
-                            CinemaSecondaryButton(
-                                onClick = { showClearLiveTvCacheDialog = true },
-                                text = "Clear",
-                                enabled = stats.liveTv.size > 0
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-                        // Movies Cache
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Movies",
-                                    style = MaterialTheme.typography.titleSmall.copy(
-                                        fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
-                                    ),
-                                    color = CinemaTextPrimary
-                                )
-                                Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-                                Text(
-                                    text = formatBytes(stats.movies.size),
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                                    ),
-                                    color = CinemaAccent
-                                )
-                                Text(
-                                    text = "${if (stats.movies.categoryCached) "1 category" else "No categories"}, ${stats.movies.streamListsCount} stream lists",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                                )
-                            }
-                            CinemaSecondaryButton(
-                                onClick = { showClearMoviesCacheDialog = true },
-                                text = "Clear",
-                                enabled = stats.movies.size > 0
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-                        // TV Shows Cache
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "TV Shows",
-                                    style = MaterialTheme.typography.titleSmall.copy(
-                                        fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
-                                    ),
-                                    color = CinemaTextPrimary
-                                )
-                                Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-                                Text(
-                                    text = formatBytes(stats.tvShows.size),
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                                    ),
-                                    color = CinemaAccent
-                                )
-                                Text(
-                                    text = "${if (stats.tvShows.categoryCached) "1 category" else "No categories"}, ${stats.tvShows.streamListsCount} stream lists",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                                )
-                            }
-                            CinemaSecondaryButton(
-                                onClick = { showClearTvShowsCacheDialog = true },
-                                text = "Clear",
-                                enabled = stats.tvShows.size > 0
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-                        // EPG & Other
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column {
-                                Text(
-                                    text = "EPG Data: ${stats.epgCount} channels",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                                )
-                                Text(
-                                    text = "Other: ${formatBytes(stats.otherSize)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
             // UI Scale
             item {
                 Column {
@@ -874,27 +698,34 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
                     // Scale options as buttons
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                     ) {
-                        listOf(0.7f to "70%", 0.8f to "80%", 0.9f to "90%", 1.0f to "100%").forEach { (scale, label) ->
-                            val isSelected = uiScale == scale
-                            if (isSelected) {
-                                CinemaPrimaryButton(
-                                    onClick = { },
-                                    text = label,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            } else {
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        uiScale = scale
-                                        appSettings.uiScale = scale
-                                    },
-                                    text = label,
-                                    modifier = Modifier.weight(1f)
-                                )
+                        listOf(0.7f to "70%", 0.8f to "80%", 0.9f to "90%", 1.0f to "100%").chunked(2).forEach { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                            ) {
+                                rowItems.forEach { (scaleValue, label) ->
+                                    val isSelected = uiScale == scaleValue
+                                    if (isSelected) {
+                                        CinemaPrimaryButton(
+                                            onClick = { },
+                                            text = label,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    } else {
+                                        CinemaSecondaryButton(
+                                            onClick = {
+                                                uiScale = scaleValue
+                                                appSettings.uiScale = scaleValue
+                                            },
+                                            text = label,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -992,8 +823,8 @@ fun SettingsScreen(
                                 },
                                 text = "Sync Now"
                             )
-                            Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                            CinemaSecondaryButton(
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                            CinemaDangerButton(
                                 onClick = {
                                     coroutineScope.launch { syncManager.signOut() }
                                 },
@@ -1004,10 +835,21 @@ fun SettingsScreen(
                         // Not signed in: show sign-in button
                         CinemaPrimaryButton(
                             onClick = {
+                                signInError = null
                                 signInLauncher.launch(syncManager.getSignInIntent())
                             },
                             text = "Sign in with Google"
                         )
+                        if (signInError != null) {
+                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                            Text(
+                                text = signInError ?: "",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                ),
+                                color = CinemaError
+                            )
+                        }
                     }
                 }
             }
@@ -1107,194 +949,6 @@ fun SettingsScreen(
         )
     }
 
-    // Clear All Cache Confirmation Dialog
-    if (showClearCacheDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearCacheDialog = false },
-            title = {
-                Text(
-                    "Clear All Cache?",
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    "This will remove all cached data (Live TV, Movies, TV Shows, EPG). The app will need to re-download data from the server. This action cannot be undone.",
-                    color = CinemaTextSecondary
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        repository.clearCache()
-                        cacheRefreshTrigger++
-                        showClearCacheDialog = false
-                    },
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaError,
-                        contentColor = androidx.compose.ui.graphics.Color.White
-                    )
-                ) {
-                    Text("Clear All")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showClearCacheDialog = false },
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary
-                    )
-                ) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = CinemaSurface,
-            tonalElevation = 6.dp.scaled(scale)
-        )
-    }
-
-    // Clear Live TV Cache Dialog
-    if (showClearLiveTvCacheDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearLiveTvCacheDialog = false },
-            title = {
-                Text(
-                    "Clear Live TV Cache?",
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    "This will remove all cached Live TV data (categories and streams). This action cannot be undone.",
-                    color = CinemaTextSecondary
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        repository.clearCacheForContentType("LIVE_TV")
-                        cacheRefreshTrigger++
-                        showClearLiveTvCacheDialog = false
-                    },
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaError,
-                        contentColor = androidx.compose.ui.graphics.Color.White
-                    )
-                ) {
-                    Text("Clear")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showClearLiveTvCacheDialog = false },
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary
-                    )
-                ) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = CinemaSurface,
-            tonalElevation = 6.dp.scaled(scale)
-        )
-    }
-
-    // Clear Movies Cache Dialog
-    if (showClearMoviesCacheDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearMoviesCacheDialog = false },
-            title = {
-                Text(
-                    "Clear Movies Cache?",
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    "This will remove all cached Movies data (categories and streams). This action cannot be undone.",
-                    color = CinemaTextSecondary
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        repository.clearCacheForContentType("MOVIES")
-                        cacheRefreshTrigger++
-                        showClearMoviesCacheDialog = false
-                    },
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaError,
-                        contentColor = androidx.compose.ui.graphics.Color.White
-                    )
-                ) {
-                    Text("Clear")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showClearMoviesCacheDialog = false },
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary
-                    )
-                ) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = CinemaSurface,
-            tonalElevation = 6.dp.scaled(scale)
-        )
-    }
-
-    // Clear TV Shows Cache Dialog
-    if (showClearTvShowsCacheDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearTvShowsCacheDialog = false },
-            title = {
-                Text(
-                    "Clear TV Shows Cache?",
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    "This will remove all cached TV Shows data (categories and streams). This action cannot be undone.",
-                    color = CinemaTextSecondary
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        repository.clearCacheForContentType("TV_SHOWS")
-                        cacheRefreshTrigger++
-                        showClearTvShowsCacheDialog = false
-                    },
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaError,
-                        contentColor = androidx.compose.ui.graphics.Color.White
-                    )
-                ) {
-                    Text("Clear")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showClearTvShowsCacheDialog = false },
-                    colors = ButtonDefaults.colors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary
-                    )
-                ) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = CinemaSurface,
-            tonalElevation = 6.dp.scaled(scale)
-        )
-    }
-
     // Category Filter Dialog
     if (showCategoryFilterDialog) {
         var filterMode by remember { mutableStateOf(categoryFilters.mode) }
@@ -1311,6 +965,7 @@ fun SettingsScreen(
             },
             text = {
                 Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
                 ) {
                     Text(
@@ -1353,13 +1008,27 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.titleSmall,
                         color = CinemaTextPrimary
                     )
-                    TextField(
+                    OutlinedTextField(
                         value = prefixesText,
                         onValueChange = { prefixesText = it },
+                        label = { Text("Prefixes (comma-separated)") },
                         placeholder = { Text("e.g., XXX, Adult, 18+") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = false,
-                        maxLines = 3
+                        maxLines = 3,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = CinemaSurface,
+                            unfocusedContainerColor = CinemaSurface,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaSurfaceVariant,
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            focusedLabelColor = CinemaAccent,
+                            unfocusedLabelColor = CinemaTextSecondary,
+                            focusedPlaceholderColor = CinemaTextSecondary,
+                            unfocusedPlaceholderColor = CinemaTextSecondary,
+                            cursorColor = CinemaAccent
+                        )
                     )
                     Text(
                         "Examples: \"XXX\", \"Adult\", \"FR|\", \"EN|\"",
@@ -1377,26 +1046,30 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = CinemaTextSecondary
                     )
-                    ScriptType.entries.forEach { script ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = script in selectedScripts,
-                                onCheckedChange = { checked ->
-                                    selectedScripts = if (checked) {
-                                        selectedScripts + script
-                                    } else {
-                                        selectedScripts - script
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+                    ) {
+                        ScriptType.entries.forEach { script ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = script in selectedScripts,
+                                    onCheckedChange = { checked ->
+                                        selectedScripts = if (checked) {
+                                            selectedScripts + script
+                                        } else {
+                                            selectedScripts - script
+                                        }
                                     }
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                            Text(
-                                text = script.displayName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary
-                            )
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                                Text(
+                                    text = script.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = CinemaTextPrimary
+                                )
+                            }
                         }
                     }
                 }
@@ -1450,14 +1123,3 @@ fun SettingsScreen(
     } // End CompositionLocalProvider
 }
 
-/**
- * Format bytes to human-readable string (KB/MB/GB)
- */
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes < 1024 -> "$bytes B"
-        bytes < 1024 * 1024 -> String.format("%.2f KB", bytes / 1024.0)
-        bytes < 1024 * 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
-        else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
-    }
-}

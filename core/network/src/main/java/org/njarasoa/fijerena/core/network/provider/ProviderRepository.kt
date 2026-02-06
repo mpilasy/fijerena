@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.XtreamRepository
 
 /**
  * Manages provider CRUD and per-provider encrypted password storage.
@@ -155,6 +156,22 @@ class ProviderRepository(private val context: Context) {
         } catch (_: Exception) {
             ProviderSettings.DEFAULT
         }
+    }
+
+    // --- Cache management ---
+
+    fun getCacheStatsForProvider(providerId: Long): XtreamRepository.CacheStats {
+        val cache = context.getSharedPreferences("xtream_cache_$providerId", Context.MODE_PRIVATE)
+        return XtreamRepository.computeCacheStats(cache)
+    }
+
+    fun clearAllCacheForProvider(providerId: Long) {
+        clearProviderCache(providerId)
+    }
+
+    fun clearCacheForProviderContentType(providerId: Long, contentType: String) {
+        val cache = context.getSharedPreferences("xtream_cache_$providerId", Context.MODE_PRIVATE)
+        XtreamRepository.clearCacheForContentTypeStatic(cache, contentType)
     }
 
     // --- Private helpers ---

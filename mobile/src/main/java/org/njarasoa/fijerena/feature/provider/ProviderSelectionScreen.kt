@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
@@ -164,7 +165,9 @@ private fun MobileProviderList(
                         Text(
                             text = provider.name,
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         if (provider.isActive) {
                             Text(
@@ -177,12 +180,16 @@ private fun MobileProviderList(
                     Text(
                         text = provider.url,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = provider.username,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(

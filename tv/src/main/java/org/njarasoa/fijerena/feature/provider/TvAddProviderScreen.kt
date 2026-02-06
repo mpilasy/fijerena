@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -26,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +43,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -75,10 +80,24 @@ fun TvAddProviderScreen(
     val saveState by viewModel.saveState.collectAsState()
     val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
 
+    // Cache management state (edit mode only)
+    val providerRepo = remember { ProviderRepository(context.applicationContext) }
+    var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
+    var cacheRefreshTrigger by remember { mutableIntStateOf(0) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
+    var showClearLiveTvCacheDialog by remember { mutableStateOf(false) }
+    var showClearMoviesCacheDialog by remember { mutableStateOf(false) }
+    var showClearTvShowsCacheDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(editId, cacheRefreshTrigger) {
+        if (isEditMode) {
+            cacheStats = providerRepo.getCacheStatsForProvider(editId)
+        }
+    }
+
     // Load existing provider data in edit mode directly from the repository
     LaunchedEffect(editId) {
         if (isEditMode) {
-            val providerRepo = ProviderRepository(context.applicationContext)
             val provider = providerRepo.getProviderById(editId)
             if (provider != null) {
                 name = provider.name
@@ -487,6 +506,162 @@ fun TvAddProviderScreen(
                     }
                 }
 
+                // Cache Management (edit mode only)
+                if (isEditMode) {
+                    Spacer(modifier = Modifier.height(Spacing.xl))
+
+                    Text(
+                        text = "Cache Management",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = CinemaAccent
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xxs))
+                    Text(
+                        text = "Clear cached data to free up storage space",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.md))
+
+                    cacheStats?.let { stats ->
+                        // Total cache size
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Total Cache Size",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = CinemaTextPrimary
+                                )
+                                Text(
+                                    text = formatBytes(stats.totalSize),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = CinemaAccent
+                                )
+                            }
+                            CinemaDangerButton(
+                                onClick = { showClearCacheDialog = true },
+                                text = "Clear All"
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.lg))
+                        HorizontalDivider(color = CinemaTextSecondary.copy(alpha = CinemaAlpha.focusedTint))
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // Live TV Cache
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Live TV",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = CinemaTextPrimary
+                                )
+                                Text(
+                                    text = formatBytes(stats.liveTv.size),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = CinemaAccent
+                                )
+                                Text(
+                                    text = "${if (stats.liveTv.categoryCached) "1 category" else "No categories"}, ${stats.liveTv.streamListsCount} stream lists",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                                )
+                            }
+                            CinemaSecondaryButton(
+                                onClick = { showClearLiveTvCacheDialog = true },
+                                text = "Clear",
+                                enabled = stats.liveTv.size > 0
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // Movies Cache
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Movies",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = CinemaTextPrimary
+                                )
+                                Text(
+                                    text = formatBytes(stats.movies.size),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = CinemaAccent
+                                )
+                                Text(
+                                    text = "${if (stats.movies.categoryCached) "1 category" else "No categories"}, ${stats.movies.streamListsCount} stream lists",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                                )
+                            }
+                            CinemaSecondaryButton(
+                                onClick = { showClearMoviesCacheDialog = true },
+                                text = "Clear",
+                                enabled = stats.movies.size > 0
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // TV Shows Cache
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "TV Shows",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = CinemaTextPrimary
+                                )
+                                Text(
+                                    text = formatBytes(stats.tvShows.size),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = CinemaAccent
+                                )
+                                Text(
+                                    text = "${if (stats.tvShows.categoryCached) "1 category" else "No categories"}, ${stats.tvShows.streamListsCount} stream lists",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                                )
+                            }
+                            CinemaSecondaryButton(
+                                onClick = { showClearTvShowsCacheDialog = true },
+                                text = "Clear",
+                                enabled = stats.tvShows.size > 0
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        // EPG & Other
+                        Text(
+                            text = "EPG Data: ${stats.epgCount} channels",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                        )
+                        Text(
+                            text = "Other: ${formatBytes(stats.otherSize)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                        )
+                    }
+                }
+
                 // Error message
                 error?.let { errorMsg ->
                     Spacer(modifier = Modifier.height(Spacing.md))
@@ -619,7 +794,117 @@ fun TvAddProviderScreen(
                         containerColor = CinemaSurface
                     )
                 }
+
+                // Cache confirmation dialogs
+                if (showClearCacheDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showClearCacheDialog = false },
+                        title = { Text("Clear All Cache?", color = CinemaTextPrimary) },
+                        text = { Text("This will remove all cached data (Live TV, Movies, TV Shows, EPG). The app will need to re-download data from the server.", color = CinemaTextSecondary) },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    providerRepo.clearAllCacheForProvider(editId)
+                                    cacheRefreshTrigger++
+                                    showClearCacheDialog = false
+                                },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaError, contentColor = androidx.compose.ui.graphics.Color.White)
+                            ) { Text("Clear All") }
+                        },
+                        dismissButton = {
+                            Button(
+                                onClick = { showClearCacheDialog = false },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant, contentColor = CinemaTextPrimary)
+                            ) { Text("Cancel") }
+                        },
+                        containerColor = CinemaSurface
+                    )
+                }
+
+                if (showClearLiveTvCacheDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showClearLiveTvCacheDialog = false },
+                        title = { Text("Clear Live TV Cache?", color = CinemaTextPrimary) },
+                        text = { Text("This will remove all cached Live TV data (categories and streams).", color = CinemaTextSecondary) },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    providerRepo.clearCacheForProviderContentType(editId, "LIVE_TV")
+                                    cacheRefreshTrigger++
+                                    showClearLiveTvCacheDialog = false
+                                },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaError, contentColor = androidx.compose.ui.graphics.Color.White)
+                            ) { Text("Clear") }
+                        },
+                        dismissButton = {
+                            Button(
+                                onClick = { showClearLiveTvCacheDialog = false },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant, contentColor = CinemaTextPrimary)
+                            ) { Text("Cancel") }
+                        },
+                        containerColor = CinemaSurface
+                    )
+                }
+
+                if (showClearMoviesCacheDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showClearMoviesCacheDialog = false },
+                        title = { Text("Clear Movies Cache?", color = CinemaTextPrimary) },
+                        text = { Text("This will remove all cached Movies data (categories and streams).", color = CinemaTextSecondary) },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    providerRepo.clearCacheForProviderContentType(editId, "MOVIES")
+                                    cacheRefreshTrigger++
+                                    showClearMoviesCacheDialog = false
+                                },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaError, contentColor = androidx.compose.ui.graphics.Color.White)
+                            ) { Text("Clear") }
+                        },
+                        dismissButton = {
+                            Button(
+                                onClick = { showClearMoviesCacheDialog = false },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant, contentColor = CinemaTextPrimary)
+                            ) { Text("Cancel") }
+                        },
+                        containerColor = CinemaSurface
+                    )
+                }
+
+                if (showClearTvShowsCacheDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showClearTvShowsCacheDialog = false },
+                        title = { Text("Clear TV Shows Cache?", color = CinemaTextPrimary) },
+                        text = { Text("This will remove all cached TV Shows data (categories and streams).", color = CinemaTextSecondary) },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    providerRepo.clearCacheForProviderContentType(editId, "TV_SHOWS")
+                                    cacheRefreshTrigger++
+                                    showClearTvShowsCacheDialog = false
+                                },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaError, contentColor = androidx.compose.ui.graphics.Color.White)
+                            ) { Text("Clear") }
+                        },
+                        dismissButton = {
+                            Button(
+                                onClick = { showClearTvShowsCacheDialog = false },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant, contentColor = CinemaTextPrimary)
+                            ) { Text("Cancel") }
+                        },
+                        containerColor = CinemaSurface
+                    )
+                }
             }
         }
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> String.format("%.2f KB", bytes / 1024.0)
+        bytes < 1024 * 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
+        else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
     }
 }

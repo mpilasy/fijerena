@@ -55,12 +55,20 @@ fun MobileSettingsScreen(
     val syncStatus by syncManager.syncStatus.collectAsState()
     val signedInEmail by syncManager.signedInEmail.collectAsState()
 
+    // Sign-in error state
+    var signInError by remember { mutableStateOf<String?>(null) }
+
     // Google Sign-In launcher
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         coroutineScope.launch {
-            syncManager.handleSignInResult(result.data)
+            val success = syncManager.handleSignInResult(result.data)
+            if (!success) {
+                signInError = "Sign-in failed. Check Google Play Services."
+            } else {
+                signInError = null
+            }
         }
     }
 
@@ -109,19 +117,6 @@ fun MobileSettingsScreen(
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showClearProgressDialog by remember { mutableStateOf(false) }
     var showCategoryFilterDialog by remember { mutableStateOf(false) }
-    var showClearCacheDialog by remember { mutableStateOf(false) }
-    var showClearLiveTvCacheDialog by remember { mutableStateOf(false) }
-    var showClearMoviesCacheDialog by remember { mutableStateOf(false) }
-    var showClearTvShowsCacheDialog by remember { mutableStateOf(false) }
-
-    // Cache stats
-    var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
-    var cacheRefreshTrigger by remember { mutableStateOf(0) }
-
-    LaunchedEffect(cacheRefreshTrigger) {
-        cacheStats = repository.getCacheStats()
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -170,29 +165,33 @@ fun MobileSettingsScreen(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AllPalettes.forEach { palette ->
-                        val isSelected = selectedThemeId == palette.id
-                        if (isSelected) {
-                            Button(
-                                onClick = { },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(palette.displayName, maxLines = 1)
-                            }
-                        } else {
-                            OutlinedButton(
-                                onClick = {
-                                    selectedThemeId = palette.id
-                                    appSettings.themeId = palette.id
-                                    onThemeChanged(palette.id)
-                                },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(palette.displayName, maxLines = 1)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AllPalettes.chunked(2).forEach { rowPalettes ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowPalettes.forEach { palette ->
+                                val isSelected = selectedThemeId == palette.id
+                                if (isSelected) {
+                                    Button(
+                                        onClick = { },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(palette.displayName, maxLines = 1)
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = {
+                                            selectedThemeId = palette.id
+                                            appSettings.themeId = palette.id
+                                            onThemeChanged(palette.id)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(palette.displayName, maxLines = 1)
+                                    }
+                                }
                             }
                         }
                     }
@@ -487,96 +486,6 @@ fun MobileSettingsScreen(
                 }
             }
 
-            // === Cache Management ===
-            SettingsSection(title = "Cache Management") {
-                Text(
-                    text = "Clear cached data to free up storage space",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                cacheStats?.let { stats ->
-                    // Total cache
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Total Cache Size",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = formatBytes(stats.totalSize),
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Button(
-                            onClick = { showClearCacheDialog = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = CinemaError
-                            )
-                        ) {
-                            Text("Clear All")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.divider)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Live TV
-                    CacheRow(
-                        label = "Live TV",
-                        size = formatBytes(stats.liveTv.size),
-                        detail = "${if (stats.liveTv.categoryCached) "1 category" else "No categories"}, ${stats.liveTv.streamListsCount} stream lists",
-                        onClear = { showClearLiveTvCacheDialog = true },
-                        clearEnabled = stats.liveTv.size > 0
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Movies
-                    CacheRow(
-                        label = "Movies",
-                        size = formatBytes(stats.movies.size),
-                        detail = "${if (stats.movies.categoryCached) "1 category" else "No categories"}, ${stats.movies.streamListsCount} stream lists",
-                        onClear = { showClearMoviesCacheDialog = true },
-                        clearEnabled = stats.movies.size > 0
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // TV Shows
-                    CacheRow(
-                        label = "TV Shows",
-                        size = formatBytes(stats.tvShows.size),
-                        detail = "${if (stats.tvShows.categoryCached) "1 category" else "No categories"}, ${stats.tvShows.streamListsCount} stream lists",
-                        onClear = { showClearTvShowsCacheDialog = true },
-                        clearEnabled = stats.tvShows.size > 0
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // EPG & Other
-                    Text(
-                        text = "EPG Data: ${stats.epgCount} channels",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                    )
-                    Text(
-                        text = "Other: ${formatBytes(stats.otherSize)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                    )
-                }
-            }
-
             // === Developer Mode ===
             SettingsSection(title = "Developer Mode") {
                 Row(
@@ -640,17 +549,13 @@ fun MobileSettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(
-                            onClick = {
-                                coroutineScope.launch { syncManager.syncNow() }
-                            },
+                            onClick = { coroutineScope.launch { syncManager.syncNow() } },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Sync Now")
                         }
                         OutlinedButton(
-                            onClick = {
-                                coroutineScope.launch { syncManager.signOut() }
-                            },
+                            onClick = { coroutineScope.launch { syncManager.signOut() } },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Sign Out")
@@ -660,11 +565,20 @@ fun MobileSettingsScreen(
                     // Not signed in: show sign-in button
                     Button(
                         onClick = {
+                            signInError = null
                             signInLauncher.launch(syncManager.getSignInIntent())
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Sign in with Google")
+                    }
+                    if (signInError != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = signInError ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CinemaError
+                        )
                     }
                 }
             }
@@ -698,62 +612,6 @@ fun MobileSettingsScreen(
                 showClearProgressDialog = false
             },
             onDismiss = { showClearProgressDialog = false }
-        )
-    }
-
-    // Clear All Cache Dialog
-    if (showClearCacheDialog) {
-        ConfirmationDialog(
-            title = "Clear All Cache?",
-            message = "This will remove all cached data (Live TV, Movies, TV Shows, EPG). The app will need to re-download data from the server.",
-            onConfirm = {
-                repository.clearCache()
-                cacheRefreshTrigger++
-                showClearCacheDialog = false
-            },
-            onDismiss = { showClearCacheDialog = false }
-        )
-    }
-
-    // Clear Live TV Cache Dialog
-    if (showClearLiveTvCacheDialog) {
-        ConfirmationDialog(
-            title = "Clear Live TV Cache?",
-            message = "This will remove all cached Live TV data (categories and streams).",
-            onConfirm = {
-                repository.clearCacheForContentType("LIVE_TV")
-                cacheRefreshTrigger++
-                showClearLiveTvCacheDialog = false
-            },
-            onDismiss = { showClearLiveTvCacheDialog = false }
-        )
-    }
-
-    // Clear Movies Cache Dialog
-    if (showClearMoviesCacheDialog) {
-        ConfirmationDialog(
-            title = "Clear Movies Cache?",
-            message = "This will remove all cached Movies data (categories and streams).",
-            onConfirm = {
-                repository.clearCacheForContentType("MOVIES")
-                cacheRefreshTrigger++
-                showClearMoviesCacheDialog = false
-            },
-            onDismiss = { showClearMoviesCacheDialog = false }
-        )
-    }
-
-    // Clear TV Shows Cache Dialog
-    if (showClearTvShowsCacheDialog) {
-        ConfirmationDialog(
-            title = "Clear TV Shows Cache?",
-            message = "This will remove all cached TV Shows data (categories and streams).",
-            onConfirm = {
-                repository.clearCacheForContentType("TV_SHOWS")
-                cacheRefreshTrigger++
-                showClearTvShowsCacheDialog = false
-            },
-            onDismiss = { showClearTvShowsCacheDialog = false }
         )
     }
 
@@ -804,44 +662,6 @@ private fun SettingsSection(
 }
 
 @Composable
-private fun CacheRow(
-    label: String,
-    size: String,
-    detail: String,
-    onClear: () -> Unit,
-    clearEnabled: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = size,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = detail,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-            )
-        }
-        OutlinedButton(
-            onClick = onClear,
-            enabled = clearEnabled
-        ) {
-            Text("Clear")
-        }
-    }
-}
-
-@Composable
 private fun ConfirmationDialog(
     title: String,
     message: String,
@@ -884,7 +704,10 @@ private fun CategoryFilterDialog(
         onDismissRequest = onDismiss,
         title = { Text("Category Filters") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 Text(
                     text = "Filter mode:",
                     style = MaterialTheme.typography.bodyMedium
@@ -977,11 +800,3 @@ private fun CategoryFilterDialog(
     )
 }
 
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes < 1024 -> "$bytes B"
-        bytes < 1024 * 1024 -> String.format("%.2f KB", bytes / 1024.0)
-        bytes < 1024 * 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
-        else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
-    }
-}

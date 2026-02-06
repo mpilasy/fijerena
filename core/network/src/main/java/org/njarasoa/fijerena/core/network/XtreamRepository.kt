@@ -110,6 +110,126 @@ class XtreamRepository(
         private const val KEY_EPG_PREFIX = "epg_"
         private const val KEY_EPG_TIMESTAMP_PREFIX = "epg_timestamp_"
         private const val EPG_CACHE_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
+
+        private fun computeCacheSize(cache: SharedPreferences): Long {
+            var totalSize = 0L
+            cache.all.forEach { (_, value) ->
+                when (value) {
+                    is String -> totalSize += value.toByteArray(Charsets.UTF_8).size
+                    is Long -> totalSize += 8
+                    is Int -> totalSize += 4
+                    is Boolean -> totalSize += 1
+                }
+            }
+            return totalSize
+        }
+
+        fun computeCacheStats(cache: SharedPreferences): CacheStats {
+            var liveTvSize = 0L
+            var moviesSize = 0L
+            var tvShowsSize = 0L
+            var otherSize = 0L
+
+            var liveTvCategoryCached = false
+            var moviesCategoryCached = false
+            var tvShowsCategoryCached = false
+
+            var liveTvStreamsCount = 0
+            var moviesStreamsCount = 0
+            var tvShowsStreamsCount = 0
+            var epgCount = 0
+
+            cache.all.forEach { (key, value) ->
+                val valueSize = when (value) {
+                    is String -> value.toByteArray(Charsets.UTF_8).size.toLong()
+                    is Long -> 8L
+                    is Int -> 4L
+                    is Boolean -> 1L
+                    else -> 0L
+                }
+
+                when {
+                    key == KEY_CATEGORIES || key == KEY_CATEGORIES_TIMESTAMP -> {
+                        liveTvSize += valueSize
+                        if (key == KEY_CATEGORIES) liveTvCategoryCached = true
+                    }
+                    key == KEY_VOD_CATEGORIES || key == KEY_VOD_CATEGORIES_TIMESTAMP -> {
+                        moviesSize += valueSize
+                        if (key == KEY_VOD_CATEGORIES) moviesCategoryCached = true
+                    }
+                    key == KEY_SERIES_CATEGORIES || key == KEY_SERIES_CATEGORIES_TIMESTAMP -> {
+                        tvShowsSize += valueSize
+                        if (key == KEY_SERIES_CATEGORIES) tvShowsCategoryCached = true
+                    }
+                    key.startsWith(KEY_STREAMS_PREFIX) && !key.contains("vod_") && !key.contains("series_") && !key.contains("search_") -> {
+                        liveTvSize += valueSize
+                        if (!key.contains("_timestamp_")) liveTvStreamsCount++
+                    }
+                    key.startsWith(KEY_STREAMS_PREFIX) && key.contains("vod_") && !key.contains("search_") -> {
+                        moviesSize += valueSize
+                        if (!key.contains("_timestamp_")) moviesStreamsCount++
+                    }
+                    key.startsWith(KEY_STREAMS_PREFIX) && key.contains("series_") && !key.contains("search_") -> {
+                        tvShowsSize += valueSize
+                        if (!key.contains("_timestamp_")) tvShowsStreamsCount++
+                    }
+                    key.startsWith(KEY_EPG_PREFIX) -> {
+                        // EPG counted in other
+                        otherSize += valueSize
+                        if (!key.contains("_timestamp_")) epgCount++
+                    }
+                    else -> {
+                        otherSize += valueSize
+                    }
+                }
+            }
+
+            return CacheStats(
+                totalSize = computeCacheSize(cache),
+                liveTv = ContentTypeCacheStats(liveTvSize, liveTvCategoryCached, liveTvStreamsCount),
+                movies = ContentTypeCacheStats(moviesSize, moviesCategoryCached, moviesStreamsCount),
+                tvShows = ContentTypeCacheStats(tvShowsSize, tvShowsCategoryCached, tvShowsStreamsCount),
+                epgCount = epgCount,
+                otherSize = otherSize
+            )
+        }
+
+        fun clearCacheForContentTypeStatic(cache: SharedPreferences, contentType: String) {
+            val editor = cache.edit()
+
+            when (contentType) {
+                "LIVE_TV" -> {
+                    editor.remove(KEY_CATEGORIES)
+                    editor.remove(KEY_CATEGORIES_TIMESTAMP)
+                    cache.all.keys.filter { key ->
+                        key.startsWith(KEY_STREAMS_PREFIX) &&
+                        !key.contains("vod_") &&
+                        !key.contains("series_") &&
+                        !key.contains("search_")
+                    }.forEach { key -> editor.remove(key) }
+                }
+                "MOVIES" -> {
+                    editor.remove(KEY_VOD_CATEGORIES)
+                    editor.remove(KEY_VOD_CATEGORIES_TIMESTAMP)
+                    cache.all.keys.filter { key ->
+                        key.startsWith(KEY_STREAMS_PREFIX) &&
+                        key.contains("vod_") &&
+                        !key.contains("search_")
+                    }.forEach { key -> editor.remove(key) }
+                }
+                "TV_SHOWS" -> {
+                    editor.remove(KEY_SERIES_CATEGORIES)
+                    editor.remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
+                    cache.all.keys.filter { key ->
+                        key.startsWith(KEY_STREAMS_PREFIX) &&
+                        key.contains("series_") &&
+                        !key.contains("search_")
+                    }.forEach { key -> editor.remove(key) }
+                }
+            }
+
+            editor.apply()
+        }
     }
 
     suspend fun login(
@@ -659,18 +779,7 @@ class XtreamRepository(
     /**
      * Get total cache size in bytes
      */
-    fun getCacheSize(): Long {
-        var totalSize = 0L
-        cache.all.forEach { (key, value) ->
-            when (value) {
-                is String -> totalSize += value.toByteArray(Charsets.UTF_8).size
-                is Long -> totalSize += 8 // 8 bytes for Long
-                is Int -> totalSize += 4 // 4 bytes for Int
-                is Boolean -> totalSize += 1 // 1 byte for Boolean
-            }
-        }
-        return totalSize
-    }
+    fun getCacheSize(): Long = computeCacheSize(cache)
 
     /**
      * Get cache statistics per content type
@@ -690,155 +799,28 @@ class XtreamRepository(
         val otherSize: Long
     )
 
-    fun getCacheStats(): CacheStats {
-        var liveTvSize = 0L
-        var moviesSize = 0L
-        var tvShowsSize = 0L
-        var epgSize = 0L
-        var otherSize = 0L
-
-        var liveTvCategoryCached = false
-        var moviesCategoryCached = false
-        var tvShowsCategoryCached = false
-
-        var liveTvStreamsCount = 0
-        var moviesStreamsCount = 0
-        var tvShowsStreamsCount = 0
-        var epgCount = 0
-
-        cache.all.forEach { (key, value) ->
-            val valueSize = when (value) {
-                is String -> value.toByteArray(Charsets.UTF_8).size.toLong()
-                is Long -> 8L
-                is Int -> 4L
-                is Boolean -> 1L
-                else -> 0L
-            }
-
-            when {
-                // Live TV categories
-                key == KEY_CATEGORIES || key == KEY_CATEGORIES_TIMESTAMP -> {
-                    liveTvSize += valueSize
-                    if (key == KEY_CATEGORIES) liveTvCategoryCached = true
-                }
-                // Movies categories
-                key == KEY_VOD_CATEGORIES || key == KEY_VOD_CATEGORIES_TIMESTAMP -> {
-                    moviesSize += valueSize
-                    if (key == KEY_VOD_CATEGORIES) moviesCategoryCached = true
-                }
-                // TV Shows categories
-                key == KEY_SERIES_CATEGORIES || key == KEY_SERIES_CATEGORIES_TIMESTAMP -> {
-                    tvShowsSize += valueSize
-                    if (key == KEY_SERIES_CATEGORIES) tvShowsCategoryCached = true
-                }
-                // Live TV streams (no prefix like "vod_" or "series_")
-                key.startsWith(KEY_STREAMS_PREFIX) && !key.contains("vod_") && !key.contains("series_") && !key.contains("search_") -> {
-                    liveTvSize += valueSize
-                    if (!key.contains("_timestamp_")) liveTvStreamsCount++
-                }
-                // Movies streams
-                key.startsWith(KEY_STREAMS_PREFIX) && key.contains("vod_") && !key.contains("search_") -> {
-                    moviesSize += valueSize
-                    if (!key.contains("_timestamp_")) moviesStreamsCount++
-                }
-                // TV Shows streams
-                key.startsWith(KEY_STREAMS_PREFIX) && key.contains("series_") && !key.contains("search_") -> {
-                    tvShowsSize += valueSize
-                    if (!key.contains("_timestamp_")) tvShowsStreamsCount++
-                }
-                // EPG data
-                key.startsWith(KEY_EPG_PREFIX) -> {
-                    epgSize += valueSize
-                    if (!key.contains("_timestamp_")) epgCount++
-                }
-                // Search cache and other
-                else -> {
-                    otherSize += valueSize
-                }
-            }
-        }
-
-        return CacheStats(
-            totalSize = getCacheSize(),
-            liveTv = ContentTypeCacheStats(liveTvSize, liveTvCategoryCached, liveTvStreamsCount),
-            movies = ContentTypeCacheStats(moviesSize, moviesCategoryCached, moviesStreamsCount),
-            tvShows = ContentTypeCacheStats(tvShowsSize, tvShowsCategoryCached, tvShowsStreamsCount),
-            epgCount = epgCount,
-            otherSize = otherSize
-        )
-    }
+    fun getCacheStats(): CacheStats = computeCacheStats(cache)
 
     /**
      * Clear cache for specific content type
      */
     fun clearCacheForContentType(contentType: String) {
-        val editor = cache.edit()
-
+        clearCacheForContentTypeStatic(cache, contentType)
+        // Clean up instance-specific tracking maps
         when (contentType) {
             "LIVE_TV" -> {
-                // Clear Live TV categories
-                editor.remove(KEY_CATEGORIES)
-                editor.remove(KEY_CATEGORIES_TIMESTAMP)
                 payloadSizes.remove("live_categories")
                 fetchTimes.remove("live_categories")
-
-                // Clear Live TV streams (keys without "vod_" or "series_" prefix)
-                cache.all.keys.filter { key ->
-                    key.startsWith(KEY_STREAMS_PREFIX) &&
-                    !key.contains("vod_") &&
-                    !key.contains("series_") &&
-                    !key.contains("search_")
-                }.forEach { key ->
-                    editor.remove(key)
-                    val categoryId = key.removePrefix(KEY_STREAMS_PREFIX)
-                        .removePrefix(KEY_STREAMS_TIMESTAMP_PREFIX)
-                    payloadSizes.remove("category_$categoryId")
-                    fetchTimes.remove("category_$categoryId")
-                }
             }
             "MOVIES" -> {
-                // Clear Movies categories
-                editor.remove(KEY_VOD_CATEGORIES)
-                editor.remove(KEY_VOD_CATEGORIES_TIMESTAMP)
                 payloadSizes.remove("vod_categories")
                 fetchTimes.remove("vod_categories")
-
-                // Clear Movies streams
-                cache.all.keys.filter { key ->
-                    key.startsWith(KEY_STREAMS_PREFIX) &&
-                    key.contains("vod_") &&
-                    !key.contains("search_")
-                }.forEach { key ->
-                    editor.remove(key)
-                    val categoryId = key.removePrefix(KEY_STREAMS_PREFIX)
-                        .removePrefix(KEY_STREAMS_TIMESTAMP_PREFIX)
-                    payloadSizes.remove("category_$categoryId")
-                    fetchTimes.remove("category_$categoryId")
-                }
             }
             "TV_SHOWS" -> {
-                // Clear TV Shows categories
-                editor.remove(KEY_SERIES_CATEGORIES)
-                editor.remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
                 payloadSizes.remove("series_categories")
                 fetchTimes.remove("series_categories")
-
-                // Clear TV Shows streams
-                cache.all.keys.filter { key ->
-                    key.startsWith(KEY_STREAMS_PREFIX) &&
-                    key.contains("series_") &&
-                    !key.contains("search_")
-                }.forEach { key ->
-                    editor.remove(key)
-                    val categoryId = key.removePrefix(KEY_STREAMS_PREFIX)
-                        .removePrefix(KEY_STREAMS_TIMESTAMP_PREFIX)
-                    payloadSizes.remove("category_$categoryId")
-                    fetchTimes.remove("category_$categoryId")
-                }
             }
         }
-
-        editor.apply()
     }
 
     fun getCurrentUrl(): String? {
