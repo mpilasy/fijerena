@@ -13,13 +13,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,16 +63,16 @@ fun MobileSearchScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(Spacing.md),
                 placeholder = { Text("Search streams...") },
                 leadingIcon = {
                     Icon(Icons.Default.Search, "Search")
                 },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    disabledTextColor = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textDisabled),
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.tint),
@@ -86,7 +85,7 @@ fun MobileSearchScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = Spacing.md)
             ) {
                 when (val state = uiState) {
                     is SearchViewModel.UiState.Loading -> {
@@ -100,6 +99,8 @@ fun MobileSearchScreen(
                             categoryResults = state.categoryResults,
                             results = state.filteredResults,
                             query = searchQuery,
+                            isSearching = state.isSearching,
+                            searchProgress = state.searchProgress,
                             onResultClick = { result ->
                                 onStreamSelected(
                                     result.itemId,
@@ -127,7 +128,7 @@ private fun LoadingView() {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             CircularProgressIndicator()
             Text(
@@ -146,8 +147,8 @@ private fun ErrorView(message: String) {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(32.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            modifier = Modifier.padding(Spacing.xl)
         ) {
             Text(
                 text = "Error",
@@ -167,6 +168,8 @@ private fun SearchResults(
     categoryResults: List<SearchViewModel.CategorySearchResult>,
     results: List<SearchViewModel.SearchResult>,
     query: String,
+    isSearching: Boolean,
+    searchProgress: String?,
     onResultClick: (SearchViewModel.SearchResult) -> Unit,
     onCategoryClick: (SearchViewModel.CategorySearchResult) -> Unit
 ) {
@@ -181,7 +184,7 @@ private fun SearchResults(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
             )
         }
-    } else if (categoryResults.isEmpty() && results.isEmpty()) {
+    } else if (!isSearching && categoryResults.isEmpty() && results.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -194,16 +197,59 @@ private fun SearchResults(
         }
     } else {
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            contentPadding = PaddingValues(bottom = Spacing.md)
         ) {
+            // Progress / complete message
+            if (isSearching && searchProgress != null) {
+                item(key = "search_progress") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = Spacing.xs),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(MobileDimensions.progressIndicatorSmall),
+                            strokeWidth = MobileDimensions.strokeWidth
+                        )
+                        Text(
+                            text = searchProgress,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            } else if (!isSearching && searchProgress != null) {
+                item(key = "search_complete") {
+                    Text(
+                        text = searchProgress,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = Spacing.xs)
+                    )
+                }
+            }
+
+            // Result count
+            if (categoryResults.isNotEmpty() || results.isNotEmpty()) {
+                item(key = "result_count") {
+                    Text(
+                        text = "${categoryResults.size + results.size} results",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    )
+                }
+            }
+
             if (categoryResults.isNotEmpty()) {
                 item(key = "category_header") {
                     Text(
                         text = "Categories",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = Spacing.xxs)
                     )
                 }
                 items(categoryResults, key = { "cat_${it.categoryId}" }) { catResult ->
@@ -219,7 +265,7 @@ private fun SearchResults(
                         text = "Streams",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = Spacing.xxs)
                     )
                 }
                 items(results, key = { it.itemId }) { result ->
@@ -248,8 +294,8 @@ private fun CategoryResultCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -279,8 +325,8 @@ private fun SearchResultCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
         ) {
             Text(
                 text = result.streamName,

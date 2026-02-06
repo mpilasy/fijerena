@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,7 +37,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
@@ -46,6 +46,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
@@ -61,6 +62,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
@@ -90,7 +92,10 @@ fun SearchScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
     val configuration = LocalConfiguration.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
+    CompositionLocalProvider(LocalUiScale provides uiScale) {
     Surface(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -131,6 +136,7 @@ fun SearchScreen(
             }
         }
     }
+    } // CompositionLocalProvider
 }
 
 @Composable
@@ -393,7 +399,7 @@ private fun SearchResultsList(
                         CircularProgressIndicator(
                             modifier = Modifier.size(TvDimensions.iconSmall),
                             color = CinemaAccent,
-                            strokeWidth = 2.dp
+                            strokeWidth = TvDimensions.borderFocused
                         )
                         Text(
                             text = searchProgress,
@@ -415,7 +421,7 @@ private fun SearchResultsList(
                             style = MaterialTheme.typography.titleMedium,
                             color = CinemaAccent,
                             modifier = Modifier.padding(
-                                horizontal = 16.dp,
+                                horizontal = Spacing.md,
                                 vertical = Spacing.xs
                             )
                         )
@@ -434,7 +440,7 @@ private fun SearchResultsList(
                             style = MaterialTheme.typography.titleMedium,
                             color = CinemaAccent,
                             modifier = Modifier.padding(
-                                horizontal = 16.dp,
+                                horizontal = Spacing.md,
                                 vertical = Spacing.xs
                             )
                         )
@@ -460,7 +466,7 @@ private fun CategoryResultItem(
     Card(
         onClick = onClick,
         modifier = Modifier
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = Spacing.md)
             .fillMaxWidth()
             .height(TvDimensions.cardHeight),
         colors = CardDefaults.colors(
@@ -514,7 +520,7 @@ private fun SearchResultItem(
     Card(
         onClick = onClick,
         modifier = Modifier
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = Spacing.md)
             .fillMaxWidth()
             .height(TvDimensions.cardHeight)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),

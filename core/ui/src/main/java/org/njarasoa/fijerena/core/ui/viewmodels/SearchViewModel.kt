@@ -89,13 +89,15 @@ class SearchViewModel(
                                     categoryName = "",
                                     contentType = contentType
                                 )
-                            }.sortedWith(compareBy<SearchResult> {
-                                when {
-                                    it.streamName.lowercase() == normalizedQuery -> 0
-                                    it.streamName.lowercase().startsWith(normalizedQuery) -> 1
-                                    else -> 2
+                            }.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
+                                .thenBy {
+                                    when {
+                                        it.streamName.lowercase() == normalizedQuery -> 0
+                                        it.streamName.lowercase().startsWith(normalizedQuery) -> 1
+                                        else -> 2
+                                    }
                                 }
-                            }.thenBy { it.streamName })
+                                .thenBy { it.streamName })
 
                             // Also search categories for server-side providers
                             val serverCategories = repository.getFilteredCategories(contentType)
@@ -110,7 +112,7 @@ class SearchViewModel(
                                 filteredResults = results,
                                 query = query,
                                 isSearching = false,
-                                searchProgress = null
+                                searchProgress = "Search complete"
                             )
                         },
                         onFailure = {
@@ -171,13 +173,15 @@ class SearchViewModel(
 
                             results.addAll(matchingItems)
 
-                            val sortedResults = results.sortedWith(compareBy<SearchResult> {
-                                when {
-                                    it.streamName.lowercase() == normalizedQuery -> 0
-                                    it.streamName.lowercase().startsWith(normalizedQuery) -> 1
-                                    else -> 2
+                            val sortedResults = results.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
+                                .thenBy {
+                                    when {
+                                        it.streamName.lowercase() == normalizedQuery -> 0
+                                        it.streamName.lowercase().startsWith(normalizedQuery) -> 1
+                                        else -> 2
+                                    }
                                 }
-                            }.thenBy { it.streamName })
+                                .thenBy { it.streamName })
 
                             val finalResults = sortedResults.take(targetResults)
 
@@ -196,13 +200,15 @@ class SearchViewModel(
                     )
                 }
 
-                val sortedFinalResults = results.sortedWith(compareBy<SearchResult> {
-                    when {
-                        it.streamName.lowercase() == normalizedQuery -> 0
-                        it.streamName.lowercase().startsWith(normalizedQuery) -> 1
-                        else -> 2
+                val sortedFinalResults = results.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
+                    .thenBy {
+                        when {
+                            it.streamName.lowercase() == normalizedQuery -> 0
+                            it.streamName.lowercase().startsWith(normalizedQuery) -> 1
+                            else -> 2
+                        }
                     }
-                }.thenBy { it.streamName })
+                    .thenBy { it.streamName })
 
                 val finalResults = sortedFinalResults.take(targetResults)
 
@@ -212,7 +218,7 @@ class SearchViewModel(
                     filteredResults = finalResults,
                     query = query,
                     isSearching = false,
-                    searchProgress = null
+                    searchProgress = "Search complete"
                 )
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Failed to search")

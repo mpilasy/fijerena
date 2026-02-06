@@ -7,6 +7,7 @@ import kotlinx.coroutines.runBlocking
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 
 class SearchViewModelFactory(
     private val context: Context,
@@ -24,7 +25,8 @@ class SearchViewModelFactory(
                 else providerRepo.getActiveProvider()
             }
             val resolvedId = entity?.id ?: providerId
-            val mediaRepository = MediaRepository(appContext, resolvedId)
+            val settings = runBlocking { providerRepo.getProviderSettings(resolvedId) }
+            val mediaRepository = MediaRepository(appContext, resolvedId, settings)
             if (entity != null) {
                 val password = providerRepo.getPassword(entity.id) ?: ""
                 val provider = MediaProviderFactory.create(entity, appContext, password)
