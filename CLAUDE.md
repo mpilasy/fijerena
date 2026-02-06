@@ -185,13 +185,14 @@ All screens must respect 56dp horizontal / 32dp vertical safe margins to account
 - **Accent Blocks:** `AccentBlock.kt` provides content-type gradients (LIVE_TV orange, MOVIE blue, TV_SHOW light blue)
 
 ## 📋 Coding Standards
-- **Design Tokens (mandatory):** All UI components must use the shared design token constants — never hardcode colors, dimensions, spacing, opacity, corner radii, or animation values. The token files are:
+- **STRICT: No Hardcoded UI Values.** When adding or modifying any UI element, every visual attribute (colors, dimensions, spacing, opacity, corner radii, animation values, stroke widths, font sizes) **must** come from an existing design token constant — never use raw literals like `16.dp`, `Color.White`, `2.dp`, `0.5f`, etc. in screen/component files. If the needed token doesn't exist yet, **add it to the appropriate token file first**, then reference it. This rule applies to all new code and all modified code — no exceptions.
+- **Design Token Files:**
   - **Shared (core/ui):** `CinemaColors` (colors), `CinemaAlpha` (opacity), `CinemaAnimation` (timing), `CinemaCornerRadius` (radii), `CinemaSpacing` (padding/margins)
   - **TV-specific:** `TvDimensions` (sizes/spacing), `TvFocusTokens` (focus scale/border/glow)
   - **Mobile-specific:** `MobileDimensions` (sizes/spacing)
-  - **Platform re-exports:** TV `CinemaColors.kt` and mobile `Color.kt` re-export core colors as computed `get()` properties from `CinemaThemeHolder` — screen files import from their platform package, not from core directly
+  - **Platform re-exports:** TV `CinemaColors.kt` and mobile `Color.kt` re-export core colors as computed `get()` properties from `CinemaThemeHolder` — screen files import from their platform package, not from core directly. TV `Spacing.kt` and mobile `Spacing.kt` re-export `CinemaSpacing` values.
   - **Theme palettes:** `CinemaThemePalette.kt` defines per-theme color sets; `CinemaThemeHolder.current` is set by the theme composable
-  - If a needed token doesn't exist, add it to the appropriate token file first, then reference it
+  - For colors, always prefer `MaterialTheme.colorScheme.*` (e.g., `onSurface`, `primary`) or the platform re-export constants — never use `Color.White`, `Color.Black`, etc.
 - **Focus Management:** Every @Composable must be D-pad (remote) navigable. Use `Modifier.focusRestorer()` and `Modifier.focusable()`.
 - **Safe Areas:** Respect "Overscan." UI must remain 5% away from screen edges for Sony/Shield TVs.
 - **Mobile vs TV:** Use `WindowSizeClass` to switch between NavigationBar (Mobile) and NavigationRail/Drawer (TV).
@@ -226,7 +227,7 @@ The app follows this streamlined navigation structure:
    - **Provider Selection:** List all providers, select/edit/delete
    - **Add/Edit Provider:** Type selector + type-specific form fields (Xtream: URL/user/pass, Jellyfin: server URL/user/pass, SMB: host/share/user/pass, Local: folder/M3U picker)
 
-**Note:** There is no login screen. Authentication happens automatically on startup via stored credentials, or after configuring a provider in Settings. Both TV and mobile use the same flow.
+**Note:** There is no login screen and no logout button anywhere in the app. Authentication happens automatically on startup via stored credentials, or after configuring a provider in Settings. To switch or remove a provider, use Settings → Manage Providers. Both TV and mobile use the same flow.
 
 **Mobile Orientation:** The mobile app is locked to portrait mode (`android:screenOrientation="portrait"`) for all screens except the player. `MobilePlayerScreen` unlocks orientation to sensor on enter and locks back to portrait on dispose.
 
