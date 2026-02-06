@@ -60,6 +60,7 @@ fun TvPlayerScreen(
     episodeExtension: String? = null,
     seriesId: String? = null,
     seriesName: String? = null,
+    startFromBeginning: Boolean = false,
     viewModel: PlaybackViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -234,7 +235,7 @@ fun TvPlayerScreen(
     var positionLoaded by remember { mutableStateOf(false) }
     LaunchedEffect(currentStreamId, contentType) {
         positionLoaded = false
-        savedPosition = if (contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
+        savedPosition = if (!startFromBeginning && contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
             mediaRepository.getPlaybackPositionSuspend(currentStreamId, contentType)
         } else null
         positionLoaded = true

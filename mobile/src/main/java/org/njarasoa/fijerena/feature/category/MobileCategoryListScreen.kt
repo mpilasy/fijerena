@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -320,15 +321,23 @@ private fun StreamCard(
                     height = MobileDimensions.posterHeight
                 )
             )
-            // Stream name
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 2,
-                modifier = Modifier
-                    .weight(1f)
-                    .basicMarquee()
-            )
+            // Stream name + rating
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 2,
+                    modifier = Modifier.basicMarquee()
+                )
+                item.metadata?.rating?.let { rating ->
+                    Text(
+                        text = "★ $rating",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textMedium),
+                        maxLines = 1
+                    )
+                }
+            }
         }
     }
 }

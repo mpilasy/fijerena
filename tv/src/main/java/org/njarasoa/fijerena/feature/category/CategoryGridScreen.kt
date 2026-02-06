@@ -823,16 +823,16 @@ private fun StreamItem(
                             modifier = Modifier.basicMarquee()
                         )
                     }
-                    item.thumbnailUrl?.let { icon ->
-                        if (icon.isNotBlank()) {
-                            Text(
-                                text = "HD",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                                ),
-                                color = LocalContentColor.current.copy(alpha = CinemaAlpha.textMedium)
-                            )
-                        }
+                    // Rating (e.g. "7.9 | PG-13")
+                    item.metadata?.rating?.let { rating ->
+                        Text(
+                            text = "★ $rating",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
+                            maxLines = 1
+                        )
                     }
                 }
             }

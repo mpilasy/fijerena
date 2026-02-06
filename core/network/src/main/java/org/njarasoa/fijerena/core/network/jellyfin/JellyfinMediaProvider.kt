@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.core.network.jellyfin
 
+import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaMetadata
@@ -319,7 +321,10 @@ class JellyfinMediaProvider(
                 plot = overview,
                 year = productionYear,
                 genre = genres.joinToString(", ").ifEmpty { null },
-                rating = officialRating,
+                rating = buildList {
+                    communityRating?.let { add(String.format("%.1f", it)) }
+                    officialRating?.let { add(it) }
+                }.joinToString(" | ").ifEmpty { null },
                 duration = runTimeTicks?.let { formatTicks(it) }
             ),
             providerData = provData
@@ -334,6 +339,15 @@ class JellyfinMediaProvider(
             .ifEmpty { null }
 
         val mediaSource = item.mediaSources.firstOrNull()
+        val videoStream = mediaSource?.mediaStreams?.firstOrNull { it.type == "Video" }
+        val audioStreams = mediaSource?.mediaStreams?.filter { it.type == "Audio" } ?: emptyList()
+        val subtitleStreams = mediaSource?.mediaStreams?.filter { it.type == "Subtitle" } ?: emptyList()
+
+        // Prefer communityRating (numeric, e.g. "7.9") with officialRating (e.g. "PG-13") as supplement
+        val ratingParts = mutableListOf<String>()
+        item.communityRating?.let { ratingParts.add(String.format("%.1f", it)) }
+        item.officialRating?.let { ratingParts.add(it) }
+        val rating = ratingParts.joinToString(" | ").ifEmpty { null }
 
         return MovieDetail(
             id = item.id,
@@ -342,7 +356,7 @@ class JellyfinMediaProvider(
                 plot = item.overview,
                 year = item.productionYear,
                 genre = item.genres.joinToString(", ").ifEmpty { null },
-                rating = item.officialRating,
+                rating = rating,
                 director = director,
                 cast = cast,
                 duration = item.runTimeTicks?.let { formatTicks(it) }
@@ -351,10 +365,34 @@ class JellyfinMediaProvider(
                 api.buildImageUrl(item.id, "Primary")
             } else null,
             extension = item.container ?: mediaSource?.container,
-            videoInfo = mediaSource?.let {
-                VideoTechInfo(codecName = it.container)
+            videoInfo = videoStream?.let { vs ->
+                VideoTechInfo(
+                    width = vs.width,
+                    height = vs.height,
+                    codecName = vs.codec,
+                    bitrate = vs.bitRate,
+                    videoRange = vs.videoDoViTitle ?: vs.videoRange,
+                    displayTitle = vs.displayTitle
+                )
             },
-            audioInfo = null
+            audioTracks = audioStreams.map { as_ ->
+                AudioTechInfo(
+                    codecName = as_.codec,
+                    language = as_.language,
+                    channels = as_.channels,
+                    sampleRate = as_.sampleRate,
+                    displayTitle = as_.displayTitle,
+                    isDefault = as_.isDefault
+                )
+            },
+            subtitleTracks = subtitleStreams.map { ss ->
+                SubtitleTechInfo(
+                    codecName = ss.codec,
+                    language = ss.language,
+                    displayTitle = ss.displayTitle,
+                    isDefault = ss.isDefault
+                )
+            }
         )
     }
 

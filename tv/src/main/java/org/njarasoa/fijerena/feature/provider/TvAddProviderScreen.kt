@@ -2,6 +2,8 @@
 
 package org.njarasoa.fijerena.feature.provider
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,16 +15,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -143,23 +148,31 @@ fun TvAddProviderScreen(
 
                 Spacer(modifier = Modifier.height(Spacing.xl))
 
-                // Provider type dropdown
+                // Provider type dropdown (D-pad friendly)
                 var typeDropdownExpanded by remember { mutableStateOf(false) }
-                @OptIn(ExperimentalMaterial3Api::class)
-                ExposedDropdownMenuBox(
-                    expanded = typeDropdownExpanded,
-                    onExpandedChange = { typeDropdownExpanded = it },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = selectedType.displayName,
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Provider Type") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeDropdownExpanded) },
+                        trailingIcon = {
+                            Text(
+                                text = if (typeDropdownExpanded) "▲" else "▼",
+                                color = CinemaAccent
+                            )
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                            .clickable { typeDropdownExpanded = true }
+                            .onKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown &&
+                                    (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                                ) {
+                                    typeDropdownExpanded = true
+                                    true
+                                } else false
+                            },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = CinemaTextPrimary,
                             unfocusedTextColor = CinemaTextPrimary,
@@ -172,7 +185,7 @@ fun TvAddProviderScreen(
                             unfocusedTrailingIconColor = CinemaTextSecondary
                         )
                     )
-                    ExposedDropdownMenu(
+                    DropdownMenu(
                         expanded = typeDropdownExpanded,
                         onDismissRequest = { typeDropdownExpanded = false },
                         containerColor = CinemaSurface

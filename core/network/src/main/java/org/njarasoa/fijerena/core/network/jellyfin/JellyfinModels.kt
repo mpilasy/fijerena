@@ -70,7 +70,26 @@ data class JellyfinMediaSource(
     @SerialName("Size") val size: Long? = null,
     @SerialName("Bitrate") val bitrate: Int? = null,
     @SerialName("SupportsDirectStream") val supportsDirectStream: Boolean = false,
-    @SerialName("SupportsTranscoding") val supportsTranscoding: Boolean = false
+    @SerialName("SupportsTranscoding") val supportsTranscoding: Boolean = false,
+    @SerialName("MediaStreams") val mediaStreams: List<JellyfinMediaStream> = emptyList()
+)
+
+@Serializable
+data class JellyfinMediaStream(
+    @SerialName("Type") val type: String,
+    @SerialName("Codec") val codec: String? = null,
+    @SerialName("Language") val language: String? = null,
+    @SerialName("DisplayTitle") val displayTitle: String? = null,
+    @SerialName("Title") val title: String? = null,
+    @SerialName("Width") val width: Int? = null,
+    @SerialName("Height") val height: Int? = null,
+    @SerialName("BitRate") val bitRate: Int? = null,
+    @SerialName("Channels") val channels: Int? = null,
+    @SerialName("SampleRate") val sampleRate: Int? = null,
+    @SerialName("IsDefault") val isDefault: Boolean = false,
+    @SerialName("VideoDoViTitle") val videoDoViTitle: String? = null,
+    @SerialName("VideoRange") val videoRange: String? = null,
+    @SerialName("VideoRangeType") val videoRangeType: String? = null
 )
 
 @Serializable

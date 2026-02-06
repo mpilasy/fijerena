@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
@@ -120,14 +121,13 @@ fun SearchScreen(
                 is SearchViewModel.UiState.Error -> ErrorView((uiState as SearchViewModel.UiState.Error).message)
                 is SearchViewModel.UiState.Success -> {
                     val successState = uiState as SearchViewModel.UiState.Success
-                    println("SearchScreen: Rendering with ${successState.filteredResults.size} results, query='${successState.query}', isSearching=${successState.isSearching}")
                     SearchContent(
                         query = successState.query,
                         categoryResults = successState.categoryResults,
                         results = successState.filteredResults,
                         isSearching = successState.isSearching,
                         searchProgress = successState.searchProgress,
-                        onQueryChange = { viewModel.updateSearchQuery(it) },
+                        onSearchSubmit = { viewModel.updateSearchQuery(it) },
                         onResultClick = { result ->
                             onStreamSelected(result.itemId, result.streamName, result.categoryId)
                         },
@@ -231,7 +231,7 @@ private fun SearchContent(
     results: List<SearchResult>,
     isSearching: Boolean,
     searchProgress: String?,
-    onQueryChange: (String) -> Unit,
+    onSearchSubmit: (String) -> Unit,
     onResultClick: (SearchResult) -> Unit,
     onCategoryClick: (CategorySearchResult) -> Unit
 ) {
@@ -250,10 +250,8 @@ private fun SearchContent(
         // Search field
         SearchTextField(
             query = localQuery,
-            onQueryChange = { newValue ->
-                localQuery = newValue
-                onQueryChange(newValue)
-            },
+            onQueryChange = { localQuery = it },
+            onSearchSubmit = { onSearchSubmit(localQuery) },
             focusRequester = searchFocusRequester
         )
 
@@ -289,37 +287,47 @@ private fun SearchContent(
 private fun SearchTextField(
     query: String,
     onQueryChange: (String) -> Unit,
+    onSearchSubmit: () -> Unit,
     focusRequester: FocusRequester
 ) {
     GlassPanel {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            label = { Text("Search") },
-            placeholder = { Text("Enter stream name...") },
-            singleLine = true,
-            modifier = Modifier
-                .width(TvDimensions.formFieldWidth)
-                .focusRequester(focusRequester),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = CinemaTextPrimary,
-                unfocusedTextColor = CinemaTextPrimary,
-                cursorColor = CinemaAccent,
-                focusedBorderColor = CinemaAccent,
-                unfocusedBorderColor = CinemaTextSecondary,
-                focusedLabelColor = CinemaAccent,
-                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                focusedPlaceholderColor = CinemaTextSecondary,
-                unfocusedPlaceholderColor = CinemaTextSecondary
-            ),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Search
-            ),
-            keyboardActions = KeyboardActions(
-                onSearch = { /* Focus stays on field for continued searching */ }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                label = { Text("Search") },
+                placeholder = { Text("Enter stream name...") },
+                singleLine = true,
+                modifier = Modifier
+                    .width(TvDimensions.formFieldWidth)
+                    .focusRequester(focusRequester),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = CinemaTextPrimary,
+                    unfocusedTextColor = CinemaTextPrimary,
+                    cursorColor = CinemaAccent,
+                    focusedBorderColor = CinemaAccent,
+                    unfocusedBorderColor = CinemaTextSecondary,
+                    focusedLabelColor = CinemaAccent,
+                    unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    focusedPlaceholderColor = CinemaTextSecondary,
+                    unfocusedPlaceholderColor = CinemaTextSecondary
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Search
+                ),
+                keyboardActions = KeyboardActions(
+                    onSearch = { onSearchSubmit() }
+                )
             )
-        )
+            CinemaPrimaryButton(
+                onClick = onSearchSubmit,
+                text = "Search"
+            )
+        }
     }
 
     // Auto-focus on screen open

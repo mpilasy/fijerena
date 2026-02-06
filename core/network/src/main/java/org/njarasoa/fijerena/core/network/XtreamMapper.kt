@@ -116,12 +116,14 @@ object XtreamMapper {
                 codecName = it.codecName
             )
         },
-        audioInfo = info?.audio?.let {
-            AudioTechInfo(
-                codecName = it.codecName,
-                language = it.language
-            )
-        }
+        audioTracks = listOfNotNull(
+            info?.audio?.let {
+                AudioTechInfo(
+                    codecName = it.codecName,
+                    language = it.language
+                )
+            }
+        )
     )
 
     fun WatchedStream.toDomain(mediaType: MediaType): MediaItem = MediaItem(

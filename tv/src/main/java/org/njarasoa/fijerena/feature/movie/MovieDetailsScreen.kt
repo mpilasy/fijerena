@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,7 +74,7 @@ fun MovieDetailsScreen(
     movieId: String,
     movieName: String,
     categoryId: String,
-    onPlayMovie: (movieId: String, movieName: String, extension: String) -> Unit,
+    onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -97,6 +98,8 @@ fun MovieDetailsScreen(
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
+    var resumePositionMs by remember { mutableStateOf(0L) }
+    var resumeDurationMs by remember { mutableStateOf(0L) }
 
     fun refresh() {
         refreshTrigger++
@@ -118,6 +121,16 @@ fun MovieDetailsScreen(
                 isLoading = false
             }
         )
+
+        // Load resume position
+        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, "MOVIES")
+        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
+            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
+            if (progress in 2.0..95.0) {
+                resumePositionMs = watched.playbackPosition
+                resumeDurationMs = watched.duration
+            }
+        }
     }
 
     when {
@@ -135,6 +148,8 @@ fun MovieDetailsScreen(
                 movieDetail = movieDetail!!,
                 movieId = movieId,
                 movieName = movieName,
+                resumePositionMs = resumePositionMs,
+                resumeDurationMs = resumeDurationMs,
                 onPlayMovie = onPlayMovie,
                 onRefresh = { refresh() },
                 onBack = onBack
@@ -148,7 +163,9 @@ private fun MovieDetailsContent(
     movieDetail: MovieDetail,
     movieId: String,
     movieName: String,
-    onPlayMovie: (movieId: String, movieName: String, extension: String) -> Unit,
+    resumePositionMs: Long,
+    resumeDurationMs: Long,
+    onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -258,30 +275,30 @@ private fun MovieDetailsContent(
                     .height(TvDimensions.posterHeightLarge)
             )
 
-            // Metadata in glass panel
+            // Metadata in glass panel (scrollable with D-pad)
             GlassPanel(modifier = Modifier.weight(1f)) {
             Column(modifier = Modifier
                 .verticalScroll(rememberScrollState())
+                .focusable()
                 .padding(Spacing.lg)) {
 
-        // Movie metadata
+        // Metadata header row: rating | year | duration
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.lg)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Genre, Rating, Duration
-            movieDetail.metadata?.genre?.let { genre ->
-                Text(
-                    text = genre,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CinemaAccent
-                )
-            }
             movieDetail.metadata?.rating?.let { rating ->
                 Text(
                     text = "★ $rating",
                     style = MaterialTheme.typography.titleMedium,
                     color = CinemaAccent
+                )
+            }
+            movieDetail.metadata?.year?.let { year ->
+                Text(
+                    text = "$year",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CinemaTextSecondary
                 )
             }
             movieDetail.metadata?.duration?.let { duration ->
@@ -291,17 +308,80 @@ private fun MovieDetailsContent(
                     color = CinemaTextSecondary
                 )
             }
+            // "Ends at" based on remaining duration
+            val endsAtText = remember(movieDetail.metadata?.duration, resumePositionMs) {
+                computeEndsAt(movieDetail.metadata?.duration, resumePositionMs)
+            }
+            if (endsAtText != null) {
+                Text(
+                    text = "Ends at $endsAtText",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(Spacing.md))
 
-        // Release date
-        movieDetail.metadata?.year?.let { year ->
-            Text(
-                text = "Released: $year",
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextSecondary
-            )
+        // Technical stream info (Jellyfin-style labeled rows)
+        val hasVideoInfo = movieDetail.videoInfo != null &&
+            (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
+        if (hasVideoInfo || movieDetail.audioTracks.isNotEmpty() || movieDetail.subtitleTracks.isNotEmpty() || movieDetail.extension != null) {
+            movieDetail.videoInfo?.let { video ->
+                val videoText = video.displayTitle ?: run {
+                    val parts = mutableListOf<String>()
+                    video.width?.let { w ->
+                        video.height?.let { h ->
+                            parts.add(resolutionLabel(w, h))
+                        }
+                    }
+                    video.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                    video.videoRange?.let { range -> parts.add(range) }
+                    video.width?.let { w ->
+                        video.height?.let { h ->
+                            parts.add("${w}×${h}")
+                        }
+                    }
+                    parts.joinToString(" · ")
+                }
+                if (videoText.isNotBlank()) {
+                    TechInfoRow(label = "Video:", value = videoText)
+                }
+            }
+            if (movieDetail.audioTracks.isNotEmpty()) {
+                val audioTexts = movieDetail.audioTracks.mapNotNull { audio ->
+                    val text = audio.displayTitle ?: run {
+                        val parts = mutableListOf<String>()
+                        audio.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
+                        audio.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                        audio.channels?.let { ch -> parts.add(channelLabel(ch)) }
+                        if (audio.isDefault) parts.add("Default")
+                        parts.joinToString(" · ")
+                    }
+                    text.ifBlank { null }
+                }
+                if (audioTexts.isNotEmpty()) {
+                    TechInfoRow(label = "Audio:", value = audioTexts.joinToString("\n"))
+                }
+            }
+            if (movieDetail.subtitleTracks.isNotEmpty()) {
+                val subTexts = movieDetail.subtitleTracks.mapNotNull { sub ->
+                    val text = sub.displayTitle ?: run {
+                        val parts = mutableListOf<String>()
+                        sub.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
+                        sub.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                        if (sub.isDefault) parts.add("Default")
+                        parts.joinToString(" · ")
+                    }
+                    text.ifBlank { null }
+                }
+                if (subTexts.isNotEmpty()) {
+                    TechInfoRow(label = "Subtitle:", value = subTexts.joinToString("\n"))
+                }
+            }
+            movieDetail.extension?.let { ext ->
+                TechInfoRow(label = "Container:", value = ext.uppercase())
+            }
             Spacer(modifier = Modifier.height(Spacing.md))
         }
 
@@ -314,7 +394,7 @@ private fun MovieDetailsContent(
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(Spacing.lg))
+            Spacer(modifier = Modifier.height(Spacing.md))
         }
 
         // Cast
@@ -339,19 +419,54 @@ private fun MovieDetailsContent(
             Spacer(modifier = Modifier.height(Spacing.xs))
         }
 
+        // Genre tags
+        movieDetail.metadata?.genre?.let { genre ->
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Text(
+                text = genre,
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaAccent
+            )
+        }
+
         Spacer(modifier = Modifier.height(Spacing.xl))
 
-        // Play button
-        CinemaPrimaryButton(
-            onClick = {
-                onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension)
-            },
-            text = "▶ Play Movie",
-            modifier = Modifier
-                .width(TvDimensions.selectionListWidth)
-                .height(TvDimensions.moviePosterHeight)
-                .focusRequester(playButtonFocusRequester)
-        )
+        // Play / Resume buttons
+        val hasResume = resumePositionMs > 0L
+        if (hasResume) {
+            val resumeTimeText = formatMillis(resumePositionMs)
+            CinemaPrimaryButton(
+                onClick = {
+                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
+                },
+                text = "▶ Resume from $resumeTimeText",
+                modifier = Modifier
+                    .width(TvDimensions.selectionListWidth)
+                    .height(TvDimensions.moviePosterHeight)
+                    .focusRequester(playButtonFocusRequester)
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            CinemaSecondaryButton(
+                onClick = {
+                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true)
+                },
+                text = "Start from Beginning",
+                modifier = Modifier
+                    .width(TvDimensions.selectionListWidth)
+                    .height(TvDimensions.moviePosterHeight)
+            )
+        } else {
+            CinemaPrimaryButton(
+                onClick = {
+                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
+                },
+                text = "▶ Play Movie",
+                modifier = Modifier
+                    .width(TvDimensions.selectionListWidth)
+                    .height(TvDimensions.moviePosterHeight)
+                    .focusRequester(playButtonFocusRequester)
+            )
+        }
             } // GlassPanel Column
             } // GlassPanel
         } // Outer Row (poster + metadata)
@@ -411,6 +526,82 @@ private fun ErrorScreen(
                 text = "Back to Movies"
             )
         }
+    }
+}
+
+@Composable
+private fun TechInfoRow(label: String, value: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = CinemaTextPrimary
+        )
+    }
+}
+
+/**
+ * Returns a human-readable channel layout label (e.g., "5.1", "7.1", "Stereo")
+ */
+private fun channelLabel(channels: Int): String {
+    return when (channels) {
+        1 -> "Mono"
+        2 -> "Stereo"
+        6 -> "5.1"
+        8 -> "7.1"
+        else -> "${channels}ch"
+    }
+}
+
+/**
+ * Returns a human-readable resolution label (e.g., "4K", "1080p", "720p")
+ */
+private fun resolutionLabel(width: Int, height: Int): String {
+    return when {
+        width >= 3840 || height >= 2160 -> "4K"
+        width >= 2560 || height >= 1440 -> "1440p"
+        width >= 1920 || height >= 1080 -> "1080p"
+        width >= 1280 || height >= 720 -> "720p"
+        width >= 854 || height >= 480 -> "480p"
+        else -> "${height}p"
+    }
+}
+
+/**
+ * Computes "Ends at" time based on duration and optional resume position.
+ * Returns formatted time string like "10:30 PM" or null if duration unavailable.
+ */
+private fun computeEndsAt(duration: String?, resumePositionMs: Long): String? {
+    if (duration == null) return null
+    val totalSeconds = duration.toLongOrNull() ?: return null
+    if (totalSeconds <= 0) return null
+    val totalMs = totalSeconds * 1000
+    val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
+    val calendar = java.util.Calendar.getInstance()
+    calendar.add(java.util.Calendar.MILLISECOND, remainingMs.toInt())
+    return java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(calendar.time)
+}
+
+/**
+ * Formats milliseconds to "1:23:45" or "23:45" style.
+ */
+private fun formatMillis(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        String.format("%d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%d:%02d", minutes, seconds)
     }
 }
 

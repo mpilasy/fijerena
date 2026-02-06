@@ -147,6 +147,7 @@ sealed interface Screen {
         val episodeId: String? = null,
         val episodeExtension: String? = null,
         val seriesId: String? = null,
-        val seriesName: String? = null
+        val seriesName: String? = null,
+        val startFromBeginning: Boolean = false
     ) : Screen
 }

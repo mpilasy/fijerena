@@ -207,6 +207,7 @@ fun MobileNavHost(
                     episodeExtension = playerScreen.episodeExtension,
                     seriesId = playerScreen.seriesId,
                     seriesName = playerScreen.seriesName,
+                    startFromBeginning = playerScreen.startFromBeginning,
                     onBack = {
                         navController.navigateUp()
                     }
@@ -355,14 +356,15 @@ fun MobileNavHost(
                     movieId = movieDetailsScreen.movieId,
                     movieName = movieDetailsScreen.movieName,
                     categoryId = movieDetailsScreen.categoryId,
-                    onPlayMovie = { movieId, movieName, extension ->
+                    onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
                         navController.navigate(
                             Screen.Player(
                                 streamId = movieId,
                                 streamName = movieName,
                                 categoryId = movieDetailsScreen.categoryId,
                                 contentType = "MOVIES",
-                                episodeExtension = extension
+                                episodeExtension = extension,
+                                startFromBeginning = startFromBeginning
                             )
                         )
                     },

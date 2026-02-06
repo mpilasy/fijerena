@@ -29,7 +29,7 @@ fun MobileMovieDetailsScreen(
     movieId: String,
     movieName: String,
     categoryId: String,
-    onPlayMovie: (movieId: String, movieName: String, extension: String) -> Unit,
+    onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -52,6 +52,8 @@ fun MobileMovieDetailsScreen(
     var movieDetail by remember { mutableStateOf<MovieDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var resumePositionMs by remember { mutableStateOf(0L) }
+    var resumeDurationMs by remember { mutableStateOf(0L) }
 
     // Load movie info on launch
     LaunchedEffect(movieId) {
@@ -68,6 +70,16 @@ fun MobileMovieDetailsScreen(
                 isLoading = false
             }
         )
+
+        // Load resume position
+        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, "MOVIES")
+        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
+            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
+            if (progress in 2.0..95.0) {
+                resumePositionMs = watched.playbackPosition
+                resumeDurationMs = watched.duration
+            }
+        }
     }
 
     Scaffold(
@@ -102,6 +114,8 @@ fun MobileMovieDetailsScreen(
                         movieDetail = movieDetail!!,
                         movieId = movieId,
                         movieName = movieName,
+                        resumePositionMs = resumePositionMs,
+                        resumeDurationMs = resumeDurationMs,
                         onPlayMovie = onPlayMovie
                     )
                 }
@@ -115,7 +129,9 @@ private fun MovieDetailsContent(
     movieDetail: MovieDetail,
     movieId: String,
     movieName: String,
-    onPlayMovie: (movieId: String, movieName: String, extension: String) -> Unit
+    resumePositionMs: Long,
+    resumeDurationMs: Long,
+    onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit
 ) {
     val extension = movieDetail.extension ?: "mp4"
 
@@ -177,6 +193,18 @@ private fun MovieDetailsContent(
                         maxLines = 1
                     )
                 }
+                // "Ends at" based on remaining duration
+                val endsAtText = remember(movieDetail.metadata?.duration, resumePositionMs) {
+                    computeEndsAt(movieDetail.metadata?.duration, resumePositionMs)
+                }
+                if (endsAtText != null) {
+                    Text(
+                        text = "Ends at $endsAtText",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                        maxLines = 1
+                    )
+                }
             }
         }
 
@@ -225,16 +253,100 @@ private fun MovieDetailsContent(
             )
         }
 
+        // Technical stream info (labeled rows)
+        val hasVideoInfo = movieDetail.videoInfo != null &&
+            (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
+        if (hasVideoInfo || movieDetail.audioTracks.isNotEmpty() || movieDetail.subtitleTracks.isNotEmpty() || movieDetail.extension != null) {
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            movieDetail.videoInfo?.let { video ->
+                val videoText = video.displayTitle ?: run {
+                    val parts = mutableListOf<String>()
+                    video.width?.let { w ->
+                        video.height?.let { h ->
+                            parts.add(resolutionLabel(w, h))
+                        }
+                    }
+                    video.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                    video.videoRange?.let { range -> parts.add(range) }
+                    video.width?.let { w ->
+                        video.height?.let { h ->
+                            parts.add("${w}×${h}")
+                        }
+                    }
+                    parts.joinToString(" · ")
+                }
+                if (videoText.isNotBlank()) {
+                    MobileTechInfoRow(label = "Video:", value = videoText)
+                }
+            }
+            if (movieDetail.audioTracks.isNotEmpty()) {
+                val audioTexts = movieDetail.audioTracks.mapNotNull { audio ->
+                    val text = audio.displayTitle ?: run {
+                        val parts = mutableListOf<String>()
+                        audio.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
+                        audio.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                        audio.channels?.let { ch -> parts.add(channelLabel(ch)) }
+                        if (audio.isDefault) parts.add("Default")
+                        parts.joinToString(" · ")
+                    }
+                    text.ifBlank { null }
+                }
+                if (audioTexts.isNotEmpty()) {
+                    MobileTechInfoRow(label = "Audio:", value = audioTexts.joinToString("\n"))
+                }
+            }
+            if (movieDetail.subtitleTracks.isNotEmpty()) {
+                val subTexts = movieDetail.subtitleTracks.mapNotNull { sub ->
+                    val text = sub.displayTitle ?: run {
+                        val parts = mutableListOf<String>()
+                        sub.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
+                        sub.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                        if (sub.isDefault) parts.add("Default")
+                        parts.joinToString(" · ")
+                    }
+                    text.ifBlank { null }
+                }
+                if (subTexts.isNotEmpty()) {
+                    MobileTechInfoRow(label = "Subtitle:", value = subTexts.joinToString("\n"))
+                }
+            }
+            movieDetail.extension?.let { ext ->
+                MobileTechInfoRow(label = "Container:", value = ext.uppercase())
+            }
+        }
+
         Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-        // Play button
-        Button(
-            onClick = {
-                onPlayMovie(movieId, movieDetail.name, extension)
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("▶ Play Movie")
+        // Play / Resume buttons
+        val hasResume = resumePositionMs > 0L
+        if (hasResume) {
+            val resumeTimeText = formatMillis(resumePositionMs)
+            Button(
+                onClick = {
+                    onPlayMovie(movieId, movieDetail.name, extension, false)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("▶ Resume from $resumeTimeText")
+            }
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            OutlinedButton(
+                onClick = {
+                    onPlayMovie(movieId, movieDetail.name, extension, true)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Start from Beginning")
+            }
+        } else {
+            Button(
+                onClick = {
+                    onPlayMovie(movieId, movieDetail.name, extension, false)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("▶ Play Movie")
+            }
         }
     }
 }
@@ -282,6 +394,69 @@ private fun ErrorScreen(
                 Text("Back")
             }
         }
+    }
+}
+
+@Composable
+private fun MobileTechInfoRow(label: String, value: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+        )
+    }
+}
+
+private fun channelLabel(channels: Int): String {
+    return when (channels) {
+        1 -> "Mono"
+        2 -> "Stereo"
+        6 -> "5.1"
+        8 -> "7.1"
+        else -> "${channels}ch"
+    }
+}
+
+private fun resolutionLabel(width: Int, height: Int): String {
+    return when {
+        width >= 3840 || height >= 2160 -> "4K"
+        width >= 2560 || height >= 1440 -> "1440p"
+        width >= 1920 || height >= 1080 -> "1080p"
+        width >= 1280 || height >= 720 -> "720p"
+        width >= 854 || height >= 480 -> "480p"
+        else -> "${height}p"
+    }
+}
+
+private fun computeEndsAt(duration: String?, resumePositionMs: Long): String? {
+    if (duration == null) return null
+    val totalSeconds = duration.toLongOrNull() ?: return null
+    if (totalSeconds <= 0) return null
+    val totalMs = totalSeconds * 1000
+    val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
+    val calendar = java.util.Calendar.getInstance()
+    calendar.add(java.util.Calendar.MILLISECOND, remainingMs.toInt())
+    return java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(calendar.time)
+}
+
+private fun formatMillis(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        String.format("%d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%d:%02d", minutes, seconds)
     }
 }
 

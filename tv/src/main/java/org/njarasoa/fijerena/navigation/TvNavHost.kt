@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -119,6 +120,8 @@ fun TvNavHost(
         ) {
             // Content Type Selection Screen
             composable<Screen.ContentTypeSelection> {
+                // Prevent back button from exiting the app on the root screen
+                BackHandler {}
                 ContentTypeSelectionScreen(
                     onContentTypeSelected = { contentType ->
                         navController.navigate(Screen.CategoryList(contentType.name)) {
@@ -257,14 +260,15 @@ fun TvNavHost(
                     movieId = movieDetailsScreen.movieId,
                     movieName = movieDetailsScreen.movieName,
                     categoryId = movieDetailsScreen.categoryId,
-                    onPlayMovie = { movieId, movieName, extension ->
+                    onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
                         navController.navigate(
                             Screen.Player(
                                 streamId = movieId,
                                 streamName = movieName,
                                 categoryId = movieDetailsScreen.categoryId,
                                 contentType = "MOVIES",
-                                episodeExtension = extension // Pass extension for VOD playback
+                                episodeExtension = extension,
+                                startFromBeginning = startFromBeginning
                             )
                         )
                     },
@@ -347,6 +351,7 @@ fun TvNavHost(
                     episodeExtension = playerScreen.episodeExtension,
                     seriesId = playerScreen.seriesId,
                     seriesName = playerScreen.seriesName,
+                    startFromBeginning = playerScreen.startFromBeginning,
                     onBack = {
                         navController.navigateUp()
                     }
@@ -410,6 +415,8 @@ fun TvNavHost(
 
             // Settings Screen
             composable<Screen.Settings> {
+                // Prevent back from exiting if Settings is the start destination (no provider)
+                BackHandler(enabled = navController.previousBackStackEntry == null) {}
                 SettingsScreen(
                     onBack = {
                         navController.navigateUp()
