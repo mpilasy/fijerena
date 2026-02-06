@@ -285,7 +285,7 @@ fun TvNavHost(
                     seriesId = episodeSelectionScreen.seriesId,
                     seriesName = episodeSelectionScreen.seriesName,
                     categoryId = episodeSelectionScreen.categoryId,
-                    onEpisodeSelected = { episodeId, episodeTitle, extension ->
+                    onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning ->
                         navController.navigate(
                             Screen.Player(
                                 streamId = episodeId,
@@ -295,7 +295,8 @@ fun TvNavHost(
                                 episodeId = episodeId,
                                 episodeExtension = extension,
                                 seriesId = episodeSelectionScreen.seriesId,
-                                seriesName = episodeSelectionScreen.seriesName
+                                seriesName = episodeSelectionScreen.seriesName,
+                                startFromBeginning = startFromBeginning
                             )
                         )
                     },

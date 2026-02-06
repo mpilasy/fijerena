@@ -77,16 +77,10 @@ fun TvProviderSelectionScreen(
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                CinemaPrimaryButton(
-                    onClick = onAddProvider,
-                    text = "Add Provider"
-                )
-                CinemaSecondaryButton(
-                    onClick = onBack,
-                    text = "Back"
-                )
-            }
+            CinemaPrimaryButton(
+                onClick = onAddProvider,
+                text = "Add Provider"
+            )
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))

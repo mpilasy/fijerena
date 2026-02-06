@@ -207,6 +207,9 @@ fun ContentTypeSelectionScreen(
             val coroutineScope = rememberCoroutineScope()
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { showProviderPicker = false },
+                containerColor = CinemaSurface,
+                titleContentColor = CinemaTextPrimary,
+                textContentColor = CinemaTextSecondary,
                 title = { androidx.compose.material3.Text("Switch Provider") },
                 text = {
                     Column(
@@ -264,7 +267,7 @@ fun ContentTypeSelectionScreen(
                 },
                 confirmButton = {
                     androidx.compose.material3.TextButton(onClick = { showProviderPicker = false }) {
-                        androidx.compose.material3.Text("Close")
+                        androidx.compose.material3.Text("Close", color = CinemaAccent)
                     }
                 }
             )

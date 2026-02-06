@@ -37,7 +37,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -204,6 +203,8 @@ private fun MovieDetailsContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .focusable()
             .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
     ) {
         // Header with back button
@@ -237,25 +238,18 @@ private fun MovieDetailsContent(
                             contentDescription = "Refresh movie info",
                             tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             modifier = Modifier
-                                .size(24.dp)
+                                .size(TvDimensions.iconSmall)
                                 .rotate(rotation)
                         )
                     }
                 }
             }
             Spacer(modifier = Modifier.width(Spacing.md))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = providerName,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                )
-                Spacer(modifier = Modifier.height(Spacing.xs))
-                CinemaSecondaryButton(
-                    onClick = onBack,
-                    text = "Back"
-                )
-            }
+            Text(
+                text = providerName,
+                style = MaterialTheme.typography.titleSmall,
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+            )
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))
@@ -275,14 +269,11 @@ private fun MovieDetailsContent(
                     .height(TvDimensions.posterHeightLarge)
             )
 
-            // Metadata in glass panel (scrollable with D-pad)
+            // Metadata in glass panel
             GlassPanel(modifier = Modifier.weight(1f)) {
-            Column(modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .focusable()
-                .padding(Spacing.lg)) {
+            Column(modifier = Modifier.padding(Spacing.lg)) {
 
-        // Metadata header row: rating | year | duration
+        // Metadata header row: rating | year | duration | ends at
         Row(
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically
@@ -321,12 +312,91 @@ private fun MovieDetailsContent(
             }
         }
 
+        // Genre tags
+        movieDetail.metadata?.genre?.let { genre ->
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Text(
+                text = genre,
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaAccent
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.lg))
+
+        // Play / Resume buttons
+        val hasResume = resumePositionMs > 0L
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (hasResume) {
+                val resumeTimeText = formatMillis(resumePositionMs)
+                CinemaPrimaryButton(
+                    onClick = {
+                        onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
+                    },
+                    text = "▶ Resume from $resumeTimeText",
+                    modifier = Modifier
+                        .focusRequester(playButtonFocusRequester)
+                )
+                CinemaSecondaryButton(
+                    onClick = {
+                        onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true)
+                    },
+                    text = "Start from Beginning"
+                )
+            } else {
+                CinemaPrimaryButton(
+                    onClick = {
+                        onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
+                    },
+                    text = "▶ Play Movie",
+                    modifier = Modifier
+                        .focusRequester(playButtonFocusRequester)
+                )
+            }
+        }
+
+        // Plot/Description
+        movieDetail.metadata?.plot?.let { plot ->
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            Text(
+                text = plot,
+                style = MaterialTheme.typography.bodyLarge,
+                color = CinemaTextPrimary,
+                maxLines = 6,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
         Spacer(modifier = Modifier.height(Spacing.md))
+
+        // Cast, Director
+        movieDetail.metadata?.cast?.let { cast ->
+            Text(
+                text = "Cast: $cast",
+                style = MaterialTheme.typography.bodySmall,
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(Spacing.xs))
+        }
+        movieDetail.metadata?.director?.let { director ->
+            Text(
+                text = "Director: $director",
+                style = MaterialTheme.typography.bodySmall,
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+            )
+            Spacer(modifier = Modifier.height(Spacing.xs))
+        }
 
         // Technical stream info (Jellyfin-style labeled rows)
         val hasVideoInfo = movieDetail.videoInfo != null &&
             (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
         if (hasVideoInfo || movieDetail.audioTracks.isNotEmpty() || movieDetail.subtitleTracks.isNotEmpty() || movieDetail.extension != null) {
+            Spacer(modifier = Modifier.height(Spacing.sm))
             movieDetail.videoInfo?.let { video ->
                 val videoText = video.displayTitle ?: run {
                     val parts = mutableListOf<String>()
@@ -382,90 +452,6 @@ private fun MovieDetailsContent(
             movieDetail.extension?.let { ext ->
                 TechInfoRow(label = "Container:", value = ext.uppercase())
             }
-            Spacer(modifier = Modifier.height(Spacing.md))
-        }
-
-        // Plot/Description
-        movieDetail.metadata?.plot?.let { plot ->
-            Text(
-                text = plot,
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextPrimary,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(Spacing.md))
-        }
-
-        // Cast
-        movieDetail.metadata?.cast?.let { cast ->
-            Text(
-                text = "Cast: $cast",
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(Spacing.xs))
-        }
-
-        // Director
-        movieDetail.metadata?.director?.let { director ->
-            Text(
-                text = "Director: $director",
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-            )
-            Spacer(modifier = Modifier.height(Spacing.xs))
-        }
-
-        // Genre tags
-        movieDetail.metadata?.genre?.let { genre ->
-            Spacer(modifier = Modifier.height(Spacing.sm))
-            Text(
-                text = genre,
-                style = MaterialTheme.typography.bodyMedium,
-                color = CinemaAccent
-            )
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.xl))
-
-        // Play / Resume buttons
-        val hasResume = resumePositionMs > 0L
-        if (hasResume) {
-            val resumeTimeText = formatMillis(resumePositionMs)
-            CinemaPrimaryButton(
-                onClick = {
-                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
-                },
-                text = "▶ Resume from $resumeTimeText",
-                modifier = Modifier
-                    .width(TvDimensions.selectionListWidth)
-                    .height(TvDimensions.moviePosterHeight)
-                    .focusRequester(playButtonFocusRequester)
-            )
-            Spacer(modifier = Modifier.height(Spacing.sm))
-            CinemaSecondaryButton(
-                onClick = {
-                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true)
-                },
-                text = "Start from Beginning",
-                modifier = Modifier
-                    .width(TvDimensions.selectionListWidth)
-                    .height(TvDimensions.moviePosterHeight)
-            )
-        } else {
-            CinemaPrimaryButton(
-                onClick = {
-                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
-                },
-                text = "▶ Play Movie",
-                modifier = Modifier
-                    .width(TvDimensions.selectionListWidth)
-                    .height(TvDimensions.moviePosterHeight)
-                    .focusRequester(playButtonFocusRequester)
-            )
         }
             } // GlassPanel Column
             } // GlassPanel
@@ -533,7 +519,7 @@ private fun ErrorScreen(
 private fun TechInfoRow(label: String, value: String) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
         Text(
             text = label,
@@ -576,12 +562,37 @@ private fun resolutionLabel(width: Int, height: Int): String {
 }
 
 /**
+ * Parses a duration string that can be either raw seconds ("7200") or h:mm:ss / m:ss format ("1:23:45").
+ * Returns total seconds, or null if unparseable.
+ */
+private fun parseDurationToSeconds(duration: String): Long? {
+    // Try raw seconds first
+    duration.toLongOrNull()?.let { return it }
+    // Try h:mm:ss or m:ss format
+    val parts = duration.split(":")
+    return when (parts.size) {
+        3 -> {
+            val h = parts[0].toLongOrNull() ?: return null
+            val m = parts[1].toLongOrNull() ?: return null
+            val s = parts[2].toLongOrNull() ?: return null
+            h * 3600 + m * 60 + s
+        }
+        2 -> {
+            val m = parts[0].toLongOrNull() ?: return null
+            val s = parts[1].toLongOrNull() ?: return null
+            m * 60 + s
+        }
+        else -> null
+    }
+}
+
+/**
  * Computes "Ends at" time based on duration and optional resume position.
  * Returns formatted time string like "10:30 PM" or null if duration unavailable.
  */
 private fun computeEndsAt(duration: String?, resumePositionMs: Long): String? {
     if (duration == null) return null
-    val totalSeconds = duration.toLongOrNull() ?: return null
+    val totalSeconds = parseDurationToSeconds(duration) ?: return null
     if (totalSeconds <= 0) return null
     val totalMs = totalSeconds * 1000
     val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
@@ -606,19 +617,16 @@ private fun formatMillis(ms: Long): String {
 }
 
 /**
- * Formats duration string (e.g., "7200" seconds to "2h 0m")
+ * Formats duration string to human-readable "2h 0m" form.
+ * Accepts raw seconds ("7200") or h:mm:ss / m:ss format ("1:23:45").
  */
 private fun formatDuration(duration: String): String {
-    return try {
-        val seconds = duration.toLongOrNull() ?: return duration
-        val hours = seconds / 3600
-        val minutes = (seconds % 3600) / 60
-        when {
-            hours > 0 -> "${hours}h ${minutes}m"
-            minutes > 0 -> "${minutes}m"
-            else -> "${seconds}s"
-        }
-    } catch (e: Exception) {
-        duration
+    val seconds = parseDurationToSeconds(duration) ?: return duration
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m"
+        else -> "${seconds}s"
     }
 }

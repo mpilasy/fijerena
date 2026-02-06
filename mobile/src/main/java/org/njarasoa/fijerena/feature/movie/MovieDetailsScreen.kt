@@ -208,21 +208,43 @@ private fun MovieDetailsContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+        Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-        // Release date
-        movieDetail.metadata?.releaseDate?.let { releaseDate ->
-            Text(
-                text = "Released: $releaseDate",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
-            )
+        // Play / Resume buttons
+        val hasResume = resumePositionMs > 0L
+        if (hasResume) {
+            val resumeTimeText = formatMillis(resumePositionMs)
+            Button(
+                onClick = {
+                    onPlayMovie(movieId, movieDetail.name, extension, false)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("▶ Resume from $resumeTimeText")
+            }
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            OutlinedButton(
+                onClick = {
+                    onPlayMovie(movieId, movieDetail.name, extension, true)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Start from Beginning")
+            }
+        } else {
+            Button(
+                onClick = {
+                    onPlayMovie(movieId, movieDetail.name, extension, false)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("▶ Play Movie")
+            }
         }
-
-        Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
         // Plot/Description
         movieDetail.metadata?.plot?.let { plot ->
+            Spacer(modifier = Modifier.height(CinemaSpacing.lg))
             Text(
                 text = plot,
                 style = MaterialTheme.typography.bodyLarge
@@ -231,24 +253,33 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
+        // Release date
+        movieDetail.metadata?.releaseDate?.let { releaseDate ->
+            Text(
+                text = "Released: $releaseDate",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+            )
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+        }
+
         // Cast
         movieDetail.metadata?.cast?.let { cast ->
             Text(
                 text = "Cast: $cast",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
         }
-
-        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
         // Director
         movieDetail.metadata?.director?.let { director ->
             Text(
                 text = "Director: $director",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium)
             )
         }
@@ -314,40 +345,6 @@ private fun MovieDetailsContent(
                 MobileTechInfoRow(label = "Container:", value = ext.uppercase())
             }
         }
-
-        Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-
-        // Play / Resume buttons
-        val hasResume = resumePositionMs > 0L
-        if (hasResume) {
-            val resumeTimeText = formatMillis(resumePositionMs)
-            Button(
-                onClick = {
-                    onPlayMovie(movieId, movieDetail.name, extension, false)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("▶ Resume from $resumeTimeText")
-            }
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            OutlinedButton(
-                onClick = {
-                    onPlayMovie(movieId, movieDetail.name, extension, true)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Start from Beginning")
-            }
-        } else {
-            Button(
-                onClick = {
-                    onPlayMovie(movieId, movieDetail.name, extension, false)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("▶ Play Movie")
-            }
-        }
     }
 }
 
@@ -401,7 +398,7 @@ private fun ErrorScreen(
 private fun MobileTechInfoRow(label: String, value: String) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
         Text(
             text = label,
@@ -437,9 +434,28 @@ private fun resolutionLabel(width: Int, height: Int): String {
     }
 }
 
+private fun parseDurationToSeconds(duration: String): Long? {
+    duration.toLongOrNull()?.let { return it }
+    val parts = duration.split(":")
+    return when (parts.size) {
+        3 -> {
+            val h = parts[0].toLongOrNull() ?: return null
+            val m = parts[1].toLongOrNull() ?: return null
+            val s = parts[2].toLongOrNull() ?: return null
+            h * 3600 + m * 60 + s
+        }
+        2 -> {
+            val m = parts[0].toLongOrNull() ?: return null
+            val s = parts[1].toLongOrNull() ?: return null
+            m * 60 + s
+        }
+        else -> null
+    }
+}
+
 private fun computeEndsAt(duration: String?, resumePositionMs: Long): String? {
     if (duration == null) return null
-    val totalSeconds = duration.toLongOrNull() ?: return null
+    val totalSeconds = parseDurationToSeconds(duration) ?: return null
     if (totalSeconds <= 0) return null
     val totalMs = totalSeconds * 1000
     val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
@@ -461,16 +477,12 @@ private fun formatMillis(ms: Long): String {
 }
 
 private fun formatDuration(duration: String): String {
-    return try {
-        val seconds = duration.toLongOrNull() ?: return duration
-        val hours = seconds / 3600
-        val minutes = (seconds % 3600) / 60
-        when {
-            hours > 0 -> "${hours}h ${minutes}m"
-            minutes > 0 -> "${minutes}m"
-            else -> "${seconds}s"
-        }
-    } catch (e: Exception) {
-        duration
+    val seconds = parseDurationToSeconds(duration) ?: return duration
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m"
+        else -> "${seconds}s"
     }
 }

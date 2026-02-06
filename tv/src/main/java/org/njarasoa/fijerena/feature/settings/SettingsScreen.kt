@@ -189,10 +189,6 @@ fun SettingsScreen(
                 ),
                 color = MaterialTheme.colorScheme.onSurface
             )
-            CinemaSecondaryButton(
-                onClick = onBack,
-                text = "Back"
-            )
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
