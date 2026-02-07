@@ -72,6 +72,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 
 @Composable
 fun TvAddProviderScreen(
@@ -220,6 +221,7 @@ fun TvAddProviderScreen(
                             unfocusedBorderColor = CinemaTextSecondary,
                             focusedLabelColor = CinemaAccent,
                             unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            focusedContainerColor = CinemaSurfaceVariant,
                             focusedTrailingIconColor = CinemaAccent,
                             unfocusedTrailingIconColor = CinemaTextSecondary
                         )
@@ -267,6 +269,7 @@ fun TvAddProviderScreen(
                         unfocusedBorderColor = CinemaTextSecondary,
                         focusedLabelColor = CinemaAccent,
                         unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        focusedContainerColor = CinemaSurfaceVariant,
                         focusedPlaceholderColor = CinemaTextSecondary,
                         unfocusedPlaceholderColor = CinemaTextSecondary
                     )
@@ -576,7 +579,9 @@ fun TvAddProviderScreen(
 
                     // Auto-Resume
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .tvFocusableNoScale(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -860,7 +865,9 @@ fun TvAddProviderScreen(
 
                         // Enable Caching
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .tvFocusableNoScale(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {

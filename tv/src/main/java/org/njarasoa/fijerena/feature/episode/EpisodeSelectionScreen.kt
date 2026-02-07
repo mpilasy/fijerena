@@ -72,6 +72,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 
 /**
@@ -209,31 +210,11 @@ private fun EpisodeListContent(
     }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
-    // Track which seasons are expanded (first season by default, updated after watch check)
+    // Track which seasons are expanded (all expanded by default for multi-season shows)
     var expandedSeasons by remember(seriesDetail) {
         mutableStateOf(
-            if (hasMultipleSeasons) setOf(sortedSeasons.first().seasonNumber) else emptySet()
+            if (hasMultipleSeasons) sortedSeasons.map { it.seasonNumber }.toSet() else emptySet()
         )
-    }
-
-    // Auto-expand season with next unwatched/in-progress episode
-    LaunchedEffect(seriesDetail) {
-        if (!hasMultipleSeasons) return@LaunchedEffect
-        for (season in sortedSeasons) {
-            val seasonKey = season.seasonNumber.toString()
-            val episodes = seriesDetail.episodes[seasonKey]
-                ?.sortedBy { it.episodeNumber }
-                ?: continue
-            for (episode in episodes) {
-                val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, "TV_SHOWS")
-                if (watched == null || !watched.isCompleted) {
-                    // Found the next episode to watch — expand its season
-                    expandedSeasons = setOf(season.seasonNumber)
-                    return@LaunchedEffect
-                }
-            }
-        }
-        // All episodes watched — just keep first season expanded
     }
 
     if (selectedEpisode != null) {
@@ -618,6 +599,7 @@ private fun SeasonHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .tvFocusableNoScale()
             .clickable { onToggle() }
             .padding(vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,

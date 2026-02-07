@@ -74,6 +74,7 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 
 /**
  * Settings screen for app configuration.
@@ -349,13 +350,25 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextField(
+                            OutlinedTextField(
                                 value = newEpgUrl,
                                 onValueChange = { newEpgUrl = it },
                                 label = { Text("XMLTV URL") },
                                 placeholder = { Text("https://epg.example.com/guide.xml.gz") },
                                 singleLine = true,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = CinemaTextPrimary,
+                                    unfocusedTextColor = CinemaTextPrimary,
+                                    cursorColor = CinemaAccent,
+                                    focusedBorderColor = CinemaAccent,
+                                    unfocusedBorderColor = CinemaTextSecondary,
+                                    focusedLabelColor = CinemaAccent,
+                                    unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                    focusedContainerColor = CinemaSurfaceVariant,
+                                    focusedPlaceholderColor = CinemaTextSecondary,
+                                    unfocusedPlaceholderColor = CinemaTextSecondary
+                                )
                             )
                             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                             CinemaSecondaryButton(
@@ -441,8 +454,15 @@ fun SettingsScreen(
 
             // Developer Mode
             item {
+                GlassPanel(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .tvFocusableNoScale()
+                ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.md.scaled(scale)),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -467,6 +487,7 @@ fun SettingsScreen(
                             appSettings.isDevMode = enabled
                         }
                     )
+                }
                 }
             }
 

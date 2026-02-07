@@ -96,11 +96,38 @@ fun TvNavHost(
     }
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
+    // Read last content type for direct-to-category startup
+    val lastContentType = remember {
+        if (!hasProvider) null
+        else {
+            kotlinx.coroutines.runBlocking {
+                val providerRepo = ProviderRepository(context.applicationContext)
+                val activeProvider = providerRepo.getActiveProvider()
+                if (activeProvider != null) {
+                    val prefs = context.applicationContext.getSharedPreferences(
+                        "media_cache_${activeProvider.id}",
+                        android.content.Context.MODE_PRIVATE
+                    )
+                    prefs.getString("last_content_type", null)
+                } else null
+            }
+        }
+    }
+
     // Determine initial destination based on provider configuration
     val startDestination = if (hasProvider) {
         Screen.ContentTypeSelection
     } else {
         Screen.Settings
+    }
+
+    // Auto-navigate to last content type on startup
+    LaunchedEffect(lastContentType) {
+        if (lastContentType != null) {
+            navController.navigate(Screen.CategoryList(lastContentType)) {
+                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+            }
+        }
     }
 
     // Auto-restore Xtream session if the active provider is Xtream

@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.provider
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +18,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -177,34 +179,39 @@ fun MobileAddProviderScreen(
                 .padding(CinemaSpacing.md)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Provider type selector
-            Text(
-                text = "Provider Type",
-                style = MaterialTheme.typography.labelLarge,
-                color = CinemaTextSecondary
-            )
-
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+            // Provider type dropdown
+            var typeDropdownExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = typeDropdownExpanded,
+                onExpandedChange = { typeDropdownExpanded = it },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                ProviderType.entries.forEach { type ->
-                    FilterChip(
-                        selected = selectedType == type,
-                        onClick = {
-                            selectedType = type
-                            error = null
-                        },
-                        label = { Text(type.displayName, style = MaterialTheme.typography.labelSmall) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = CinemaAccent,
-                            selectedLabelColor = CinemaTextPrimary
+                OutlinedTextField(
+                    value = selectedType.displayName,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Provider Type") },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeDropdownExpanded)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                )
+                ExposedDropdownMenu(
+                    expanded = typeDropdownExpanded,
+                    onDismissRequest = { typeDropdownExpanded = false }
+                ) {
+                    ProviderType.entries.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type.displayName) },
+                            onClick = {
+                                selectedType = type
+                                error = null
+                                typeDropdownExpanded = false
+                            }
                         )
-                    )
+                    }
                 }
             }
 
