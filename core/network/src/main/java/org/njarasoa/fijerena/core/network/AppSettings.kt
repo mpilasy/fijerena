@@ -26,6 +26,7 @@ class AppSettings(context: Context) {
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
         const val DEFAULT_UI_SCALE = 1.0f
+        const val DEFAULT_EPG_URL = "https://epg.pw/xmltv/epg_lite.xml"
     }
 
     /**
@@ -107,6 +108,6 @@ class AppSettings(context: Context) {
      * Empty string means no external EPG is configured.
      */
     var epgUrl: String
-        get() = prefs.getString(KEY_EPG_URL, "") ?: ""
+        get() = prefs.getString(KEY_EPG_URL, DEFAULT_EPG_URL) ?: DEFAULT_EPG_URL
         set(value) = prefs.edit().putString(KEY_EPG_URL, value.trim()).apply()
 }

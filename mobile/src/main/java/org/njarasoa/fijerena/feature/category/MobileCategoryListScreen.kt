@@ -41,11 +41,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -75,6 +78,12 @@ fun MobileCategoryListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val nowPlaying by viewModel.nowPlaying.collectAsState()
+    val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsState()
+    val context = LocalContext.current
+    val epgFileManager = remember { EpgFileManager.getInstance(context.applicationContext) }
+    val epgFileState by epgFileManager.state.collectAsState()
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val isDevMode = remember { appSettings.isDevMode }
 
     Scaffold(
         topBar = {
@@ -86,13 +95,16 @@ fun MobileCategoryListScreen(
                     }
                 },
                 actions = {
-                    // EPG button - only for Live TV when a category is selected
+                    // EPG button - show for Live TV when native EPG or XMLTV file is available
                     if (contentType == "LIVE_TV") {
                         val state = uiState
                         if (state is CategoryViewModel.UiState.Success) {
                             val selectedCatId = state.selectedCategoryId
                             val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
-                            if (selectedCatId != null && selectedCatName != null) {
+                            val hasEpgData = supportsNativeEpg ||
+                                epgFileState is EpgFileManager.EpgFileState.Ready ||
+                                epgFileState is EpgFileManager.EpgFileState.Error
+                            if (selectedCatId != null && selectedCatName != null && hasEpgData) {
                                 IconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) }) {
                                     Icon(Icons.Default.DateRange, "TV Guide")
                                 }
@@ -122,6 +134,59 @@ fun MobileCategoryListScreen(
                 }
                 is CategoryViewModel.UiState.Success -> {
                     Column(modifier = Modifier.fillMaxSize()) {
+                        // EPG error/status banner (Live TV only)
+                        if (contentType == "LIVE_TV") {
+                            val epgMessage = when (epgFileState) {
+                                is EpgFileManager.EpgFileState.Failed ->
+                                    (epgFileState as EpgFileManager.EpgFileState.Failed).reason
+                                is EpgFileManager.EpgFileState.Error ->
+                                    (epgFileState as EpgFileManager.EpgFileState.Error).reason
+                                is EpgFileManager.EpgFileState.Downloading ->
+                                    "EPG file downloading..."
+                                else -> null
+                            }
+                            if (epgMessage != null) {
+                                Text(
+                                    text = epgMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (epgFileState is EpgFileManager.EpgFileState.Downloading) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.error
+                                    },
+                                    modifier = Modifier.padding(
+                                        horizontal = CinemaSpacing.md,
+                                        vertical = CinemaSpacing.xs
+                                    )
+                                )
+                            }
+                            // Dev mode EPG info
+                            if (isDevMode) {
+                                val epgInfo = when (val epg = epgFileState) {
+                                    is EpgFileManager.EpgFileState.Ready -> {
+                                        val sizeMb = epg.sizeBytes / (1024.0 * 1024.0)
+                                        val ageMs = System.currentTimeMillis() - epg.lastModifiedMs
+                                        val ageHours = ageMs / 3600000
+                                        val ageMins = (ageMs % 3600000) / 60000
+                                        "EPG: ${"%.1f".format(sizeMb)} MB | ${ageHours}h ${ageMins}m ago"
+                                    }
+                                    is EpgFileManager.EpgFileState.Downloading -> "EPG: Downloading..."
+                                    else -> null
+                                }
+                                if (epgInfo != null) {
+                                    Text(
+                                        text = epgInfo,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(
+                                            horizontal = CinemaSpacing.md,
+                                            vertical = CinemaSpacing.xs
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
                         // Horizontal category chips
                         CategoryChipRow(
                             categories = state.categories,

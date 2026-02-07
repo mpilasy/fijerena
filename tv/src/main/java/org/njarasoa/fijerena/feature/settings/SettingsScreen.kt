@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -337,6 +338,7 @@ fun SettingsScreen(
                                     onClick = {
                                         epgUrl = ""
                                         appSettings.epgUrl = ""
+                                        EpgFileManager.getInstance(context.applicationContext).triggerDownload()
                                     },
                                     text = "Clear"
                                 )
@@ -371,6 +373,7 @@ fun SettingsScreen(
                                     isEditingEpgUrl = false
                                     newEpgUrl = ""
                                     appSettings.epgUrl = url
+                                    EpgFileManager.getInstance(context.applicationContext).triggerDownload()
                                 },
                                 enabled = newEpgUrl.isNotBlank(),
                                 text = "Save"
