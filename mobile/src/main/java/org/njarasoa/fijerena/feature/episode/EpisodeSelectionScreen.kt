@@ -169,29 +169,11 @@ private fun EpisodeListContent(
     }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
-    // Track which seasons are expanded (first season by default, updated after watch check)
+    // Track which seasons are expanded (all expanded by default for multi-season shows)
     var expandedSeasons by remember(seriesDetail) {
         mutableStateOf(
-            if (hasMultipleSeasons) setOf(sortedSeasons.first().seasonNumber) else emptySet()
+            if (hasMultipleSeasons) sortedSeasons.map { it.seasonNumber }.toSet() else emptySet()
         )
-    }
-
-    // Auto-expand season with next unwatched/in-progress episode
-    LaunchedEffect(seriesDetail) {
-        if (!hasMultipleSeasons) return@LaunchedEffect
-        for (season in sortedSeasons) {
-            val seasonKey = season.seasonNumber.toString()
-            val episodes = seriesDetail.episodes[seasonKey]
-                ?.sortedBy { it.episodeNumber }
-                ?: continue
-            for (episode in episodes) {
-                val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, "TV_SHOWS")
-                if (watched == null || !watched.isCompleted) {
-                    expandedSeasons = setOf(season.seasonNumber)
-                    return@LaunchedEffect
-                }
-            }
-        }
     }
 
     Column(

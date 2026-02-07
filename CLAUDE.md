@@ -220,7 +220,8 @@ All screens must respect 56dp horizontal / 32dp vertical safe margins to account
 The app follows this streamlined navigation structure:
 1. **App Startup:**
    - **No Provider Configured:** Opens directly to Settings screen
-   - **Provider Configured:** Auto-restores session → Content Type Selection
+   - **Provider Configured + Last Content Type Saved:** Auto-navigates directly to last Category Grid (ContentTypeSelection stays on backstack for back button)
+   - **Provider Configured + No History:** Auto-restores session → Content Type Selection
 2. **Content Type Selection** (main landing page) - Choose Live TV, Movies, or TV Shows
 3. **Category Grid** - Browse categories and streams/episodes
 4. **Movie Details** (Movies) / **Episode Selection → Episode Details** (TV Shows) - Info screen before playback
@@ -228,7 +229,7 @@ The app follows this streamlined navigation structure:
 6. **Settings** - Accessible from Content Type Selection via gear icon
 7. **Provider Management** - Accessible from Settings → "Manage Providers"
    - **Provider Selection:** List all providers, select/edit/delete
-   - **Add/Edit Provider:** Type selector + type-specific form fields (Xtream: URL/user/pass, Jellyfin: server URL/user/pass, SMB: host/share/user/pass, Local: folder/M3U picker). Edit mode includes inline provider settings (auto-resume, watch history size, favorites max size, clear buttons, category filters, caching toggle).
+   - **Add/Edit Provider:** Type selector (TV: D-pad dropdown, Mobile: ExposedDropdownMenu) + type-specific form fields (Xtream: URL/user/pass, Jellyfin: server URL/user/pass, SMB: host/share/user/pass, Local: folder/M3U picker). Edit mode includes inline provider settings (auto-resume, watch history size, favorites max size, clear buttons, category filters, caching toggle). TV form fields use `focusedContainerColor` for visible focus, switch rows use `tvFocusableNoScale()`.
 
 **Note:** There is no login screen and no logout button anywhere in the app. Authentication happens automatically on startup via stored credentials, or after configuring a provider in Settings. To switch or remove a provider, use Settings → Manage Providers. Both TV and mobile use the same flow.
 
@@ -302,7 +303,8 @@ When selecting an episode from the episode list, an inline detail panel is shown
 **Collapsible Seasons:**
 - Multi-season shows display collapsible season headers with chevron indicators
 - Tapping/clicking a season header toggles its episode list
-- On load, the season containing the **next unwatched/in-progress episode** is auto-expanded (checks watch status via `mediaRepository.getPlaybackPositionSuspend()`)
+- On load, **all seasons are expanded by default** for multi-season shows
+- Season headers on TV use `tvFocusableNoScale()` for D-pad focus visibility
 - Single-season shows skip the header entirely
 
 **Resume Logic:**
