@@ -54,7 +54,20 @@ fun MobileContentTypeSelectionScreen(
     var activeProviderId by remember { mutableStateOf(0L) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
+    // Category counts per content type: Pair(filtered, total) — null while loading
+    var liveTvCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var moviesCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var tvShowsCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var mediaProviderRef by remember { mutableStateOf<org.njarasoa.fijerena.core.player.domain.MediaProvider?>(null) }
+    var categoryFilters by remember {
+        mutableStateOf(org.njarasoa.fijerena.core.network.provider.CategoryFilters())
+    }
+
     LaunchedEffect(refreshTrigger) {
+        // Reset counts so stale values don't linger during provider switch
+        liveTvCounts = null
+        moviesCounts = null
+        tvShowsCounts = null
         withContext(Dispatchers.IO) {
             val providerRepo = ProviderRepository(context.applicationContext)
             allProviders = providerRepo.getAllProvidersList()
@@ -66,8 +79,37 @@ fun MobileContentTypeSelectionScreen(
                 val password = providerRepo.getPassword(activeProvider.id) ?: ""
                 val mediaProvider = MediaProviderFactory.create(activeProvider, context.applicationContext, password)
                 supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
+                categoryFilters = providerRepo.getProviderSettings(activeProvider.id).categoryFilters
+                mediaProviderRef = mediaProvider
             } else {
                 providerName = appSettings.providerName
+            }
+        }
+    }
+
+    // Load category counts in the background once provider is ready
+    LaunchedEffect(mediaProviderRef) {
+        val mp = mediaProviderRef ?: return@LaunchedEffect
+        val filters = categoryFilters
+        val hasFilters = filters.prefixes.isNotEmpty() || filters.allowedScripts.isNotEmpty()
+        withContext(Dispatchers.IO) {
+            if ("LIVE_TV" in mp.capabilities.supportedContentTypes) {
+                mp.getCategories("LIVE_TV").onSuccess { cats ->
+                    val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
+                    liveTvCounts = Pair(filtered, cats.size)
+                }
+            }
+            if ("MOVIES" in mp.capabilities.supportedContentTypes) {
+                mp.getCategories("MOVIES").onSuccess { cats ->
+                    val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
+                    moviesCounts = Pair(filtered, cats.size)
+                }
+            }
+            if ("TV_SHOWS" in mp.capabilities.supportedContentTypes) {
+                mp.getCategories("TV_SHOWS").onSuccess { cats ->
+                    val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
+                    tvShowsCounts = Pair(filtered, cats.size)
+                }
             }
         }
     }
@@ -111,10 +153,13 @@ fun MobileContentTypeSelectionScreen(
                 modifier = Modifier.padding(bottom = CinemaSpacing.lg)
             )
 
+            val isDevMode = appSettings.isDevMode
             if ("LIVE_TV" in supportedContentTypes) {
                 GradientContentCard(
                     title = "Live TV",
                     description = "Watch live television channels",
+                    categoryCounts = liveTvCounts,
+                    showTotal = isDevMode,
                     gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
                     onClick = { onContentTypeSelected("LIVE_TV") }
                 )
@@ -124,6 +169,8 @@ fun MobileContentTypeSelectionScreen(
                 GradientContentCard(
                     title = "Movies",
                     description = "Browse on-demand movies",
+                    categoryCounts = moviesCounts,
+                    showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccent, CinemaAccentDark),
                     onClick = { onContentTypeSelected("MOVIES") }
                 )
@@ -133,6 +180,8 @@ fun MobileContentTypeSelectionScreen(
                 GradientContentCard(
                     title = "TV Shows",
                     description = "Watch series and episodes",
+                    categoryCounts = tvShowsCounts,
+                    showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccentLight, CinemaAccent),
                     onClick = { onContentTypeSelected("TV_SHOWS") }
                 )
@@ -215,6 +264,8 @@ fun MobileContentTypeSelectionScreen(
 private fun GradientContentCard(
     title: String,
     description: String,
+    categoryCounts: Pair<Int, Int>?,
+    showTotal: Boolean = false,
     gradientColors: List<androidx.compose.ui.graphics.Color>,
     onClick: () -> Unit
 ) {
@@ -234,20 +285,44 @@ private fun GradientContentCard(
                 ),
             contentAlignment = Alignment.CenterStart
         ) {
-            Column(
-                modifier = Modifier.padding(CinemaSpacing.lg)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(CinemaSpacing.lg),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = CinemaTextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
-                )
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = CinemaTextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
+                    )
+                }
+                if (categoryCounts != null) {
+                    val (filtered, total) = categoryCounts
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "$filtered",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (showTotal && filtered < total) {
+                            Text(
+                                text = "of $total",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
