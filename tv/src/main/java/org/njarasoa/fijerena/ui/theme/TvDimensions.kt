@@ -51,8 +51,9 @@ object TvDimensions {
     val posterWidth: Dp = 160.dp
     val posterHeight: Dp = 90.dp
     val posterHeightLarge: Dp = 240.dp
-    val contentTypeCardWidth: Dp = 300.dp
-    val contentTypeCardHeight: Dp = 180.dp
+    val contentTypeCardWidth: Dp = 340.dp
+    val contentTypeCardHeight: Dp = 240.dp
+    val contentTypeIconSize: Dp = 56.dp
 
     // Borders
     val borderDefault: Dp = 1.dp

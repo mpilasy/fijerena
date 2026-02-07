@@ -8,16 +8,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,11 +34,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.BorderStroke
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -48,6 +52,7 @@ import org.njarasoa.fijerena.core.navigation.ContentType
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -67,7 +72,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
- * Content type selection screen — hero card redesign with gradient backgrounds.
+ * Content type selection screen with icons, category counts, and gradient cards.
  */
 @Composable
 fun ContentTypeSelectionScreen(
@@ -75,7 +80,6 @@ fun ContentTypeSelectionScreen(
     onSettings: () -> Unit,
     onProviderChanged: () -> Unit = {}
 ) {
-    val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     var providerName by remember { mutableStateOf("") }
@@ -86,7 +90,22 @@ fun ContentTypeSelectionScreen(
     var activeProviderId by remember { mutableStateOf(0L) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
+    // Category counts per content type: Pair(filtered, total) — null while loading
+    var liveTvCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var moviesCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var tvShowsCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+    // Stash provider ref + filters so we can load counts
+    var mediaProviderRef by remember { mutableStateOf<MediaProvider?>(null) }
+    var categoryFilters by remember {
+        mutableStateOf(org.njarasoa.fijerena.core.network.provider.CategoryFilters())
+    }
+
     LaunchedEffect(refreshTrigger) {
+        // Reset counts so stale values don't linger during provider switch
+        liveTvCounts = null
+        moviesCounts = null
+        tvShowsCounts = null
         withContext(Dispatchers.IO) {
             val providerRepo = ProviderRepository(context.applicationContext)
             allProviders = providerRepo.getAllProvidersList()
@@ -98,8 +117,37 @@ fun ContentTypeSelectionScreen(
                 val password = providerRepo.getPassword(activeProvider.id) ?: ""
                 val mediaProvider = MediaProviderFactory.create(activeProvider, context.applicationContext, password)
                 supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
+                categoryFilters = providerRepo.getProviderSettings(activeProvider.id).categoryFilters
+                mediaProviderRef = mediaProvider
             } else {
                 providerName = appSettings.providerName
+            }
+        }
+    }
+
+    // Load category counts in the background once provider is ready
+    LaunchedEffect(mediaProviderRef) {
+        val mp = mediaProviderRef ?: return@LaunchedEffect
+        val filters = categoryFilters
+        val hasFilters = filters.prefixes.isNotEmpty() || filters.allowedScripts.isNotEmpty()
+        withContext(Dispatchers.IO) {
+            if ("LIVE_TV" in mp.capabilities.supportedContentTypes) {
+                mp.getCategories("LIVE_TV").onSuccess { cats ->
+                    val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
+                    liveTvCounts = Pair(filtered, cats.size)
+                }
+            }
+            if ("MOVIES" in mp.capabilities.supportedContentTypes) {
+                mp.getCategories("MOVIES").onSuccess { cats ->
+                    val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
+                    moviesCounts = Pair(filtered, cats.size)
+                }
+            }
+            if ("TV_SHOWS" in mp.capabilities.supportedContentTypes) {
+                mp.getCategories("TV_SHOWS").onSuccess { cats ->
+                    val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
+                    tvShowsCounts = Pair(filtered, cats.size)
+                }
             }
         }
     }
@@ -132,7 +180,7 @@ fun ContentTypeSelectionScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "IPTV.atr",
+                    text = providerName.ifEmpty { "Fijerena" },
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -141,21 +189,23 @@ fun ContentTypeSelectionScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
-                    val displayName = if (appSettings.isDevMode && providerType.isNotEmpty()) {
-                        "$providerName ($providerType)"
-                    } else providerName
-                    GlassPanel(
-                        modifier = Modifier.clickable { showProviderPicker = true }
-                    ) {
-                        Text(
-                            text = displayName,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = CinemaAccentLight,
-                            modifier = Modifier.padding(
-                                horizontal = Spacing.md,
-                                vertical = Spacing.xs
+                    if (allProviders.size > 1) {
+                        val displayName = if (appSettings.isDevMode && providerType.isNotEmpty()) {
+                            "$providerName ($providerType)"
+                        } else providerName
+                        GlassPanel(
+                            modifier = Modifier.clickable { showProviderPicker = true }
+                        ) {
+                            Text(
+                                text = displayName,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = CinemaAccentLight,
+                                modifier = Modifier.padding(
+                                    horizontal = Spacing.md,
+                                    vertical = Spacing.xs
+                                )
                             )
-                        )
+                        }
                     }
                     CinemaIconButton(
                         onClick = onSettings,
@@ -176,23 +226,22 @@ fun ContentTypeSelectionScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = "Select Content Type",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = Spacing.xxl)
-                )
-
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xl),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
+                    val isDevMode = appSettings.isDevMode
                     if ("LIVE_TV" in supportedContentTypes) {
                         ContentTypeHeroCard(
                             title = "Live TV",
                             subtitle = "Watch live channels",
+                            icon = Icons.Default.LiveTv,
+                            categoryCounts = liveTvCounts,
+                            showTotal = isDevMode,
                             gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                            onClick = { onContentTypeSelected(ContentType.LIVE_TV) }
+                            onClick = { onContentTypeSelected(ContentType.LIVE_TV) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
 
@@ -200,8 +249,12 @@ fun ContentTypeSelectionScreen(
                         ContentTypeHeroCard(
                             title = "Movies",
                             subtitle = "Browse on-demand",
+                            icon = Icons.Default.Movie,
+                            categoryCounts = moviesCounts,
+                            showTotal = isDevMode,
                             gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                            onClick = { onContentTypeSelected(ContentType.MOVIES) }
+                            onClick = { onContentTypeSelected(ContentType.MOVIES) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
 
@@ -209,8 +262,12 @@ fun ContentTypeSelectionScreen(
                         ContentTypeHeroCard(
                             title = "TV Shows",
                             subtitle = "Series & episodes",
+                            icon = Icons.Default.Tv,
+                            categoryCounts = tvShowsCounts,
+                            showTotal = isDevMode,
                             gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                            onClick = { onContentTypeSelected(ContentType.TV_SHOWS) }
+                            onClick = { onContentTypeSelected(ContentType.TV_SHOWS) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -292,20 +349,22 @@ fun ContentTypeSelectionScreen(
 }
 
 /**
- * Hero card with gradient background for content type selection.
+ * Hero card with gradient background, icon, and category count.
  */
 @Composable
 private fun ContentTypeHeroCard(
     title: String,
     subtitle: String,
+    icon: ImageVector,
+    categoryCounts: Pair<Int, Int>?,
+    showTotal: Boolean = false,
     gradientColors: List<androidx.compose.ui.graphics.Color>,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .width(TvDimensions.contentTypeCardWidth)
-            .height(TvDimensions.contentTypeCardHeight),
+        modifier = modifier.height(TvDimensions.contentTypeCardHeight),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             contentColor = CinemaTextPrimary,
@@ -314,7 +373,7 @@ private fun ContentTypeHeroCard(
         ),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.defaultScale,
+            focusedScale = TvFocusTokens.focusedScaleSubtle,
             pressedScale = TvFocusTokens.pressedScaleSubtle
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.xLarge)),
@@ -339,11 +398,19 @@ private fun ContentTypeHeroCard(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(Spacing.md)
             ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = CinemaTextPrimary,
+                    modifier = Modifier.size(TvDimensions.contentTypeIconSize)
+                )
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.headlineMedium,
                     color = CinemaTextPrimary,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -353,8 +420,23 @@ private fun ContentTypeHeroCard(
                     style = MaterialTheme.typography.bodyLarge,
                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = Spacing.xs)
+                    modifier = Modifier.padding(top = Spacing.xxs)
                 )
+                if (categoryCounts != null) {
+                    val (filtered, total) = categoryCounts
+                    val countText = if (showTotal && filtered < total) {
+                        "$filtered of $total categories"
+                    } else {
+                        "$filtered categories"
+                    }
+                    Text(
+                        text = countText,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = Spacing.xs)
+                    )
+                }
             }
         }
     }
