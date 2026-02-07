@@ -2,6 +2,8 @@
 A native Android media player built with Kotlin and Jetpack Compose supporting multiple provider types.
 Targeting: Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Bravia (Android TV).
 
+**App Icon:** Blue Marble (Earth) with red/cyan 3D glasses. Uses adaptive icon (foreground PNGs in `mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, black background XML) + legacy webp mipmaps for both mobile and TV modules.
+
 ## 🛠 Tech Stack
 - **UI:** 100% Jetpack Compose. Use `androidx.tv.material3` for TV-specific screens.
 - **Networking:** Ktor with kotlinx.serialization (JSON).
