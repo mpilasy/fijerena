@@ -85,6 +85,9 @@ class CategoryViewModel(
     private val _nowPlaying = MutableStateFlow<Map<String, EpgProgram>>(emptyMap())
     val nowPlaying: StateFlow<Map<String, EpgProgram>> = _nowPlaying.asStateFlow()
 
+    private val _supportsNativeEpg = MutableStateFlow(false)
+    val supportsNativeEpg: StateFlow<Boolean> = _supportsNativeEpg.asStateFlow()
+
     private var categories: List<MediaCategory> = emptyList()
     private var currentStreams: List<MediaItem> = emptyList()
     private var currentCategoryId: String? = null
@@ -108,6 +111,8 @@ class CategoryViewModel(
                     return@launch
                 }
             }
+
+            _supportsNativeEpg.value = repository.getCapabilities()?.supportsEpg == true
 
             val result = repository.getFilteredCategories(contentType)
 

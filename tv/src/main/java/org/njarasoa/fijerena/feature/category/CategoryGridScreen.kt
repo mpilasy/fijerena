@@ -56,6 +56,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -113,17 +114,23 @@ fun CategoryGridScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val nowPlaying by viewModel.nowPlaying.collectAsState()
+    val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsState()
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
+    val epgFileManager = remember { EpgFileManager.getInstance(context.applicationContext) }
+    val epgFileState by epgFileManager.state.collectAsState()
+
     // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
         CategoryGridContent(
             uiState = uiState,
             nowPlaying = nowPlaying,
+            supportsNativeEpg = supportsNativeEpg,
+            epgFileState = epgFileState,
             configuration = configuration,
             isDevMode = isDevMode,
             catViewModel = viewModel,
@@ -140,6 +147,8 @@ fun CategoryGridScreen(
 private fun CategoryGridContent(
     uiState: CategoryViewModel.UiState,
     nowPlaying: Map<String, EpgProgram>,
+    supportsNativeEpg: Boolean,
+    epgFileState: EpgFileManager.EpgFileState,
     configuration: android.content.res.Configuration,
     isDevMode: Boolean,
     catViewModel: CategoryViewModel,
@@ -178,6 +187,8 @@ private fun CategoryGridContent(
                     lastPlayedItemId = state.lastPlayedItemId,
                     nowPlaying = nowPlaying,
                     contentType = contentType,
+                    supportsNativeEpg = supportsNativeEpg,
+                    epgFileState = epgFileState,
                     onCategorySelected = { categoryId ->
                         catViewModel.loadStreams(categoryId)
                     },
@@ -219,6 +230,31 @@ private fun CategoryGridContent(
                     // Counts
                     put("Categories", "${state.categories.size}")
                     state.streams?.let { put("Streams", "${it.size}") }
+                    // EPG file info (Live TV only)
+                    if (contentType == "LIVE_TV") {
+                        when (val epg = epgFileState) {
+                            is EpgFileManager.EpgFileState.Ready -> {
+                                val sizeMb = epg.sizeBytes / (1024.0 * 1024.0)
+                                put("EPG File", "%.1f MB".format(sizeMb))
+                                val ageMs = System.currentTimeMillis() - epg.lastModifiedMs
+                                val ageHours = ageMs / 3600000
+                                val ageMins = (ageMs % 3600000) / 60000
+                                put("EPG Age", "${ageHours}h ${ageMins}m ago")
+                            }
+                            is EpgFileManager.EpgFileState.Downloading -> {
+                                put("EPG File", "Downloading...")
+                            }
+                            is EpgFileManager.EpgFileState.Error -> {
+                                put("EPG File", "Error (stale)")
+                            }
+                            is EpgFileManager.EpgFileState.Failed -> {
+                                put("EPG File", "Failed")
+                            }
+                            is EpgFileManager.EpgFileState.NoUrl -> {
+                                put("EPG File", "No URL")
+                            }
+                        }
+                    }
                 }
 
                 StatsOverlay(
@@ -243,6 +279,8 @@ private fun TwoColumnLayout(
     lastPlayedItemId: String?,
     nowPlaying: Map<String, EpgProgram>,
     contentType: String,
+    supportsNativeEpg: Boolean,
+    epgFileState: EpgFileManager.EpgFileState,
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onRefreshCategories: () -> Unit,
@@ -274,8 +312,11 @@ private fun TwoColumnLayout(
                     onClick = onSearchClick,
                     text = "Search"
                 )
-                // EPG button - only for Live TV
-                if (contentType == "LIVE_TV" && selectedCategoryId != null) {
+                // EPG button - show for Live TV when native EPG or XMLTV file is available
+                val hasEpgData = supportsNativeEpg ||
+                    epgFileState is EpgFileManager.EpgFileState.Ready ||
+                    epgFileState is EpgFileManager.EpgFileState.Error
+                if (contentType == "LIVE_TV" && selectedCategoryId != null && hasEpgData) {
                     val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name
                     if (selectedCategoryName != null) {
                         CinemaSecondaryButton(
@@ -315,6 +356,30 @@ private fun TwoColumnLayout(
                 ),
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
+        }
+
+        // EPG error/status banner (Live TV only)
+        if (contentType == "LIVE_TV") {
+            val epgErrorMessage = when (epgFileState) {
+                is EpgFileManager.EpgFileState.Failed -> epgFileState.reason
+                is EpgFileManager.EpgFileState.Error -> epgFileState.reason
+                is EpgFileManager.EpgFileState.Downloading -> "EPG file downloading..."
+                else -> null
+            }
+            if (epgErrorMessage != null) {
+                Text(
+                    text = epgErrorMessage,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                    ),
+                    color = if (epgFileState is EpgFileManager.EpgFileState.Downloading) {
+                        CinemaTextSecondary
+                    } else {
+                        CinemaError
+                    },
+                    modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale))
+                )
+            }
         }
 
         // Two-column content
