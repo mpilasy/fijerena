@@ -300,11 +300,13 @@ When selecting an episode from the episode list, an inline detail panel is shown
 - Plot description, cast, director (with series-level fallback)
 - Back button (mobile) or remote back (TV) returns to the episode list
 
-**Collapsible Seasons:**
+**Collapsible Seasons (Accordion):**
 - Multi-season shows display collapsible season headers with chevron indicators
-- Tapping/clicking a season header toggles its episode list
-- On load, **all seasons are expanded by default** for multi-season shows
+- **Accordion behavior:** Only one season is expanded at a time — opening a season collapses the others
+- Default: first season expanded on load
+- If watch history data is available, the season containing the **next unwatched/in-progress episode** is auto-expanded instead
 - Season headers on TV use `tvFocusableNoScale()` for D-pad focus visibility
+- If the API returns an empty `seasons` array, seasons are derived from episode map keys
 - Single-season shows skip the header entirely
 
 **Resume Logic:**

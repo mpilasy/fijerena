@@ -201,20 +201,43 @@ private fun EpisodeListContent(
         }
     }
 
-    // Sort seasons and build grouped episode data
+    // Use API seasons if available, otherwise derive from episode map keys
     val sortedSeasons = remember(seriesDetail) {
-        seriesDetail.seasons.sortedBy { it.seasonNumber }
+        val apiSeasons = seriesDetail.seasons.sortedBy { it.seasonNumber }
+        if (apiSeasons.isNotEmpty()) apiSeasons
+        else seriesDetail.episodes.keys
+            .mapNotNull { key -> key.toIntOrNull() }
+            .sorted()
+            .map { num -> SeasonInfo(seasonNumber = num, name = "Season $num", episodeCount = seriesDetail.episodes[num.toString()]?.size ?: 0) }
     }
     val totalEpisodes = remember(seriesDetail) {
         seriesDetail.episodes.values.sumOf { it.size }
     }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
-    // Track which seasons are expanded (all expanded by default for multi-season shows)
+    // Accordion: only one season expanded at a time (first season by default)
     var expandedSeasons by remember(seriesDetail) {
         mutableStateOf(
-            if (hasMultipleSeasons) sortedSeasons.map { it.seasonNumber }.toSet() else emptySet()
+            if (hasMultipleSeasons && sortedSeasons.isNotEmpty()) setOf(sortedSeasons.first().seasonNumber) else emptySet()
         )
+    }
+
+    // Auto-expand season with next unwatched/in-progress episode
+    LaunchedEffect(seriesDetail) {
+        if (!hasMultipleSeasons) return@LaunchedEffect
+        for (season in sortedSeasons) {
+            val seasonKey = season.seasonNumber.toString()
+            val episodes = seriesDetail.episodes[seasonKey]
+                ?.sortedBy { it.episodeNumber }
+                ?: continue
+            for (episode in episodes) {
+                val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, "TV_SHOWS")
+                if (watched == null || !watched.isCompleted) {
+                    expandedSeasons = setOf(season.seasonNumber)
+                    return@LaunchedEffect
+                }
+            }
+        }
     }
 
     if (selectedEpisode != null) {
@@ -341,9 +364,9 @@ private fun EpisodeListContent(
                                 isExpanded = isExpanded,
                                 onToggle = {
                                     expandedSeasons = if (isExpanded) {
-                                        expandedSeasons - season.seasonNumber
+                                        emptySet()
                                     } else {
-                                        expandedSeasons + season.seasonNumber
+                                        setOf(season.seasonNumber)
                                     }
                                 }
                             )
