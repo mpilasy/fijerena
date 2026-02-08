@@ -16,7 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -55,7 +58,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -120,16 +123,19 @@ fun SearchScreen(
                 is SearchViewModel.UiState.Error -> ErrorView((uiState as SearchViewModel.UiState.Error).message)
                 is SearchViewModel.UiState.Success -> {
                     val successState = uiState as SearchViewModel.UiState.Success
+                    val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
+                    val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
                     val devStats = if (appSettings.isDevMode && successState.searchDataSize != null) {
-                        " | ${successState.searchDataSize} in ${successState.searchDuration}"
-                    } else ""
+                        "${successState.searchDataSize} fetched | ${successState.totalDuration} total | network: ${successState.networkWallDuration} wall / ${successState.networkAccumDuration} accum | ${successState.networkCalls} calls$failedSuffix$errorSuffix"
+                    } else null
                     SearchContent(
                         query = successState.query,
                         categoryResults = successState.categoryResults,
                         results = successState.filteredResults,
                         isSearching = successState.isSearching,
-                        searchProgress = (successState.searchProgress ?: "") + devStats,
-                        onSearchSubmit = { viewModel.updateSearchQuery(it) },
+                        searchProgress = successState.searchProgress ?: "",
+                        devStats = devStats,
+                        onSearchSubmit = { viewModel.performSearch(it) },
                         onResultClick = { result ->
                             onStreamSelected(result.itemId, result.streamName, result.categoryId)
                         },
@@ -223,6 +229,7 @@ private fun SearchContent(
     results: List<SearchResult>,
     isSearching: Boolean,
     searchProgress: String?,
+    devStats: String?,
     onSearchSubmit: (String) -> Unit,
     onResultClick: (SearchResult) -> Unit,
     onCategoryClick: (CategorySearchResult) -> Unit
@@ -249,8 +256,9 @@ private fun SearchContent(
 
         Spacer(modifier = Modifier.height(Spacing.lg))
 
-        // Results or empty state
-        if (localQuery.isEmpty()) {
+        // Results or empty state — show results whenever they exist, even if text field is cleared
+        val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
+        if (!hasResults && query.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -265,9 +273,10 @@ private fun SearchContent(
             SearchResultsList(
                 categoryResults = categoryResults,
                 results = results,
-                query = localQuery,
+                query = query,
                 isSearching = isSearching,
                 searchProgress = searchProgress,
+                devStats = devStats,
                 onResultClick = onResultClick,
                 onCategoryClick = onCategoryClick
             )
@@ -315,9 +324,14 @@ private fun SearchTextField(
                     onSearch = { onSearchSubmit() }
                 )
             )
-            CinemaPrimaryButton(
+            CinemaIconButton(
                 onClick = onSearchSubmit,
-                text = "Search"
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search"
+                    )
+                }
             )
         }
     }
@@ -335,14 +349,10 @@ private fun SearchResultsList(
     query: String,
     isSearching: Boolean,
     searchProgress: String?,
+    devStats: String?,
     onResultClick: (SearchResult) -> Unit,
     onCategoryClick: (CategorySearchResult) -> Unit
 ) {
-    println("SearchResultsList: Received ${results.size} results, query='$query', isSearching=$isSearching")
-    if (results.isNotEmpty()) {
-        println("SearchResultsList: First result - ${results.first().streamName}")
-    }
-
     val focusRequesters = remember(results) {
         results.associate { it.itemId to FocusRequester() }
     }
@@ -396,16 +406,18 @@ private fun SearchResultsList(
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
 
-                if (isSearching && searchProgress != null) {
+                if (searchProgress != null) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(TvDimensions.iconSmall),
-                            color = CinemaAccent,
-                            strokeWidth = TvDimensions.borderFocused
-                        )
+                        if (isSearching) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(TvDimensions.iconSmall),
+                                color = CinemaAccent,
+                                strokeWidth = TvDimensions.borderFocused
+                            )
+                        }
                         Text(
                             text = searchProgress,
                             style = MaterialTheme.typography.bodyMedium,
@@ -413,6 +425,20 @@ private fun SearchResultsList(
                         )
                     }
                 }
+            }
+
+            if (devStats != null) {
+                Text(
+                    text = devStats,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = MaterialTheme.typography.labelSmall.fontSize * CinemaAlpha.textMedium
+                    ),
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = Spacing.xs),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End
+                )
             }
 
             TvLazyColumn(

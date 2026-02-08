@@ -110,7 +110,7 @@ data class XtreamSeries(
     val rating5based: Double? = null,
 
     @SerialName("backdrop_path")
-    val backdropPath: List<String>? = null,
+    val backdropPath: List<String?>? = null,
 
     @SerialName("youtube_trailer")
     val youtubeTrailer: String? = null,

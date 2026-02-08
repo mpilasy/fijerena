@@ -2,14 +2,19 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.network.MediaRepository
 
 class SearchViewModel(
@@ -27,7 +32,12 @@ class SearchViewModel(
             val isSearching: Boolean = false,
             val searchProgress: String? = null,
             val searchDataSize: String? = null,
-            val searchDuration: String? = null
+            val totalDuration: String? = null,
+            val networkWallDuration: String? = null,
+            val networkAccumDuration: String? = null,
+            val networkCalls: Int = 0,
+            val failedCalls: Int = 0,
+            val firstError: String? = null
         ) : UiState()
         data class Error(val message: String) : UiState()
     }
@@ -50,19 +60,57 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val searchQuery = MutableStateFlow("")
+    private var searchJob: Job? = null
+
+    companion object {
+        private const val PARALLEL_BATCH_SIZE = 20
+        private const val TARGET_RESULTS = 200
+    }
+
+    // Pre-fetched categories (loaded in background on init)
+    private var prefetchedCategories: List<org.njarasoa.fijerena.core.player.domain.MediaCategory>? = null
 
     init {
-        observeSearchQuery()
         _uiState.value = UiState.Success(
             allResults = emptyList(),
             filteredResults = emptyList(),
             query = ""
         )
+        // Pre-fetch category list + all missing/stale category items in background.
+        // This job runs independently — never cancelled by search.
+        viewModelScope.launch(Dispatchers.IO) {
+            if (!repository.isConnected()) {
+                repository.connect()
+            }
+            val result = repository.getFilteredCategories(contentType)
+            result.onSuccess { categories ->
+                val realCategories = categories.filter { it.id != "last_watched" && !it.isVirtual }
+                prefetchedCategories = realCategories
+
+                // Pre-fetch all category items that aren't cached yet
+                val semaphore = Semaphore(PARALLEL_BATCH_SIZE)
+                realCategories.map { category ->
+                    launch {
+                        if (repository.getItemsIfCached(category.id, contentType) != null) return@launch
+                        semaphore.withPermit {
+                            try {
+                                repository.getItemsForSearch(category.id, contentType)
+                            } catch (_: Exception) { }
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    fun updateSearchQuery(query: String) {
-        searchQuery.value = query
+    /** Called when the user presses the Search button or keyboard search action. */
+    fun performSearch(query: String) {
+        if (query.isBlank() || query.length < 2) return
+        // Cancel previous search, start new one
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            doSearch(this, query)
+        }
     }
 
     private fun formatBytes(bytes: Long): String {
@@ -73,201 +121,285 @@ class SearchViewModel(
         }
     }
 
-    private fun performIncrementalSearch(query: String) {
-        viewModelScope.launch {
-            try {
-                val startTime = System.currentTimeMillis()
-                var totalBytes = 0L
+    private fun formatSeconds(ms: Long): String {
+        return "%.1fs".format(ms / 1000.0)
+    }
 
-                if (!repository.isConnected()) {
-                    val connectResult = repository.connect()
-                    if (connectResult.isFailure) {
-                        _uiState.value = UiState.Error("Session expired. Please login again.")
-                        return@launch
-                    }
+    private suspend fun doSearch(scope: kotlinx.coroutines.CoroutineScope, query: String) {
+        try {
+            val startTime = System.currentTimeMillis()
+            var networkBytes = 0L
+            var networkCalls = 0
+            var failedCalls = 0
+            var accumulatedNetworkMs = 0L
+            var firstError: String? = null
+
+            if (!repository.isConnected()) {
+                val connectResult = repository.connect()
+                if (connectResult.isFailure) {
+                    _uiState.value = UiState.Error("Session expired. Please login again.")
+                    return
                 }
+            }
 
-                _uiState.value = UiState.Loading
+            _uiState.value = UiState.Loading
 
-                // Try server-side search first (e.g., Jellyfin)
-                val serverResult = repository.search(query, contentType)
-                if (serverResult != null) {
-                    serverResult.fold(
-                        onSuccess = { items ->
-                            val elapsed = System.currentTimeMillis() - startTime
-                            totalBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
-                            val normalizedQuery = query.trim().lowercase()
-                            val results = items.map { item ->
-                                SearchResult(
-                                    itemId = item.id,
-                                    streamName = item.name,
-                                    categoryId = item.categoryId,
-                                    categoryName = "",
-                                    contentType = contentType,
-                                    thumbnailUrl = item.thumbnailUrl
-                                )
-                            }.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
-                                .thenBy {
-                                    when {
-                                        it.streamName.lowercase() == normalizedQuery -> 0
-                                        it.streamName.lowercase().startsWith(normalizedQuery) -> 1
-                                        else -> 2
-                                    }
-                                }
-                                .thenBy { it.streamName })
-
-                            // Also search categories for server-side providers
-                            val serverCategories = repository.getFilteredCategories(contentType)
-                            val matchingCategories = serverCategories.getOrDefault(emptyList())
-                                .filter { !it.isVirtual }
-                                .filter { it.name.lowercase().contains(normalizedQuery) }
-                                .map { CategorySearchResult(it.id, it.name, contentType) }
-
-                            _uiState.value = UiState.Success(
-                                categoryResults = matchingCategories,
-                                allResults = results,
-                                filteredResults = results,
-                                query = query,
-                                isSearching = false,
-                                searchProgress = "Search complete",
-                                searchDataSize = formatBytes(totalBytes),
-                                searchDuration = "${elapsed}ms"
+            // Try server-side search first (e.g., Jellyfin)
+            val serverResult = repository.search(query, contentType)
+            if (serverResult != null) {
+                serverResult.fold(
+                    onSuccess = { items ->
+                        val elapsed = System.currentTimeMillis() - startTime
+                        val bulkDataSize = repository.getLastSearchDataSize(contentType)
+                        networkBytes = bulkDataSize
+                            ?: items.sumOf { it.name.length.toLong() * 2 + 64 }
+                        val normalizedQuery = query.trim().lowercase()
+                        val results = items.map { item ->
+                            SearchResult(
+                                itemId = item.id,
+                                streamName = item.name,
+                                categoryId = item.categoryId,
+                                categoryName = "",
+                                contentType = contentType,
+                                thumbnailUrl = item.thumbnailUrl
                             )
-                        },
-                        onFailure = {
-                            _uiState.value = UiState.Error(it.message ?: "Search failed")
-                        }
-                    )
-                    return@launch
-                }
+                        }.let { sortResults(it, normalizedQuery) }
 
-                // Fall back to client-side category iteration (uses filtered categories)
+                        val serverCategories = repository.getFilteredCategories(contentType)
+                        val matchingCategories = serverCategories.getOrDefault(emptyList())
+                            .filter { !it.isVirtual }
+                            .filter { it.name.lowercase().contains(normalizedQuery) }
+                            .map { CategorySearchResult(it.id, it.name, contentType) }
+
+                        _uiState.value = UiState.Success(
+                            categoryResults = matchingCategories,
+                            allResults = results,
+                            filteredResults = results,
+                            query = query,
+                            isSearching = false,
+                            searchProgress = "Search complete",
+                            searchDataSize = formatBytes(networkBytes),
+                            totalDuration = formatSeconds(elapsed),
+                            networkWallDuration = formatSeconds(elapsed),
+                            networkAccumDuration = formatSeconds(elapsed),
+                            networkCalls = 1
+                        )
+                    },
+                    onFailure = {
+                        _uiState.value = UiState.Error(it.message ?: "Search failed")
+                    }
+                )
+                return
+            }
+
+            // Fall back to parallel client-side category iteration
+            val realCategories = prefetchedCategories ?: run {
                 val categoriesResult = repository.getFilteredCategories(contentType)
                 val categories = categoriesResult.getOrElse {
                     _uiState.value = UiState.Error(it.message ?: "Failed to load categories")
-                    return@launch
+                    return
                 }
+                categories.filter { it.id != "last_watched" && !it.isVirtual }
+            }
 
-                val realCategories = categories.filter { it.id != "last_watched" && !it.isVirtual }
+            val results = mutableListOf<SearchResult>()
+            val normalizedQuery = query.trim().lowercase()
 
-                val results = mutableListOf<SearchResult>()
-                val normalizedQuery = query.trim().lowercase()
-                val targetResults = 200
+            val matchingCategories = realCategories
+                .filter { it.name.lowercase().contains(normalizedQuery) }
+                .map { CategorySearchResult(it.id, it.name, contentType) }
 
-                // Filter categories by name match
-                val matchingCategories = realCategories
-                    .filter { it.name.lowercase().contains(normalizedQuery) }
-                    .map { CategorySearchResult(it.id, it.name, contentType) }
+            _uiState.value = UiState.Success(
+                categoryResults = matchingCategories,
+                allResults = emptyList(),
+                filteredResults = emptyList(),
+                query = query,
+                isSearching = true,
+                searchProgress = "Searching categories..."
+            )
 
-                _uiState.value = UiState.Success(
-                    categoryResults = matchingCategories,
-                    allResults = emptyList(),
-                    filteredResults = emptyList(),
-                    query = query,
-                    isSearching = true,
-                    searchProgress = "Searching categories..."
-                )
+            var categoriesSearched = 0
 
-                var categoriesSearched = 0
-                for (category in realCategories) {
+            // Phase 1: Sweep all categories from cache (instant, no network)
+            val uncachedCategories = mutableListOf<org.njarasoa.fijerena.core.player.domain.MediaCategory>()
+            for (category in realCategories) {
+                currentCoroutineContext().job.ensureActive() // respect cancellation
+                val cached = repository.getItemsIfCached(category.id, contentType)
+                if (cached != null) {
                     categoriesSearched++
-                    if (results.size >= targetResults) break
-                    if (searchQuery.value != query) break
-
-                    val itemsResult = repository.getItemsForSearch(category.id, contentType)
-
-                    itemsResult.fold(
-                        onSuccess = { items ->
-                            totalBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
-                            val matchingItems = items
-                                .filter { it.name.lowercase().contains(normalizedQuery) }
-                                .map { item ->
-                                    SearchResult(
-                                        itemId = item.id,
-                                        streamName = item.name,
-                                        categoryId = category.id,
-                                        categoryName = category.name,
-                                        contentType = contentType,
-                                        thumbnailUrl = item.thumbnailUrl
-                                    )
-                                }
-
-                            results.addAll(matchingItems)
-
-                            val sortedResults = results.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
-                                .thenBy {
-                                    when {
-                                        it.streamName.lowercase() == normalizedQuery -> 0
-                                        it.streamName.lowercase().startsWith(normalizedQuery) -> 1
-                                        else -> 2
-                                    }
-                                }
-                                .thenBy { it.streamName })
-
-                            val finalResults = sortedResults.take(targetResults)
-                            val elapsed = System.currentTimeMillis() - startTime
-
-                            _uiState.value = UiState.Success(
-                                categoryResults = matchingCategories,
-                                allResults = finalResults,
-                                filteredResults = finalResults,
-                                query = query,
-                                isSearching = true,
-                                searchProgress = "Found ${finalResults.size} results (searched $categoriesSearched/${realCategories.size} categories)",
-                                searchDataSize = formatBytes(totalBytes),
-                                searchDuration = "${elapsed}ms"
+                    val matchingItems = cached
+                        .filter { it.name.lowercase().contains(normalizedQuery) }
+                        .map { item ->
+                            SearchResult(
+                                itemId = item.id,
+                                streamName = item.name,
+                                categoryId = category.id,
+                                categoryName = category.name,
+                                contentType = contentType,
+                                thumbnailUrl = item.thumbnailUrl
                             )
-                        },
-                        onFailure = {
-                            // Skip failed categories
                         }
-                    )
+                    results.addAll(matchingItems)
+                } else {
+                    uncachedCategories.add(category)
                 }
+            }
 
-                val sortedFinalResults = results.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
-                    .thenBy {
-                        when {
-                            it.streamName.lowercase() == normalizedQuery -> 0
-                            it.streamName.lowercase().startsWith(normalizedQuery) -> 1
-                            else -> 2
-                        }
-                    }
-                    .thenBy { it.streamName })
-
-                val finalResults = sortedFinalResults.take(targetResults)
-
+            // Show cached results immediately
+            if (categoriesSearched > 0) {
+                val sortedCached = sortResults(results, normalizedQuery)
+                val displayCached = sortedCached.take(TARGET_RESULTS)
                 val elapsed = System.currentTimeMillis() - startTime
                 _uiState.value = UiState.Success(
                     categoryResults = matchingCategories,
-                    allResults = finalResults,
-                    filteredResults = finalResults,
+                    allResults = displayCached,
+                    filteredResults = displayCached,
                     query = query,
-                    isSearching = false,
-                    searchProgress = "Search complete",
-                    searchDataSize = formatBytes(totalBytes),
-                    searchDuration = "${elapsed}ms"
+                    isSearching = uncachedCategories.isNotEmpty(),
+                    searchProgress = "Found ${displayCached.size} results (searched $categoriesSearched/${realCategories.size} categories)",
+                    searchDataSize = formatBytes(networkBytes),
+                    totalDuration = formatSeconds(elapsed),
+                    networkWallDuration = formatSeconds(0),
+                    networkAccumDuration = formatSeconds(0),
+                    networkCalls = 0
                 )
-            } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Failed to search")
             }
+
+            var networkStartTime = System.currentTimeMillis()
+
+            // Phase 2: Fetch uncached categories from network with concurrency limit
+            if (uncachedCategories.isNotEmpty() && results.size < TARGET_RESULTS) {
+                currentCoroutineContext().job.ensureActive()
+                networkStartTime = System.currentTimeMillis()
+                val semaphore = Semaphore(PARALLEL_BATCH_SIZE)
+
+                data class FetchResult(
+                    val category: org.njarasoa.fijerena.core.player.domain.MediaCategory,
+                    val items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
+                    val callDurationMs: Long,
+                    val error: String? = null
+                )
+                val fetchChannel = Channel<FetchResult>(Channel.UNLIMITED)
+
+                val producerJob = scope.launch(Dispatchers.IO) {
+                    for (category in uncachedCategories) {
+                        launch {
+                            semaphore.withPermit {
+                                val t0 = System.currentTimeMillis()
+                                var items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>? = null
+                                var error: String? = null
+                                try {
+                                    val result = repository.getItemsForSearch(category.id, contentType)
+                                    items = result.getOrNull()
+                                    if (items == null) {
+                                        error = result.exceptionOrNull()?.message ?: "Unknown failure"
+                                    }
+                                } catch (e: Exception) {
+                                    error = e.message ?: e.javaClass.simpleName
+                                }
+                                val dt = System.currentTimeMillis() - t0
+                                fetchChannel.send(FetchResult(category, items, dt, error))
+                            }
+                        }
+                    }
+                }
+
+                var lastUiUpdateTime = 0L
+                repeat(uncachedCategories.size) {
+                    if (results.size >= TARGET_RESULTS) {
+                        categoriesSearched++
+                        fetchChannel.receive()
+                        return@repeat
+                    }
+                    currentCoroutineContext().job.ensureActive()
+
+                    val fetch = fetchChannel.receive()
+                    categoriesSearched++
+                    networkCalls++
+                    accumulatedNetworkMs += fetch.callDurationMs
+                    val items = fetch.items
+                    if (items != null) {
+                        networkBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
+                        val matchingItems = items
+                            .filter { it.name.lowercase().contains(normalizedQuery) }
+                            .map { item ->
+                                SearchResult(
+                                    itemId = item.id,
+                                    streamName = item.name,
+                                    categoryId = fetch.category.id,
+                                    categoryName = fetch.category.name,
+                                    contentType = contentType,
+                                    thumbnailUrl = item.thumbnailUrl
+                                )
+                            }
+                        results.addAll(matchingItems)
+                    } else {
+                        failedCalls++
+                        if (firstError == null && fetch.error != null) {
+                            firstError = fetch.error
+                            android.util.Log.w("SearchVM", "First fetch failure for cat=${fetch.category.id} (${fetch.category.name}): ${fetch.error}")
+                        }
+                    }
+
+                    val now = System.currentTimeMillis()
+                    if (now - lastUiUpdateTime > 100 || categoriesSearched == realCategories.size) {
+                        lastUiUpdateTime = now
+                        val sorted = sortResults(results, normalizedQuery)
+                        val display = sorted.take(TARGET_RESULTS)
+                        val now2 = System.currentTimeMillis()
+                        _uiState.value = UiState.Success(
+                            categoryResults = matchingCategories,
+                            allResults = display,
+                            filteredResults = display,
+                            query = query,
+                            isSearching = true,
+                            searchProgress = "Found ${display.size} results (searched $categoriesSearched/${realCategories.size} categories)",
+                            searchDataSize = formatBytes(networkBytes),
+                            totalDuration = formatSeconds(now2 - startTime),
+                            networkWallDuration = formatSeconds(now2 - networkStartTime),
+                            networkAccumDuration = formatSeconds(accumulatedNetworkMs),
+                            networkCalls = networkCalls,
+                            failedCalls = failedCalls,
+                            firstError = firstError
+                        )
+                    }
+                }
+                fetchChannel.close()
+            }
+
+            val finalResults = sortResults(results, normalizedQuery).take(TARGET_RESULTS)
+            val endTime = System.currentTimeMillis()
+            val networkEndTime = if (uncachedCategories.isNotEmpty()) endTime else startTime
+            _uiState.value = UiState.Success(
+                categoryResults = matchingCategories,
+                allResults = finalResults,
+                filteredResults = finalResults,
+                query = query,
+                isSearching = false,
+                searchProgress = "Search complete",
+                searchDataSize = formatBytes(networkBytes),
+                totalDuration = formatSeconds(endTime - startTime),
+                networkWallDuration = if (networkCalls > 0) formatSeconds(networkEndTime - networkStartTime) else formatSeconds(0),
+                networkAccumDuration = formatSeconds(accumulatedNetworkMs),
+                networkCalls = networkCalls,
+                failedCalls = failedCalls,
+                firstError = firstError
+            )
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            _uiState.value = UiState.Error(e.message ?: "Failed to search")
         }
     }
 
-    @OptIn(FlowPreview::class)
-    private fun observeSearchQuery() {
-        searchQuery
-            .debounce(500)
-            .onEach { query ->
-                if (query.isBlank()) {
-                    _uiState.value = UiState.Success(
-                        allResults = emptyList(),
-                        filteredResults = emptyList(),
-                        query = ""
-                    )
-                } else if (query.length >= 2) {
-                    performIncrementalSearch(query)
+    private fun sortResults(results: List<SearchResult>, normalizedQuery: String): List<SearchResult> {
+        return results.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
+            .thenBy {
+                when {
+                    it.streamName.lowercase() == normalizedQuery -> 0
+                    it.streamName.lowercase().startsWith(normalizedQuery) -> 1
+                    else -> 2
                 }
             }
-            .launchIn(viewModelScope)
+            .thenBy { it.streamName })
     }
 }

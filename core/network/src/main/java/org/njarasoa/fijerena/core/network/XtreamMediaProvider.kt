@@ -16,6 +16,8 @@ class XtreamMediaProvider(
     private val repository: XtreamRepository
 ) : MediaProvider {
 
+    private val searchDataSizes = mutableMapOf<String, Long>()
+
     override val capabilities = ProviderCapabilities(
         supportedContentTypes = setOf("LIVE_TV", "MOVIES", "TV_SHOWS"),
         supportsEpg = true,
@@ -134,6 +136,30 @@ class XtreamMediaProvider(
                 kotlin.Result.failure(result.exception)
         }
     }
+
+    override fun getItemsIfCached(categoryId: String, contentType: String): List<MediaItem>? {
+        val mediaType = when (contentType) {
+            "LIVE_TV" -> MediaType.LIVE_CHANNEL
+            "MOVIES" -> MediaType.MOVIE
+            "TV_SHOWS" -> MediaType.SERIES
+            else -> MediaType.LIVE_CHANNEL
+        }
+        val cached = when (contentType) {
+            "LIVE_TV" -> repository.getStreamsCached(categoryId)
+            "MOVIES" -> repository.getVodStreamsCached(categoryId)
+            "TV_SHOWS" -> repository.getSeriesCached(categoryId)
+            else -> repository.getStreamsCached(categoryId)
+        }
+        return cached?.map { it.toDomain(mediaType) }
+    }
+
+    override suspend fun search(query: String, contentType: String): kotlin.Result<List<MediaItem>>? {
+        // Xtream has no server-side search — return null to use client-side parallel iteration
+        // (per-category API payloads are cached in SharedPreferences by XtreamRepository)
+        return null
+    }
+
+    override fun getLastSearchDataSize(contentType: String): Long? = searchDataSizes[contentType]
 
     override suspend fun getEpg(streamId: String): kotlin.Result<EpgResponse>? {
         val id = streamId.toIntOrNull() ?: return kotlin.Result.failure(
