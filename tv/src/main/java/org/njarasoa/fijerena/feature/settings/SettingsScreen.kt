@@ -51,6 +51,9 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -352,14 +355,38 @@ fun SettingsScreen(
                             }
                         }
                         if (epgFile != null) {
+                            val lastModified = epgFile.lastModified()
+                            val sizeAndDate = "File size: ${formatEpgFileSize(epgFile.length())}" +
+                                if (lastModified > 0) " — Last refreshed: ${formatTimestamp(lastModified)}" else ""
                             Text(
-                                text = "File size: ${formatEpgFileSize(epgFile.length())}",
+                                text = sizeAndDate,
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                                 ),
                                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                             )
                         }
+                        // Search index status
+                        val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
+                        val indexState by epgIndexer.state.collectAsState()
+                        val indexStatusText = when (val idx = indexState) {
+                            is EpgIndexState.NotIndexed -> "Search index: not built"
+                            is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}% (${formatProgrammeCount(idx.programmesIndexed)} programmes)"
+                            is EpgIndexState.Indexed -> "Search index: ${formatProgrammeCount(idx.programmeCount)} programmes, ${formatProgrammeCount(idx.channelCount)} channels"
+                            is EpgIndexState.Failed -> "Search index failed: ${idx.reason}"
+                        }
+                        Text(
+                            text = indexStatusText,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = when (indexState) {
+                                is EpgIndexState.Indexed -> CinemaAccent
+                                is EpgIndexState.Indexing -> CinemaTextSecondary
+                                is EpgIndexState.Failed -> CinemaError
+                                else -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
+                            }
+                        )
                         // Download EPG file status & button
                         val epgFileManager = remember { EpgFileManager.getInstance(context.applicationContext) }
                         val epgState by epgFileManager.state.collectAsState()
@@ -400,6 +427,42 @@ fun SettingsScreen(
                                 )
                             }
                         }
+                        // EPG Timezone Override
+                        var epgTzOffset by remember { mutableStateOf(appSettings.epgTimezoneOffsetHours) }
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Source timezone:",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                ),
+                                color = CinemaTextSecondary
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
+                            val tzLabel = if (epgTzOffset == 0) "Auto (from data)" else {
+                                val sign = if (epgTzOffset >= 0) "+" else ""
+                                "UTC${sign}${epgTzOffset}"
+                            }
+                            CinemaSecondaryButton(
+                                onClick = {
+                                    epgTzOffset = (epgTzOffset + 1).let { if (it > 14) -12 else it }
+                                    appSettings.epgTimezoneOffsetHours = epgTzOffset
+                                    XmltvParser.timezoneOverrideHours = epgTzOffset
+                                    epgFileManager.reindexIfNeeded()
+                                },
+                                text = tzLabel
+                            )
+                        }
+                        Text(
+                            text = "Tap to cycle. Fixes sources that tag times as UTC but use local time.",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
+                        )
                     } else {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -690,6 +753,20 @@ private fun formatEpgFileSize(bytes: Long): String {
         bytes >= 1_048_576L -> "%.1f MB".format(bytes / 1_048_576.0)
         bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
         else -> "$bytes B"
+    }
+}
+
+private fun formatTimestamp(millis: Long): String {
+    val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
+    format.timeZone = java.util.TimeZone.getDefault()
+    return format.format(java.util.Date(millis))
+}
+
+private fun formatProgrammeCount(count: Int): String {
+    return when {
+        count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
+        count >= 1_000 -> "%.1fK".format(count / 1_000.0)
+        else -> count.toString()
     }
 }
 

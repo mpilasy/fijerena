@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
 import android.util.Log
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgChannelEntity
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgProgrammeEntity
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.InputStream
@@ -11,6 +13,14 @@ import java.util.TimeZone
 object XmltvParser {
 
     private const val TAG = "XmltvParser"
+
+    /**
+     * Timezone offset override (hours) for XMLTV timestamps.
+     * When non-zero, replaces the timezone offset from the XMLTV data.
+     * Set from AppSettings.epgTimezoneOffsetHours at app startup.
+     */
+    @Volatile
+    var timezoneOverrideHours: Int = 0
 
     /**
      * Parse XMLTV data with optional filtering to handle large files (500MB+).
@@ -307,6 +317,36 @@ object XmltvParser {
         )
     }
 
+    /**
+     * Parse a <channel> element and return a Room entity for indexing.
+     * Reuses the same parsing logic as [parseChannel].
+     */
+    fun parseChannelForIndex(parser: XmlPullParser): EpgChannelEntity? {
+        val channel = parseChannel(parser) ?: return null
+        return EpgChannelEntity(
+            xmltvId = channel.id,
+            displayName = channel.displayName,
+            iconUrl = channel.iconUrl
+        )
+    }
+
+    /**
+     * Parse a <programme> element and return a Room entity for indexing.
+     * Reuses the same parsing logic as [parseProgramme].
+     */
+    fun parseProgrammeForIndex(parser: XmlPullParser): EpgProgrammeEntity? {
+        val programme = parseProgramme(parser) ?: return null
+        return EpgProgrammeEntity(
+            channelId = programme.channelId,
+            title = programme.title,
+            titleLowercase = programme.title.lowercase(Locale.ROOT),
+            description = programme.description,
+            category = programme.category,
+            startEpoch = programme.startEpoch,
+            endEpoch = programme.endEpoch
+        )
+    }
+
     fun parseTimestamp(ts: String): Long {
         return try {
             // XMLTV format: "20260206180000 +0000" or "20260206180000"
@@ -315,22 +355,30 @@ object XmltvParser {
             // Split into datetime part and optional timezone
             val spaceIndex = trimmed.indexOf(' ')
             val datePart: String
-            val tzPart: String?
             if (spaceIndex > 0) {
                 datePart = trimmed.substring(0, spaceIndex)
-                tzPart = trimmed.substring(spaceIndex + 1).trim()
             } else {
                 datePart = trimmed
-                tzPart = null
             }
 
             val format = SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
-            if (tzPart != null) {
-                // Normalize timezone: "+0000" or "+00:00" → standard offset
-                val normalizedTz = tzPart.replace(":", "")
-                format.timeZone = TimeZone.getTimeZone("GMT$normalizedTz")
+
+            // If user has configured a timezone override, use it instead of
+            // the XMLTV-provided offset. This fixes sources that encode local
+            // times (e.g. UTC+8) but mislabel them as UTC (+0000).
+            val overrideHours = timezoneOverrideHours
+            if (overrideHours != 0) {
+                val sign = if (overrideHours >= 0) "+" else "-"
+                val absHours = kotlin.math.abs(overrideHours)
+                format.timeZone = TimeZone.getTimeZone("GMT${sign}${"%02d".format(absHours)}00")
             } else {
-                format.timeZone = TimeZone.getTimeZone("UTC")
+                val tzPart = if (spaceIndex > 0) trimmed.substring(spaceIndex + 1).trim() else null
+                if (tzPart != null) {
+                    val normalizedTz = tzPart.replace(":", "")
+                    format.timeZone = TimeZone.getTimeZone("GMT$normalizedTz")
+                } else {
+                    format.timeZone = TimeZone.getTimeZone("UTC")
+                }
             }
 
             val date = format.parse(datePart)

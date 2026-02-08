@@ -262,7 +262,7 @@ Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
 - **Active Provider Display:** Shows current provider name and URL
 - **Manage Providers:** Navigate to provider selection/management screen (add, edit, delete, switch providers)
 - **Theme Selection:** Choose from 4 dark themes (Deep Night, AMOLED Black, Emerald, Crimson) — persists across app restarts
-- **External EPG Source (XMLTV):** Global EPG URL editor with edit/save/clear/download buttons — used for external XMLTV EPG data across all providers (stored in `AppSettings.epgUrl`). Shows download status (Downloading/Downloaded with size/Failed/Error) and file size. Download button triggers `EpgFileManager`. WiFi-only download enforcement.
+- **External EPG Source (XMLTV):** Global EPG URL editor with edit/save/clear/download buttons — used for external XMLTV EPG data across all providers (stored in `AppSettings.epgUrl`). Shows download status (Downloading/Downloaded with size/Failed/Error), file size, last refreshed date/time, search index status (programme/channel counts or indexing progress), and source timezone override (cycle button: Auto/UTC-12 to UTC+14). Download button triggers `EpgFileManager`. Timezone changes trigger automatic re-indexing. WiFi-only download enforcement.
 - **Cache Management:** View cache statistics and clear cached data
   - Total cache size display
   - Per-content-type breakdown (Live TV, Movies, TV Shows)
@@ -467,20 +467,48 @@ A dynamically generated category that displays:
 - Each result shows: title, category badge, description, channel name + airing times
 - Time window: past 1 day to future 6 days
 - Max 500 results with truncation indicator
+- Search source indicator: `[indexed]` (SQLite FTS) or `[XML scan]` (fallback)
+- Indexing progress banner with percentage and programme count
 - Dev mode: EPG file size displayed below search box
 - TV: GlassPanel cards in TvLazyColumn, D-pad navigable
 - Mobile: Expandable cards in LazyColumn (first 3 airings shown, expand for all)
 
-**Data Flow:**
-- `XmltvSearchService` → `XmltvParser.searchByTitle()` — streaming XmlPullParser scan
+**Search Strategy (Dual-Path):**
+1. **SQLite FTS (primary):** When index is built, uses FTS4 MATCH query (<100ms for millions of programmes). Falls back to LIKE if FTS returns empty or errors.
+2. **XML scan (fallback):** Streaming XmlPullParser scan of raw XMLTV file. Used when index not yet built or indexing in progress.
+- `XmltvSearchService` automatically selects the best path based on `EpgIndexer.state`
 - `EpgBrowserViewModel` groups flat results into `EpgBrowserProgram` with `EpgBrowserAiring` list
 - Search cancellable (new search cancels previous)
 
+**SQLite FTS Indexing:**
+- `EpgIndexer` singleton parses XMLTV file once into Room database with FTS4 virtual table
+- Streaming parse with 1000-row batch INSERTs (~200KB per batch, memory-bounded)
+- `CountingInputStream` tracks bytes read for progress reporting
+- FTS rebuilt after all inserts via `INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')`
+- Index metadata tracks: file size, last modified, timezone offset — re-indexes automatically on any change
+- States: `NotIndexed`, `Indexing(progressPercent, channelsIndexed, programmesIndexed)`, `Indexed(channelCount, programmeCount, indexedAtMs)`, `Failed(reason)`
+- Triggered by `EpgFileManager` after EPG file download/refresh, and after timezone override changes in Settings
+
+**Timezone Override:**
+- Some XMLTV sources (e.g., Chinese providers) encode local times (UTC+8) but mislabel them as UTC (`+0000`)
+- `AppSettings.epgTimezoneOffsetHours` (range: -12 to +14, default: 0) overrides the XMLTV timezone during parsing
+- `XmltvParser.timezoneOverrideHours` volatile field applied in `parseTimestamp()` at parse time
+- Changing timezone in Settings triggers automatic re-indexing (stored epoch values depend on timezone)
+- Settings UI: cycle button showing "Auto (from data)" or "UTC+N"
+
 **Key Files:**
-- `core/network/.../xmltv/XmltvSearchService.kt` — Local file search service
+- `core/network/.../xmltv/XmltvSearchService.kt` — Dual-path search (SQLite FTS → LIKE → XML scan)
 - `core/network/.../xmltv/EpgBrowserModels.kt` — Domain models (EpgBrowserProgram, EpgBrowserAiring)
-- `core/network/.../xmltv/XmltvParser.kt` — `searchByTitle()` with streaming parse, OOM protection
-- `core/ui/.../viewmodels/EpgBrowserViewModel.kt` — ViewModel with Idle/NoEpgFile/Searching/Results/Error states
+- `core/network/.../xmltv/XmltvParser.kt` — `searchByTitle()` streaming parse, `parseTimestamp()` with timezone override
+- `core/network/.../xmltv/epgindex/EpgIndexer.kt` — Singleton indexing orchestrator
+- `core/network/.../xmltv/epgindex/EpgIndexDatabase.kt` — Room database (version 2, destructive migration)
+- `core/network/.../xmltv/epgindex/EpgIndexDao.kt` — DAO with FTS MATCH and LIKE queries
+- `core/network/.../xmltv/epgindex/EpgProgrammeEntity.kt` — Room entity + FTS4 virtual table (unicode61 tokenizer)
+- `core/network/.../xmltv/epgindex/EpgChannelEntity.kt` — Room entity for XMLTV channels
+- `core/network/.../xmltv/epgindex/EpgIndexMetadata.kt` — Tracks file size, last modified, timezone for staleness check
+- `core/network/.../xmltv/epgindex/EpgIndexState.kt` — Sealed interface for indexing state machine
+- `core/network/.../xmltv/epgindex/EpgSearchResultRow.kt` — JOIN query result model
+- `core/ui/.../viewmodels/EpgBrowserViewModel.kt` — ViewModel with Idle/NoEpgFile/Searching/Indexing/Results/Error states
 - `tv/.../feature/epgbrowser/EpgBrowserScreen.kt` — TV screen
 - `mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt` — Mobile screen
 
@@ -497,7 +525,10 @@ A dynamically generated category that displays:
 - 64KB I/O buffers, 10-minute read timeout
 - `OutOfMemoryError` caught explicitly (not caught by `catch (e: Exception)`)
 - States: `NoUrl`, `Downloading`, `Ready(file, sizeBytes, timestamp)`, `Failed(reason)`, `Error(reason, file?)`
-- Settings UI shows download status, file size, and "Download EPG" button
+- On `initialize()`: applies timezone override to `XmltvParser`, triggers indexing if file exists
+- After download completes (`Ready` state): triggers `EpgIndexer` to build/rebuild SQLite index
+- `reindexIfNeeded()`: public method called from Settings when timezone override changes
+- Settings UI shows download status, file size, last refreshed date, index status, and timezone override
 
 ### Multi-Provider Architecture
 The app supports 4 provider types through a unified domain model abstraction. All providers map to generic types — screens never see provider-specific types.

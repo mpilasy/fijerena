@@ -29,5 +29,6 @@ data class XmltvSearchResult(
     val channels: Map<String, XmltvChannel>,
     val programmes: List<XmltvProgramme>,
     val totalScanned: Int,
-    val truncated: Boolean
+    val truncated: Boolean,
+    val searchedFromIndex: Boolean = false
 )

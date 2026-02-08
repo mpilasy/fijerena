@@ -22,6 +22,7 @@ class AppSettings(context: Context) {
         private const val KEY_UI_SCALE = "ui_scale"
         private const val KEY_THEME_ID = "theme_id"
         private const val KEY_EPG_URL = "epg_url"
+        private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
@@ -110,4 +111,17 @@ class AppSettings(context: Context) {
     var epgUrl: String
         get() = prefs.getString(KEY_EPG_URL, DEFAULT_EPG_URL) ?: DEFAULT_EPG_URL
         set(value) = prefs.edit().putString(KEY_EPG_URL, value.trim()).apply()
+
+    /**
+     * Timezone offset override for XMLTV data, in hours (e.g., 8 for UTC+8, -5 for UTC-5).
+     * When non-zero, replaces the timezone offset in XMLTV timestamps during parsing.
+     * This fixes XMLTV sources that encode local times but mislabel them as UTC (+0000).
+     * Default: 0 (use timezone from XMLTV data as-is).
+     */
+    var epgTimezoneOffsetHours: Int
+        get() = prefs.getInt(KEY_EPG_TIMEZONE_OFFSET, 0)
+        set(value) {
+            val clamped = value.coerceIn(-12, 14)
+            prefs.edit().putInt(KEY_EPG_TIMEZONE_OFFSET, clamped).apply()
+        }
 }
