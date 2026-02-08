@@ -20,6 +20,9 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -222,12 +225,34 @@ fun MobileSettingsScreen(
                         }
                     }
                     if (epgFile != null) {
+                        val lastModified = epgFile.lastModified()
+                        val sizeAndDate = "File size: ${formatEpgFileSize(epgFile.length())}" +
+                            if (lastModified > 0) " — Last refreshed: ${formatTimestamp(lastModified)}" else ""
                         Text(
-                            text = "File size: ${formatEpgFileSize(epgFile.length())}",
+                            text = sizeAndDate,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                         )
                     }
+                    // Search index status
+                    val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
+                    val indexState by epgIndexer.state.collectAsState()
+                    val indexStatusText = when (val idx = indexState) {
+                        is EpgIndexState.NotIndexed -> "Search index: not built"
+                        is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}% (${formatProgrammeCount(idx.programmesIndexed)} programmes)"
+                        is EpgIndexState.Indexed -> "Search index: ${formatProgrammeCount(idx.programmeCount)} programmes, ${formatProgrammeCount(idx.channelCount)} channels"
+                        is EpgIndexState.Failed -> "Search index failed: ${idx.reason}"
+                    }
+                    Text(
+                        text = indexStatusText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = when (indexState) {
+                            is EpgIndexState.Indexed -> MaterialTheme.colorScheme.primary
+                            is EpgIndexState.Indexing -> MaterialTheme.colorScheme.onSurfaceVariant
+                            is EpgIndexState.Failed -> CinemaError
+                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        }
+                    )
                     if (epgUrl.isNotBlank()) {
                         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                         Button(
@@ -282,6 +307,37 @@ fun MobileSettingsScreen(
                             }
                         }
                     }
+                    // EPG Timezone Override
+                    var epgTzOffset by remember { mutableStateOf(appSettings.epgTimezoneOffsetHours) }
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                    ) {
+                        Text(
+                            text = "Source timezone:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        val tzLabel = if (epgTzOffset == 0) "Auto (from data)" else {
+                            val sign = if (epgTzOffset >= 0) "+" else ""
+                            "UTC${sign}${epgTzOffset}"
+                        }
+                        OutlinedButton(onClick = {
+                            epgTzOffset = (epgTzOffset + 1).let { if (it > 14) -12 else it }
+                            appSettings.epgTimezoneOffsetHours = epgTzOffset
+                            XmltvParser.timezoneOverrideHours = epgTzOffset
+                            epgFileManager.reindexIfNeeded()
+                        }) {
+                            Text(tzLabel)
+                        }
+                    }
+                    Text(
+                        text = "Tap to cycle. Fixes sources that tag times as UTC but use local time.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    )
                 } else {
                     OutlinedTextField(
                         value = newEpgUrl,
@@ -497,6 +553,20 @@ private fun formatEpgFileSize(bytes: Long): String {
         bytes >= 1_048_576L -> "%.1f MB".format(bytes / 1_048_576.0)
         bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
         else -> "$bytes B"
+    }
+}
+
+private fun formatTimestamp(millis: Long): String {
+    val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
+    format.timeZone = java.util.TimeZone.getDefault()
+    return format.format(java.util.Date(millis))
+}
+
+private fun formatProgrammeCount(count: Int): String {
+    return when {
+        count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
+        count >= 1_000 -> "%.1fK".format(count / 1_000.0)
+        else -> count.toString()
     }
 }
 

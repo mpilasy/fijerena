@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -51,6 +52,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -78,6 +80,7 @@ fun EpgBrowserScreen(
         factory = remember { EpgBrowserViewModelFactory(context.applicationContext) }
     )
     val uiState by viewModel.uiState.collectAsState()
+    val indexState by viewModel.indexState.collectAsState()
     val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
     val isDevMode = appSettings.isDevMode
     val epgFileSizeBytes = viewModel.epgFileSizeBytes
@@ -128,6 +131,7 @@ fun EpgBrowserScreen(
                 else -> {
                     EpgBrowserContent(
                         uiState = state,
+                        indexState = indexState,
                         isDevMode = isDevMode,
                         epgFileSizeBytes = epgFileSizeBytes,
                         onSearch = { viewModel.performSearch(it) }
@@ -141,6 +145,7 @@ fun EpgBrowserScreen(
 @Composable
 private fun EpgBrowserContent(
     uiState: EpgBrowserViewModel.UiState,
+    indexState: EpgIndexState,
     isDevMode: Boolean,
     epgFileSizeBytes: Long?,
     onSearch: (String) -> Unit
@@ -210,6 +215,37 @@ private fun EpgBrowserContent(
             )
         }
 
+        // Indexing progress banner
+        val currentIndexState = indexState
+        if (currentIndexState is EpgIndexState.Indexing) {
+            val idx = currentIndexState
+            Column(modifier = Modifier.padding(top = Spacing.sm)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Building search index...",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = CinemaAccentLight
+                    )
+                    Text(
+                        text = "${idx.progressPercent}% (${formatCount(idx.programmesIndexed)} programmes)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = CinemaTextSecondary
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { idx.progressPercent / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = Spacing.xxs),
+                    color = CinemaAccent,
+                    trackColor = CinemaSurface
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(Spacing.lg))
 
         when (uiState) {
@@ -260,8 +296,9 @@ private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results) {
         // Stats row
         val timeStr = "%.1f".format(results.searchTimeMs / 1000.0)
         val truncatedSuffix = if (results.truncated) " (truncated)" else ""
+        val sourceSuffix = if (results.searchedFromIndex) " [indexed]" else " [XML scan]"
         Text(
-            text = "${results.programs.size} programs (${results.totalAirings} airings) — ${timeStr}s$truncatedSuffix",
+            text = "${results.programs.size} programs (${results.totalAirings} airings) — ${timeStr}s$truncatedSuffix$sourceSuffix",
             style = MaterialTheme.typography.titleMedium,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             modifier = Modifier.padding(bottom = Spacing.sm)
@@ -431,5 +468,13 @@ private fun formatFileSize(bytes: Long): String {
         bytes >= 1_048_576L -> "%.1f MB".format(bytes / 1_048_576.0)
         bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
         else -> "$bytes B"
+    }
+}
+
+private fun formatCount(count: Int): String {
+    return when {
+        count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
+        count >= 1_000 -> "%.1fK".format(count / 1_000.0)
+        else -> count.toString()
     }
 }

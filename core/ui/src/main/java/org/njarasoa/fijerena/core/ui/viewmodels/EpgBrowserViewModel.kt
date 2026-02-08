@@ -14,6 +14,8 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 
 class EpgBrowserViewModel(
     private val context: Context
@@ -23,18 +25,26 @@ class EpgBrowserViewModel(
         data object Idle : UiState
         data object NoEpgFile : UiState
         data object Searching : UiState
+        data class Indexing(
+            val progressPercent: Int,
+            val programmesIndexed: Int
+        ) : UiState
         data class Results(
             val query: String,
             val programs: List<EpgBrowserProgram>,
             val totalAirings: Int,
             val truncated: Boolean,
-            val searchTimeMs: Long
+            val searchTimeMs: Long,
+            val searchedFromIndex: Boolean = false
         ) : UiState
         data class Error(val message: String) : UiState
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    /** Indexer state exposed for UI (progress banner, settings display). */
+    val indexState: StateFlow<EpgIndexState> = EpgIndexer.getInstance(context).state
 
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
@@ -103,7 +113,8 @@ class EpgBrowserViewModel(
                     programs = grouped,
                     totalAirings = totalAirings,
                     truncated = result.truncated,
-                    searchTimeMs = elapsed
+                    searchTimeMs = elapsed,
+                    searchedFromIndex = result.searchedFromIndex
                 )
             } catch (e: OutOfMemoryError) {
                 System.gc()

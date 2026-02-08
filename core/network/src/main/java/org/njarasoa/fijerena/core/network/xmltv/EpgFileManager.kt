@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import java.io.File
@@ -79,6 +80,9 @@ class EpgFileManager private constructor(private val context: Context) {
      * Checks local file, sets initial state, schedules download/refresh.
      */
     fun initialize() {
+        // Apply timezone override to parser
+        XmltvParser.timezoneOverrideHours = appSettings.epgTimezoneOffsetHours
+
         val url = appSettings.epgUrl
         if (url.isBlank()) {
             _state.value = EpgFileState.NoUrl
@@ -92,6 +96,7 @@ class EpgFileManager private constructor(private val context: Context) {
         if (xmltvFile.exists() && savedUrl == url && savedTimestamp > 0) {
             // File exists for this URL
             _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), savedTimestamp)
+            triggerIndexing(xmltvFile)
 
             if (age >= REFRESH_INTERVAL_MS) {
                 // Stale file — refresh in background, keep Ready state
@@ -256,6 +261,7 @@ class EpgFileManager private constructor(private val context: Context) {
 
                 _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), now)
                 Log.d(TAG, "EPG file ready: ${xmltvFile.length() / (1024 * 1024)}MB")
+                triggerIndexing(xmltvFile)
 
                 // Schedule next refresh
                 scheduleRefreshAfter(url, REFRESH_INTERVAL_MS)
@@ -297,6 +303,29 @@ class EpgFileManager private constructor(private val context: Context) {
         }
         // All retries exhausted
         handleError("EPG download failed: $lastError", keepReadyDuringRefresh)
+    }
+
+    /**
+     * Trigger re-indexing if the EPG file exists and the index is stale.
+     * Called from settings when timezone override changes.
+     */
+    fun reindexIfNeeded() {
+        if (xmltvFile.exists()) {
+            triggerIndexing(xmltvFile)
+        }
+    }
+
+    private fun triggerIndexing(file: File) {
+        scope.launch {
+            val indexer = EpgIndexer.getInstance(context)
+            if (indexer.needsReindex(file)) {
+                Log.d(TAG, "EPG file changed, starting indexing")
+                indexer.startIndexing(file)
+            } else {
+                Log.d(TAG, "EPG index up-to-date, restoring state")
+                indexer.initialize()
+            }
+        }
     }
 
     private fun handleError(reason: String, keepReadyDuringRefresh: Boolean) {
