@@ -85,7 +85,7 @@ class AdaptiveLoadControl(
             .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
             .setBackBuffer(backBuffer, retainKeyframe)
 
-        if (!isWifi && !isLive) {
+        if (!isWifi) {
             builder.setPrioritizeTimeOverSizeThresholds(true)
         }
 
