@@ -34,7 +34,8 @@ Targeting: Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Br
 #### Cellular Profiles (mobile devices on 4G/5G)
 
 **Live TV:**
-- `minBufferMs: 8000ms` | `maxBufferMs: 20000ms` | `playbackMs: 1500ms` | `rebufferMs: 2000ms` | `backBuffer: 0ms`
+- `minBufferMs: 12000ms` | `maxBufferMs: 30000ms` | `playbackMs: 3000ms` | `rebufferMs: 4000ms` | `backBuffer: 0ms`
+- `prioritizeTimeOverSizeThresholds: true`
 
 **VOD:**
 - `minBufferMs: 40000ms` | `maxBufferMs: 100000ms` | `playbackMs: 8000ms` | `rebufferMs: 10000ms` | `backBuffer: 10000ms`
@@ -53,10 +54,9 @@ Hardware-accelerated codec selection based on device capabilities:
 ### StreamingMediaSourceFactory Usage
 Always use `StreamingMediaSourceFactory.createMediaSource()` for stream playback:
 - Automatically detects stream type (HLS/DASH/MPEG-TS)
-- **Network-aware HTTP timeouts:** WiFi 30s/60s, Cellular 45s/90s (connect/read)
+- **Network-aware HTTP timeouts:** WiFi 30s/60s, Cellular 45s/30s (connect/read)
 - **Supports custom headers for authentication** (auth tokens, CDN headers, Jellyfin X-Emby-Token)
 - **`AdaptiveLoadErrorPolicy`** on all media sources: 3 retries on WiFi, 6 on cellular with exponential backoff (1s base, 10s cap)
-- **Live stream URL mutation:** On cellular, `.ts` URLs are rewritten to `.m3u8` for adaptive bitrate
 - `isLive` parameter propagated from `PlayerMetadata.isLive`
 - Enables cross-protocol redirects
 - Supports `smb://` URIs via custom `SmbDataSource` for SMB network shares

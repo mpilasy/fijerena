@@ -15,8 +15,6 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
 object StreamingMediaSourceFactory {
 
-    private val tsExtensionRegex = Regex("\\.ts(\\?|#|$)")
-
     fun createMediaSource(
         context: Context,
         streamUrl: String,
@@ -25,11 +23,8 @@ object StreamingMediaSourceFactory {
     ): MediaSource {
         val isCellular = NetworkMonitor.currentNetworkType == NetworkType.CELLULAR
 
-        // For live streams on cellular, prefer HLS over raw .ts for adaptive bitrate
-        val effectiveUrl = if (isLive && isCellular) forceLiveHls(streamUrl) else streamUrl
-
         val mediaItem = MediaItem.Builder()
-            .setUri(effectiveUrl)
+            .setUri(streamUrl)
             .build()
 
         // Network-aware HTTP timeouts
@@ -51,7 +46,7 @@ object StreamingMediaSourceFactory {
         val errorPolicy = AdaptiveLoadErrorPolicy()
 
         // Strip query parameters before checking extension
-        val urlPath = effectiveUrl.substringBefore("?").substringBefore("#")
+        val urlPath = streamUrl.substringBefore("?").substringBefore("#")
 
         return when {
             urlPath.endsWith(".m3u8", ignoreCase = true) -> {
@@ -85,12 +80,4 @@ object StreamingMediaSourceFactory {
         }
     }
 
-    /**
-     * On cellular, replace `.ts` extension with `.m3u8` for live streams.
-     * HLS gives adaptive bitrate on unstable cellular connections.
-     * Already-`.m3u8` URLs are returned unchanged.
-     */
-    private fun forceLiveHls(url: String): String {
-        return tsExtensionRegex.replaceFirst(url, ".m3u8$1")
-    }
 }
