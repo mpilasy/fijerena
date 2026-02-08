@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.feature.category.CategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.epg.EpgGuideScreen
+import org.njarasoa.fijerena.feature.epgbrowser.EpgBrowserScreen
 import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
@@ -169,7 +170,17 @@ fun TvNavHost(
                     },
                     onSettings = {
                         navController.navigate(Screen.Settings)
+                    },
+                    onEpgBrowser = {
+                        navController.navigate(Screen.EpgBrowser)
                     }
+                )
+            }
+
+            // EPG Browser Screen
+            composable<Screen.EpgBrowser> {
+                EpgBrowserScreen(
+                    onBack = { navController.navigateUp() }
                 )
             }
 

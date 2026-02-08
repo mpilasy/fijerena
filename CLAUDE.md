@@ -246,8 +246,9 @@ The app follows this streamlined navigation structure:
 4. **Movie Details** (Movies) / **Episode Selection → Episode Details** (TV Shows) - Info screen before playback
 5. **Player Screen** - Video playback
 6. **Settings** - Accessible from Content Type Selection via gear icon
-7. **Provider Management** - Accessible from Settings → "Manage Providers"
-   - **Provider Selection:** List all providers, select/edit/delete
+7. **EPG Browser** - Accessible from Content Type Selection via book icon (only visible when EPG file exists on disk)
+8. **Provider Management** - Accessible from Settings → "Manage Providers"
+   - **Provider Selection:** List all providers with icon buttons (checkmark=select, pencil=edit, trash=delete, plus=add)
    - **Add/Edit Provider:** Type selector (TV: D-pad dropdown, Mobile: ExposedDropdownMenu) + type-specific form fields (Xtream: URL/user/pass, Jellyfin: server URL/user/pass, SMB: host/share/user/pass, Local: folder/M3U picker). Edit mode includes inline provider settings (auto-resume, watch history size, favorites max size, clear buttons, category filters, caching toggle). TV form fields use `focusedContainerColor` for visible focus, switch rows use `tvFocusableNoScale()`.
 
 **Note:** There is no login screen and no logout button anywhere in the app. Authentication happens automatically on startup via stored credentials, or after configuring a provider in Settings. To switch or remove a provider, use Settings → Manage Providers. Both TV and mobile use the same flow.
@@ -261,7 +262,7 @@ Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
 - **Active Provider Display:** Shows current provider name and URL
 - **Manage Providers:** Navigate to provider selection/management screen (add, edit, delete, switch providers)
 - **Theme Selection:** Choose from 4 dark themes (Deep Night, AMOLED Black, Emerald, Crimson) — persists across app restarts
-- **External EPG Source (XMLTV):** Global EPG URL editor with edit/save/clear buttons — used for external XMLTV EPG data across all providers (stored in `AppSettings.epgUrl`)
+- **External EPG Source (XMLTV):** Global EPG URL editor with edit/save/clear/download buttons — used for external XMLTV EPG data across all providers (stored in `AppSettings.epgUrl`). Shows download status (Downloading/Downloaded with size/Failed/Error) and file size. Download button triggers `EpgFileManager`. WiFi-only download enforcement.
 - **Cache Management:** View cache statistics and clear cached data
   - Total cache size display
   - Per-content-type breakdown (Live TV, Movies, TV Shows)
@@ -454,6 +455,49 @@ A dynamically generated category that displays:
 - Max 50 channels displayed at once
 - Requires EPG data from IPTV provider
 - 30-minute cache refresh interval
+
+### EPG Browser
+**Feature:** Standalone screen for searching programme titles in a locally-cached XMLTV file. Pure local I/O, zero network calls during search.
+
+**Access:** Content Type Selection → book icon (MenuBook), visible only when `xmltv_global.xml` exists in cache directory.
+
+**Features:**
+- Search programme titles across the entire XMLTV dataset
+- Results grouped by normalized title, sorted by airing count (descending)
+- Each result shows: title, category badge, description, channel name + airing times
+- Time window: past 1 day to future 6 days
+- Max 500 results with truncation indicator
+- Dev mode: EPG file size displayed below search box
+- TV: GlassPanel cards in TvLazyColumn, D-pad navigable
+- Mobile: Expandable cards in LazyColumn (first 3 airings shown, expand for all)
+
+**Data Flow:**
+- `XmltvSearchService` → `XmltvParser.searchByTitle()` — streaming XmlPullParser scan
+- `EpgBrowserViewModel` groups flat results into `EpgBrowserProgram` with `EpgBrowserAiring` list
+- Search cancellable (new search cancels previous)
+
+**Key Files:**
+- `core/network/.../xmltv/XmltvSearchService.kt` — Local file search service
+- `core/network/.../xmltv/EpgBrowserModels.kt` — Domain models (EpgBrowserProgram, EpgBrowserAiring)
+- `core/network/.../xmltv/XmltvParser.kt` — `searchByTitle()` with streaming parse, OOM protection
+- `core/ui/.../viewmodels/EpgBrowserViewModel.kt` — ViewModel with Idle/NoEpgFile/Searching/Results/Error states
+- `tv/.../feature/epgbrowser/EpgBrowserScreen.kt` — TV screen
+- `mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt` — Mobile screen
+
+### EpgFileManager
+**Singleton** managing background XMLTV EPG file download lifecycle (`core/network/.../xmltv/EpgFileManager.kt`).
+
+**Key Design Decisions:**
+- Uses raw `java.net.HttpURLConnection` instead of Ktor to avoid in-memory buffering of large (500MB+) responses
+- `Accept-Encoding: identity` header prevents automatic gzip decompression by HttpURLConnection
+- `.xml` URLs: saved directly as-is
+- `.gz` URLs: downloaded raw to disk first, then decompressed in a second file-to-file pass via `GZIPInputStream`
+- WiFi-only: downloads skip on cellular networks (`NetworkMonitor.currentNetworkType`)
+- Retry logic: 3 attempts with exponential backoff
+- 64KB I/O buffers, 10-minute read timeout
+- `OutOfMemoryError` caught explicitly (not caught by `catch (e: Exception)`)
+- States: `NoUrl`, `Downloading`, `Ready(file, sizeBytes, timestamp)`, `Failed(reason)`, `Error(reason, file?)`
+- Settings UI shows download status, file size, and "Download EPG" button
 
 ### Multi-Provider Architecture
 The app supports 4 provider types through a unified domain model abstraction. All providers map to generic types — screens never see provider-specific types.

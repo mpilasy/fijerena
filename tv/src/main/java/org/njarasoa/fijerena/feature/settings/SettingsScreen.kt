@@ -345,6 +345,61 @@ fun SettingsScreen(
                                 )
                             }
                         }
+                        // Show EPG file size if file exists
+                        val epgFile = remember {
+                            java.io.File(context.applicationContext.cacheDir, "xmltv_global.xml").let {
+                                if (it.exists() && it.length() > 0) it else null
+                            }
+                        }
+                        if (epgFile != null) {
+                            Text(
+                                text = "File size: ${formatEpgFileSize(epgFile.length())}",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                ),
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                            )
+                        }
+                        // Download EPG file status & button
+                        val epgFileManager = remember { EpgFileManager.getInstance(context.applicationContext) }
+                        val epgState by epgFileManager.state.collectAsState()
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val statusText = when (epgState) {
+                                is EpgFileManager.EpgFileState.NoUrl -> "No URL configured"
+                                is EpgFileManager.EpgFileState.Downloading -> "Downloading..."
+                                is EpgFileManager.EpgFileState.Ready -> {
+                                    val size = (epgState as EpgFileManager.EpgFileState.Ready).sizeBytes
+                                    "Downloaded (${formatEpgFileSize(size)})"
+                                }
+                                is EpgFileManager.EpgFileState.Failed ->
+                                    (epgState as EpgFileManager.EpgFileState.Failed).reason
+                                is EpgFileManager.EpgFileState.Error ->
+                                    (epgState as EpgFileManager.EpgFileState.Error).reason
+                            }
+                            Text(
+                                text = statusText,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                ),
+                                color = when (epgState) {
+                                    is EpgFileManager.EpgFileState.Ready -> CinemaAccent
+                                    is EpgFileManager.EpgFileState.Downloading -> CinemaTextSecondary
+                                    else -> CinemaError
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (epgUrl.isNotBlank() && epgState !is EpgFileManager.EpgFileState.Downloading) {
+                                Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
+                                CinemaPrimaryButton(
+                                    onClick = { epgFileManager.triggerDownload() },
+                                    text = "Download EPG"
+                                )
+                            }
+                        }
                     } else {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -627,5 +682,14 @@ fun SettingsScreen(
     }
 
     } // End CompositionLocalProvider
+}
+
+private fun formatEpgFileSize(bytes: Long): String {
+    return when {
+        bytes >= 1_073_741_824L -> "%.1f GB".format(bytes / 1_073_741_824.0)
+        bytes >= 1_048_576L -> "%.1f MB".format(bytes / 1_048_576.0)
+        bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
+        else -> "$bytes B"
+    }
 }
 

@@ -12,7 +12,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,9 +40,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
-import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.*
 
 @Composable
@@ -77,9 +82,11 @@ fun TvProviderSelectionScreen(
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            CinemaPrimaryButton(
+            CinemaIconButton(
                 onClick = onAddProvider,
-                text = "Add Provider"
+                icon = {
+                    Icon(Icons.Default.Add, contentDescription = "Add Provider", tint = CinemaAccent)
+                }
             )
         }
 
@@ -219,18 +226,24 @@ private fun ProviderList(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     if (!provider.isActive) {
-                        CinemaPrimaryButton(
+                        CinemaIconButton(
                             onClick = { onSelect(provider) },
-                            text = "Select"
+                            icon = {
+                                Icon(Icons.Default.CheckCircle, contentDescription = "Select", tint = CinemaAccent)
+                            }
                         )
                     }
-                    CinemaSecondaryButton(
+                    CinemaIconButton(
                         onClick = { onEdit(provider.id) },
-                        text = "Edit"
+                        icon = {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = CinemaAccent)
+                        }
                     )
-                    CinemaDangerButton(
+                    CinemaIconButton(
                         onClick = { onDelete(provider) },
-                        text = "Delete"
+                        icon = {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = CinemaError)
+                        }
                     )
                 }
             }

@@ -5,6 +5,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,8 +55,8 @@ fun MobileProviderSelectionScreen(
                     }
                 },
                 actions = {
-                    Button(onClick = onAddProvider) {
-                        Text("Add")
+                    IconButton(onClick = onAddProvider) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Provider")
                     }
                 }
             )
@@ -187,23 +191,30 @@ private fun MobileProviderList(
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm, Alignment.End)
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End)
                     ) {
                         if (!provider.isActive) {
-                            Button(onClick = { onSelect(provider) }) {
-                                Text("Select")
+                            IconButton(onClick = { onSelect(provider) }) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = "Select",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
-                        OutlinedButton(onClick = { onEdit(provider.id) }) {
-                            Text("Edit")
-                        }
-                        OutlinedButton(
-                            onClick = { onDelete(provider) },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = CinemaError
+                        IconButton(onClick = { onEdit(provider.id) }) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
-                        ) {
-                            Text("Delete")
+                        }
+                        IconButton(onClick = { onDelete(provider) }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = CinemaError
+                            )
                         }
                     }
                 }

@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
 import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
 import org.njarasoa.fijerena.feature.epg.MobileEpgGuideScreen
+import org.njarasoa.fijerena.feature.epgbrowser.MobileEpgBrowserScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
 import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
@@ -188,7 +189,17 @@ fun MobileNavHost(
                     },
                     onSettings = {
                         navController.navigate(Screen.Settings)
+                    },
+                    onEpgBrowser = {
+                        navController.navigate(Screen.EpgBrowser)
                     }
+                )
+            }
+
+            // EPG Browser Screen
+            composable<Screen.EpgBrowser> {
+                MobileEpgBrowserScreen(
+                    onBack = { navController.navigateUp() }
                 )
             }
 

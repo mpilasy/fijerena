@@ -127,6 +127,13 @@ sealed interface Screen {
     ) : Screen
 
     /**
+     * EPG Browser screen destination.
+     * Allows searching programme titles in the locally-cached XMLTV file.
+     */
+    @Serializable
+    data object EpgBrowser : Screen
+
+    /**
      * Player screen destination with stream parameters.
      *
      * @param streamId The Xtream stream ID to play (or episode ID for TV shows as string converted to int hash)
