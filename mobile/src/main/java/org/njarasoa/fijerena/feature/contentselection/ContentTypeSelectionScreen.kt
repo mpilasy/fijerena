@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,6 +42,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 fun MobileContentTypeSelectionScreen(
     onContentTypeSelected: (contentType: String) -> Unit,
     onSettings: () -> Unit = {},
+    onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -61,6 +63,13 @@ fun MobileContentTypeSelectionScreen(
     var mediaProviderRef by remember { mutableStateOf<org.njarasoa.fijerena.core.player.domain.MediaProvider?>(null) }
     var categoryFilters by remember {
         mutableStateOf(org.njarasoa.fijerena.core.network.provider.CategoryFilters())
+    }
+
+    // Only show EPG Browser button when a local EPG file exists
+    val hasEpgFile = remember {
+        java.io.File(context.applicationContext.cacheDir, "xmltv_global.xml").let {
+            it.exists() && it.length() > 0
+        }
     }
 
     LaunchedEffect(refreshTrigger) {
@@ -131,6 +140,11 @@ fun MobileContentTypeSelectionScreen(
                     )
                 },
                 actions = {
+                    if (hasEpgFile) {
+                        IconButton(onClick = onEpgBrowser) {
+                            Icon(Icons.Default.MenuBook, "EPG Browser")
+                        }
+                    }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, "Settings")
                     }

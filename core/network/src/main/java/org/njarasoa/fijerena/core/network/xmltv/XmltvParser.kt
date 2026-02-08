@@ -147,6 +147,19 @@ object XmltvParser {
         )
     }
 
+    /** Max characters to keep from any single text field (title, desc, category). */
+    private const val MAX_TEXT_LENGTH = 2000
+
+    private fun safeNextText(parser: XmlPullParser): String {
+        return try {
+            val text = parser.nextText()
+            if (text.length > MAX_TEXT_LENGTH) text.substring(0, MAX_TEXT_LENGTH) else text
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read text element", e)
+            ""
+        }
+    }
+
     private fun parseProgramme(parser: XmlPullParser): XmltvProgramme? {
         val startStr = parser.getAttributeValue(null, "start") ?: return null
         val stopStr = parser.getAttributeValue(null, "stop") ?: return null
@@ -169,19 +182,19 @@ object XmltvParser {
                     when (parser.name) {
                         "title" -> {
                             if (title == null) {
-                                title = parser.nextText()
+                                title = safeNextText(parser)
                                 depth--
                             }
                         }
                         "desc" -> {
                             if (description == null) {
-                                description = parser.nextText()
+                                description = safeNextText(parser)
                                 depth--
                             }
                         }
                         "category" -> {
                             if (category == null) {
-                                category = parser.nextText()
+                                category = safeNextText(parser)
                                 depth--
                             }
                         }
@@ -201,6 +214,96 @@ object XmltvParser {
             title = title,
             description = description,
             category = category
+        )
+    }
+
+    /**
+     * Search programmes by title in a streaming fashion.
+     * Scans the XMLTV file once, collecting programmes whose title contains [query]
+     * (case-insensitive). Stops early once [maxResults] programmes are found.
+     *
+     * @param query Case-insensitive substring to match against programme titles
+     * @param maxResults Maximum number of matching programmes before early termination
+     * @param timeWindowSeconds Optional (start, end) epoch range to filter programmes
+     * @return [XmltvSearchResult] with matched programmes and only channels that have matches
+     */
+    fun searchByTitle(
+        inputStream: InputStream,
+        query: String,
+        maxResults: Int = 500,
+        timeWindowSeconds: Pair<Long, Long>? = null
+    ): XmltvSearchResult {
+        val allChannels = mutableMapOf<String, XmltvChannel>()
+        val matchedProgrammes = mutableListOf<XmltvProgramme>()
+        val matchedChannelIds = mutableSetOf<String>()
+        var totalScanned = 0
+        var truncated = false
+        val queryLower = query.lowercase(Locale.ROOT)
+
+        try {
+            val factory = XmlPullParserFactory.newInstance()
+            factory.isNamespaceAware = false
+            val parser = factory.newPullParser()
+            parser.setInput(inputStream, null)
+
+            var eventType = parser.eventType
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                if (eventType == XmlPullParser.START_TAG) {
+                    when (parser.name) {
+                        "channel" -> {
+                            val channel = parseChannel(parser)
+                            if (channel != null) {
+                                allChannels[channel.id] = channel
+                            }
+                        }
+                        "programme" -> {
+                            // Time window pre-check on attributes
+                            val startStr = parser.getAttributeValue(null, "start")
+                            val stopStr = parser.getAttributeValue(null, "stop")
+                            val outsideWindow = if (timeWindowSeconds != null && startStr != null && stopStr != null) {
+                                val startEpoch = parseTimestamp(startStr)
+                                val endEpoch = parseTimestamp(stopStr)
+                                endEpoch < timeWindowSeconds.first || startEpoch > timeWindowSeconds.second
+                            } else false
+
+                            if (outsideWindow) {
+                                skipElement(parser)
+                            } else {
+                                val programme = parseProgramme(parser)
+                                if (programme != null) {
+                                    totalScanned++
+                                    if (programme.title.lowercase(Locale.ROOT).contains(queryLower)) {
+                                        matchedProgrammes.add(programme)
+                                        matchedChannelIds.add(programme.channelId)
+                                        if (matchedProgrammes.size >= maxResults) {
+                                            truncated = true
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "OOM during search, returning partial results (${matchedProgrammes.size} found)", e)
+            truncated = true
+        } catch (e: Exception) {
+            Log.e(TAG, "Parser error during search, returning partial results (${matchedProgrammes.size} found)", e)
+            truncated = true
+        }
+
+        // Return only channels that have matching programmes
+        val resultChannels = allChannels.filterKeys { it in matchedChannelIds }
+
+        Log.d(TAG, "Search '$query': ${matchedProgrammes.size} matches from $totalScanned scanned, truncated=$truncated")
+        return XmltvSearchResult(
+            channels = resultChannels,
+            programmes = matchedProgrammes,
+            totalScanned = totalScanned,
+            truncated = truncated
         )
     }
 

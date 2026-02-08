@@ -3,11 +3,6 @@ package org.njarasoa.fijerena.core.network.xmltv
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.android.Android
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,14 +13,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.config.NetworkType
+import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import java.io.File
-import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.zip.GZIPInputStream
 
 /**
  * Singleton managing background EPG file download lifecycle.
  * Downloads the XMLTV EPG file in the background, refreshes every 24h,
  * and exposes state for UI to show/hide EPG buttons.
+ *
+ * Uses raw HttpURLConnection instead of Ktor to avoid in-memory buffering
+ * of large (500MB+) responses.
  */
 class EpgFileManager private constructor(private val context: Context) {
 
@@ -35,8 +36,13 @@ class EpgFileManager private constructor(private val context: Context) {
         private const val KEY_DOWNLOAD_TIMESTAMP = "file_download_timestamp"
         private const val KEY_FILE_URL = "file_url"
         private const val REFRESH_INTERVAL_MS = 24L * 60 * 60 * 1000 // 24 hours
-        private const val BUFFER_SIZE = 8192
-        private const val LOG_INTERVAL_BYTES = 10L * 1024 * 1024 // 10MB
+        private const val BUFFER_SIZE = 65536 // 64KB for faster large-file I/O
+        private const val GZIP_BUFFER_SIZE = 65536
+        private const val LOG_INTERVAL_BYTES = 50L * 1024 * 1024 // 50MB
+        private const val MAX_RETRIES = 3
+        private const val RETRY_DELAY_MS = 5000L
+        private const val CONNECT_TIMEOUT_MS = 60_000
+        private const val READ_TIMEOUT_MS = 600_000 // 10 minutes for large XMLTV files
 
         @Volatile
         private var instance: EpgFileManager? = null
@@ -63,13 +69,7 @@ class EpgFileManager private constructor(private val context: Context) {
 
     private val xmltvFile = File(context.cacheDir, "xmltv_global.xml")
     private val tmpFile = File(context.cacheDir, "xmltv_global_tmp")
-
-    private val client = HttpClient(Android) {
-        engine {
-            connectTimeout = 30_000
-            socketTimeout = 300_000 // 5 minutes for large XMLTV files
-        }
-    }
+    private val tmpGzFile = File(context.cacheDir, "xmltv_global_tmp.gz")
 
     private val _state = MutableStateFlow<EpgFileState>(EpgFileState.NoUrl)
     val state: StateFlow<EpgFileState> = _state.asStateFlow()
@@ -154,83 +154,149 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     private suspend fun downloadFile(url: String, keepReadyDuringRefresh: Boolean) {
-        try {
-            Log.d(TAG, "Downloading XMLTV from: $url")
-            val response = client.get(url)
-            val statusCode = response.status.value
-            if (statusCode !in 200..299) {
-                handleError("EPG download failed: server returned HTTP $statusCode", keepReadyDuringRefresh)
-                return
-            }
+        // Only download on WiFi/Ethernet — EPG files can be hundreds of MB
+        val networkType = NetworkMonitor.currentNetworkType
+        if (networkType == NetworkType.CELLULAR) {
+            Log.d(TAG, "Skipping EPG download: on cellular network")
+            handleError("EPG download skipped: WiFi required for large EPG files", keepReadyDuringRefresh)
+            return
+        }
 
-            val channel = response.bodyAsChannel()
-            val rawStream: InputStream = channel.toInputStream()
+        val isGzip = url.endsWith(".gz", ignoreCase = true)
+        var lastError: String? = null
 
-            val inputStream = if (url.endsWith(".gz", ignoreCase = true)) {
-                GZIPInputStream(rawStream)
-            } else {
-                rawStream
-            }
+        for (attempt in 1..MAX_RETRIES) {
+            var connection: HttpURLConnection? = null
+            try {
+                Log.d(TAG, "Downloading XMLTV from: $url (attempt $attempt/$MAX_RETRIES)")
 
-            tmpFile.delete()
-            inputStream.use { input ->
-                tmpFile.outputStream().buffered().use { output ->
-                    val buffer = ByteArray(BUFFER_SIZE)
-                    var bytesRead: Int
-                    var totalBytes = 0L
-                    var lastLoggedMb = 0L
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
-                        totalBytes += bytesRead
-                        val currentMb = totalBytes / (1024 * 1024)
-                        if (currentMb >= lastLoggedMb + (LOG_INTERVAL_BYTES / (1024 * 1024))) {
-                            Log.d(TAG, "XMLTV download: ${currentMb}MB")
-                            lastLoggedMb = currentMb
+                connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = CONNECT_TIMEOUT_MS
+                    readTimeout = READ_TIMEOUT_MS
+                    instanceFollowRedirects = true
+                    // Disable automatic gzip decompression — we handle .gz ourselves
+                    setRequestProperty("Accept-Encoding", "identity")
+                }
+
+                val statusCode = connection.responseCode
+                if (statusCode !in 200..299) {
+                    lastError = "server returned HTTP $statusCode"
+                    Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
+                    if (statusCode in 400..499) break // Client errors won't recover
+                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                    break
+                }
+
+                val downloadTarget = if (isGzip) tmpGzFile else tmpFile
+
+                // Stream directly from network to disk — zero in-memory buffering
+                downloadTarget.delete()
+                connection.inputStream.buffered(BUFFER_SIZE).use { input ->
+                    downloadTarget.outputStream().buffered(BUFFER_SIZE).use { output ->
+                        val buffer = ByteArray(BUFFER_SIZE)
+                        var bytesRead: Int
+                        var totalBytes = 0L
+                        var lastLoggedMb = 0L
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            totalBytes += bytesRead
+                            val currentMb = totalBytes / (1024 * 1024)
+                            if (currentMb >= lastLoggedMb + (LOG_INTERVAL_BYTES / (1024 * 1024))) {
+                                Log.d(TAG, "XMLTV download: ${currentMb}MB written")
+                                lastLoggedMb = currentMb
+                            }
+                        }
+                        output.flush()
+                        Log.d(TAG, "XMLTV download complete: ${totalBytes / (1024 * 1024)}MB")
+                    }
+                }
+
+                // If .gz, decompress to tmpFile
+                if (isGzip) {
+                    Log.d(TAG, "Decompressing .gz file (${tmpGzFile.length() / (1024 * 1024)}MB)")
+                    tmpFile.delete()
+                    GZIPInputStream(tmpGzFile.inputStream().buffered(BUFFER_SIZE), GZIP_BUFFER_SIZE).use { gzInput ->
+                        tmpFile.outputStream().buffered(BUFFER_SIZE).use { output ->
+                            val buffer = ByteArray(BUFFER_SIZE)
+                            var bytesRead: Int
+                            var totalBytes = 0L
+                            var lastLoggedMb = 0L
+                            while (gzInput.read(buffer).also { bytesRead = it } != -1) {
+                                output.write(buffer, 0, bytesRead)
+                                totalBytes += bytesRead
+                                val currentMb = totalBytes / (1024 * 1024)
+                                if (currentMb >= lastLoggedMb + (LOG_INTERVAL_BYTES / (1024 * 1024))) {
+                                    Log.d(TAG, "XMLTV decompress: ${currentMb}MB written")
+                                    lastLoggedMb = currentMb
+                                }
+                            }
+                            output.flush()
+                            Log.d(TAG, "XMLTV decompress complete: ${totalBytes / (1024 * 1024)}MB")
                         }
                     }
-                    Log.d(TAG, "XMLTV download complete: ${totalBytes / (1024 * 1024)}MB")
+                    tmpGzFile.delete()
                 }
+
+                // Basic validation: check it starts with XML-ish content
+                if (!validateXmltvFile(tmpFile)) {
+                    tmpFile.delete()
+                    handleError("EPG file invalid: not a valid XMLTV file", keepReadyDuringRefresh)
+                    return
+                }
+
+                // Atomic rename
+                xmltvFile.delete()
+                tmpFile.renameTo(xmltvFile)
+
+                val now = System.currentTimeMillis()
+                prefs.edit()
+                    .putString(KEY_FILE_URL, url)
+                    .putLong(KEY_DOWNLOAD_TIMESTAMP, now)
+                    .apply()
+
+                _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), now)
+                Log.d(TAG, "EPG file ready: ${xmltvFile.length() / (1024 * 1024)}MB")
+
+                // Schedule next refresh
+                scheduleRefreshAfter(url, REFRESH_INTERVAL_MS)
+                return // Success — exit retry loop
+
+            } catch (e: java.net.UnknownHostException) {
+                tmpFile.delete(); tmpGzFile.delete()
+                handleError("EPG download failed: no internet connection", keepReadyDuringRefresh)
+                return // No point retrying without network
+            } catch (e: OutOfMemoryError) {
+                tmpFile.delete(); tmpGzFile.delete()
+                System.gc()
+                lastError = "out of memory during download"
+                Log.e(TAG, "OOM during EPG download (attempt $attempt)", e)
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+            } catch (e: java.net.SocketTimeoutException) {
+                tmpFile.delete(); tmpGzFile.delete()
+                lastError = "connection timed out"
+                Log.w(TAG, "EPG download timeout (attempt $attempt)", e)
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+            } catch (e: java.io.IOException) {
+                tmpFile.delete(); tmpGzFile.delete()
+                lastError = if (e.message?.contains("No space", ignoreCase = true) == true) {
+                    "insufficient storage"
+                } else {
+                    e.message ?: "I/O error"
+                }
+                Log.w(TAG, "EPG download I/O error (attempt $attempt): $lastError", e)
+                if (lastError == "insufficient storage") break // Won't recover
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+            } catch (e: Exception) {
+                tmpFile.delete(); tmpGzFile.delete()
+                lastError = e.message ?: "unknown error"
+                Log.w(TAG, "EPG download error (attempt $attempt): $lastError", e)
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+            } finally {
+                connection?.disconnect()
             }
-
-            // Basic validation: check it starts with XML-ish content
-            if (!validateXmltvFile(tmpFile)) {
-                tmpFile.delete()
-                handleError("EPG file invalid: not a valid XMLTV file", keepReadyDuringRefresh)
-                return
-            }
-
-            // Atomic rename
-            xmltvFile.delete()
-            tmpFile.renameTo(xmltvFile)
-
-            val now = System.currentTimeMillis()
-            prefs.edit()
-                .putString(KEY_FILE_URL, url)
-                .putLong(KEY_DOWNLOAD_TIMESTAMP, now)
-                .apply()
-
-            _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), now)
-            Log.d(TAG, "EPG file ready: ${xmltvFile.length() / (1024 * 1024)}MB")
-
-            // Schedule next refresh
-            scheduleRefreshAfter(url, REFRESH_INTERVAL_MS)
-
-        } catch (e: java.net.UnknownHostException) {
-            handleError("EPG download failed: no internet connection", keepReadyDuringRefresh)
-        } catch (e: java.net.SocketTimeoutException) {
-            handleError("EPG download failed: connection timed out", keepReadyDuringRefresh)
-        } catch (e: java.io.IOException) {
-            val message = if (e.message?.contains("No space", ignoreCase = true) == true) {
-                "EPG download failed: insufficient storage"
-            } else {
-                "EPG download failed: ${e.message}"
-            }
-            handleError(message, keepReadyDuringRefresh)
-        } catch (e: Exception) {
-            handleError("EPG download failed: ${e.message}", keepReadyDuringRefresh)
-        } finally {
-            tmpFile.delete()
         }
+        // All retries exhausted
+        handleError("EPG download failed: $lastError", keepReadyDuringRefresh)
     }
 
     private fun handleError(reason: String, keepReadyDuringRefresh: Boolean) {

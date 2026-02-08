@@ -215,6 +215,19 @@ fun MobileSettingsScreen(
                             Text("Edit")
                         }
                     }
+                    // Show EPG file size if file exists
+                    val epgFile = remember {
+                        java.io.File(context.applicationContext.cacheDir, "xmltv_global.xml").let {
+                            if (it.exists() && it.length() > 0) it else null
+                        }
+                    }
+                    if (epgFile != null) {
+                        Text(
+                            text = "File size: ${formatEpgFileSize(epgFile.length())}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        )
+                    }
                     if (epgUrl.isNotBlank()) {
                         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                         Button(
@@ -229,6 +242,44 @@ fun MobileSettingsScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Clear EPG URL")
+                        }
+                    }
+                    // Download EPG file status & button
+                    val epgFileManager = remember { EpgFileManager.getInstance(context.applicationContext) }
+                    val epgState by epgFileManager.state.collectAsState()
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val statusText = when (epgState) {
+                            is EpgFileManager.EpgFileState.NoUrl -> "No URL configured"
+                            is EpgFileManager.EpgFileState.Downloading -> "Downloading..."
+                            is EpgFileManager.EpgFileState.Ready -> {
+                                val size = (epgState as EpgFileManager.EpgFileState.Ready).sizeBytes
+                                "Downloaded (${formatEpgFileSize(size)})"
+                            }
+                            is EpgFileManager.EpgFileState.Failed ->
+                                (epgState as EpgFileManager.EpgFileState.Failed).reason
+                            is EpgFileManager.EpgFileState.Error ->
+                                (epgState as EpgFileManager.EpgFileState.Error).reason
+                        }
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when (epgState) {
+                                is EpgFileManager.EpgFileState.Ready -> MaterialTheme.colorScheme.primary
+                                is EpgFileManager.EpgFileState.Downloading ->
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                else -> CinemaError
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (epgUrl.isNotBlank() && epgState !is EpgFileManager.EpgFileState.Downloading) {
+                            Spacer(modifier = Modifier.width(CinemaSpacing.sm))
+                            Button(onClick = { epgFileManager.triggerDownload() }) {
+                                Text("Download EPG")
+                            }
                         }
                     }
                 } else {
@@ -438,6 +489,15 @@ private fun ConfirmationDialog(
             }
         }
     )
+}
+
+private fun formatEpgFileSize(bytes: Long): String {
+    return when {
+        bytes >= 1_073_741_824L -> "%.1f GB".format(bytes / 1_073_741_824.0)
+        bytes >= 1_048_576L -> "%.1f MB".format(bytes / 1_048_576.0)
+        bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
+        else -> "$bytes B"
+    }
 }
 
 @Composable

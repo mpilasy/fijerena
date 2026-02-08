@@ -2,7 +2,10 @@
 
 package org.njarasoa.fijerena.feature.contentselection
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,9 +21,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Icon
@@ -78,6 +84,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 fun ContentTypeSelectionScreen(
     onContentTypeSelected: (ContentType) -> Unit,
     onSettings: () -> Unit,
+    onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -100,6 +107,14 @@ fun ContentTypeSelectionScreen(
     var categoryFilters by remember {
         mutableStateOf(org.njarasoa.fijerena.core.network.provider.CategoryFilters())
     }
+
+    // Only show EPG Browser button when a local EPG file exists
+    val hasEpgFile = remember {
+        java.io.File(context.applicationContext.cacheDir, "xmltv_global.xml").let {
+            it.exists() && it.length() > 0
+        }
+    }
+
 
     LaunchedEffect(refreshTrigger) {
         // Reset counts so stale values don't linger during provider switch
@@ -193,19 +208,45 @@ fun ContentTypeSelectionScreen(
                         val displayName = if (appSettings.isDevMode && providerType.isNotEmpty()) {
                             "$providerName ($providerType)"
                         } else providerName
+                        var providerPillFocused by remember { mutableStateOf(false) }
+                        val pillScale by animateFloatAsState(
+                            targetValue = if (providerPillFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
+                            animationSpec = tween(durationMillis = org.njarasoa.fijerena.core.ui.theme.CinemaAnimation.focusDurationMs),
+                            label = "provider_pill_scale"
+                        )
                         GlassPanel(
-                            modifier = Modifier.clickable { showProviderPicker = true }
+                            modifier = Modifier
+                                .scale(pillScale)
+                                .border(
+                                    width = TvFocusTokens.focusBorderWidth,
+                                    color = if (providerPillFocused) CinemaAccentLight else androidx.compose.ui.graphics.Color.Transparent,
+                                    shape = RoundedCornerShape(CinemaCornerRadius.large)
+                                )
+                                .onFocusChanged { providerPillFocused = it.isFocused }
+                                .clickable { showProviderPicker = true }
                         ) {
                             Text(
                                 text = displayName,
                                 style = MaterialTheme.typography.titleSmall,
-                                color = CinemaAccentLight,
+                                color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
                                 modifier = Modifier.padding(
                                     horizontal = Spacing.md,
                                     vertical = Spacing.xs
                                 )
                             )
                         }
+                    }
+                    if (hasEpgFile) {
+                        CinemaIconButton(
+                            onClick = onEpgBrowser,
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.MenuBook,
+                                    contentDescription = "EPG Browser",
+                                    tint = CinemaAccentLight
+                                )
+                            }
+                        )
                     }
                     CinemaIconButton(
                         onClick = onSettings,

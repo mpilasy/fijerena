@@ -24,3 +24,10 @@ data class XmltvData(
     val channels: Map<String, XmltvChannel>,
     val programmes: Map<String, List<XmltvProgramme>>
 )
+
+data class XmltvSearchResult(
+    val channels: Map<String, XmltvChannel>,
+    val programmes: List<XmltvProgramme>,
+    val totalScanned: Int,
+    val truncated: Boolean
+)
