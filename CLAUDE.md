@@ -20,24 +20,27 @@ Targeting: Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Br
 - **DASH** (`.mpd`) - Dynamic Adaptive Streaming over HTTP
 - **MPEG-TS** (`.ts`, `.mpeg`) - MPEG Transport Stream
 
-### LoadControl Optimization - Content-Type Aware
-**Dual Buffer Profiles:** Automatically configured based on content type for optimal performance.
+### LoadControl Optimization - Network & Content-Type Aware
+**Adaptive Buffer Profiles:** `AdaptiveLoadControl` dynamically selects buffer parameters based on both content type (Live TV vs VOD) and network type (WiFi vs Cellular). Buffer thresholds swap at runtime without restarting the player.
 
-#### Live TV Profile (Fast Zapping)
-Optimized for instant channel switching and minimal latency:
-- `minBufferMs: 2000ms` - Minimal buffering for live streams
-- `maxBufferMs: 5000ms` - Avoid over-buffering live content
-- `bufferForPlaybackMs: 250ms` - Fast startup/channel switching (80% faster)
-- `bufferForPlaybackAfterRebufferMs: 500ms` - Quick recovery from rebuffering
-- `backBufferDurationMs: 0ms` - No back buffer for live streams
+#### WiFi Profiles (default for TVs, Ethernet)
 
-#### VOD Profile (Movies/TV Shows)
-Optimized for smooth playback during network fluctuations:
-- `minBufferMs: 15000ms` - Adequate buffer for stability
-- `maxBufferMs: 50000ms` - Handle network variations
-- `bufferForPlaybackMs: 2500ms` - Smooth startup
-- `bufferForPlaybackAfterRebufferMs: 5000ms` - Recover gracefully
-- `backBufferDurationMs: 10000ms` - Support seeking in VOD content
+**Live TV (Fast Zapping):**
+- `minBufferMs: 2000ms` | `maxBufferMs: 5000ms` | `playbackMs: 250ms` | `rebufferMs: 500ms` | `backBuffer: 0ms`
+
+**VOD (Movies/TV Shows):**
+- `minBufferMs: 15000ms` | `maxBufferMs: 50000ms` | `playbackMs: 2500ms` | `rebufferMs: 5000ms` | `backBuffer: 10000ms`
+
+#### Cellular Profiles (mobile devices on 4G/5G)
+
+**Live TV:**
+- `minBufferMs: 8000ms` | `maxBufferMs: 20000ms` | `playbackMs: 1500ms` | `rebufferMs: 2000ms` | `backBuffer: 0ms`
+
+**VOD:**
+- `minBufferMs: 40000ms` | `maxBufferMs: 100000ms` | `playbackMs: 8000ms` | `rebufferMs: 10000ms` | `backBuffer: 10000ms`
+- `prioritizeTimeOverSizeThresholds: true`
+
+**Architecture:** `AdaptiveLoadControl` implements `LoadControl`, delegates to a `@Volatile` inner `DefaultLoadControl` with a shared `DefaultAllocator`. `NetworkMonitor` emits `StateFlow<NetworkType>`, collected by `StreamingPlaybackService` which calls `updateForNetwork()` — ExoPlayer reads new thresholds on its next `shouldContinueLoading()` call with zero player restart.
 
 **Content Type Detection:** Automatically applied in both `TvPlayerScreen` and `MobilePlayerScreen` based on `contentType` parameter.
 
@@ -50,11 +53,27 @@ Hardware-accelerated codec selection based on device capabilities:
 ### StreamingMediaSourceFactory Usage
 Always use `StreamingMediaSourceFactory.createMediaSource()` for stream playback:
 - Automatically detects stream type (HLS/DASH/MPEG-TS)
-- Configures HTTP timeouts (30s connect, 60s read)
+- **Network-aware HTTP timeouts:** WiFi 30s/60s, Cellular 45s/90s (connect/read)
 - **Supports custom headers for authentication** (auth tokens, CDN headers, Jellyfin X-Emby-Token)
+- **`AdaptiveLoadErrorPolicy`** on all media sources: 3 retries on WiFi, 6 on cellular with exponential backoff (1s base, 10s cap)
+- **Live stream URL mutation:** On cellular, `.ts` URLs are rewritten to `.m3u8` for adaptive bitrate
+- `isLive` parameter propagated from `PlayerMetadata.isLive`
 - Enables cross-protocol redirects
 - Supports `smb://` URIs via custom `SmbDataSource` for SMB network shares
 - Supports `content://` URIs for local media files
+
+### Network Monitoring
+**`NetworkMonitor`** singleton observes connectivity via `ConnectivityManager.NetworkCallback`:
+- `StateFlow<NetworkType>` for coroutine-based collection (used by `StreamingPlaybackService`)
+- `@Volatile currentNetworkType` for synchronous hot-path reads (used by `AdaptiveLoadControl`, `AdaptiveLoadErrorPolicy`, `StreamingMediaSourceFactory`)
+- Ethernet/WiFi → `WIFI` profile, Cellular → `CELLULAR` profile, Unknown → `WIFI` fallback
+- Lifecycle: `init(context)` in `onCreate()`, `release()` in `onDestroy()`
+
+**Key Files:**
+- `core/player/.../config/NetworkBufferProfile.kt` — All buffer/retry/timeout constants
+- `core/player/.../config/AdaptiveLoadControl.kt` — Delegating LoadControl with atomic swap
+- `core/player/.../network/NetworkMonitor.kt` — ConnectivityManager wrapper
+- `core/player/.../source/AdaptiveLoadErrorPolicy.kt` — Network-aware retry policy
 
 ### Audio Track Selection
 **Feature:** Multi-language and audio format selection during playback.
