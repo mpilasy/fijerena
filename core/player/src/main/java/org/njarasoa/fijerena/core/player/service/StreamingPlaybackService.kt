@@ -13,12 +13,19 @@ import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 
 class StreamingPlaybackService : MediaSessionService() {
@@ -47,11 +54,27 @@ class StreamingPlaybackService : MediaSessionService() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingRetry: Runnable? = null
 
+    // Adaptive load control for network-aware buffering
+    private var adaptiveLoadControl: AdaptiveLoadControl? = null
+    private var serviceScope: CoroutineScope? = null
+
     override fun onCreate() {
         super.onCreate()
         instance = this
+        NetworkMonitor.init(this)
         initializePlayer()
         acquireWakeLock()
+        observeNetworkChanges()
+    }
+
+    private fun observeNetworkChanges() {
+        val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        serviceScope = scope
+        scope.launch {
+            NetworkMonitor.networkType.collect { networkType ->
+                adaptiveLoadControl?.updateForNetwork(networkType)
+            }
+        }
     }
 
     private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {
@@ -74,8 +97,12 @@ class StreamingPlaybackService : MediaSessionService() {
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
             .setEnableAudioFloatOutput(true) // Better audio quality if hardware supports it
 
+        // Use AdaptiveLoadControl for network-aware buffer management
+        val loadControl = AdaptiveLoadControl(contentType)
+        adaptiveLoadControl = loadControl
+
         val player = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)
-            .setLoadControl(PlayerConfigFactory.createLoadControl(contentType))
+            .setLoadControl(loadControl)
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -148,7 +175,8 @@ class StreamingPlaybackService : MediaSessionService() {
         val mediaSource = StreamingMediaSourceFactory.createMediaSource(
             context = this,
             streamUrl = metadata.streamUrl,
-            headers = metadata.headers
+            headers = metadata.headers,
+            isLive = metadata.isLive
         )
 
         player.setMediaSource(mediaSource)
@@ -183,7 +211,8 @@ class StreamingPlaybackService : MediaSessionService() {
             val mediaSource = StreamingMediaSourceFactory.createMediaSource(
                 context = this,
                 streamUrl = metadata.streamUrl,
-                headers = metadata.headers
+                headers = metadata.headers,
+                isLive = metadata.isLive
             )
 
             player.setMediaSource(mediaSource)
@@ -390,6 +419,11 @@ class StreamingPlaybackService : MediaSessionService() {
         // Clean up wake lock reference
         wakeLock = null
         analyticsListener = null
+        // Clean up network monitoring and coroutine scope
+        serviceScope?.cancel()
+        serviceScope = null
+        adaptiveLoadControl = null
+        NetworkMonitor.release()
         instance = null
         super.onDestroy()
     }
