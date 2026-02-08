@@ -47,6 +47,14 @@ fun MobileSearchScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
 
+    // Restore search query from ViewModel on screen re-entry (e.g. back from stream playback)
+    LaunchedEffect(Unit) {
+        val vmQuery = (viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query ?: ""
+        if (vmQuery.isNotEmpty() && searchQuery.isEmpty()) {
+            searchQuery = vmQuery
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -76,7 +84,7 @@ fun MobileSearchScreen(
                 leadingIcon = {
                     IconButton(onClick = {
                         if (searchQuery.isNotBlank()) {
-                            viewModel.updateSearchQuery(searchQuery)
+                            viewModel.performSearch(searchQuery)
                             keyboardController?.hide()
                         }
                     }) {
@@ -88,7 +96,7 @@ fun MobileSearchScreen(
                 keyboardActions = KeyboardActions(
                     onSearch = {
                         if (searchQuery.isNotBlank()) {
-                            viewModel.updateSearchQuery(searchQuery)
+                            viewModel.performSearch(searchQuery)
                             keyboardController?.hide()
                         }
                     }
@@ -119,15 +127,18 @@ fun MobileSearchScreen(
                         ErrorView(message = state.message)
                     }
                     is SearchViewModel.UiState.Success -> {
+                        val failedSuffix = if (state.failedCalls > 0) " (${state.failedCalls} failed)" else ""
+                        val errorSuffix = if (state.firstError != null) "\n${state.firstError}" else ""
                         val devStats = if (appSettings.isDevMode && state.searchDataSize != null) {
-                            " | ${state.searchDataSize} in ${state.searchDuration}"
-                        } else ""
+                            "${state.searchDataSize} fetched | ${state.totalDuration} total | network: ${state.networkWallDuration} wall / ${state.networkAccumDuration} accum | ${state.networkCalls} calls$failedSuffix$errorSuffix"
+                        } else null
                         SearchResults(
                             categoryResults = state.categoryResults,
                             results = state.filteredResults,
-                            query = searchQuery,
+                            query = state.query,
                             isSearching = state.isSearching,
-                            searchProgress = (state.searchProgress ?: "") + devStats,
+                            searchProgress = state.searchProgress ?: "",
+                            devStats = devStats,
                             onResultClick = { result ->
                                 onStreamSelected(
                                     result.itemId,
@@ -197,10 +208,12 @@ private fun SearchResults(
     query: String,
     isSearching: Boolean,
     searchProgress: String?,
+    devStats: String?,
     onResultClick: (SearchViewModel.SearchResult) -> Unit,
     onCategoryClick: (SearchViewModel.CategorySearchResult) -> Unit
 ) {
-    if (query.isBlank()) {
+    val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
+    if (!hasResults && query.isBlank()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -255,6 +268,21 @@ private fun SearchResults(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(vertical = Spacing.xs)
+                    )
+                }
+            }
+
+            // Dev stats on separate line
+            if (devStats != null) {
+                item(key = "dev_stats") {
+                    Text(
+                        text = devStats,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = MaterialTheme.typography.labelSmall.fontSize * CinemaAlpha.textMedium
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End
                     )
                 }
             }

@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,6 +70,7 @@ import org.njarasoa.fijerena.feature.common.StatsOverlay
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
@@ -308,9 +311,14 @@ private fun TwoColumnLayout(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CinemaSecondaryButton(
+                CinemaIconButton(
                     onClick = onSearchClick,
-                    text = "Search"
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search"
+                        )
+                    }
                 )
                 // EPG button - show for Live TV when native EPG or XMLTV file is available
                 val hasEpgData = supportsNativeEpg ||

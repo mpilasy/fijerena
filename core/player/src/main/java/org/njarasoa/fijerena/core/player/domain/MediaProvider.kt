@@ -21,7 +21,13 @@ interface MediaProvider {
         extension: String? = null
     ): Result<PlayableStream>
 
+    /** Returns cached items for a category or null if not cached. Never hits the network. */
+    fun getItemsIfCached(categoryId: String, contentType: String): List<MediaItem>? = null
+
     suspend fun search(query: String, contentType: String): Result<List<MediaItem>>? = null
+
+    /** Returns estimated byte size of the full dataset fetched for the last search (before filtering). */
+    fun getLastSearchDataSize(contentType: String): Long? = null
 
     suspend fun getEpg(streamId: String): Result<EpgResponse>? = null
     suspend fun getEpgBulk(streamIds: List<String>): Result<Map<String, EpgResponse>>? = null

@@ -276,10 +276,45 @@ Content-type specific watch history system:
 - Maintains watch history per content type (separate tracking for each type)
 - Enables "Last Watched" virtual category for quick access to recently viewed content
 
+### Search
+**Access:** Category Grid Screen → magnifying glass icon button (both TV and mobile)
+
+**Architecture:** Two-phase parallel search with background pre-fetching.
+
+**Search Behavior:**
+- Search is triggered explicitly by pressing the search icon or keyboard search action (not auto-debounce)
+- Minimum 2 characters required
+- Results persist when clearing the text field — only replaced by a new search
+- Search term and results survive navigation to stream playback and back (ViewModel state)
+
+**Two-Phase Search (Xtream client-side):**
+1. **Phase 1 (Cache Sweep):** Instantly scans all cached categories in SharedPreferences — no network calls. Results displayed immediately.
+2. **Phase 2 (Network Fetch):** Fetches remaining uncached categories in parallel (semaphore=20, Channel-based streaming). Results stream in as they arrive with live progress updates (throttled to 100ms).
+- Target: 200 results max
+- Cancellable: new search cancels previous
+
+**Background Pre-fetching:** On SearchViewModel init, a background job pre-fetches all category items that aren't cached yet (independent of search, never cancelled by search). This warms the cache so subsequent searches are faster.
+
+**Server-side Search:** Jellyfin providers use native server-side search (single API call). Xtream falls back to client-side parallel iteration.
+
+**Dev Mode Stats (right-aligned, small font below progress):**
+- Network bytes fetched (excludes cached data)
+- Total wall-clock time
+- Network wall-clock time / accumulated per-call time
+- Call count with failure count
+- First error message (for debugging)
+
+**Key Files:**
+- `core/ui/.../viewmodels/SearchViewModel.kt` — Search orchestration, two-phase logic, stats
+- `core/ui/.../viewmodels/SearchViewModelFactory.kt` — Creates MediaRepository per search instance
+- `tv/.../feature/search/SearchScreen.kt` — TV search UI
+- `mobile/.../feature/search/SearchScreen.kt` — Mobile search UI
+
 ### Developer Mode Features
 When enabled, provides debugging and performance insights:
 - **Payload Size Tracking:** Monitor API response sizes in bytes (works with both network and cache)
 - **Network Statistics:** View request/response metrics
+- **Search Stats:** Network bytes, wall/accumulated timing, call counts, failure reasons (displayed in search results)
 - **Debug Info:** Additional diagnostics for network operations
 - **Provider Type Display:** Shows provider type in parentheses after provider name on Content Type Selection screen (e.g., "My Server (JELLYFIN)")
 

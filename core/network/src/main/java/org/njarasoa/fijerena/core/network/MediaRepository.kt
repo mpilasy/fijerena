@@ -136,6 +136,10 @@ class MediaRepository(
             ?: kotlin.Result.failure(Exception("No provider set"))
     }
 
+    fun getItemsIfCached(categoryId: String, contentType: String): List<MediaItem>? {
+        return provider?.getItemsIfCached(categoryId, contentType)
+    }
+
     suspend fun getItemsForSearch(categoryId: String, contentType: String): kotlin.Result<List<MediaItem>> {
         return provider?.getItems(categoryId, contentType)
             ?: kotlin.Result.failure(Exception("No provider set"))
@@ -163,6 +167,10 @@ class MediaRepository(
 
     suspend fun search(query: String, contentType: String): kotlin.Result<List<MediaItem>>? {
         return provider?.search(query, contentType)
+    }
+
+    fun getLastSearchDataSize(contentType: String): Long? {
+        return provider?.getLastSearchDataSize(contentType)
     }
 
     suspend fun getEpg(streamId: String): kotlin.Result<EpgResponse>? {
