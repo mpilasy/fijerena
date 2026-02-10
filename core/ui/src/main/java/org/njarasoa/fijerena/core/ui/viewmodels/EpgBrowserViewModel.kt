@@ -3,19 +3,27 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
 
 class EpgBrowserViewModel(
     private val context: Context
@@ -40,6 +48,11 @@ class EpgBrowserViewModel(
         data class Error(val message: String) : UiState
     }
 
+    companion object {
+        private const val PAGE_SIZE = 50
+        private const val PREFETCH_DISTANCE = 25
+    }
+
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
@@ -52,6 +65,14 @@ class EpgBrowserViewModel(
     /** EPG file size in bytes, or null if no file. */
     val epgFileSizeBytes: Long?
 
+    // --------------- Paging flows ---------------
+
+    private val _pagedNowPlaying = MutableStateFlow<Flow<PagingData<EpgSearchResultRow>>>(emptyFlow())
+    val pagedNowPlaying: StateFlow<Flow<PagingData<EpgSearchResultRow>>> = _pagedNowPlaying.asStateFlow()
+
+    private val _pagedSearchResults = MutableStateFlow<Flow<PagingData<EpgSearchResultRow>>>(emptyFlow())
+    val pagedSearchResults: StateFlow<Flow<PagingData<EpgSearchResultRow>>> = _pagedSearchResults.asStateFlow()
+
     init {
         val managerFile = EpgFileManager.getInstance(context).getEpgFile()
         val physicalFile = java.io.File(context.cacheDir, "xmltv_global.xml")
@@ -60,6 +81,27 @@ class EpgBrowserViewModel(
         epgFileSizeBytes = file?.length()
         if (file == null) {
             _uiState.value = UiState.NoEpgFile
+        } else {
+            // Set up paged "Now Playing" flow when index is available
+            initPagedNowPlaying()
+        }
+    }
+
+    private fun initPagedNowPlaying() {
+        val indexer = EpgIndexer.getInstance(context)
+        if (indexer.state.value is EpgIndexState.Indexed) {
+            val nowEpoch = System.currentTimeMillis() / 1000L
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            _pagedNowPlaying.value = Pager(
+                config = PagingConfig(
+                    pageSize = PAGE_SIZE,
+                    prefetchDistance = PREFETCH_DISTANCE,
+                    enablePlaceholders = false
+                )
+            ) {
+                dao.getPagedNowPlaying(nowEpoch)
+            }.flow.cachedIn(viewModelScope)
         }
     }
 
@@ -116,6 +158,9 @@ class EpgBrowserViewModel(
                     searchTimeMs = elapsed,
                     searchedFromIndex = result.searchedFromIndex
                 )
+
+                // Also set up paged search results for large datasets
+                initPagedSearch(query)
             } catch (e: OutOfMemoryError) {
                 System.gc()
                 _uiState.value = UiState.Error("EPG file too large for search. Try a more specific query.")
@@ -123,5 +168,45 @@ class EpgBrowserViewModel(
                 _uiState.value = UiState.Error(e.message ?: "Search failed")
             }
         }
+    }
+
+    private fun initPagedSearch(query: String) {
+        val indexer = EpgIndexer.getInstance(context)
+        if (indexer.state.value is EpgIndexState.Indexed) {
+            val now = System.currentTimeMillis() / 1000L
+            val windowStart = now - 86400L
+            val windowEnd = now + 6 * 86400L
+
+            val sanitized = query
+                .replace("\"", "")
+                .replace("*", "")
+                .replace("(", "")
+                .replace(")", "")
+                .replace(":", "")
+                .trim()
+            if (sanitized.isBlank()) return
+
+            val ftsQuery = "\"$sanitized\"*"
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+
+            _pagedSearchResults.value = Pager(
+                config = PagingConfig(
+                    pageSize = PAGE_SIZE,
+                    prefetchDistance = PREFETCH_DISTANCE,
+                    enablePlaceholders = false
+                )
+            ) {
+                dao.searchByTitleFtsPaged(ftsQuery, windowStart, windowEnd)
+            }.flow.cachedIn(viewModelScope)
+        }
+    }
+
+    /**
+     * Refresh the paged "Now Playing" data. Call when the user navigates
+     * to the Now Playing view or when enough time has passed.
+     */
+    fun refreshNowPlaying() {
+        initPagedNowPlaying()
     }
 }
