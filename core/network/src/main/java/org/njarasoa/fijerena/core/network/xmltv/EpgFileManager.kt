@@ -36,7 +36,8 @@ class EpgFileManager private constructor(private val context: Context) {
         private const val PREFS_NAME = "epg_file_manager"
         private const val KEY_DOWNLOAD_TIMESTAMP = "file_download_timestamp"
         private const val KEY_FILE_URL = "file_url"
-        private const val REFRESH_INTERVAL_MS = 24L * 60 * 60 * 1000 // 24 hours
+        private const val REFRESH_INTERVAL_MS = 24L * 60 * 60 * 1000 // 24 hours (generic XMLTV)
+        private const val IPTV_ORG_REFRESH_INTERVAL_MS = 12L * 60 * 60 * 1000 // 12 hours (iptv-org)
         private const val BUFFER_SIZE = 65536 // 64KB for faster large-file I/O
         private const val GZIP_BUFFER_SIZE = 65536
         private const val LOG_INTERVAL_BYTES = 50L * 1024 * 1024 // 50MB
@@ -92,19 +93,20 @@ class EpgFileManager private constructor(private val context: Context) {
         val savedUrl = prefs.getString(KEY_FILE_URL, null)
         val savedTimestamp = prefs.getLong(KEY_DOWNLOAD_TIMESTAMP, 0L)
         val age = System.currentTimeMillis() - savedTimestamp
+        val refreshInterval = getRefreshIntervalMs(url)
 
         if (xmltvFile.exists() && savedUrl == url && savedTimestamp > 0) {
             // File exists for this URL
             _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), savedTimestamp)
             triggerIndexing(xmltvFile)
 
-            if (age >= REFRESH_INTERVAL_MS) {
+            if (age >= refreshInterval) {
                 // Stale file — refresh in background, keep Ready state
                 Log.d(TAG, "EPG file stale (${age / 3600000}h old), refreshing in background")
                 scheduleDownload(url, keepReadyDuringRefresh = true)
             } else {
                 // Fresh file — schedule refresh for remaining time
-                val remaining = REFRESH_INTERVAL_MS - age
+                val remaining = refreshInterval - age
                 Log.d(TAG, "EPG file fresh, next refresh in ${remaining / 60000}min")
                 scheduleRefreshAfter(url, remaining)
             }
@@ -260,11 +262,12 @@ class EpgFileManager private constructor(private val context: Context) {
                     .apply()
 
                 _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), now)
-                Log.d(TAG, "EPG file ready: ${xmltvFile.length() / (1024 * 1024)}MB")
+                Log.d(TAG, "EPG file ready: ${xmltvFile.length() / (1024 * 1024)}MB" +
+                    if (IptvOrgEpgSource.isIptvOrgUrl(url)) " [iptv-org source]" else "")
                 triggerIndexing(xmltvFile)
 
-                // Schedule next refresh
-                scheduleRefreshAfter(url, REFRESH_INTERVAL_MS)
+                // Schedule next refresh (iptv-org sources refresh more frequently)
+                scheduleRefreshAfter(url, getRefreshIntervalMs(url))
                 return // Success — exit retry loop
 
             } catch (e: java.net.UnknownHostException) {
@@ -319,12 +322,28 @@ class EpgFileManager private constructor(private val context: Context) {
         scope.launch {
             val indexer = EpgIndexer.getInstance(context)
             if (indexer.needsReindex(file)) {
-                Log.d(TAG, "EPG file changed, starting indexing")
-                indexer.startIndexing(file)
+                val fileSizeMb = file.length() / (1024 * 1024)
+                // Use transactional indexing for small-to-medium files (<100MB)
+                // to guarantee atomic updates. Larger files stream in batches.
+                if (fileSizeMb < 100) {
+                    Log.d(TAG, "EPG file changed (${fileSizeMb}MB), starting transactional indexing")
+                    indexer.startTransactionalIndexing(file)
+                } else {
+                    Log.d(TAG, "EPG file changed (${fileSizeMb}MB), starting streaming indexing")
+                    indexer.startIndexing(file)
+                }
             } else {
                 Log.d(TAG, "EPG index up-to-date, restoring state")
                 indexer.initialize()
             }
+        }
+    }
+
+    private fun getRefreshIntervalMs(url: String): Long {
+        return if (IptvOrgEpgSource.isIptvOrgUrl(url)) {
+            IPTV_ORG_REFRESH_INTERVAL_MS
+        } else {
+            REFRESH_INTERVAL_MS
         }
     }
 

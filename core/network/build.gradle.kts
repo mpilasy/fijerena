@@ -36,7 +36,11 @@ dependencies {
     // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.room.paging)
     ksp(libs.room.compiler)
+
+    // Paging
+    api(libs.paging.runtime)
 
     // Google Drive API for settings sync
     implementation(libs.play.services.auth)
