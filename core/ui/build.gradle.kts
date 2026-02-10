@@ -35,6 +35,10 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
 
+    // Paging
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
+
     // Image Loading
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
