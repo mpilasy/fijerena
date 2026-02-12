@@ -39,6 +39,9 @@ dependencies {
     implementation(libs.paging.runtime)
     implementation(libs.paging.compose)
 
+    // Room (needed for EpgIndexDatabase access in EpgBrowserViewModel)
+    implementation(libs.room.runtime)
+
     // Image Loading
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
