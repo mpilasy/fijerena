@@ -51,7 +51,6 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
-import org.njarasoa.fijerena.core.network.xmltv.IptvOrgGuideResolver
 import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -151,9 +150,7 @@ fun SettingsScreen(
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
 
     // EPG state
-    var epgMode by remember { mutableStateOf(appSettings.epgMode) }
     var epgUrl by remember { mutableStateOf(appSettings.epgUrl) }
-    var epgPreferredLang by remember { mutableStateOf(appSettings.epgPreferredLang) }
     var isEditingEpgUrl by remember { mutableStateOf(false) }
     var newEpgUrl by remember { mutableStateOf("") }
 
@@ -317,91 +314,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-                    // Mode toggle: Auto-detect vs Manual URL
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
-                    ) {
-                        if (epgMode == "auto") {
-                            CinemaPrimaryButton(onClick = { }, text = "Auto-detect (iptv-org)")
-                            CinemaSecondaryButton(
-                                onClick = {
-                                    epgMode = "manual"
-                                    appSettings.epgMode = "manual"
-                                },
-                                text = "Manual URL"
-                            )
-                        } else {
-                            CinemaSecondaryButton(
-                                onClick = {
-                                    epgMode = "auto"
-                                    appSettings.epgMode = "auto"
-                                    appSettings.epgUrl = ""
-                                    epgUrl = ""
-                                    EpgFileManager.getInstance(context.applicationContext).initialize()
-                                },
-                                text = "Auto-detect (iptv-org)"
-                            )
-                            CinemaPrimaryButton(onClick = { }, text = "Manual URL")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-
-                    if (epgMode == "auto") {
-                        // === Auto-detect panel ===
-                        val resolver = remember { IptvOrgGuideResolver.getInstance(context.applicationContext) }
-                        val resolverState by resolver.state.collectAsState()
-                        val resolverStatusText = when (val rs = resolverState) {
-                            is IptvOrgGuideResolver.ResolverState.Idle -> "Waiting for Live TV channels..."
-                            is IptvOrgGuideResolver.ResolverState.Resolving -> "Detecting guides..."
-                            is IptvOrgGuideResolver.ResolverState.Resolved ->
-                                "${rs.guides.size} guide files, ${rs.matchCount}/${rs.totalChannels} channels matched"
-                            is IptvOrgGuideResolver.ResolverState.NoMatch -> "No channels matched iptv-org database"
-                            is IptvOrgGuideResolver.ResolverState.Failed -> "Detection failed: ${rs.reason}"
-                        }
-                        Text(
-                            text = resolverStatusText,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                            ),
-                            color = when (resolverState) {
-                                is IptvOrgGuideResolver.ResolverState.Resolved -> CinemaAccent
-                                is IptvOrgGuideResolver.ResolverState.Resolving -> CinemaTextSecondary
-                                is IptvOrgGuideResolver.ResolverState.Failed,
-                                is IptvOrgGuideResolver.ResolverState.NoMatch -> CinemaError
-                                else -> CinemaTextSecondary
-                            }
-                        )
-
-                        // Language preference
-                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Preferred language:",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                                ),
-                                color = CinemaTextSecondary
-                            )
-                            Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                            val languages = listOf("en", "fr", "de", "es", "pt", "it", "nl", "ru", "ar", "zh", "ja", "ko")
-                            CinemaSecondaryButton(
-                                onClick = {
-                                    val currentIdx = languages.indexOf(epgPreferredLang)
-                                    val nextIdx = (currentIdx + 1) % languages.size
-                                    epgPreferredLang = languages[nextIdx]
-                                    appSettings.epgPreferredLang = epgPreferredLang
-                                },
-                                text = epgPreferredLang.uppercase()
-                            )
-                        }
-                    } else {
-                        // === Manual URL panel ===
-                        if (!isEditingEpgUrl) {
+                    if (!isEditingEpgUrl) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -483,9 +396,8 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                    }
 
-                    // === Shared: file status, index status, timezone ===
+                    // === File status, index status, timezone ===
                     val epgFile = remember {
                         java.io.File(context.applicationContext.cacheDir, "xmltv_global.xml").let {
                             if (it.exists() && it.length() > 0) it else null
@@ -535,7 +447,6 @@ fun SettingsScreen(
                     ) {
                         val statusText = when (epgState) {
                             is EpgFileManager.EpgFileState.NoUrl -> "No EPG source configured"
-                            is EpgFileManager.EpgFileState.AutoDetecting -> "Auto-detecting guides..."
                             is EpgFileManager.EpgFileState.Downloading -> "Downloading..."
                             is EpgFileManager.EpgFileState.Ready -> {
                                 val size = (epgState as EpgFileManager.EpgFileState.Ready).sizeBytes
@@ -553,13 +464,12 @@ fun SettingsScreen(
                             ),
                             color = when (epgState) {
                                 is EpgFileManager.EpgFileState.Ready -> CinemaAccent
-                                is EpgFileManager.EpgFileState.Downloading,
-                                is EpgFileManager.EpgFileState.AutoDetecting -> CinemaTextSecondary
+                                is EpgFileManager.EpgFileState.Downloading -> CinemaTextSecondary
                                 else -> CinemaError
                             },
                             modifier = Modifier.weight(1f)
                         )
-                        if (epgMode == "manual" && epgUrl.isNotBlank() && epgState !is EpgFileManager.EpgFileState.Downloading) {
+                        if (epgUrl.isNotBlank() && epgState !is EpgFileManager.EpgFileState.Downloading) {
                             Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                             CinemaPrimaryButton(
                                 onClick = { epgFileManager.triggerDownload() },

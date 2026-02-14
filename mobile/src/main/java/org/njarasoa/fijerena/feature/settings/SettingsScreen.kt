@@ -20,7 +20,6 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
-import org.njarasoa.fijerena.core.network.xmltv.IptvOrgGuideResolver
 import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -103,9 +102,7 @@ fun MobileSettingsScreen(
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
 
     // EPG state
-    var epgMode by remember { mutableStateOf(appSettings.epgMode) }
     var epgUrl by remember { mutableStateOf(appSettings.epgUrl) }
-    var epgPreferredLang by remember { mutableStateOf(appSettings.epgPreferredLang) }
     var isEditingEpgUrl by remember { mutableStateOf(false) }
     var newEpgUrl by remember { mutableStateOf("") }
     Scaffold(
@@ -198,94 +195,7 @@ fun MobileSettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-                // Mode toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                ) {
-                    if (epgMode == "auto") {
-                        Button(onClick = { }, modifier = Modifier.weight(1f)) {
-                            Text("Auto-detect", maxLines = 1)
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                epgMode = "manual"
-                                appSettings.epgMode = "manual"
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Manual URL", maxLines = 1)
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = {
-                                epgMode = "auto"
-                                appSettings.epgMode = "auto"
-                                appSettings.epgUrl = ""
-                                epgUrl = ""
-                                EpgFileManager.getInstance(context.applicationContext).initialize()
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Auto-detect", maxLines = 1)
-                        }
-                        Button(onClick = { }, modifier = Modifier.weight(1f)) {
-                            Text("Manual URL", maxLines = 1)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                if (epgMode == "auto") {
-                    // === Auto-detect panel ===
-                    val resolver = remember { IptvOrgGuideResolver.getInstance(context.applicationContext) }
-                    val resolverState by resolver.state.collectAsState()
-                    val resolverStatusText = when (val rs = resolverState) {
-                        is IptvOrgGuideResolver.ResolverState.Idle -> "Waiting for Live TV channels..."
-                        is IptvOrgGuideResolver.ResolverState.Resolving -> "Detecting guides..."
-                        is IptvOrgGuideResolver.ResolverState.Resolved ->
-                            "${rs.guides.size} guide files, ${rs.matchCount}/${rs.totalChannels} channels matched"
-                        is IptvOrgGuideResolver.ResolverState.NoMatch -> "No channels matched iptv-org database"
-                        is IptvOrgGuideResolver.ResolverState.Failed -> "Detection failed: ${rs.reason}"
-                    }
-                    Text(
-                        text = resolverStatusText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = when (resolverState) {
-                            is IptvOrgGuideResolver.ResolverState.Resolved -> MaterialTheme.colorScheme.primary
-                            is IptvOrgGuideResolver.ResolverState.Resolving -> MaterialTheme.colorScheme.onSurfaceVariant
-                            is IptvOrgGuideResolver.ResolverState.Failed,
-                            is IptvOrgGuideResolver.ResolverState.NoMatch -> CinemaError
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-
-                    // Language preference
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                    ) {
-                        Text(
-                            text = "Preferred language:",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        val languages = listOf("en", "fr", "de", "es", "pt", "it", "nl", "ru", "ar", "zh", "ja", "ko")
-                        OutlinedButton(onClick = {
-                            val currentIdx = languages.indexOf(epgPreferredLang)
-                            val nextIdx = (currentIdx + 1) % languages.size
-                            epgPreferredLang = languages[nextIdx]
-                            appSettings.epgPreferredLang = epgPreferredLang
-                        }) {
-                            Text(epgPreferredLang.uppercase())
-                        }
-                    }
-                } else {
-                    // === Manual URL panel ===
-                    if (!isEditingEpgUrl) {
+                if (!isEditingEpgUrl) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -359,9 +269,8 @@ fun MobileSettingsScreen(
                             }
                         }
                     }
-                }
 
-                // === Shared: file status, index status, timezone ===
+                // === File status, index status, timezone ===
                 val epgFile = remember {
                     java.io.File(context.applicationContext.cacheDir, "xmltv_global.xml").let {
                         if (it.exists() && it.length() > 0) it else null
@@ -407,7 +316,6 @@ fun MobileSettingsScreen(
                 ) {
                     val statusText = when (epgState) {
                         is EpgFileManager.EpgFileState.NoUrl -> "No EPG source configured"
-                        is EpgFileManager.EpgFileState.AutoDetecting -> "Auto-detecting guides..."
                         is EpgFileManager.EpgFileState.Downloading -> "Downloading..."
                         is EpgFileManager.EpgFileState.Ready -> {
                             val size = (epgState as EpgFileManager.EpgFileState.Ready).sizeBytes
@@ -423,14 +331,13 @@ fun MobileSettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = when (epgState) {
                             is EpgFileManager.EpgFileState.Ready -> MaterialTheme.colorScheme.primary
-                            is EpgFileManager.EpgFileState.Downloading,
-                            is EpgFileManager.EpgFileState.AutoDetecting ->
+                            is EpgFileManager.EpgFileState.Downloading ->
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                             else -> CinemaError
                         },
                         modifier = Modifier.weight(1f)
                     )
-                    if (epgMode == "manual" && epgUrl.isNotBlank() && epgState !is EpgFileManager.EpgFileState.Downloading) {
+                    if (epgUrl.isNotBlank() && epgState !is EpgFileManager.EpgFileState.Downloading) {
                         Spacer(modifier = Modifier.width(CinemaSpacing.sm))
                         Button(onClick = { epgFileManager.triggerDownload() }) {
                             Text("Download EPG")

@@ -97,12 +97,6 @@ class EpgViewModel(
             }
 
             val channelRows = buildChannelRows(items, epgData, date)
-
-            if (channelRows.isEmpty()) {
-                _uiState.value = UiState.Error("No EPG data available for $date")
-                return@launch
-            }
-
             val timeSlots = generateTimeSlots(date)
             val currentSlot = calculateCurrentTimeSlot(timeSlots)
             val elapsed = System.currentTimeMillis() - startTime
@@ -169,15 +163,13 @@ class EpgViewModel(
         val dayStart = date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
         val dayEnd = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
 
-        return items.mapNotNull { item ->
+        return items.map { item ->
             val programs = epgData[item.id]?.listings?.filter {
                 it.startTime in dayStart..dayEnd || it.endTime in dayStart..dayEnd ||
                 (it.startTime < dayStart && it.endTime > dayEnd)
             }?.sortedBy { it.startTime } ?: emptyList()
 
-            if (programs.isNotEmpty()) {
-                EpgChannelRow(item, programs)
-            } else null
+            EpgChannelRow(item, programs)
         }
     }
 

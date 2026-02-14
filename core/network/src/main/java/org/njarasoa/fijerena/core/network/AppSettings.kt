@@ -23,15 +23,11 @@ class AppSettings(context: Context) {
         private const val KEY_THEME_ID = "theme_id"
         private const val KEY_EPG_URL = "epg_url"
         private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
-        private const val KEY_EPG_MODE = "epg_mode"
-        private const val KEY_EPG_PREFERRED_LANG = "epg_preferred_lang"
-        private const val KEY_EPG_MIGRATED = "epg_migrated_v1"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
         const val DEFAULT_UI_SCALE = 1.0f
         const val DEFAULT_EPG_URL = ""
-        private const val OLD_DEFAULT_EPG_URL = "https://epg.pw/xmltv/epg_lite.xml"
     }
 
     /**
@@ -109,28 +105,8 @@ class AppSettings(context: Context) {
         set(value) = prefs.edit().putString(KEY_THEME_ID, value).apply()
 
     /**
-     * EPG mode: "auto" for iptv-org auto-detection, "manual" for user-provided URL.
-     * Default: "auto"
-     */
-    var epgMode: String
-        get() {
-            migrateEpgSettingsIfNeeded()
-            return prefs.getString(KEY_EPG_MODE, "auto") ?: "auto"
-        }
-        set(value) = prefs.edit().putString(KEY_EPG_MODE, value).apply()
-
-    /**
-     * Preferred language for iptv-org auto-detected guides.
-     * ISO 639-1 code (e.g., "en", "fr", "zh").
-     */
-    var epgPreferredLang: String
-        get() = prefs.getString(KEY_EPG_PREFERRED_LANG, "en") ?: "en"
-        set(value) = prefs.edit().putString(KEY_EPG_PREFERRED_LANG, value.trim().lowercase()).apply()
-
-    /**
      * Get or set the external XMLTV EPG URL (global setting, applies to all providers).
      * Empty string means no external EPG is configured.
-     * Only used when epgMode == "manual".
      */
     var epgUrl: String
         get() = prefs.getString(KEY_EPG_URL, DEFAULT_EPG_URL) ?: DEFAULT_EPG_URL
@@ -148,35 +124,4 @@ class AppSettings(context: Context) {
             val clamped = value.coerceIn(-12, 14)
             prefs.edit().putInt(KEY_EPG_TIMEZONE_OFFSET, clamped).apply()
         }
-
-    /**
-     * One-time migration: users with the old default EPG URL are migrated to auto mode.
-     * Users with a custom URL keep manual mode.
-     */
-    private fun migrateEpgSettingsIfNeeded() {
-        if (prefs.getBoolean(KEY_EPG_MIGRATED, false)) return
-        val editor = prefs.edit()
-        editor.putBoolean(KEY_EPG_MIGRATED, true)
-
-        // Only migrate if epg_mode hasn't been explicitly set yet
-        if (!prefs.contains(KEY_EPG_MODE)) {
-            val currentUrl = prefs.getString(KEY_EPG_URL, null)
-            when {
-                currentUrl == null || currentUrl == OLD_DEFAULT_EPG_URL -> {
-                    // Was using old default — switch to auto mode
-                    editor.putString(KEY_EPG_MODE, "auto")
-                    editor.putString(KEY_EPG_URL, "")
-                }
-                currentUrl.isBlank() -> {
-                    // No URL set — auto mode
-                    editor.putString(KEY_EPG_MODE, "auto")
-                }
-                else -> {
-                    // Custom URL — keep as manual
-                    editor.putString(KEY_EPG_MODE, "manual")
-                }
-            }
-        }
-        editor.apply()
-    }
 }
