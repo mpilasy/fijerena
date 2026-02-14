@@ -205,8 +205,9 @@ class EpgFileManager private constructor(private val context: Context) {
             if (stats.error != null) errorCount++
         }
 
-        // Rebuild FTS once at the end
+        // Rebuild FTS once at the end, then reclaim freed pages
         indexer.rebuildFtsAndUpdateState()
+        indexer.incrementalVacuum()
 
         val totalChannels = allStats.sumOf { it.channelsIngested }
         val totalProgrammes = allStats.sumOf { it.programmesIngested }

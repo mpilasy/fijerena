@@ -362,7 +362,7 @@ private fun TwoColumnLayout(
         if (contentType == "LIVE_TV") {
             val epgErrorMessage = when (epgIndexState) {
                 is EpgIndexState.Failed -> "EPG indexing failed"
-                is EpgIndexState.Indexing -> "EPG indexing ${(epgIndexState as EpgIndexState.Indexing).progressPercent}%..."
+                is EpgIndexState.Indexing -> "EPG indexing ${epgIndexState.progressPercent}%..."
                 else -> null
             }
             if (epgErrorMessage != null) {
@@ -909,7 +909,7 @@ private fun StreamItem(
                         )
                     }
                     // Rating (e.g. "7.9 | PG-13")
-                    item.metadata?.rating?.let { rating ->
+                    item.metadata.rating?.let { rating ->
                         Text(
                             text = "★ $rating",
                             style = MaterialTheme.typography.bodySmall.copy(

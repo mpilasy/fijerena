@@ -271,6 +271,7 @@ class EpgIndexer private constructor(private val context: Context) {
             dao.deleteAllProgrammes()
             dao.deleteAllChannels()
             dao.deleteAllMetadata()
+            incrementalVacuum()
             _state.value = EpgIndexState.NotIndexed
             Log.d(TAG, "All EPG data cleared")
         } catch (e: Exception) {
@@ -312,9 +313,25 @@ class EpgIndexer private constructor(private val context: Context) {
                 EpgIndexState.NotIndexed
             }
 
+            incrementalVacuum()
             Log.d(TAG, "Purge complete: $channelCount channels, $programmeCount programmes remaining")
         } catch (e: Exception) {
             Log.e(TAG, "Purge failed: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Reclaim free pages left by delete-heavy operations.
+     * Requires auto_vacuum=INCREMENTAL (set in EpgIndexDatabase onOpen callback).
+     * No page limit = free all available pages.
+     */
+    fun incrementalVacuum() {
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            db.openHelper.writableDatabase.execSQL("PRAGMA incremental_vacuum")
+            Log.d(TAG, "Incremental vacuum completed")
+        } catch (e: Exception) {
+            Log.w(TAG, "Incremental vacuum failed: ${e.message}", e)
         }
     }
 
