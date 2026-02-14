@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
 import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
 import org.njarasoa.fijerena.feature.epg.MobileEpgGuideScreen
+import org.njarasoa.fijerena.feature.epg.MobileEpgManagementScreen
 import org.njarasoa.fijerena.feature.epgbrowser.MobileEpgBrowserScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
@@ -79,18 +80,6 @@ fun MobileNavHost(
                     providerRepo.addProvider(name, url, username, password)
                 }
             }
-            // One-time migration: copy provider epgUrl to global AppSettings.epgUrl
-            val appSettingsMigration = org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext)
-            if (appSettingsMigration.epgUrl.isBlank()) {
-                val activeProvider = providerRepo.getActiveProvider()
-                if (activeProvider != null) {
-                    val ps = providerRepo.getProviderSettings(activeProvider.id)
-                    if (ps.epgUrl.isNotBlank()) {
-                        appSettingsMigration.epgUrl = ps.epgUrl
-                    }
-                }
-            }
-
             providerRepo.getProviderCount() > 0
         }
     }
@@ -338,6 +327,9 @@ fun MobileNavHost(
                     onManageProviders = {
                         navController.navigate(Screen.ProviderSelection)
                     },
+                    onManageEpg = {
+                        navController.navigate(Screen.EpgManagement)
+                    },
                     onProviderChanged = {
                         coroutineScope.launch {
                             val providerRepo = ProviderRepository(context.applicationContext)
@@ -458,6 +450,13 @@ fun MobileNavHost(
                     onBack = {
                         navController.navigateUp()
                     }
+                )
+            }
+
+            // EPG Management Screen
+            composable<Screen.EpgManagement> {
+                MobileEpgManagementScreen(
+                    onBack = { navController.navigateUp() }
                 )
             }
 

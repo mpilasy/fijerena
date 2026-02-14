@@ -48,7 +48,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -80,8 +81,8 @@ fun MobileCategoryListScreen(
     val nowPlaying by viewModel.nowPlaying.collectAsState()
     val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsState()
     val context = LocalContext.current
-    val epgFileManager = remember { EpgFileManager.getInstance(context.applicationContext) }
-    val epgFileState by epgFileManager.state.collectAsState()
+    val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
+    val epgIndexState by epgIndexer.state.collectAsState()
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode = remember { appSettings.isDevMode }
 
@@ -102,8 +103,7 @@ fun MobileCategoryListScreen(
                             val selectedCatId = state.selectedCategoryId
                             val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
                             val hasEpgData = supportsNativeEpg ||
-                                epgFileState is EpgFileManager.EpgFileState.Ready ||
-                                epgFileState is EpgFileManager.EpgFileState.Error
+                                epgIndexState is EpgIndexState.Indexed
                             if (selectedCatId != null && selectedCatName != null && hasEpgData) {
                                 IconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) }) {
                                     Icon(Icons.Default.DateRange, "TV Guide")
@@ -136,20 +136,17 @@ fun MobileCategoryListScreen(
                     Column(modifier = Modifier.fillMaxSize()) {
                         // EPG error/status banner (Live TV only)
                         if (contentType == "LIVE_TV") {
-                            val epgMessage = when (epgFileState) {
-                                is EpgFileManager.EpgFileState.Failed ->
-                                    (epgFileState as EpgFileManager.EpgFileState.Failed).reason
-                                is EpgFileManager.EpgFileState.Error ->
-                                    (epgFileState as EpgFileManager.EpgFileState.Error).reason
-                                is EpgFileManager.EpgFileState.Downloading ->
-                                    "EPG file downloading..."
+                            val epgMessage = when (epgIndexState) {
+                                is EpgIndexState.Failed -> "EPG indexing failed"
+                                is EpgIndexState.Indexing ->
+                                    "EPG indexing ${(epgIndexState as EpgIndexState.Indexing).progressPercent}%..."
                                 else -> null
                             }
                             if (epgMessage != null) {
                                 Text(
                                     text = epgMessage,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (epgFileState is EpgFileManager.EpgFileState.Downloading) {
+                                    color = if (epgIndexState is EpgIndexState.Indexing) {
                                         MaterialTheme.colorScheme.onSurfaceVariant
                                     } else {
                                         MaterialTheme.colorScheme.error
@@ -162,15 +159,11 @@ fun MobileCategoryListScreen(
                             }
                             // Dev mode EPG info
                             if (isDevMode) {
-                                val epgInfo = when (val epg = epgFileState) {
-                                    is EpgFileManager.EpgFileState.Ready -> {
-                                        val sizeMb = epg.sizeBytes / (1024.0 * 1024.0)
-                                        val ageMs = System.currentTimeMillis() - epg.lastModifiedMs
-                                        val ageHours = ageMs / 3600000
-                                        val ageMins = (ageMs % 3600000) / 60000
-                                        "EPG: ${"%.1f".format(sizeMb)} MB | ${ageHours}h ${ageMins}m ago"
+                                val epgInfo = when (val epg = epgIndexState) {
+                                    is EpgIndexState.Indexed -> {
+                                        "EPG: ${epg.programmeCount} progs, ${epg.channelCount} channels"
                                     }
-                                    is EpgFileManager.EpgFileState.Downloading -> "EPG: Downloading..."
+                                    is EpgIndexState.Indexing -> "EPG: Indexing..."
                                     else -> null
                                 }
                                 if (epgInfo != null) {

@@ -73,7 +73,10 @@ fun MobileEpgBrowserScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
     val isDevMode = appSettings.isDevMode
-    val epgFileSizeBytes = viewModel.epgFileSizeBytes
+    val epgDbStats = when (val idx = indexState) {
+        is EpgIndexState.Indexed -> "${idx.programmeCount} progs, ${idx.channelCount} channels"
+        else -> null
+    }
 
     Scaffold(
         topBar = {
@@ -122,10 +125,10 @@ fun MobileEpgBrowserScreen(
                 )
             )
 
-            // Dev mode: show EPG file size
-            if (isDevMode && epgFileSizeBytes != null) {
+            // Dev mode: show EPG DB stats
+            if (isDevMode && epgDbStats != null) {
                 Text(
-                    text = "EPG file: ${formatFileSize(epgFileSizeBytes)}",
+                    text = "EPG: $epgDbStats",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = Spacing.md)

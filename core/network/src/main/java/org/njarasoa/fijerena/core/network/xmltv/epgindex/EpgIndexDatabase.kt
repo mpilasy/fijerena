@@ -10,14 +10,16 @@ import androidx.room.RoomDatabase
         EpgChannelEntity::class,
         EpgProgrammeEntity::class,
         EpgProgrammeFts::class,
-        EpgIndexMetadata::class
+        EpgIndexMetadata::class,
+        EpgSourceEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class EpgIndexDatabase : RoomDatabase() {
 
     abstract fun epgIndexDao(): EpgIndexDao
+    abstract fun epgSourceDao(): EpgSourceDao
 
     companion object {
         private const val DB_NAME = "epg_index.db"

@@ -50,8 +50,6 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.XtreamRepository
-import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
-import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -92,6 +90,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onThemeChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
+    onManageEpg: () -> Unit = {},
     onProviderChanged: () -> Unit
 ) {
     val context = LocalContext.current
@@ -148,11 +147,6 @@ fun SettingsScreen(
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
     var uiScale by remember { mutableStateOf(appSettings.uiScale) }
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
-
-    // EPG state
-    var epgUrl by remember { mutableStateOf(appSettings.epgUrl) }
-    var isEditingEpgUrl by remember { mutableStateOf(false) }
-    var newEpgUrl by remember { mutableStateOf("") }
 
     androidx.compose.runtime.CompositionLocalProvider(LocalUiScale provides uiScale) {
     val scale = LocalUiScale.current
@@ -293,225 +287,38 @@ fun SettingsScreen(
                 }
             }
 
-            // EPG Source
+            // EPG Data
             item {
                 GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
                 Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                     Text(
-                        text = "EPG Source (XMLTV)",
+                        text = "EPG Data",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
                         ),
                         color = CinemaAccent
                     )
                     Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+
+                    val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
+                    val indexState by epgIndexer.state.collectAsState()
+                    val summaryText = when (val idx = indexState) {
+                        is EpgIndexState.Indexed -> "${formatProgrammeCount(idx.programmeCount)} programmes, ${formatProgrammeCount(idx.channelCount)} channels"
+                        is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
+                        is EpgIndexState.NotIndexed -> "No sources configured"
+                        is EpgIndexState.Failed -> "Error: ${idx.reason}"
+                    }
                     Text(
-                        text = "TV Guide data source for programme listings",
+                        text = summaryText,
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
                         ),
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-
-                    if (!isEditingEpgUrl) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (epgUrl.isBlank()) "Not configured" else epgUrl,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                                    ),
-                                    color = if (epgUrl.isBlank()) CinemaTextSecondary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 2
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        isEditingEpgUrl = true
-                                        newEpgUrl = epgUrl
-                                    },
-                                    text = "Edit"
-                                )
-                                if (epgUrl.isNotBlank()) {
-                                    Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                                    CinemaDangerButton(
-                                        onClick = {
-                                            epgUrl = ""
-                                            appSettings.epgUrl = ""
-                                            EpgFileManager.getInstance(context.applicationContext).triggerDownload()
-                                        },
-                                        text = "Clear"
-                                    )
-                                }
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OutlinedTextField(
-                                    value = newEpgUrl,
-                                    onValueChange = { newEpgUrl = it },
-                                    label = { Text("XMLTV URL") },
-                                    placeholder = { Text("https://epg.example.com/guide.xml.gz") },
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedTextColor = CinemaTextPrimary,
-                                        unfocusedTextColor = CinemaTextPrimary,
-                                        cursorColor = CinemaAccent,
-                                        focusedBorderColor = CinemaAccent,
-                                        unfocusedBorderColor = CinemaTextSecondary,
-                                        focusedLabelColor = CinemaAccent,
-                                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                        focusedContainerColor = CinemaSurfaceVariant,
-                                        focusedPlaceholderColor = CinemaTextSecondary,
-                                        unfocusedPlaceholderColor = CinemaTextSecondary
-                                    )
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        isEditingEpgUrl = false
-                                        newEpgUrl = ""
-                                    },
-                                    text = "Cancel"
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                                CinemaPrimaryButton(
-                                    onClick = {
-                                        val url = newEpgUrl.trim()
-                                        epgUrl = url
-                                        isEditingEpgUrl = false
-                                        newEpgUrl = ""
-                                        appSettings.epgUrl = url
-                                        EpgFileManager.getInstance(context.applicationContext).triggerDownload()
-                                    },
-                                    enabled = newEpgUrl.isNotBlank(),
-                                    text = "Save"
-                                )
-                            }
-                        }
-
-                    // === File status, index status, timezone ===
-                    val epgFile = remember {
-                        java.io.File(context.applicationContext.cacheDir, "xmltv_global.xml").let {
-                            if (it.exists() && it.length() > 0) it else null
-                        }
-                    }
-                    if (epgFile != null) {
-                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        val lastModified = epgFile.lastModified()
-                        val sizeAndDate = "File size: ${formatEpgFileSize(epgFile.length())}" +
-                            if (lastModified > 0) " — Last refreshed: ${formatTimestamp(lastModified)}" else ""
-                        Text(
-                            text = sizeAndDate,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                            ),
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                        )
-                    }
-                    // Search index status
-                    val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
-                    val indexState by epgIndexer.state.collectAsState()
-                    val indexStatusText = when (val idx = indexState) {
-                        is EpgIndexState.NotIndexed -> "Search index: not built"
-                        is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}% (${formatProgrammeCount(idx.programmesIndexed)} programmes)"
-                        is EpgIndexState.Indexed -> "Search index: ${formatProgrammeCount(idx.programmeCount)} programmes, ${formatProgrammeCount(idx.channelCount)} channels"
-                        is EpgIndexState.Failed -> "Search index failed: ${idx.reason}"
-                    }
-                    Text(
-                        text = indexStatusText,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                        ),
-                        color = when (indexState) {
-                            is EpgIndexState.Indexed -> CinemaAccent
-                            is EpgIndexState.Indexing -> CinemaTextSecondary
-                            is EpgIndexState.Failed -> CinemaError
-                            else -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
-                        }
-                    )
-                    // Download status
-                    val epgFileManager = remember { EpgFileManager.getInstance(context.applicationContext) }
-                    val epgState by epgFileManager.state.collectAsState()
-                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val statusText = when (epgState) {
-                            is EpgFileManager.EpgFileState.NoUrl -> "No EPG source configured"
-                            is EpgFileManager.EpgFileState.Downloading -> "Downloading..."
-                            is EpgFileManager.EpgFileState.Ready -> {
-                                val size = (epgState as EpgFileManager.EpgFileState.Ready).sizeBytes
-                                "Downloaded (${formatEpgFileSize(size)})"
-                            }
-                            is EpgFileManager.EpgFileState.Failed ->
-                                (epgState as EpgFileManager.EpgFileState.Failed).reason
-                            is EpgFileManager.EpgFileState.Error ->
-                                (epgState as EpgFileManager.EpgFileState.Error).reason
-                        }
-                        Text(
-                            text = statusText,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                            ),
-                            color = when (epgState) {
-                                is EpgFileManager.EpgFileState.Ready -> CinemaAccent
-                                is EpgFileManager.EpgFileState.Downloading -> CinemaTextSecondary
-                                else -> CinemaError
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (epgUrl.isNotBlank() && epgState !is EpgFileManager.EpgFileState.Downloading) {
-                            Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                            CinemaPrimaryButton(
-                                onClick = { epgFileManager.triggerDownload() },
-                                text = "Download EPG"
-                            )
-                        }
-                    }
-                    // EPG Timezone Override
-                    var epgTzOffset by remember { mutableStateOf(appSettings.epgTimezoneOffsetHours) }
-                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Source timezone:",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                            ),
-                            color = CinemaTextSecondary
-                        )
-                        Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                        val tzLabel = if (epgTzOffset == 0) "Auto (from data)" else {
-                            val sign = if (epgTzOffset >= 0) "+" else ""
-                            "UTC${sign}${epgTzOffset}"
-                        }
-                        CinemaSecondaryButton(
-                            onClick = {
-                                epgTzOffset = (epgTzOffset + 1).let { if (it > 14) -12 else it }
-                                appSettings.epgTimezoneOffsetHours = epgTzOffset
-                                XmltvParser.timezoneOverrideHours = epgTzOffset
-                                epgFileManager.reindexIfNeeded()
-                            },
-                            text = tzLabel
-                        )
-                    }
-                    Text(
-                        text = "Tap to cycle. Fixes sources that tag times as UTC but use local time.",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
-                        ),
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
+                    CinemaSecondaryButton(
+                        onClick = onManageEpg,
+                        text = "Manage EPG Data"
                     )
                 }
                 }

@@ -134,6 +134,13 @@ sealed interface Screen {
     data object EpgBrowser : Screen
 
     /**
+     * EPG Management screen destination.
+     * Manage multiple XMLTV EPG sources (add, edit, delete, refresh).
+     */
+    @Serializable
+    data object EpgManagement : Screen
+
+    /**
      * Player screen destination with stream parameters.
      *
      * @param streamId The Xtream stream ID to play (or episode ID for TV shows as string converted to int hash)

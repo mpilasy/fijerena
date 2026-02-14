@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
-import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -62,9 +61,6 @@ class EpgBrowserViewModel(
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
 
-    /** EPG file size in bytes, or null if no file. */
-    val epgFileSizeBytes: Long?
-
     // --------------- Paging flows ---------------
 
     private val _pagedNowPlaying = MutableStateFlow<Flow<PagingData<EpgSearchResultRow>>>(emptyFlow())
@@ -74,16 +70,12 @@ class EpgBrowserViewModel(
     val pagedSearchResults: StateFlow<Flow<PagingData<EpgSearchResultRow>>> = _pagedSearchResults.asStateFlow()
 
     init {
-        val managerFile = EpgFileManager.getInstance(context).getEpgFile()
-        val physicalFile = java.io.File(context.cacheDir, "xmltv_global.xml")
-        val file = managerFile
-            ?: if (physicalFile.exists() && physicalFile.length() > 0) physicalFile else null
-        epgFileSizeBytes = file?.length()
-        if (file == null) {
-            _uiState.value = UiState.NoEpgFile
-        } else {
+        val indexer = EpgIndexer.getInstance(context)
+        if (indexer.state.value is EpgIndexState.Indexed) {
             // Set up paged "Now Playing" flow when index is available
             initPagedNowPlaying()
+        } else {
+            _uiState.value = UiState.NoEpgFile
         }
     }
 

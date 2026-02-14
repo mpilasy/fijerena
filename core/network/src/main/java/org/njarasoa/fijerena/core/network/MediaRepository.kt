@@ -186,17 +186,14 @@ class MediaRepository(
     }
 
     suspend fun getEpgBulkForItems(items: List<MediaItem>): kotlin.Result<Map<String, EpgResponse>> {
-        // Try XMLTV service with user-provided URL
-        val epgUrl = appSettings.epgUrl
-        if (epgUrl.isNotBlank()) {
-            try {
-                val xmltvResult = xmltvEpgService.getEpgForChannels(items, epgUrl)
-                if (xmltvResult.isNotEmpty()) {
-                    return kotlin.Result.success(xmltvResult)
-                }
-            } catch (_: Exception) {
-                // Fall through to provider EPG
+        // Try XMLTV EPG from SQLite index
+        try {
+            val xmltvResult = xmltvEpgService.getEpgForChannels(items)
+            if (xmltvResult.isNotEmpty()) {
+                return kotlin.Result.success(xmltvResult)
             }
+        } catch (_: Exception) {
+            // Fall through to provider EPG
         }
         // Fallback to provider's native EPG
         val streamIds = items.map { it.id }
@@ -206,6 +203,15 @@ class MediaRepository(
 
     fun clearXmltvCache() {
         xmltvEpgService.clearCache()
+    }
+
+    /**
+     * Check whether the SQLite EPG index has data available for search/display.
+     */
+    fun hasIndexedEpgData(): Boolean {
+        return org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+            .getInstance(context).state.value is
+            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
     }
 
     // --- Progress sync hook ---
