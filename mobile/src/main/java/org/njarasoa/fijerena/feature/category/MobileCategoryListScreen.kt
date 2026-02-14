@@ -446,7 +446,7 @@ private fun StreamCard(
                     maxLines = 2,
                     modifier = Modifier.basicMarquee()
                 )
-                item.metadata?.rating?.let { rating ->
+                item.metadata.rating?.let { rating ->
                     Text(
                         text = "★ $rating",
                         style = MaterialTheme.typography.bodySmall,

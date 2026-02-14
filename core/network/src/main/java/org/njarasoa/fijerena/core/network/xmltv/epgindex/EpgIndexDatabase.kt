@@ -1,9 +1,11 @@
 package org.njarasoa.fijerena.core.network.xmltv.epgindex
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
@@ -22,6 +24,7 @@ abstract class EpgIndexDatabase : RoomDatabase() {
     abstract fun epgSourceDao(): EpgSourceDao
 
     companion object {
+        private const val TAG = "EpgIndexDatabase"
         private const val DB_NAME = "epg_index.db"
 
         @Volatile
@@ -40,6 +43,18 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                 DB_NAME
             )
                 .fallbackToDestructiveMigration(true)
+                .addCallback(object : RoomDatabase.Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        val cursor = db.query("PRAGMA auto_vacuum")
+                        val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
+                        cursor.close()
+                        if (currentMode == 2) return
+                        Log.d(TAG, "Enabling incremental auto_vacuum (current mode=$currentMode)")
+                        db.execSQL("PRAGMA auto_vacuum = INCREMENTAL")
+                        db.execSQL("VACUUM")
+                        Log.d(TAG, "One-time VACUUM complete, auto_vacuum now INCREMENTAL")
+                    }
+                })
                 .build()
         }
 
