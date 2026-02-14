@@ -36,8 +36,7 @@ class EpgFileManager private constructor(private val context: Context) {
         private const val PREFS_NAME = "epg_file_manager"
         private const val KEY_DOWNLOAD_TIMESTAMP = "file_download_timestamp"
         private const val KEY_FILE_URL = "file_url"
-        private const val REFRESH_INTERVAL_MS = 24L * 60 * 60 * 1000 // 24 hours (generic XMLTV)
-        private const val IPTV_ORG_REFRESH_INTERVAL_MS = 12L * 60 * 60 * 1000 // 12 hours (iptv-org)
+        private const val REFRESH_INTERVAL_MS = 24L * 60 * 60 * 1000 // 24 hours
         private const val BUFFER_SIZE = 65536 // 64KB for faster large-file I/O
         private const val GZIP_BUFFER_SIZE = 65536
         private const val LOG_INTERVAL_BYTES = 50L * 1024 * 1024 // 50MB
@@ -58,7 +57,6 @@ class EpgFileManager private constructor(private val context: Context) {
 
     sealed interface EpgFileState {
         data object NoUrl : EpgFileState
-        data object AutoDetecting : EpgFileState
         data object Downloading : EpgFileState
         data class Ready(val file: File, val sizeBytes: Long, val lastModifiedMs: Long) : EpgFileState
         data class Failed(val reason: String) : EpgFileState
@@ -79,52 +77,14 @@ class EpgFileManager private constructor(private val context: Context) {
 
     /**
      * Initialize the EPG file manager. Call from MainActivity.onCreate().
-     * Routes to auto-detect or manual mode based on AppSettings.epgMode.
      */
     fun initialize() {
         // Apply timezone override to parser
         XmltvParser.timezoneOverrideHours = appSettings.epgTimezoneOffsetHours
 
-        val mode = appSettings.epgMode
-
-        if (mode == "auto") {
-            initializeAutoMode()
-        } else {
-            initializeManualMode()
-        }
+        initializeManualMode()
     }
 
-    /**
-     * Auto-detect mode: use cached merged file if available, wait for resolver.
-     */
-    private fun initializeAutoMode() {
-        val savedTimestamp = prefs.getLong(KEY_DOWNLOAD_TIMESTAMP, 0L)
-
-        if (xmltvFile.exists() && savedTimestamp > 0) {
-            // Merged file exists from a previous auto-detect session
-            _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), savedTimestamp)
-            triggerIndexing(xmltvFile)
-
-            val age = System.currentTimeMillis() - savedTimestamp
-            if (age >= IPTV_ORG_REFRESH_INTERVAL_MS) {
-                Log.d(TAG, "Auto-detect EPG file stale (${age / 3600000}h old)")
-                // Resolver will trigger re-download when it runs from CategoryViewModel
-            } else {
-                Log.d(TAG, "Auto-detect EPG file fresh, next refresh in ${(IPTV_ORG_REFRESH_INTERVAL_MS - age) / 60000}min")
-            }
-        } else {
-            // No file yet — resolver hasn't run or download pending
-            _state.value = EpgFileState.AutoDetecting
-            Log.d(TAG, "Auto-detect mode: waiting for guide resolution")
-        }
-
-        // Initialize resolver cached state
-        IptvOrgGuideResolver.getInstance(context).initialize()
-    }
-
-    /**
-     * Manual mode: use the user-provided EPG URL (original behavior).
-     */
     private fun initializeManualMode() {
         val url = appSettings.epgUrl
         if (url.isBlank()) {
@@ -135,7 +95,7 @@ class EpgFileManager private constructor(private val context: Context) {
         val savedUrl = prefs.getString(KEY_FILE_URL, null)
         val savedTimestamp = prefs.getLong(KEY_DOWNLOAD_TIMESTAMP, 0L)
         val age = System.currentTimeMillis() - savedTimestamp
-        val refreshInterval = getRefreshIntervalMs(url)
+        val refreshInterval = REFRESH_INTERVAL_MS
 
         if (xmltvFile.exists() && savedUrl == url && savedTimestamp > 0) {
             _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), savedTimestamp)
@@ -300,12 +260,11 @@ class EpgFileManager private constructor(private val context: Context) {
                     .apply()
 
                 _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), now)
-                Log.d(TAG, "EPG file ready: ${xmltvFile.length() / (1024 * 1024)}MB" +
-                    if (IptvOrgEpgSource.isIptvOrgUrl(url)) " [iptv-org source]" else "")
+                Log.d(TAG, "EPG file ready: ${xmltvFile.length() / (1024 * 1024)}MB")
                 triggerIndexing(xmltvFile)
 
-                // Schedule next refresh (iptv-org sources refresh more frequently)
-                scheduleRefreshAfter(url, getRefreshIntervalMs(url))
+                // Schedule next refresh
+                scheduleRefreshAfter(url, REFRESH_INTERVAL_MS)
                 return // Success — exit retry loop
 
             } catch (e: java.net.UnknownHostException) {
@@ -347,138 +306,6 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Download multiple per-site XMLTV guide files and merge into xmltv_global.xml.
-     * Called by IptvOrgGuideResolver after selecting optimal guide files.
-     */
-    fun downloadAndMergeGuides(guides: List<SelectedGuide>) {
-        downloadJob?.cancel()
-        downloadJob = scope.launch {
-            if (_state.value !is EpgFileState.Ready) {
-                _state.value = EpgFileState.Downloading
-            }
-
-            // WiFi-only
-            if (NetworkMonitor.currentNetworkType == NetworkType.CELLULAR) {
-                Log.d(TAG, "Skipping auto-detect EPG download: on cellular network")
-                handleError("EPG download skipped: WiFi required", _state.value is EpgFileState.Ready)
-                return@launch
-            }
-
-            val guideDir = File(context.cacheDir, "epg_guides")
-            guideDir.mkdirs()
-
-            val downloadedFiles = mutableListOf<File>()
-            var failureCount = 0
-
-            for (guide in guides) {
-                val guideFile = File(guideDir, "${guide.site}_${guide.lang}.xml")
-                val success = downloadGuideFile(guide.url, guideFile)
-                if (success) {
-                    downloadedFiles.add(guideFile)
-                } else {
-                    failureCount++
-                    Log.w(TAG, "Failed to download guide: ${guide.site} (${guide.lang})")
-                }
-            }
-
-            if (downloadedFiles.isEmpty()) {
-                handleError("All guide downloads failed ($failureCount/${guides.size})", false)
-                return@launch
-            }
-
-            Log.d(TAG, "Downloaded ${downloadedFiles.size}/${guides.size} guide files, merging...")
-
-            // Merge all downloaded files into xmltv_global.xml
-            val mergeSuccess = XmltvMerger.merge(downloadedFiles, xmltvFile)
-
-            if (!mergeSuccess) {
-                handleError("Failed to merge guide files", false)
-                return@launch
-            }
-
-            val now = System.currentTimeMillis()
-            prefs.edit()
-                .putString(KEY_FILE_URL, "auto-detect")
-                .putLong(KEY_DOWNLOAD_TIMESTAMP, now)
-                .apply()
-
-            _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), now)
-            Log.d(TAG, "Auto-detect EPG ready: ${xmltvFile.length() / 1024}KB " +
-                "(${downloadedFiles.size} guides merged)")
-
-            triggerIndexing(xmltvFile)
-
-            // Schedule refresh
-            scope.launch {
-                delay(IPTV_ORG_REFRESH_INTERVAL_MS)
-                // Re-trigger from resolver's cached guides
-                val resolver = IptvOrgGuideResolver.getInstance(context)
-                val cachedGuides = resolver.getCachedGuides()
-                if (cachedGuides != null && cachedGuides.isNotEmpty()) {
-                    downloadAndMergeGuides(cachedGuides)
-                }
-            }
-        }
-    }
-
-    /**
-     * Download a single guide XMLTV file. Returns true on success.
-     */
-    private fun downloadGuideFile(url: String, target: File): Boolean {
-        val tmpTarget = File(target.parent, "${target.name}.tmp")
-        var connection: HttpURLConnection? = null
-        try {
-            connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                connectTimeout = CONNECT_TIMEOUT_MS
-                readTimeout = READ_TIMEOUT_MS
-                instanceFollowRedirects = true
-                setRequestProperty("Accept-Encoding", "identity")
-            }
-
-            val statusCode = connection.responseCode
-            if (statusCode !in 200..299) {
-                Log.w(TAG, "Guide download HTTP $statusCode: $url")
-                return false
-            }
-
-            tmpTarget.delete()
-            connection.inputStream.buffered(BUFFER_SIZE).use { input ->
-                tmpTarget.outputStream().buffered(BUFFER_SIZE).use { output ->
-                    val buffer = ByteArray(BUFFER_SIZE)
-                    var bytesRead: Int
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
-                    }
-                    output.flush()
-                }
-            }
-
-            if (!validateXmltvFile(tmpTarget)) {
-                tmpTarget.delete()
-                Log.w(TAG, "Invalid XMLTV content from: $url")
-                return false
-            }
-
-            target.delete()
-            tmpTarget.renameTo(target)
-            Log.d(TAG, "Guide downloaded: ${target.name} (${target.length() / 1024}KB)")
-            return true
-
-        } catch (e: Exception) {
-            tmpTarget.delete()
-            Log.w(TAG, "Guide download error: $url — ${e.message}")
-            return false
-        } catch (e: OutOfMemoryError) {
-            tmpTarget.delete()
-            System.gc()
-            Log.e(TAG, "OOM downloading guide: $url", e)
-            return false
-        } finally {
-            connection?.disconnect()
-        }
-    }
-
-    /**
      * Trigger re-indexing if the EPG file exists and the index is stale.
      * Called from settings when timezone override changes.
      */
@@ -506,14 +333,6 @@ class EpgFileManager private constructor(private val context: Context) {
                 Log.d(TAG, "EPG index up-to-date, restoring state")
                 indexer.initialize()
             }
-        }
-    }
-
-    private fun getRefreshIntervalMs(url: String): Long {
-        return if (IptvOrgEpgSource.isIptvOrgUrl(url)) {
-            IPTV_ORG_REFRESH_INTERVAL_MS
-        } else {
-            REFRESH_INTERVAL_MS
         }
     }
 

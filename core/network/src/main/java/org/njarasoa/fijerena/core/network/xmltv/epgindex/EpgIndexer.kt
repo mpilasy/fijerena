@@ -7,8 +7,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.xmltv.IptvOrgEpgSource
 import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
@@ -89,21 +87,13 @@ class EpgIndexer private constructor(private val context: Context) {
     /**
      * Parse the XMLTV file and build the SQLite index.
      *
-     * Uses the iptv-org "Clear and Load" strategy when the EPG URL is an iptv-org source:
-     * deletes programmes older than 24 hours, then upserts new data. For non-iptv-org sources,
-     * performs a full database rebuild.
+     * Performs a full database rebuild: destroys and recreates DB for clean state.
      *
      * The entire ingestion (parse + insert) runs inside a single Room @Transaction to prevent
      * the UI from seeing partial or empty EPG data if the update is interrupted.
      */
     suspend fun startIndexing(file: File) = withContext(Dispatchers.IO) {
-        val appSettings = AppSettings(context)
-        val epgUrl = appSettings.epgUrl
-        val ingestionConfig = IptvOrgEpgSource.getIngestionConfig(epgUrl)
-        val useIncrementalLoad = ingestionConfig.clearBeforeLoad
-
-        Log.d(TAG, "Starting indexing of ${file.name} (${file.length() / (1024 * 1024)}MB)" +
-            if (useIncrementalLoad) " [iptv-org: Clear and Load]" else " [full rebuild]")
+        Log.d(TAG, "Starting indexing of ${file.name} (${file.length() / (1024 * 1024)}MB) [full rebuild]")
 
         _state.value = EpgIndexState.Indexing(
             progressPercent = 0,
@@ -112,10 +102,8 @@ class EpgIndexer private constructor(private val context: Context) {
         )
 
         try {
-            if (!useIncrementalLoad) {
-                // Full rebuild: destroy and recreate database for clean state
-                EpgIndexDatabase.destroy(context)
-            }
+            // Full rebuild: destroy and recreate database for clean state
+            EpgIndexDatabase.destroy(context)
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
 
@@ -157,14 +145,9 @@ class EpgIndexer private constructor(private val context: Context) {
                             }
                         }
                         "programme" -> {
-                            // First programme encountered — flush channels + stale cleanup
+                            // First programme encountered — flush channels
                             if (!channelsFinished) {
                                 channelsFinished = true
-                                if (useIncrementalLoad) {
-                                    dao.deleteStaleProgrammes(ingestionConfig.staleCutoffEpochSeconds)
-                                    Log.d(TAG, "Cleared stale programmes (cutoff: ${ingestionConfig.staleCutoffHours}h)")
-                                }
-                                // Insert all channels in one batch (with REPLACE for upsert)
                                 if (allChannels.isNotEmpty()) {
                                     for (batch in allChannels.chunked(BATCH_SIZE)) {
                                         dao.insertChannels(batch)
@@ -200,9 +183,6 @@ class EpgIndexer private constructor(private val context: Context) {
 
             // Flush remaining channels (if no programmes were found)
             if (!channelsFinished && allChannels.isNotEmpty()) {
-                if (useIncrementalLoad) {
-                    dao.deleteStaleProgrammes(ingestionConfig.staleCutoffEpochSeconds)
-                }
                 for (batch in allChannels.chunked(BATCH_SIZE)) {
                     dao.insertChannels(batch)
                 }
@@ -221,16 +201,8 @@ class EpgIndexer private constructor(private val context: Context) {
 
             // Store metadata (including timezone so re-index triggers on change)
             val now = System.currentTimeMillis()
-            val finalProgrammeCount = if (useIncrementalLoad) {
-                dao.getProgrammeCount()
-            } else {
-                programmeCount
-            }
-            val finalChannelCount = if (useIncrementalLoad) {
-                dao.getChannelCount()
-            } else {
-                channelCount
-            }
+            val finalProgrammeCount = programmeCount
+            val finalChannelCount = channelCount
 
             dao.insertMetadata(
                 EpgIndexMetadata(

@@ -3,9 +3,9 @@ package org.njarasoa.fijerena.feature.epg
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,15 +14,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -34,16 +39,74 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import java.time.LocalDate
+import java.time.ZoneId
+
+private const val NO_PROGRAM_ID_PREFIX = "no_prog_"
+
+private fun isGapEntry(program: EpgProgram): Boolean =
+    program.id.startsWith(NO_PROGRAM_ID_PREFIX)
+
+/**
+ * Fills gaps between programs with "No program found" placeholder entries.
+ * Always covers the full day from dayStart to dayEnd.
+ */
+private fun fillGapsWithPlaceholders(
+    programs: List<EpgProgram>,
+    channelId: String,
+    dayStart: Long,
+    dayEnd: Long
+): List<EpgProgram> {
+    val result = mutableListOf<EpgProgram>()
+    var cursor = dayStart
+
+    for (program in programs) {
+        val progStart = program.startTime.coerceAtLeast(dayStart)
+        if (progStart > cursor) {
+            result.add(
+                EpgProgram(
+                    id = "${NO_PROGRAM_ID_PREFIX}${channelId}_$cursor",
+                    title = "No program found",
+                    start = cursor.toString(),
+                    end = progStart.toString()
+                )
+            )
+        }
+        result.add(program)
+        cursor = maxOf(cursor, program.endTime)
+    }
+
+    if (cursor < dayEnd) {
+        result.add(
+            EpgProgram(
+                id = "${NO_PROGRAM_ID_PREFIX}${channelId}_$cursor",
+                title = "No program found",
+                start = cursor.toString(),
+                end = dayEnd.toString()
+            )
+        )
+    }
+
+    return result
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileEpgTimeline(
     channelRows: List<EpgChannelRow>,
+    selectedDate: LocalDate,
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
     onChannelSelected: (String, String, String) -> Unit,
     onRefresh: () -> Unit,
     isRefreshing: Boolean
 ) {
+    val dayStart = remember(selectedDate) {
+        selectedDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
+    }
+    val dayEnd = remember(selectedDate) {
+        selectedDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
+    }
+
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh
@@ -55,6 +118,8 @@ fun MobileEpgTimeline(
             items(channelRows, key = { it.channel.id }) { row ->
                 ChannelTimelineRow(
                     channelRow = row,
+                    dayStart = dayStart,
+                    dayEnd = dayEnd,
                     onProgramSelected = { program ->
                         onProgramSelected(program, row.channel)
                     },
@@ -74,9 +139,31 @@ fun MobileEpgTimeline(
 @Composable
 private fun ChannelTimelineRow(
     channelRow: EpgChannelRow,
+    dayStart: Long,
+    dayEnd: Long,
     onProgramSelected: (EpgProgram) -> Unit,
     onChannelSelected: () -> Unit
 ) {
+    val filledPrograms = remember(channelRow.programs, dayStart, dayEnd) {
+        fillGapsWithPlaceholders(channelRow.programs, channelRow.channel.id, dayStart, dayEnd)
+    }
+
+    // Find index of program overlapping "now" for auto-scroll
+    val nowEpochSeconds = remember { System.currentTimeMillis() / 1000 }
+    val nowIndex = remember(filledPrograms) {
+        val idx = filledPrograms.indexOfFirst {
+            nowEpochSeconds in it.startTime..it.endTime
+        }
+        if (idx >= 0) idx else 0
+    }
+    val lazyListState = rememberLazyListState()
+
+    LaunchedEffect(filledPrograms) {
+        if (nowIndex > 0) {
+            lazyListState.scrollToItem(nowIndex)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -100,16 +187,21 @@ private fun ChannelTimelineRow(
                 )
         )
 
-        // Horizontal row of program chips
+        // Horizontal row of program chips (with gap placeholders)
         LazyRow(
+            state = lazyListState,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
             contentPadding = PaddingValues(horizontal = CinemaSpacing.xs)
         ) {
-            items(channelRow.programs, key = { it.id }) { program ->
-                ProgramChip(
-                    program = program,
-                    onClick = { onProgramSelected(program) }
-                )
+            items(filledPrograms, key = { it.id }) { program ->
+                if (isGapEntry(program)) {
+                    GapChip(program = program)
+                } else {
+                    ProgramChip(
+                        program = program,
+                        onClick = { onProgramSelected(program) }
+                    )
+                }
             }
         }
     }
@@ -157,5 +249,39 @@ private fun ProgramChip(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+private fun GapChip(program: EpgProgram) {
+    val isCurrent = EpgUtils.isCurrentProgram(program)
+    val bgColor = MaterialTheme.colorScheme.surface
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Box(
+        modifier = Modifier
+            .width(MobileDimensions.epgProgramMinWidth)
+            .height(MobileDimensions.epgProgramHeight)
+            .clip(RoundedCornerShape(CinemaCornerRadius.small))
+            .background(bgColor)
+            .padding(CinemaSpacing.xs),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = TimeFormat.formatTimeRange(program.startTime, program.endTime),
+                style = MaterialTheme.typography.labelSmall,
+                color = textColor.copy(alpha = CinemaAlpha.textMedium),
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
+            Text(
+                text = "No program found",
+                style = MaterialTheme.typography.bodySmall,
+                fontStyle = FontStyle.Italic,
+                color = textColor.copy(alpha = CinemaAlpha.textMedium),
+                maxLines = 1
+            )
+        }
     }
 }

@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -178,6 +179,7 @@ fun MobileEpgGuideScreen(
                         } else {
                             MobileEpgTimeline(
                                 channelRows = state.channelRows,
+                                selectedDate = state.selectedDate,
                                 onProgramSelected = onProgramSelected,
                                 onChannelSelected = onChannelSelected,
                                 onRefresh = { viewModel.forceRefresh() },
