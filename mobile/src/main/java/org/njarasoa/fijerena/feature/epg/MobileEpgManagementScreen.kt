@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -66,6 +67,7 @@ fun MobileEpgManagementScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
+    var autoRefreshEnabled by remember { mutableStateOf(viewModel.autoRefreshEnabled) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
 
@@ -269,6 +271,24 @@ fun MobileEpgManagementScreen(
 
             // Actions
             SettingsSection(title = "Actions") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Auto-refresh (every 24h)",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Switch(
+                        checked = autoRefreshEnabled,
+                        onCheckedChange = {
+                            autoRefreshEnabled = it
+                            viewModel.setAutoRefreshEnabled(it)
+                        }
+                    )
+                }
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Button(
                     onClick = { viewModel.refreshAll() },
                     enabled = sources.isNotEmpty() && processingState is EpgFileManager.MultiSourceState.Idle,

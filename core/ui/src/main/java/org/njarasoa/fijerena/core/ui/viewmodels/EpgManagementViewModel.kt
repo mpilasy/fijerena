@@ -35,6 +35,13 @@ class EpgManagementViewModel(
 
     val isDevMode: Boolean get() = appSettings.isDevMode
 
+    val autoRefreshEnabled: Boolean get() = appSettings.epgAutoRefreshEnabled
+
+    fun setAutoRefreshEnabled(enabled: Boolean) {
+        appSettings.epgAutoRefreshEnabled = enabled
+        epgFileManager.updateAutoRefreshSchedule()
+    }
+
     data class DbStats(
         val channelCount: Int = 0,
         val programmeCount: Int = 0

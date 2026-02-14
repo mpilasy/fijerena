@@ -67,6 +67,7 @@ fun TvEpgManagementScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
+    var autoRefreshEnabled by remember { mutableStateOf(viewModel.autoRefreshEnabled) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
 
@@ -311,6 +312,25 @@ fun TvEpgManagementScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = CinemaAccent
                         )
+                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Auto-refresh (every 24h)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            CinemaSecondaryButton(
+                                onClick = {
+                                    autoRefreshEnabled = !autoRefreshEnabled
+                                    viewModel.setAutoRefreshEnabled(autoRefreshEnabled)
+                                },
+                                text = if (autoRefreshEnabled) "ON" else "OFF"
+                            )
+                        }
                         Spacer(modifier = Modifier.height(Spacing.sm))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
