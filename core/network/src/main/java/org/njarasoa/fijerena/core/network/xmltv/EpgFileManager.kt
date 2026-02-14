@@ -46,6 +46,7 @@ class EpgFileManager private constructor(private val context: Context) {
         private const val RETRY_DELAY_MS = 5000L
         private const val CONNECT_TIMEOUT_MS = 60_000
         private const val READ_TIMEOUT_MS = 600_000
+        private const val STALE_THRESHOLD_MS = 24L * 3600 * 1000
 
         @Volatile
         private var instance: EpgFileManager? = null
@@ -115,6 +116,7 @@ class EpgFileManager private constructor(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var processJob: Job? = null
+    private var autoRefreshJob: Job? = null
 
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
     val state: StateFlow<MultiSourceState> = _state.asStateFlow()
@@ -131,6 +133,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val indexer = EpgIndexer.getInstance(context)
             indexer.initialize()
             cleanupStrayFiles()
+            scheduleAutoRefresh()
         }
     }
 
@@ -368,6 +371,59 @@ class EpgFileManager private constructor(private val context: Context) {
         } finally {
             tmpFile.delete()
             tmpGzFile.delete()
+        }
+    }
+
+    private suspend fun autoRefreshIfStale() {
+        val db = EpgIndexDatabase.getInstance(context)
+        val sourceDao = db.epgSourceDao()
+        val sources = sourceDao.getEnabledSources()
+        if (sources.isEmpty()) return
+
+        if (NetworkMonitor.currentNetworkType == NetworkType.CELLULAR) {
+            Log.d(TAG, "Auto-refresh skipped: not on WiFi")
+            return
+        }
+
+        if (_state.value is MultiSourceState.Processing) {
+            Log.d(TAG, "Auto-refresh skipped: already processing")
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val hasStale = sources.any { source ->
+            source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > STALE_THRESHOLD_MS
+        }
+
+        if (hasStale) {
+            Log.d(TAG, "Auto-refresh: found stale sources, refreshing all")
+            processAllSources(sources)
+        } else {
+            Log.d(TAG, "Auto-refresh: all sources fresh, skipping")
+        }
+    }
+
+    private fun scheduleAutoRefresh() {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = scope.launch {
+            while (true) {
+                val appSettings = AppSettings(context)
+                if (appSettings.epgAutoRefreshEnabled) {
+                    try {
+                        autoRefreshIfStale()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Auto-refresh failed", e)
+                    }
+                }
+                delay(STALE_THRESHOLD_MS)
+            }
+        }
+    }
+
+    fun updateAutoRefreshSchedule() {
+        autoRefreshJob?.cancel()
+        scope.launch {
+            scheduleAutoRefresh()
         }
     }
 

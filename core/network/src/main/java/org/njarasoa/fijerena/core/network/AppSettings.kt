@@ -23,6 +23,7 @@ class AppSettings(context: Context) {
         private const val KEY_THEME_ID = "theme_id"
         private const val KEY_EPG_URL = "epg_url"
         private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
+        private const val KEY_EPG_AUTO_REFRESH = "epg_auto_refresh"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
@@ -118,6 +119,10 @@ class AppSettings(context: Context) {
      * This fixes XMLTV sources that encode local times but mislabel them as UTC (+0000).
      * Default: 0 (use timezone from XMLTV data as-is).
      */
+    var epgAutoRefreshEnabled: Boolean
+        get() = prefs.getBoolean(KEY_EPG_AUTO_REFRESH, true)
+        set(value) = prefs.edit().putBoolean(KEY_EPG_AUTO_REFRESH, value).apply()
+
     var epgTimezoneOffsetHours: Int
         get() = prefs.getInt(KEY_EPG_TIMEZONE_OFFSET, 0)
         set(value) {
