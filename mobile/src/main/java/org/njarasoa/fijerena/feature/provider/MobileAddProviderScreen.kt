@@ -230,6 +230,7 @@ fun MobileAddProviderScreen(
                     ProviderType.JELLYFIN -> "e.g. My Jellyfin Server"
                     ProviderType.SMB -> "e.g. NAS Media"
                     ProviderType.LOCAL -> "e.g. Local Videos"
+                    ProviderType.REMOTE_M3U -> "e.g. My M3U Playlist"
                 }) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -401,6 +402,23 @@ fun MobileAddProviderScreen(
 
                 ProviderType.LOCAL -> {
                     // Only the name field is needed; folder/file picker will be added later
+                }
+
+                ProviderType.REMOTE_M3U -> {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+
+                    OutlinedTextField(
+                        value = url,
+                        onValueChange = {
+                            url = it
+                            error = null
+                        },
+                        label = { Text("M3U Playlist URL") },
+                        placeholder = { Text("https://example.com/playlist.m3u") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
@@ -850,6 +868,11 @@ fun MobileAddProviderScreen(
                         }
                         ProviderType.LOCAL -> when {
                             name.isBlank() -> "Provider name is required"
+                            else -> null
+                        }
+                        ProviderType.REMOTE_M3U -> when {
+                            name.isBlank() -> "Provider name is required"
+                            url.isBlank() -> "M3U Playlist URL is required"
                             else -> null
                         }
                     }

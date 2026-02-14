@@ -562,6 +562,34 @@ fun TvAddProviderScreen(
                     ProviderType.LOCAL -> {
                         // LOCAL type only requires name - folder/file picker will be added later
                     }
+
+                    ProviderType.REMOTE_M3U -> {
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = {
+                                url = it
+                                error = null
+                            },
+                            label = { Text("M3U Playlist URL") },
+                            placeholder = { Text("https://example.com/playlist.m3u") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextSecondary,
+                                focusedLabelColor = CinemaAccent,
+                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                focusedPlaceholderColor = CinemaTextSecondary,
+                                unfocusedPlaceholderColor = CinemaTextSecondary
+                            )
+                        )
+                    }
                 }
 
                 // Provider Settings (edit mode only)
@@ -1105,6 +1133,11 @@ fun TvAddProviderScreen(
                                 }
                                 ProviderType.LOCAL -> when {
                                     name.isBlank() -> "Provider name is required"
+                                    else -> null
+                                }
+                                ProviderType.REMOTE_M3U -> when {
+                                    name.isBlank() -> "Provider name is required"
+                                    url.isBlank() -> "M3U Playlist URL is required"
                                     else -> null
                                 }
                             }

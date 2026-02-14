@@ -275,6 +275,8 @@ class CategoryViewModel(
                     )
                     // Load "What's On Now" for Live TV channels
                     loadNowPlaying(items)
+                    // Trigger iptv-org auto-detect EPG if mode is "auto"
+                    triggerAutoDetectEpg(items)
                     // Retry once if initial load returned empty for a non-virtual category
                     if (isInitialLoad && items.isEmpty() && !initialLoadRetried &&
                         categoryId != CONTINUE_WATCHING_CATEGORY_ID &&
@@ -313,7 +315,8 @@ class CategoryViewModel(
         if (contentType != "LIVE_TV") return
         viewModelScope.launch {
             val caps = repository.getCapabilities()
-            val hasExternalEpg = repository.getProviderSettings().epgUrl.isNotBlank()
+            val appSettings = repository.getAppSettings()
+            val hasExternalEpg = appSettings.epgUrl.isNotBlank() || appSettings.epgMode == "auto"
             if (caps?.supportsEpg != true && !hasExternalEpg) return@launch
             val epgData = repository.getEpgBulkForItems(
                 items.take(50)
@@ -322,6 +325,24 @@ class CategoryViewModel(
             _nowPlaying.value = epgData.mapValues { (_, resp) ->
                 resp.listings.firstOrNull { now in it.startTime..it.endTime }
             }.filterValues { it != null }.mapValues { it.value!! }
+        }
+    }
+
+    private var autoDetectTriggered = false
+
+    private fun triggerAutoDetectEpg(items: List<MediaItem>) {
+        if (contentType != "LIVE_TV") return
+        if (autoDetectTriggered) return
+        autoDetectTriggered = true
+
+        viewModelScope.launch {
+            val channelRefs = repository.collectChannelRefs(items)
+            if (channelRefs.isNotEmpty()) {
+                // Collect from all cached categories for better coverage
+                val allRefs = repository.collectAllLiveTvChannelRefs()
+                val refsToUse = allRefs.ifEmpty { channelRefs }
+                repository.triggerAutoDetectEpg(refsToUse)
+            }
         }
     }
 
