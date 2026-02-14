@@ -127,6 +127,31 @@ fun TvEpgManagementScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CinemaTextSecondary
                             )
+                            if (viewModel.isDevMode) {
+                                if (procState.phase == "Downloading" && procState.downloadedBytes > 0) {
+                                    val progress = if (procState.downloadTotalBytes > 0) {
+                                        "${formatBytes(procState.downloadedBytes)} / ${formatBytes(procState.downloadTotalBytes)}" +
+                                            " (${(procState.downloadedBytes * 100 / procState.downloadTotalBytes)}%)"
+                                    } else {
+                                        formatBytes(procState.downloadedBytes)
+                                    }
+                                    Text(
+                                        text = "Download: $progress",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = CinemaTextSecondary
+                                    )
+                                }
+                                if (procState.completedSourceStats.isNotEmpty()) {
+                                    procState.completedSourceStats.forEach { stat ->
+                                        Text(
+                                            text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
+                                                (stat.error?.let { " [$it]" } ?: ""),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (stat.error != null) CinemaError else CinemaTextSecondary
+                                        )
+                                    }
+                                }
+                            }
                         }
                         if (procState is EpgFileManager.MultiSourceState.Completed) {
                             Spacer(modifier = Modifier.height(Spacing.xs))
@@ -136,6 +161,21 @@ fun TvEpgManagementScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (procState.errors > 0) CinemaError else CinemaAccent
                             )
+                            if (viewModel.isDevMode) {
+                                Text(
+                                    text = "Total: ${formatBytes(procState.totalDownloadBytes)}, ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = CinemaTextSecondary
+                                )
+                                procState.sourceStats.forEach { stat ->
+                                    Text(
+                                        text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
+                                            (stat.error?.let { " [$it]" } ?: ""),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (stat.error != null) CinemaError else CinemaTextSecondary
+                                    )
+                                }
+                            }
                         }
                         if (procState is EpgFileManager.MultiSourceState.Error) {
                             Spacer(modifier = Modifier.height(Spacing.xs))
@@ -198,7 +238,7 @@ fun TvEpgManagementScreen(
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = source.label.ifBlank { EpgFileManager.extractDomainLabel(source.url) },
+                                    text = source.label.ifBlank { EpgFileManager.extractLabel(source.url) },
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -232,9 +272,22 @@ fun TvEpgManagementScreen(
                                         maxLines = 1
                                     )
                                 }
+                                if (viewModel.isDevMode && source.lastIngestedAtMs > 0) {
+                                    Text(
+                                        text = "${formatCount(source.lastChannels)}ch, ${formatCount(source.lastProgrammes)}prg, ${formatBytes(source.lastDownloadBytes)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.width(Spacing.sm))
+                            CinemaPrimaryButton(
+                                onClick = { viewModel.refreshSource(source.id) },
+                                enabled = processingState is EpgFileManager.MultiSourceState.Idle,
+                                text = "Refresh"
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.xs))
                             CinemaSecondaryButton(
                                 onClick = { editingSource = source },
                                 text = "Edit"
@@ -376,9 +429,10 @@ private fun SourceDialog(
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("XMLTV URL") },
-                    placeholder = { Text("https://epg.example.com/guide.xml.gz") },
-                    singleLine = true,
+                    label = { Text(if (source != null) "XMLTV URL" else "XMLTV URL(s)") },
+                    placeholder = { Text(if (source != null) "https://epg.example.com/guide.xml.gz" else "One or more URLs (one per line)") },
+                    singleLine = source != null,
+                    maxLines = if (source != null) 1 else 5,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = CinemaTextPrimary,
@@ -454,6 +508,15 @@ private fun formatCount(count: Int): String {
         count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
         count >= 1_000 -> "%.1fK".format(count / 1_000.0)
         else -> count.toString()
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    return when {
+        bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
+        bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
+        bytes >= 1_024 -> "%.1f KB".format(bytes / 1_024.0)
+        else -> "$bytes B"
     }
 }
 

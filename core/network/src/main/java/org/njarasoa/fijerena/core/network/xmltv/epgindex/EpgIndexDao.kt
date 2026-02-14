@@ -13,6 +13,9 @@ interface EpgIndexDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChannels(channels: List<EpgChannelEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertChannelsIgnore(channels: List<EpgChannelEntity>)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProgrammes(programmes: List<EpgProgrammeEntity>)
 
@@ -135,6 +138,27 @@ interface EpgIndexDao {
         windowStart: Long,
         windowEnd: Long
     ): PagingSource<Int, EpgSearchResultRow>
+
+    // --------------- Channel queries ---------------
+
+    @Query("SELECT * FROM epg_channel")
+    suspend fun getAllChannels(): List<EpgChannelEntity>
+
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM epg_programme p
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id
+        WHERE p.channel_id IN (:channelIds)
+          AND p.start_epoch >= :windowStart AND p.end_epoch <= :windowEnd
+        ORDER BY p.start_epoch ASC
+        """
+    )
+    suspend fun getProgrammesForChannels(
+        channelIds: List<String>,
+        windowStart: Long,
+        windowEnd: Long
+    ): List<EpgSearchResultRow>
 
     // --------------- Metadata & cleanup ---------------
 

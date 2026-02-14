@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -24,12 +25,15 @@ class EpgManagementViewModel(
     private val sourceDao = db.epgSourceDao()
     private val epgFileManager = EpgFileManager.getInstance(context)
     private val indexer = EpgIndexer.getInstance(context)
+    private val appSettings = AppSettings(context)
 
     val sources: Flow<List<EpgSourceEntity>> = sourceDao.getAllSources()
 
     val processingState: StateFlow<EpgFileManager.MultiSourceState> = epgFileManager.state
 
     val indexState: StateFlow<EpgIndexState> = indexer.state
+
+    val isDevMode: Boolean get() = appSettings.isDevMode
 
     data class DbStats(
         val channelCount: Int = 0,
@@ -62,14 +66,24 @@ class EpgManagementViewModel(
     fun addSource(url: String, label: String, timezoneOffsetHours: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val finalLabel = label.ifBlank { EpgFileManager.extractDomainLabel(url) }
-                sourceDao.insertSource(
-                    EpgSourceEntity(
-                        url = url.trim(),
-                        label = finalLabel,
-                        timezoneOffsetHours = timezoneOffsetHours
+                val urls = url.split("\n", ",", " ")
+                    .map { it.trim() }
+                    .filter { it.startsWith("http://") || it.startsWith("https://") }
+
+                for (u in urls) {
+                    val finalLabel = if (urls.size == 1) {
+                        label.ifBlank { EpgFileManager.extractLabel(u) }
+                    } else {
+                        EpgFileManager.extractLabel(u)
+                    }
+                    sourceDao.insertSource(
+                        EpgSourceEntity(
+                            url = u,
+                            label = finalLabel,
+                            timezoneOffsetHours = timezoneOffsetHours
+                        )
                     )
-                )
+                }
             }
         }
     }
@@ -95,6 +109,15 @@ class EpgManagementViewModel(
             withContext(Dispatchers.IO) {
                 val enabledSources = sourceDao.getEnabledSources()
                 epgFileManager.processAllSources(enabledSources)
+                refreshDbStats()
+            }
+        }
+    }
+
+    fun refreshSource(sourceId: Long) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                epgFileManager.processSingleSource(sourceId)
                 refreshDbStats()
             }
         }

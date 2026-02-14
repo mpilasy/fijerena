@@ -17,13 +17,11 @@ import java.io.FileInputStream
 /**
  * Singleton that indexes XMLTV files into SQLite for fast FTS search.
  *
- * Streaming parse with transactional batch INSERT (1000 rows per batch).
+ * Streaming parse with batch INSERT (1000 rows per batch).
  * Memory bounded: ~200KB per batch.
  *
- * Supports two ingestion strategies:
- * - **Full rebuild**: Destroys and recreates DB (legacy XMLTV sources)
- * - **Clear and Load**: Deletes stale programmes (>24h old), upserts new data
- *   via REPLACE — optimal for iptv-org sources on storage-constrained devices.
+ * Append-only: uses REPLACE on unique (channel_id, start_epoch) index
+ * so the database stays searchable during sync. No clearing needed.
  */
 class EpgIndexer private constructor(private val context: Context) {
 
@@ -46,20 +44,17 @@ class EpgIndexer private constructor(private val context: Context) {
     val state: StateFlow<EpgIndexState> = _state.asStateFlow()
 
     /**
-     * Check whether the file has changed or timezone override differs since last index.
+     * Ingestion stats for the most recent ingestFile() call.
+     * Reset at the start of each ingestion.
      */
-    suspend fun needsReindex(file: File): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val metadata = db.epgIndexDao().getMetadata() ?: return@withContext true
-            metadata.fileSizeBytes != file.length() ||
-                metadata.fileLastModifiedMs != file.lastModified() ||
-                metadata.timezoneOffsetHours != XmltvParser.timezoneOverrideHours
-        } catch (e: Exception) {
-            Log.w(TAG, "Error checking index metadata, will re-index", e)
-            true
-        }
-    }
+    data class IngestionStats(
+        val channelsIngested: Int = 0,
+        val programmesIngested: Int = 0
+    )
+
+    @Volatile
+    var lastIngestionStats: IngestionStats = IngestionStats()
+        private set
 
     /**
      * Restore Indexed state from stored metadata without re-indexing.
@@ -85,15 +80,37 @@ class EpgIndexer private constructor(private val context: Context) {
     }
 
     /**
-     * Parse the XMLTV file and build the SQLite index.
+     * Parse the XMLTV file and append/replace data into the SQLite index.
      *
-     * Performs a full database rebuild: destroys and recreates DB for clean state.
-     *
-     * The entire ingestion (parse + insert) runs inside a single Room @Transaction to prevent
-     * the UI from seeing partial or empty EPG data if the update is interrupted.
+     * Append-only: uses IGNORE for channels (preserves existing) and REPLACE
+     * for programmes (unique index on channel_id + start_epoch deduplicates).
+     * The database remains searchable throughout ingestion.
      */
-    suspend fun startIndexing(file: File) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Starting indexing of ${file.name} (${file.length() / (1024 * 1024)}MB) [full rebuild]")
+    suspend fun startIndexing(file: File) = ingestFile(file)
+
+    /**
+     * Append data from a file without clearing existing data.
+     * Uses IGNORE for channels and REPLACE for programmes.
+     *
+     * @param file The XMLTV file to parse
+     * @param timezoneOverride Per-source timezone offset applied during parsing
+     */
+    suspend fun appendFromFile(file: File, timezoneOverride: Int) {
+        val previousTz = XmltvParser.timezoneOverrideHours
+        XmltvParser.timezoneOverrideHours = timezoneOverride
+        try {
+            ingestFile(file)
+        } finally {
+            XmltvParser.timezoneOverrideHours = previousTz
+        }
+    }
+
+    /**
+     * Core ingestion: streaming parse + batch insert.
+     * Append-only — never clears existing data.
+     */
+    private suspend fun ingestFile(file: File) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Ingesting ${file.name} (${file.length() / (1024 * 1024)}MB)")
 
         _state.value = EpgIndexState.Indexing(
             progressPercent = 0,
@@ -102,12 +119,9 @@ class EpgIndexer private constructor(private val context: Context) {
         )
 
         try {
-            // Full rebuild: destroy and recreate database for clean state
-            EpgIndexDatabase.destroy(context)
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
 
-            // Phase 1: Streaming parse — collect all channels and programmes in batches
             val fileSize = file.length()
             var channelCount = 0
             var programmeCount = 0
@@ -124,13 +138,6 @@ class EpgIndexer private constructor(private val context: Context) {
             )
             parser.setInput(countingStream, null)
 
-            // Phase 2: Parse and batch-insert inside a transaction.
-            // For iptv-org (Clear and Load): clean stale data first, then insert.
-            // For full rebuild: DB is already empty from destroy().
-            //
-            // We accumulate channels during the parse (they're small, typically <10K),
-            // then flush programmes in BATCH_SIZE chunks via transactional inserts.
-
             var eventType = parser.eventType
             var channelsFinished = false
 
@@ -145,12 +152,12 @@ class EpgIndexer private constructor(private val context: Context) {
                             }
                         }
                         "programme" -> {
-                            // First programme encountered — flush channels
+                            // First programme encountered — flush channels (IGNORE keeps existing)
                             if (!channelsFinished) {
                                 channelsFinished = true
                                 if (allChannels.isNotEmpty()) {
                                     for (batch in allChannels.chunked(BATCH_SIZE)) {
-                                        dao.insertChannels(batch)
+                                        dao.insertChannelsIgnore(batch)
                                     }
                                 }
                             }
@@ -163,7 +170,6 @@ class EpgIndexer private constructor(private val context: Context) {
                                     dao.insertProgrammes(programmeBatch.toList())
                                     programmeBatch.clear()
 
-                                    // Update progress
                                     val bytesProcessed = countingStream.bytesRead
                                     val percent = if (fileSize > 0) {
                                         ((bytesProcessed * 100) / fileSize).toInt().coerceIn(0, 99)
@@ -181,10 +187,10 @@ class EpgIndexer private constructor(private val context: Context) {
                 eventType = parser.next()
             }
 
-            // Flush remaining channels (if no programmes were found)
+            // Flush remaining channels
             if (!channelsFinished && allChannels.isNotEmpty()) {
                 for (batch in allChannels.chunked(BATCH_SIZE)) {
-                    dao.insertChannels(batch)
+                    dao.insertChannelsIgnore(batch)
                 }
             }
 
@@ -193,251 +199,25 @@ class EpgIndexer private constructor(private val context: Context) {
                 dao.insertProgrammes(programmeBatch.toList())
             }
 
-            // Rebuild FTS index
-            Log.d(TAG, "Rebuilding FTS index...")
-            db.openHelper.writableDatabase.execSQL(
-                "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')"
+            // Record per-file stats
+            lastIngestionStats = IngestionStats(
+                channelsIngested = channelCount,
+                programmesIngested = programmeCount
             )
 
-            // Store metadata (including timezone so re-index triggers on change)
-            val now = System.currentTimeMillis()
-            val finalProgrammeCount = programmeCount
-            val finalChannelCount = channelCount
-
-            dao.insertMetadata(
-                EpgIndexMetadata(
-                    fileSizeBytes = file.length(),
-                    fileLastModifiedMs = file.lastModified(),
-                    indexedAtMs = now,
-                    channelCount = finalChannelCount,
-                    programmeCount = finalProgrammeCount,
-                    timezoneOffsetHours = XmltvParser.timezoneOverrideHours
-                )
-            )
-
-            _state.value = EpgIndexState.Indexed(
-                channelCount = finalChannelCount,
-                programmeCount = finalProgrammeCount,
-                indexedAtMs = now
-            )
-            Log.d(TAG, "Indexing complete: $finalChannelCount channels, $finalProgrammeCount programmes")
+            Log.d(TAG, "Ingestion complete: $channelCount channels, $programmeCount programmes")
 
         } catch (e: OutOfMemoryError) {
             System.gc()
             val msg = "Out of memory during indexing"
             Log.e(TAG, msg, e)
+            lastIngestionStats = IngestionStats()
             _state.value = EpgIndexState.Failed(msg)
         } catch (e: Exception) {
             val msg = e.message ?: "Indexing failed"
             Log.e(TAG, msg, e)
+            lastIngestionStats = IngestionStats()
             _state.value = EpgIndexState.Failed(msg)
-        }
-    }
-
-    /**
-     * Perform a full transactional ingestion: parse the XMLTV file and atomically replace
-     * all data in a single Room @Transaction. This prevents partial/empty EPG if interrupted.
-     *
-     * Suitable for small-to-medium XMLTV files (< ~100MB / ~500K programmes) where
-     * collecting all data in memory before the atomic write is feasible.
-     * For larger files, use [startIndexing] which streams batches.
-     */
-    suspend fun startTransactionalIndexing(file: File) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Starting transactional indexing of ${file.name} (${file.length() / (1024 * 1024)}MB)")
-        _state.value = EpgIndexState.Indexing(
-            progressPercent = 0,
-            channelsIndexed = 0,
-            programmesIndexed = 0
-        )
-
-        try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
-
-            val fileSize = file.length()
-            val allChannels = mutableListOf<EpgChannelEntity>()
-            val allProgrammes = mutableListOf<EpgProgrammeEntity>()
-
-            val factory = XmlPullParserFactory.newInstance()
-            factory.isNamespaceAware = false
-            val parser = factory.newPullParser()
-
-            val countingStream = CountingInputStream(
-                BufferedInputStream(FileInputStream(file), STREAM_BUFFER_SIZE)
-            )
-            parser.setInput(countingStream, null)
-
-            var eventType = parser.eventType
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG) {
-                    when (parser.name) {
-                        "channel" -> {
-                            val channel = XmltvParser.parseChannelForIndex(parser)
-                            if (channel != null) allChannels.add(channel)
-                        }
-                        "programme" -> {
-                            val programme = XmltvParser.parseProgrammeForIndex(parser)
-                            if (programme != null) {
-                                allProgrammes.add(programme)
-                                if (allProgrammes.size % BATCH_SIZE == 0) {
-                                    val bytesProcessed = countingStream.bytesRead
-                                    val percent = if (fileSize > 0) {
-                                        ((bytesProcessed * 100) / fileSize).toInt().coerceIn(0, 99)
-                                    } else 0
-                                    _state.value = EpgIndexState.Indexing(
-                                        progressPercent = percent,
-                                        channelsIndexed = allChannels.size,
-                                        programmesIndexed = allProgrammes.size
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                eventType = parser.next()
-            }
-
-            countingStream.close()
-
-            // Atomic write: all-or-nothing inside a single @Transaction
-            val now = System.currentTimeMillis()
-            val metadata = EpgIndexMetadata(
-                fileSizeBytes = file.length(),
-                fileLastModifiedMs = file.lastModified(),
-                indexedAtMs = now,
-                channelCount = allChannels.size,
-                programmeCount = allProgrammes.size,
-                timezoneOffsetHours = XmltvParser.timezoneOverrideHours
-            )
-
-            dao.replaceAllData(allChannels, allProgrammes, metadata)
-
-            // Rebuild FTS index after the transaction commits
-            db.openHelper.writableDatabase.execSQL(
-                "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')"
-            )
-
-            _state.value = EpgIndexState.Indexed(
-                channelCount = allChannels.size,
-                programmeCount = allProgrammes.size,
-                indexedAtMs = now
-            )
-            Log.d(TAG, "Transactional indexing complete: ${allChannels.size} channels, ${allProgrammes.size} programmes")
-
-        } catch (e: OutOfMemoryError) {
-            System.gc()
-            val msg = "Out of memory during transactional indexing — file too large for atomic mode"
-            Log.e(TAG, msg, e)
-            // Fall back to streaming mode
-            Log.d(TAG, "Falling back to streaming ingestion")
-            startIndexing(file)
-        } catch (e: Exception) {
-            val msg = e.message ?: "Transactional indexing failed"
-            Log.e(TAG, msg, e)
-            _state.value = EpgIndexState.Failed(msg)
-        }
-    }
-
-    /**
-     * Append data from a file without clearing existing data.
-     * Uses REPLACE for channels (handles overlapping channel IDs across sources)
-     * and accumulates programmes.
-     *
-     * @param file The XMLTV file to parse
-     * @param timezoneOverride Per-source timezone offset applied during parsing
-     */
-    suspend fun appendFromFile(file: File, timezoneOverride: Int) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Appending from ${file.name} (${file.length() / (1024 * 1024)}MB) tz=$timezoneOverride")
-
-        val previousTz = XmltvParser.timezoneOverrideHours
-        XmltvParser.timezoneOverrideHours = timezoneOverride
-
-        try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
-
-            val fileSize = file.length()
-            var channelCount = 0
-            var programmeCount = 0
-
-            val allChannels = mutableListOf<EpgChannelEntity>()
-            val programmeBatch = mutableListOf<EpgProgrammeEntity>()
-
-            val factory = XmlPullParserFactory.newInstance()
-            factory.isNamespaceAware = false
-            val parser = factory.newPullParser()
-
-            val countingStream = CountingInputStream(
-                BufferedInputStream(FileInputStream(file), STREAM_BUFFER_SIZE)
-            )
-            parser.setInput(countingStream, null)
-
-            var eventType = parser.eventType
-            var channelsFinished = false
-
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG) {
-                    when (parser.name) {
-                        "channel" -> {
-                            val channel = XmltvParser.parseChannelForIndex(parser)
-                            if (channel != null) {
-                                allChannels.add(channel)
-                                channelCount++
-                            }
-                        }
-                        "programme" -> {
-                            if (!channelsFinished) {
-                                channelsFinished = true
-                                if (allChannels.isNotEmpty()) {
-                                    for (batch in allChannels.chunked(BATCH_SIZE)) {
-                                        dao.insertChannels(batch)
-                                    }
-                                }
-                            }
-
-                            val programme = XmltvParser.parseProgrammeForIndex(parser)
-                            if (programme != null) {
-                                programmeBatch.add(programme)
-                                programmeCount++
-                                if (programmeBatch.size >= BATCH_SIZE) {
-                                    dao.insertProgrammes(programmeBatch.toList())
-                                    programmeBatch.clear()
-
-                                    val bytesProcessed = countingStream.bytesRead
-                                    val percent = if (fileSize > 0) {
-                                        ((bytesProcessed * 100) / fileSize).toInt().coerceIn(0, 99)
-                                    } else 0
-                                    _state.value = EpgIndexState.Indexing(
-                                        progressPercent = percent,
-                                        channelsIndexed = channelCount,
-                                        programmesIndexed = programmeCount
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                eventType = parser.next()
-            }
-
-            if (!channelsFinished && allChannels.isNotEmpty()) {
-                for (batch in allChannels.chunked(BATCH_SIZE)) {
-                    dao.insertChannels(batch)
-                }
-            }
-
-            if (programmeBatch.isNotEmpty()) {
-                dao.insertProgrammes(programmeBatch.toList())
-            }
-
-            Log.d(TAG, "Append complete: $channelCount channels, $programmeCount programmes")
-        } catch (e: OutOfMemoryError) {
-            System.gc()
-            Log.e(TAG, "Out of memory during append", e)
-        } catch (e: Exception) {
-            Log.e(TAG, "Append failed: ${e.message}", e)
-        } finally {
-            XmltvParser.timezoneOverrideHours = previousTz
         }
     }
 

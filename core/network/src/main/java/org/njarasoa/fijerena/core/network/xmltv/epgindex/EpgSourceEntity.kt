@@ -26,5 +26,14 @@ data class EpgSourceEntity(
     val lastError: String? = null,
 
     @ColumnInfo(name = "enabled")
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+
+    @ColumnInfo(name = "last_channels", defaultValue = "0")
+    val lastChannels: Int = 0,
+
+    @ColumnInfo(name = "last_programmes", defaultValue = "0")
+    val lastProgrammes: Int = 0,
+
+    @ColumnInfo(name = "last_download_bytes", defaultValue = "0")
+    val lastDownloadBytes: Long = 0
 )
