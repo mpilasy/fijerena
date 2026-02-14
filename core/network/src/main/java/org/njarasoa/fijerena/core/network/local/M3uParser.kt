@@ -51,24 +51,24 @@ object M3uParser {
         return entries
     }
 
-    fun entriesToCategories(entries: List<M3uEntry>): List<MediaCategory> {
+    fun entriesToCategories(entries: List<M3uEntry>, idPrefix: String = "local"): List<MediaCategory> {
         return entries
             .map { it.groupTitle }
             .distinct()
             .mapIndexed { index, group ->
                 MediaCategory(
-                    id = "local_cat_$index",
+                    id = "${idPrefix}_cat_$index",
                     name = group
                 )
             }
     }
 
-    fun entriesToItems(entries: List<M3uEntry>, categories: List<MediaCategory>): List<MediaItem> {
+    fun entriesToItems(entries: List<M3uEntry>, categories: List<MediaCategory>, idPrefix: String = "local"): List<MediaItem> {
         val categoryMap = categories.associateBy { it.name }
         return entries.mapIndexed { index, entry ->
             val category = categoryMap[entry.groupTitle]
             MediaItem(
-                id = "local_m3u_$index",
+                id = "${idPrefix}_m3u_$index",
                 name = entry.name,
                 mediaType = if (entry.isLive) MediaType.LIVE_CHANNEL else MediaType.VIDEO_FILE,
                 categoryId = category?.id ?: "local_cat_0",

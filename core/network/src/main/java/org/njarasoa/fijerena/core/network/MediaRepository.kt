@@ -15,6 +15,8 @@ import org.njarasoa.fijerena.core.player.domain.PlayableStream
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import org.njarasoa.fijerena.core.network.xmltv.ChannelRef
+import org.njarasoa.fijerena.core.network.xmltv.IptvOrgGuideResolver
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import java.util.concurrent.ConcurrentHashMap
 
@@ -186,10 +188,13 @@ class MediaRepository(
     }
 
     suspend fun getEpgBulkForItems(items: List<MediaItem>): kotlin.Result<Map<String, EpgResponse>> {
+        // Try XMLTV service: works for both manual URL and auto-detect (merged file)
         val epgUrl = appSettings.epgUrl
-        if (epgUrl.isNotBlank()) {
+        val epgMode = appSettings.epgMode
+        val xmltvKey = if (epgMode == "auto") "auto-detect" else epgUrl
+        if (xmltvKey.isNotBlank()) {
             try {
-                val xmltvResult = xmltvEpgService.getEpgForChannels(items, epgUrl)
+                val xmltvResult = xmltvEpgService.getEpgForChannels(items, xmltvKey)
                 if (xmltvResult.isNotEmpty()) {
                     return kotlin.Result.success(xmltvResult)
                 }
@@ -205,6 +210,46 @@ class MediaRepository(
 
     fun clearXmltvCache() {
         xmltvEpgService.clearCache()
+    }
+
+    /**
+     * Collect channel references from loaded Live TV items.
+     * Used for iptv-org auto-detection. Extracts epgChannelId and name.
+     */
+    fun collectChannelRefs(items: List<MediaItem>): List<ChannelRef> {
+        return items.map { item ->
+            ChannelRef(
+                epgChannelId = item.providerData["epgChannelId"],
+                name = item.name
+            )
+        }
+    }
+
+    /**
+     * Collect channel references from ALL cached Live TV categories.
+     * Cache-only, no network calls. Returns empty if nothing is cached.
+     */
+    suspend fun collectAllLiveTvChannelRefs(): List<ChannelRef> {
+        val refs = mutableListOf<ChannelRef>()
+        val categories = getFilteredCategories("LIVE_TV").getOrNull() ?: return emptyList()
+        for (cat in categories) {
+            val items = getItemsIfCached(cat.id, "LIVE_TV") ?: continue
+            for (item in items) {
+                refs.add(ChannelRef(
+                    epgChannelId = item.providerData["epgChannelId"],
+                    name = item.name
+                ))
+            }
+        }
+        return refs
+    }
+
+    /**
+     * Trigger iptv-org auto-detection with the given channel refs.
+     */
+    fun triggerAutoDetectEpg(channelRefs: List<ChannelRef>) {
+        if (appSettings.epgMode != "auto") return
+        IptvOrgGuideResolver.getInstance(context).resolve(channelRefs)
     }
 
     // --- Progress sync hook ---

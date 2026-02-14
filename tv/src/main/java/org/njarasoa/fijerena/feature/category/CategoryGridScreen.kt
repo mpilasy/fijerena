@@ -247,6 +247,9 @@ private fun CategoryGridContent(
                             is EpgFileManager.EpgFileState.Downloading -> {
                                 put("EPG File", "Downloading...")
                             }
+                            is EpgFileManager.EpgFileState.AutoDetecting -> {
+                                put("EPG File", "Auto-detecting...")
+                            }
                             is EpgFileManager.EpgFileState.Error -> {
                                 put("EPG File", "Error (stale)")
                             }

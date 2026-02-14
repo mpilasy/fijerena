@@ -9,6 +9,7 @@ import org.njarasoa.fijerena.core.network.jellyfin.JellyfinMediaProvider
 import org.njarasoa.fijerena.core.network.local.LocalMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.remote.RemoteM3uMediaProvider
 import org.njarasoa.fijerena.core.network.smb.SmbClient
 import org.njarasoa.fijerena.core.network.smb.SmbMediaProvider
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -48,6 +49,7 @@ object MediaProviderFactory {
             "JELLYFIN" -> createJellyfin(entity, password, context)
             "SMB" -> createSmb(entity, password)
             "LOCAL" -> createLocal(entity, context)
+            "REMOTE_M3U" -> createRemoteM3u(entity, context)
             else -> createXtream(entity, context, password)
         }
 
@@ -137,6 +139,14 @@ object MediaProviderFactory {
                 rootPaths = rootPaths,
                 m3uPath = m3uPath
             )
+        )
+    }
+
+    private fun createRemoteM3u(entity: ProviderEntity, context: Context): MediaProvider {
+        return RemoteM3uMediaProvider(
+            providerId = entity.id,
+            m3uUrl = entity.url,
+            context = context.applicationContext
         )
     }
 

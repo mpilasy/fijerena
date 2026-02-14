@@ -301,6 +301,36 @@ class ProviderViewModel(
                     Result.failure(e)
                 }
             }
+            "REMOTE_M3U" -> {
+                try {
+                    val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                    connection.connectTimeout = 15_000
+                    connection.readTimeout = 15_000
+                    connection.instanceFollowRedirects = true
+                    connection.setRequestProperty("Accept-Encoding", "identity")
+                    try {
+                        val statusCode = connection.responseCode
+                        if (statusCode !in 200..299) {
+                            Result.failure(Exception("Server returned HTTP $statusCode"))
+                        } else {
+                            val header = connection.inputStream.bufferedReader().use { reader ->
+                                val buf = CharArray(256)
+                                val read = reader.read(buf)
+                                if (read > 0) String(buf, 0, read) else ""
+                            }
+                            if (header.trimStart().startsWith("#EXTM3U")) {
+                                Result.success(Unit)
+                            } else {
+                                Result.failure(Exception("Not a valid M3U file: missing #EXTM3U header"))
+                            }
+                        }
+                    } finally {
+                        connection.disconnect()
+                    }
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            }
             "JELLYFIN", "SMB" -> {
                 val tempEntity = ProviderEntity(
                     id = 0L,
