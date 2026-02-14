@@ -2,538 +2,184 @@
 A native Android media player built with Kotlin and Jetpack Compose supporting multiple provider types.
 Targeting: Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Bravia (Android TV).
 
-**App Icon:** Blue Marble (Earth) with red/cyan 3D glasses. Uses adaptive icon (foreground PNGs in `mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, black background XML) + legacy webp mipmaps for both mobile and TV modules.
+**App Icon:** Blue Marble (Earth) with red/cyan 3D glasses. Adaptive icon (foreground PNGs in `mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, black background XML) + legacy webp mipmaps.
 
-## 🛠 Tech Stack
-- **UI:** 100% Jetpack Compose. Use `androidx.tv.material3` for TV-specific screens.
+## Tech Stack
+- **UI:** 100% Jetpack Compose. `androidx.tv.material3` for TV screens.
 - **Networking:** Ktor with kotlinx.serialization (JSON).
 - **Video Player:** Media3 (ExoPlayer). Optimize for 4K/HDR hardware acceleration.
 - **Navigation:** Adaptive Navigation Suite (handles Mobile and TV D-Pad logic).
-- **Database:** Room (provider management). Per-provider EncryptedSharedPreferences for passwords.
+- **Database:** Room (provider management, EPG index). Per-provider EncryptedSharedPreferences for passwords.
 - **Theming:** Dynamic runtime theme switching via `CinemaThemeHolder` + `CinemaThemePalette`.
 - **SMB:** `com.hierynomus:smbj:0.13.0` for network share access.
 
-## 🎬 Media3 Player Configuration
+## Media3 Player Configuration
 
-### Supported Stream Formats
-- **HLS** (`.m3u8`) - HTTP Live Streaming
-- **DASH** (`.mpd`) - Dynamic Adaptive Streaming over HTTP
-- **MPEG-TS** (`.ts`, `.mpeg`) - MPEG Transport Stream
+### Stream Formats & Codecs
+Supported: **HLS** (`.m3u8`), **DASH** (`.mpd`), **MPEG-TS** (`.ts`, `.mpeg`)
 
-### LoadControl Optimization - Network & Content-Type Aware
-**Adaptive Buffer Profiles:** `AdaptiveLoadControl` dynamically selects buffer parameters based on both content type (Live TV vs VOD) and network type (WiFi vs Cellular). Buffer thresholds swap at runtime without restarting the player.
+Codec priority: NVIDIA Shield (AV1→HEVC→AVC), Sony Bravia (HEVC→AVC), Generic (AVC fallback).
 
-#### WiFi Profiles (default for TVs, Ethernet)
+### LoadControl — Network & Content-Type Aware
+`AdaptiveLoadControl` dynamically selects buffer parameters based on content type (Live TV vs VOD) and network type (WiFi vs Cellular). Buffer thresholds swap at runtime without restarting the player. Architecture: delegates to `@Volatile` inner `DefaultLoadControl` with shared `DefaultAllocator`. `NetworkMonitor` emits `StateFlow<NetworkType>`, collected by `StreamingPlaybackService`.
 
-**Live TV (Fast Zapping):**
-- `minBufferMs: 2000ms` | `maxBufferMs: 5000ms` | `playbackMs: 250ms` | `rebufferMs: 500ms` | `backBuffer: 0ms`
+Buffer constants defined in `core/player/.../config/NetworkBufferProfile.kt`. WiFi Live TV uses aggressive low-latency buffers (2s min/5s max); VOD uses large buffers (15s/50s). Cellular profiles are 5-8x larger with `prioritizeTimeOverSizeThresholds: true`.
 
-**VOD (Movies/TV Shows):**
-- `minBufferMs: 15000ms` | `maxBufferMs: 50000ms` | `playbackMs: 2500ms` | `rebufferMs: 5000ms` | `backBuffer: 10000ms`
+### StreamingMediaSourceFactory
+Always use `StreamingMediaSourceFactory.createMediaSource()` for playback:
+- Auto-detects HLS/DASH/MPEG-TS, network-aware HTTP timeouts, custom auth headers
+- `AdaptiveLoadErrorPolicy`: 3 retries WiFi / 6 cellular, exponential backoff (1s base, 10s cap)
+- Supports `smb://` (SmbDataSource) and `content://` URIs, cross-protocol redirects
 
-#### Cellular Profiles (mobile devices on 4G/5G)
+### NetworkMonitor
+Singleton via `ConnectivityManager.NetworkCallback`. `StateFlow<NetworkType>` for coroutines, `@Volatile currentNetworkType` for synchronous reads. Ethernet/WiFi→`WIFI`, Cellular→`CELLULAR`, Unknown→`WIFI` fallback.
 
-**Live TV:**
-- `minBufferMs: 12000ms` | `maxBufferMs: 30000ms` | `playbackMs: 3000ms` | `rebufferMs: 4000ms` | `backBuffer: 0ms`
-- `prioritizeTimeOverSizeThresholds: true`
+**Key Player Files:** `config/NetworkBufferProfile.kt`, `config/AdaptiveLoadControl.kt`, `network/NetworkMonitor.kt`, `source/AdaptiveLoadErrorPolicy.kt` (all in `core/player/`)
 
-**VOD:**
-- `minBufferMs: 40000ms` | `maxBufferMs: 100000ms` | `playbackMs: 8000ms` | `rebufferMs: 10000ms` | `backBuffer: 10000ms`
-- `prioritizeTimeOverSizeThresholds: true`
+### Player UI Features
+- **Audio/Subtitle/Quality selection:** In-playback track switching dialogs (D-pad navigable)
+- **Channel switching:** D-pad up/down for Live TV only (disabled for VOD to prevent accidents). Toast notification at top-center, auto-dismiss 3s.
+- **VOD time display:** Progress bar, remaining time, "Ends at" with timezone-aware calculation
+- **Stats overlay:** Double-tap OK. Video/audio codec info, network stats, dropped frames (color-coded), repositionable (4 corners)
+- **Control hints:** First-playback overlay listing all controls, auto-dismiss 7s, "Don't show again" option
+- **Wake lock:** Acquired on play, released on pause/stop. `PARTIAL_WAKE_LOCK` + `WAKE_MODE_NETWORK`.
+- **Auto-resume:** Saved position every 5s, resume if 2-95% progress
+- **Mobile:** Touch to show/hide controls, orientation unlocks to sensor during playback
 
-**Architecture:** `AdaptiveLoadControl` implements `LoadControl`, delegates to a `@Volatile` inner `DefaultLoadControl` with a shared `DefaultAllocator`. `NetworkMonitor` emits `StateFlow<NetworkType>`, collected by `StreamingPlaybackService` which calls `updateForNetwork()` — ExoPlayer reads new thresholds on its next `shouldContinueLoading()` call with zero player restart.
+**Controls:** OK=show controls, Double-OK=stats, Back=exit, D-pad Up/Down=channel (Live TV), Audio/Subtitle/Quality/Favorite buttons.
 
-**Content Type Detection:** Automatically applied in both `TvPlayerScreen` and `MobilePlayerScreen` based on `contentType` parameter.
+## Theme & Design System
 
-### Codec Prioritization Strategy
-Hardware-accelerated codec selection based on device capabilities:
-- **NVIDIA Shield:** AV1 → HEVC → AVC (prioritizes AV1/HEVC for 4K/HDR)
-- **Sony Bravia:** HEVC → AVC (prioritizes HEVC for 4K)
-- **Generic devices:** AVC (fallback to H.264)
-
-### StreamingMediaSourceFactory Usage
-Always use `StreamingMediaSourceFactory.createMediaSource()` for stream playback:
-- Automatically detects stream type (HLS/DASH/MPEG-TS)
-- **Network-aware HTTP timeouts:** WiFi 30s/60s, Cellular 45s/30s (connect/read)
-- **Supports custom headers for authentication** (auth tokens, CDN headers, Jellyfin X-Emby-Token)
-- **`AdaptiveLoadErrorPolicy`** on all media sources: 3 retries on WiFi, 6 on cellular with exponential backoff (1s base, 10s cap)
-- `isLive` parameter propagated from `PlayerMetadata.isLive`
-- Enables cross-protocol redirects
-- Supports `smb://` URIs via custom `SmbDataSource` for SMB network shares
-- Supports `content://` URIs for local media files
-
-### Network Monitoring
-**`NetworkMonitor`** singleton observes connectivity via `ConnectivityManager.NetworkCallback`:
-- `StateFlow<NetworkType>` for coroutine-based collection (used by `StreamingPlaybackService`)
-- `@Volatile currentNetworkType` for synchronous hot-path reads (used by `AdaptiveLoadControl`, `AdaptiveLoadErrorPolicy`, `StreamingMediaSourceFactory`)
-- Ethernet/WiFi → `WIFI` profile, Cellular → `CELLULAR` profile, Unknown → `WIFI` fallback
-- Lifecycle: `init(context)` in `onCreate()`, `release()` in `onDestroy()`
-
-**Key Files:**
-- `core/player/.../config/NetworkBufferProfile.kt` — All buffer/retry/timeout constants
-- `core/player/.../config/AdaptiveLoadControl.kt` — Delegating LoadControl with atomic swap
-- `core/player/.../network/NetworkMonitor.kt` — ConnectivityManager wrapper
-- `core/player/.../source/AdaptiveLoadErrorPolicy.kt` — Network-aware retry policy
-
-### Audio Track Selection
-**Feature:** Multi-language and audio format selection during playback.
-
-**Capabilities:**
-- Detect available audio tracks from ExoPlayer
-- Display track information: language, channels (stereo/5.1/7.1), sample rate, bitrate
-- D-pad navigable selection dialog
-- Instant track switching without playback interruption
-- Visual indication of currently active track
-
-**Usage:**
-1. During playback, press OK to show controls
-2. Navigate to "🔊 Audio" button
-3. Select from available audio tracks
-4. Track changes apply immediately
-
-**API:**
-```kotlin
-// Get available tracks
-val tracks: List<AudioTrackInfo> = viewModel.getAudioTracks()
-
-// Select track
-viewModel.selectAudioTrack(groupIndex, trackIndex)
-```
-
-### Wake Lock Management
-**Optimization:** Smart lifecycle management for long-form content.
-
-**Behavior:**
-- **Acquire:** On playback start/resume (keeps screen on)
-- **Release:** On pause (saves battery, allows device sleep)
-- **Release:** On stop/service destroy
-- **No Timeout:** Supports movies of any length (2+ hours)
-
-**Battery Impact:**
-- 20-30% battery savings during pause periods
-- No interruptions during long movies
-- Device can sleep when VOD content is paused
-
-**Implementation:** Uses `PARTIAL_WAKE_LOCK` for CPU, `WAKE_MODE_NETWORK` for screen.
-
-## 🎨 Theme & Design System
-
-### User-Selectable Themes
-The app supports 4 dark theme variants, switchable at runtime from Settings:
+### Themes
+4 dark variants switchable at runtime. Architecture: `CinemaThemeHolder` + `CinemaThemePalette`. TV/mobile re-export files use computed `get()` properties.
 
 | Theme | Accent | Surfaces |
 |-------|--------|----------|
-| **Deep Night** (default) | Electric Blue `#2979FF` | `#0F1014`, `#161A20` |
-| **AMOLED Black** | Electric Blue `#2979FF` | `#000000`, `#0A0A0A` |
-| **Emerald** | Green `#00C853` | `#0F1014`, `#161A20` |
-| **Crimson** | Red `#FF1744` | `#0F1014`, `#161A20` |
+| **Deep Night** (default) | `#2979FF` Electric Blue | `#0F1014`, `#161A20` |
+| **AMOLED Black** | `#2979FF` | `#000000`, `#0A0A0A` |
+| **Emerald** | `#00C853` Green | `#0F1014`, `#161A20` |
+| **Crimson** | `#FF1744` Red | `#0F1014`, `#161A20` |
 
-**Architecture:** `CinemaThemeHolder` (global object) + `CinemaThemePalette` (immutable data class). TV and mobile re-export files (`CinemaColors.kt`, `Color.kt`) use computed `get()` properties that read from the holder. Zero screen-file changes needed when adding themes.
+Secondary accent (Vivid Orange `#FF6D00`) constant across themes. Status colors, text colors, glassmorphism tokens also constant. All colors defined in `core/ui/.../theme/CinemaThemePalette.kt`, re-exported by `tv/.../ui/theme/CinemaColors.kt` and `mobile/.../ui/theme/Color.kt`.
 
-**Implementation:**
-- Theme palettes defined in `core/ui/.../theme/CinemaThemePalette.kt`
-- TV re-exports: `tv/.../ui/theme/CinemaColors.kt`
-- Mobile re-exports: `mobile/.../ui/theme/Color.kt`
-- Theme ID persisted in `AppSettings.themeId`
-
-### Color Palette (Deep Night Default)
-Google TV Material 3 design with **Electric Blue** primary and **Vivid Orange** secondary:
-- **Primary Accent (Electric Blue)**: `#2979FF` - Focus states, primary CTAs
-- **Primary Dark**: `#1565C0` - Darker interactive states
-- **Primary Light**: `#82B1FF` - Focus borders & subtle highlights
-- **Secondary Accent (Vivid Orange)**: `#FF6D00` - LIVE badges, destructive actions
-- **Secondary Light**: `#FFAB40` - Secondary highlights
-- **Background (Deep Night)**: `#0F1014` - Main background
-- **Surface**: `#161A20` - Cards & elevated surfaces
-- **Surface Variant**: `#1E2228` - Secondary surfaces
-- **Surface Light**: `#2A3038` - Borders & dividers
-- **Glassmorphism BG**: `#0F1014` @ 75% alpha - Translucent backgrounds
-- **Glassmorphism Border**: `#2979FF` @ 15% alpha - Subtle gradient borders
-- **Text Primary**: `#FFFFFF` - Main text
-- **Text Secondary**: `#B0B0B0` - Secondary text
-
-Status colors (success/warning/error/live), text colors, and orange secondary remain constant across all themes.
-
-### Typography Scale
-Full 13-style scale optimized for 10-foot TV viewing distance (Roboto, system default):
-- **Display**: 48-40sp Bold (headlines, major titles)
-- **Headline**: 32-24sp SemiBold (section headers)
-- **Title**: 22-18sp Medium (subheaders, labels)
-- **Body**: 20-18sp Regular (main content - minimum 18sp)
-- **Label**: 18-14sp Medium (small labels, timestamps)
-
-**Key Rule:** All body text ≥18sp for TV readability.
-
-### Focus States (Every Interactive Element)
-All focusable components use animated focus feedback:
-- **Scale**: 1.0f → 1.1f (animated, 200ms tween)
-- **Border**: 2dp Electric Blue border on focus
-- **Glow**: 8dp shadow with `#2979FF` @ 40% opacity
-- **Animation**: `animateFloatAsState(tween(200ms))` for smooth scaling
-
-**Implementation:** See `FocusModifiers.kt` for `tvFocusable()`, `tvFocusableSubtle()`, `tvFocusableNoScale()`.
+### Typography & Focus
+- 13-style Roboto scale (48-14sp). **Key rule:** All body text >=18sp for TV readability.
+- Focus states: scale 1.0→1.1 (200ms tween), 2dp blue border, 8dp glow. See `FocusModifiers.kt`.
 
 ### Safe Margins (TV Overscan)
-All screens must respect 56dp horizontal / 32dp vertical safe margins to account for TV overscan:
-- **Horizontal**: `Spacing.tvSafeMarginHorizontal = 56.dp`
-- **Vertical**: `Spacing.tvSafeMarginVertical = 32.dp`
+56dp horizontal / 32dp vertical on all screen root containers: `Spacing.tvSafeMarginHorizontal`, `Spacing.tvSafeMarginVertical`.
 
-**Usage:** Apply to all screen root containers:
-```kotlin
-.padding(
-    horizontal = Spacing.tvSafeMarginHorizontal,
-    vertical = Spacing.tvSafeMarginVertical
-)
-```
+### Components
+**Cards:** `CinemaSelectableCard` (interactive), `CinemaInfoCard`, `CinemaCompactCard`, `CinemaStandardCard`
+**Buttons:** `CinemaPrimaryButton`, `CinemaSecondaryButton`, `CinemaTertiaryButton`, `CinemaIconButton`, `CinemaDangerButton`
+**Effects:** Glassmorphism (category sidebar), `AccentBlock.kt` (content-type gradients)
 
-### Component Design
-
-**Cards:**
-- `CinemaSelectableCard` - Interactive, focusable, glow effect
-- `CinemaInfoCard` - Non-interactive info display
-- `CinemaCompactCard` - Dense grid variant
-- `CinemaStandardCard` - Content with accent blocks
-
-**Buttons:**
-- `CinemaPrimaryButton` - Primary CTAs (Electric Blue)
-- `CinemaSecondaryButton` - Secondary actions (muted)
-- `CinemaTertiaryButton` - Minimal emphasis (outline)
-- `CinemaIconButton` - Icon-only actions
-- `CinemaDangerButton` - Destructive actions (Vivid Orange)
-
-**Special Effects:**
-- **Glassmorphism:** Category sidebar uses translucent background + gradient border
-- **Accent Blocks:** `AccentBlock.kt` provides content-type gradients (LIVE_TV orange, MOVIE blue, TV_SHOW light blue)
-
-## 📋 Coding Standards
-- **STRICT: No Hardcoded UI Values.** When adding or modifying any UI element, every visual attribute (colors, dimensions, spacing, opacity, corner radii, animation values, stroke widths, font sizes) **must** come from an existing design token constant — never use raw literals like `16.dp`, `Color.White`, `2.dp`, `0.5f`, etc. in screen/component files. If the needed token doesn't exist yet, **add it to the appropriate token file first**, then reference it. This rule applies to all new code and all modified code — no exceptions.
+## Coding Standards
+- **STRICT: No Hardcoded UI Values.** Every visual attribute must come from design token constants — never raw literals (`16.dp`, `Color.White`, etc.). Add missing tokens to token files first.
 - **Design Token Files:**
-  - **Shared (core/ui):** `CinemaColors` (colors), `CinemaAlpha` (opacity), `CinemaAnimation` (timing), `CinemaCornerRadius` (radii), `CinemaSpacing` (padding/margins)
-  - **TV-specific:** `TvDimensions` (sizes/spacing), `TvFocusTokens` (focus scale/border/glow)
-  - **Mobile-specific:** `MobileDimensions` (sizes/spacing)
-  - **Platform re-exports:** TV `CinemaColors.kt` and mobile `Color.kt` re-export core colors as computed `get()` properties from `CinemaThemeHolder` — screen files import from their platform package, not from core directly. TV `Spacing.kt` and mobile `Spacing.kt` re-export `CinemaSpacing` values.
-  - **Theme palettes:** `CinemaThemePalette.kt` defines per-theme color sets; `CinemaThemeHolder.current` is set by the theme composable
-  - For colors, always prefer `MaterialTheme.colorScheme.*` (e.g., `onSurface`, `primary`) or the platform re-export constants — never use `Color.White`, `Color.Black`, etc.
-- **Focus Management:** Every @Composable must be D-pad (remote) navigable. Use `Modifier.focusRestorer()` and `Modifier.focusable()`.
-- **Safe Areas:** Respect "Overscan." UI must remain 5% away from screen edges for Sony/Shield TVs.
-- **Mobile vs TV:** Use `WindowSizeClass` to switch between NavigationBar (Mobile) and NavigationRail/Drawer (TV).
+  - **Shared (core/ui):** `CinemaColors`, `CinemaAlpha`, `CinemaAnimation`, `CinemaCornerRadius`, `CinemaSpacing`
+  - **TV:** `TvDimensions`, `TvFocusTokens` | **Mobile:** `MobileDimensions`
+  - **Platform re-exports:** TV `CinemaColors.kt`/`Spacing.kt`, mobile `Color.kt`/`Spacing.kt` — screen files import from platform package
+  - Colors: prefer `MaterialTheme.colorScheme.*` or platform re-exports, never `Color.White`/`Color.Black`
+- **Focus Management:** Every @Composable must be D-pad navigable. Use `focusRestorer()` and `focusable()`.
+- **Safe Areas:** UI must remain 5% away from screen edges for Sony/Shield TVs.
+- **Mobile vs TV:** Use `WindowSizeClass` for layout switching.
 - **Network:** Support HTTP/Cleartext for legacy Xtream providers.
 
-## 📺 Device-Specific Rules
-- **NVIDIA Shield:** Enable "High-Performance" video codecs (AV1/HEVC) if the device is identified as 'shield'.
-- **Sony TV:** Avoid complex UI animations that might lag on mid-range Bravia processors; keep the UI lean.
-- **Chromecast:** Ensure the layout is responsive to "Compact" window sizes (often lower DPI on Chromecast).
+## Device-Specific Rules
+- **NVIDIA Shield:** Enable AV1/HEVC codecs if device is 'shield'.
+- **Sony TV:** Avoid complex UI animations on mid-range Bravia processors.
+- **Chromecast:** Responsive to "Compact" window sizes (lower DPI).
 
-## 🚀 Development Commands
-- **Build App:** `./gradlew assembleDebug`
-- **Build Release:** `./gradlew :mobile:assembleRelease` (or `:tv:assembleRelease`)
-- **Install on Shield/Sony:** `adb connect [TV_IP] && ./gradlew installDebug`
-- **Install mobile only on phone:** `adb -s emulator-5554 install -r mobile/build/outputs/apk/debug/mobile-debug.apk`
-- **Lint Check:** `./gradlew ktlintCheck`
+## Development Commands
+- **Build:** `./gradlew assembleDebug` | **Release:** `./gradlew :mobile:assembleRelease` (or `:tv:assembleRelease`)
+- **Install TV:** `adb connect [TV_IP] && ./gradlew installDebug`
+- **Install mobile:** `adb -s emulator-5554 install -r mobile/build/outputs/apk/debug/mobile-debug.apk`
+- **Lint:** `./gradlew ktlintCheck`
 
-**Note:** TV and mobile modules share the same `applicationId`. When deploying to both a phone and TV emulator simultaneously, use `adb -s <device>` to target the correct device to avoid overwriting one APK with the other.
+TV and mobile share `applicationId` — use `adb -s <device>` when deploying to both simultaneously.
 
-## 📱 App Navigation & Features
+## App Navigation & Features
 
 ### Navigation Flow
-The app follows this streamlined navigation structure:
-1. **App Startup:**
-   - **No Provider Configured:** Opens directly to Settings screen
-   - **Provider Configured + Last Content Type Saved:** Auto-navigates directly to last Category Grid (ContentTypeSelection stays on backstack for back button)
-   - **Provider Configured + No History:** Auto-restores session → Content Type Selection
-2. **Content Type Selection** (main landing page) - Choose Live TV, Movies, or TV Shows
-3. **Category Grid** - Browse categories and streams/episodes
-4. **Movie Details** (Movies) / **Episode Selection → Episode Details** (TV Shows) - Info screen before playback
-5. **Player Screen** - Video playback
-6. **Settings** - Accessible from Content Type Selection via gear icon
-7. **EPG Browser** - Accessible from Content Type Selection via book icon (only visible when EPG file exists on disk)
-8. **Provider Management** - Accessible from Settings → "Manage Providers"
-   - **Provider Selection:** List all providers with icon buttons (checkmark=select, pencil=edit, trash=delete, plus=add)
-   - **Add/Edit Provider:** Type selector (TV: D-pad dropdown, Mobile: ExposedDropdownMenu) + type-specific form fields (Xtream: URL/user/pass, Jellyfin: server URL/user/pass, SMB: host/share/user/pass, Local: folder/M3U picker). Edit mode includes inline provider settings (auto-resume, watch history size, favorites max size, clear buttons, category filters, caching toggle). TV form fields use `focusedContainerColor` for visible focus, switch rows use `tvFocusableNoScale()`.
+1. **Startup:** No provider → Settings. Provider + saved content type → auto-navigate to last Category Grid. Otherwise → Content Type Selection.
+2. **Content Type Selection** → **Category Grid** → **Details** (Movie/Episode) → **Player**
+3. **Settings** via gear icon, **EPG Browser** via book icon (visible when EPG data is indexed), **EPG Management** via Settings → "Manage EPG Data"
+4. **Provider Management** via Settings → "Manage Providers" (select/edit/delete/add with type-specific forms)
 
-**Note:** There is no login screen and no logout button anywhere in the app. Authentication happens automatically on startup via stored credentials, or after configuring a provider in Settings. To switch or remove a provider, use Settings → Manage Providers. Both TV and mobile use the same flow.
-
-**TV Back Navigation:** TV screens do not have explicit "Back" buttons — the remote's back button handles all backward navigation. Only error/fallback screens retain on-screen Back buttons.
-
-**Mobile Orientation:** The mobile app is locked to portrait mode (`android:screenOrientation="portrait"`) for all screens except the player. `MobilePlayerScreen` unlocks orientation to sensor on enter and locks back to portrait on dispose.
+**TV Back Navigation:** Remote back button only, no on-screen Back buttons (except error screens).
+**Mobile Orientation:** Portrait locked except player (sensor-based).
+**No login/logout screens.** Auth via stored credentials or provider configuration.
 
 ### Settings Screen
-Accessible from the ContentTypeSelection screen via the gear icon (bottom left):
-- **Active Provider Display:** Shows current provider name and URL
-- **Manage Providers:** Navigate to provider selection/management screen (add, edit, delete, switch providers)
-- **Theme Selection:** Choose from 4 dark themes (Deep Night, AMOLED Black, Emerald, Crimson) — persists across app restarts
-- **External EPG Source (XMLTV):** Global EPG URL editor with edit/save/clear/download buttons — used for external XMLTV EPG data across all providers (stored in `AppSettings.epgUrl`). Shows download status (Downloading/Downloaded with size/Failed/Error), file size, last refreshed date/time, search index status (programme/channel counts or indexing progress), and source timezone override (cycle button: Auto/UTC-12 to UTC+14). Download button triggers `EpgFileManager`. Timezone changes trigger automatic re-indexing. WiFi-only download enforcement.
-- **Cache Management:** View cache statistics and clear cached data
-  - Total cache size display
-  - Per-content-type breakdown (Live TV, Movies, TV Shows)
-  - Individual clear buttons for each content type
-  - Shows category cache status and stream list counts
-  - EPG data and other cache information
-- **UI Scale:** Adjust font, spacing, and element sizes for category/grid views
-  - Options: 70%, 80%, 90%, 100% (default: 100%)
-  - Applies to category grid screens and settings page
-  - Scales fonts, buttons, spacing, padding, cards, heights, and widths
-- **Developer Mode:** Enable debug features including:
-  - Stats for nerds (payload size tracking for API responses)
-  - Payload size metrics displayed in category grid
-  - Payload size tracking works even when loading from cache
-  - Debug information for troubleshooting
+- **Active Provider:** Name and URL display
+- **Manage Providers:** Navigate to provider CRUD screen
+- **Theme Selection:** 4 dark themes, persisted
+- **Manage EPG Data:** Navigate to EPG Management screen. Shows summary ("N sources, X programmes" or "No sources configured")
+- **Cache Management:** Total size, per-content-type breakdown with clear buttons
+- **UI Scale:** 70-100% for category/grid views
+- **Developer Mode:** Payload size tracking, debug info, provider type display
 
 ### Provider Settings (Inline in Edit Provider)
-Per-provider settings are configured inline on the Edit Provider screen (not visible when adding a new provider):
-- **Auto-Resume:** Toggle automatic playback resume for VOD content (default: enabled)
-- **Last Watched Queue Size:** Configure the number of items to keep in the "Last Watched" virtual category (range: 1-100, default: 25)
-- **Favorites Max Size:** Configure maximum number of favorites to store (range: 10-500, default: 100)
-- **Clear All Favorites:** Remove all favorited streams from all content types
-- **Clear Playback Progress:** Remove all saved positions (clears Continue Watching category)
-- **Category Filters:** Configure category filtering rules (Xtream only) — include/exclude by name/regex
-- **Enable Caching:** Toggle response caching (Xtream only, default: enabled)
-
-### Watch History Tracking
-Content-type specific watch history system:
-- Tracks recently watched streams across all content types (Live TV, Movies, TV Shows)
-- Configurable queue size via Edit Provider settings (1-100 items)
-- Maintains watch history per content type (separate tracking for each type)
-- Enables "Last Watched" virtual category for quick access to recently viewed content
-
-### Search
-**Access:** Category Grid Screen → magnifying glass icon button (both TV and mobile)
-
-**Architecture:** Two-phase parallel search with background pre-fetching.
-
-**Search Behavior:**
-- Search is triggered explicitly by pressing the search icon or keyboard search action (not auto-debounce)
-- Minimum 2 characters required
-- Results persist when clearing the text field — only replaced by a new search
-- Search term and results survive navigation to stream playback and back (ViewModel state)
-
-**Two-Phase Search (Xtream client-side):**
-1. **Phase 1 (Cache Sweep):** Instantly scans all cached categories in SharedPreferences — no network calls. Results displayed immediately.
-2. **Phase 2 (Network Fetch):** Fetches remaining uncached categories in parallel (semaphore=20, Channel-based streaming). Results stream in as they arrive with live progress updates (throttled to 100ms).
-- Target: 200 results max
-- Cancellable: new search cancels previous
-
-**Background Pre-fetching:** On SearchViewModel init, a background job pre-fetches all category items that aren't cached yet (independent of search, never cancelled by search). This warms the cache so subsequent searches are faster.
-
-**Server-side Search:** Jellyfin providers use native server-side search (single API call). Xtream falls back to client-side parallel iteration.
-
-**Dev Mode Stats (right-aligned, small font below progress):**
-- Network bytes fetched (excludes cached data)
-- Total wall-clock time
-- Network wall-clock time / accumulated per-call time
-- Call count with failure count
-- First error message (for debugging)
-
-**Key Files:**
-- `core/ui/.../viewmodels/SearchViewModel.kt` — Search orchestration, two-phase logic, stats
-- `core/ui/.../viewmodels/SearchViewModelFactory.kt` — Creates MediaRepository per search instance
-- `tv/.../feature/search/SearchScreen.kt` — TV search UI
-- `mobile/.../feature/search/SearchScreen.kt` — Mobile search UI
-
-### Developer Mode Features
-When enabled, provides debugging and performance insights:
-- **Payload Size Tracking:** Monitor API response sizes in bytes (works with both network and cache)
-- **Network Statistics:** View request/response metrics
-- **Search Stats:** Network bytes, wall/accumulated timing, call counts, failure reasons (displayed in search results)
-- **Debug Info:** Additional diagnostics for network operations
-- **Provider Type Display:** Shows provider type in parentheses after provider name on Content Type Selection screen (e.g., "My Server (JELLYFIN)")
+Auto-resume (default: on), Last Watched queue size (1-100, default: 25), Favorites max (10-500, default: 100), clear favorites/progress, category filters (Xtream only), caching toggle (Xtream only).
 
 ### Content Types
-The app supports three primary content types (availability depends on provider capabilities):
-- **Live TV:** Live television channels and streams (Xtream, Local with M3U)
-- **Movies (VOD):** On-demand movie content (all providers)
-- **TV Shows:** Series and episodes with episode selection support (Xtream, Jellyfin)
-
-### Episode Details (Inline)
-When selecting an episode from the episode list, an inline detail panel is shown before playback (same pattern as the Movie Details screen). This avoids a separate navigation route since all episode data is already loaded in `SeriesDetail`.
-
-**Features:**
-- Episode thumbnail, title, "Season X · Episode Y" label
-- Metadata row: rating (episode or series fallback), duration, "Ends at" time
-- Genre (from series)
-- Play / Resume buttons (resume shows saved position timestamp)
-- Plot description, cast, director (with series-level fallback)
-- Back button (mobile) or remote back (TV) returns to the episode list
-
-**Collapsible Seasons (Accordion):**
-- Multi-season shows display collapsible season headers with chevron indicators
-- **Accordion behavior:** Only one season is expanded at a time — opening a season collapses the others
-- Default: first season expanded on load
-- If watch history data is available, the season containing the **next unwatched/in-progress episode** is auto-expanded instead
-- Season headers on TV use `tvFocusableNoScale()` for D-pad focus visibility
-- If the API returns an empty `seasons` array, seasons are derived from episode map keys
-- Single-season shows skip the header entirely
-
-**Resume Logic:**
-- Uses `mediaRepository.getPlaybackPositionSuspend(episodeId, "TV_SHOWS")`
-- Shows Resume button if progress is between 2% and 95%
-- `startFromBeginning` parameter passed through to Player screen
-
-**Files:**
-- `tv/.../feature/episode/EpisodeSelectionScreen.kt` - TV version with GlassPanel, D-pad focus
-- `mobile/.../feature/episode/EpisodeSelectionScreen.kt` - Mobile version with scrollable layout
+- **Live TV:** Live channels (Xtream, Local with M3U)
+- **Movies (VOD):** On-demand (all providers)
+- **TV Shows:** Series with episode selection (Xtream, Jellyfin)
 
 ### Virtual Categories
-The app provides two special virtual categories that load locally from device storage:
+- **Continue Watching:** In-progress VOD items (not for Live TV)
+- **Favorites:** User-curated, star button in player, per-content-type, configurable max size
+- **Last Watched:** Chronological history, auto-updated on play, per-content-type, configurable queue size
 
-#### Favorites Virtual Category
-A user-curated collection of favorite streams:
-- Empty by default until streams are favorited
-- Add/remove favorites via star button in player controls
-- Loads instantly from local storage (no network call)
-- Filtered by content type (separate favorites for Live TV, Movies, TV Shows)
-- Pinned at top of category list for quick access
-- Size configurable via Edit Provider settings (range: 10-500, default: 100)
+### Episode Details (Inline)
+Inline detail panel before playback (no separate route). Thumbnail, metadata, Play/Resume buttons, plot/cast/director with series fallback. Collapsible season accordion (one expanded at a time, auto-expands next unwatched). Resume if 2-95% progress.
 
-#### Last Watched Virtual Category
-A dynamically generated category that displays:
-- Most recently watched streams across all content types
-- Ordered chronologically (newest first)
-- Automatically updated when streams are played
-- Loads instantly from local storage (no network call)
-- Filtered by content type (separate history for each type)
-- Pinned at top of category list below Favorites
-- Size configurable via Edit Provider settings (range: 1-100, default: 25)
+### Search
+**Access:** Category Grid → magnifying glass icon. Minimum 2 chars, explicit trigger.
+
+**Xtream (client-side):** Two-phase parallel search. Phase 1: instant cache sweep. Phase 2: network fetch of uncached categories (semaphore=20, streaming results, 200 max). Background pre-fetching warms cache on init.
+**Jellyfin:** Native server-side search.
+
+**Key Files:** `core/ui/.../viewmodels/SearchViewModel.kt`, `tv/.../feature/search/SearchScreen.kt`, `mobile/.../feature/search/SearchScreen.kt`
 
 ### EPG (Electronic Program Guide)
-**Feature:** Full TV Guide with grid view for Live TV channels displaying 24-hour program schedules.
+Full TV Guide grid for Live TV. Access: Category Grid → "TV Guide" button (Live TV only).
 
-**Access:** Category Grid Screen → "TV Guide" button (next to Search, only visible for Live TV)
+Grid: channel list (20%) + time grid (80%), 48×30min slots, auto-scroll to now, date navigation (prev/next day, jump to now). Click channel/program to play. Max 50 channels, 30-min cache TTL.
 
-**Features:**
-- **Grid Layout:** Two-pane design with channel list (20% width) and time grid (80% width)
-- **Time Slots:** 48 x 30-minute intervals covering full 24-hour day
-- **Current Time Indicator:** Highlighted time slot showing current time
-- **Auto-Scroll:** Automatically scrolls to current time on initial load
-- **Date Navigation:**
-  - Previous Day button (← arrow)
-  - Next Day button (→ arrow)
-  - Jump to Now button (returns to current date/time)
-- **Program Information:** Each cell displays start time and program title
-- **Current Program Highlighting:** Different background color for programs airing now
-- **Channel Selection:** Click any channel to start playback
-- **Program Selection:** Click any program to start playback on that channel
-
-**API Integration:**
-- **Primary Endpoint:** `get_simple_data_table` - Full EPG data for a stream
-- **Fallback Endpoint:** `get_short_epg` - Limited programs with configurable limit
-- **Cache Strategy:** 30-minute TTL with background refresh for optimal performance
-- **Bulk Fetching:** Parallel API calls for multiple channels (max 50 channels for performance)
-
-**Technical Details:**
-- **Data Models:** `EpgModels.kt` (EpgProgram, EpgResponse, EpgChannelRow, TimeSlot)
-- **ViewModel:** `EpgViewModel.kt` with Loading, Success, Error states
-- **UI Components:** `EpgGuideScreen.kt`, `EpgGridLayout.kt`
-- **Navigation:** Type-safe navigation via `Screen.EpgGuide(categoryId, categoryName)`
-- **Caching:** SharedPreferences with keys `epg_` + `epg_timestamp_` prefixes
-
-**Performance Optimizations:**
-- Maximum 50 channels displayed to ensure smooth scrolling
-- 30-minute cache expiry with background refresh
-- Lazy loading for channel rows and program cells
-- Synchronized horizontal scrolling across all channel rows
-
-**Error Handling:**
-- No EPG data available for channels
-- Authentication failures
-- Network errors
-- Empty program listings
-- Missing streams in category
-
-**Usage Flow:**
-1. Navigate to Live TV → Select a category
-2. Focus on "TV Guide" button in header (has calendar icon)
-3. Press OK/Center button
-4. EPG grid loads with current date and time
-5. Use D-pad to navigate: UP/DOWN for channels, LEFT/RIGHT for time
-6. Select program or channel to start playback
-7. Use date navigation buttons to view other days
-
-**Limitations:**
-- Live TV only (not available for Movies or TV Shows)
-- Only available when `provider.capabilities.supportsEpg` is true (currently Xtream only)
-- Max 50 channels displayed at once
-- Requires EPG data from IPTV provider
-- 30-minute cache refresh interval
+**API:** `get_simple_data_table` (primary), `get_short_epg` (fallback). Parallel bulk fetching.
+**Files:** `EpgModels.kt`, `EpgViewModel.kt`, `EpgGuideScreen.kt`, `EpgGridLayout.kt`
 
 ### EPG Browser
-**Feature:** Standalone screen for searching programme titles in a locally-cached XMLTV file. Pure local I/O, zero network calls during search.
+Standalone programme search screen. Access: Content Type Selection → book icon (visible when `EpgIndexer.state` is `Indexed`).
 
-**Access:** Content Type Selection → book icon (MenuBook), visible only when `xmltv_global.xml` exists in cache directory.
+Results grouped by title, sorted by airing count. Time window: -1 to +6 days, max 500 results. TV: GlassPanel/TvLazyColumn. Mobile: expandable cards/LazyColumn.
 
-**Features:**
-- Search programme titles across the entire XMLTV dataset
-- Results grouped by normalized title, sorted by airing count (descending)
-- Each result shows: title, category badge, description, channel name + airing times
-- Time window: past 1 day to future 6 days
-- Max 500 results with truncation indicator
-- Search source indicator: `[indexed]` (SQLite FTS) or `[XML scan]` (fallback)
-- Indexing progress banner with percentage and programme count
-- Dev mode: EPG file size displayed below search box
-- TV: GlassPanel cards in TvLazyColumn, D-pad navigable
-- Mobile: Expandable cards in LazyColumn (first 3 airings shown, expand for all)
+**Search:** SQLite FTS4 MATCH query (<100ms). Falls back to LIKE if FTS returns empty.
 
-**Search Strategy (Dual-Path):**
-1. **SQLite FTS (primary):** When index is built, uses FTS4 MATCH query (<100ms for millions of programmes). Falls back to LIKE if FTS returns empty or errors.
-2. **XML scan (fallback):** Streaming XmlPullParser scan of raw XMLTV file. Used when index not yet built or indexing in progress.
-- `XmltvSearchService` automatically selects the best path based on `EpgIndexer.state`
-- `EpgBrowserViewModel` groups flat results into `EpgBrowserProgram` with `EpgBrowserAiring` list
-- Search cancellable (new search cancels previous)
+**Indexing:** `EpgIndexer` singleton parses XMLTV into Room DB with FTS4. Streaming parse, 1000-row batch INSERTs. States: `NotIndexed`, `Indexing(progress)`, `Indexed(counts)`, `Failed(reason)`. Triggered by `EpgFileManager` after source ingestion.
 
-**SQLite FTS Indexing:**
-- `EpgIndexer` singleton parses XMLTV file once into Room database with FTS4 virtual table
-- Streaming parse with 1000-row batch INSERTs (~200KB per batch, memory-bounded)
-- `CountingInputStream` tracks bytes read for progress reporting
-- FTS rebuilt after all inserts via `INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')`
-- Index metadata tracks: file size, last modified, timezone offset — re-indexes automatically on any change
-- States: `NotIndexed`, `Indexing(progressPercent, channelsIndexed, programmesIndexed)`, `Indexed(channelCount, programmeCount, indexedAtMs)`, `Failed(reason)`
-- Triggered by `EpgFileManager` after EPG file download/refresh, and after timezone override changes in Settings
+**Timezone Override:** Per-source `timezoneOffsetHours` overrides XMLTV timestamps during parsing via `XmltvParser.timezoneOverrideHours`.
 
-**Timezone Override:**
-- Some XMLTV sources (e.g., Chinese providers) encode local times (UTC+8) but mislabel them as UTC (`+0000`)
-- `AppSettings.epgTimezoneOffsetHours` (range: -12 to +14, default: 0) overrides the XMLTV timezone during parsing
-- `XmltvParser.timezoneOverrideHours` volatile field applied in `parseTimestamp()` at parse time
-- Changing timezone in Settings triggers automatic re-indexing (stored epoch values depend on timezone)
-- Settings UI: cycle button showing "Auto (from data)" or "UTC+N"
+**Key Files:** `XmltvSearchService.kt` (SQLite-only search), `EpgBrowserModels.kt`, `XmltvParser.kt`, `epgindex/EpgIndexer.kt`, `epgindex/EpgIndexDatabase.kt` (Room v4), `epgindex/EpgIndexDao.kt` (FTS MATCH + LIKE), `epgindex/EpgProgrammeEntity.kt` (FTS4), `epgindex/EpgChannelEntity.kt`, `EpgBrowserViewModel.kt`
 
-**Key Files:**
-- `core/network/.../xmltv/XmltvSearchService.kt` — Dual-path search (SQLite FTS → LIKE → XML scan)
-- `core/network/.../xmltv/EpgBrowserModels.kt` — Domain models (EpgBrowserProgram, EpgBrowserAiring)
-- `core/network/.../xmltv/XmltvParser.kt` — `searchByTitle()` streaming parse, `parseTimestamp()` with timezone override
-- `core/network/.../xmltv/epgindex/EpgIndexer.kt` — Singleton indexing orchestrator
-- `core/network/.../xmltv/epgindex/EpgIndexDatabase.kt` — Room database (version 2, destructive migration)
-- `core/network/.../xmltv/epgindex/EpgIndexDao.kt` — DAO with FTS MATCH and LIKE queries
-- `core/network/.../xmltv/epgindex/EpgProgrammeEntity.kt` — Room entity + FTS4 virtual table (unicode61 tokenizer)
-- `core/network/.../xmltv/epgindex/EpgChannelEntity.kt` — Room entity for XMLTV channels
-- `core/network/.../xmltv/epgindex/EpgIndexMetadata.kt` — Tracks file size, last modified, timezone for staleness check
-- `core/network/.../xmltv/epgindex/EpgIndexState.kt` — Sealed interface for indexing state machine
-- `core/network/.../xmltv/epgindex/EpgSearchResultRow.kt` — JOIN query result model
-- `core/ui/.../viewmodels/EpgBrowserViewModel.kt` — ViewModel with Idle/NoEpgFile/Searching/Indexing/Results/Error states
-- `tv/.../feature/epgbrowser/EpgBrowserScreen.kt` — TV screen
-- `mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt` — Mobile screen
+### EPG Management (Multi-Source)
+Dedicated screen (`Screen.EpgManagement`) for managing multiple XMLTV EPG sources. Replaces the old single-URL EPG configuration in Settings.
 
-### EpgFileManager
-**Singleton** managing background XMLTV EPG file download lifecycle (`core/network/.../xmltv/EpgFileManager.kt`).
+**Architecture:** Download-ingest-delete pipeline per source. Each source URL is downloaded to a temp file, parsed into Room SQLite database, and the file is immediately deleted. No permanent XML files on disk. First source clears existing data (full rebuild), subsequent sources append (REPLACE handles channel ID overlaps).
 
-**Key Design Decisions:**
-- Uses raw `java.net.HttpURLConnection` instead of Ktor to avoid in-memory buffering of large (500MB+) responses
-- `Accept-Encoding: identity` header prevents automatic gzip decompression by HttpURLConnection
-- `.xml` URLs: saved directly as-is
-- `.gz` URLs: downloaded raw to disk first, then decompressed in a second file-to-file pass via `GZIPInputStream`
-- WiFi-only: downloads skip on cellular networks (`NetworkMonitor.currentNetworkType`)
-- Retry logic: 3 attempts with exponential backoff
-- 64KB I/O buffers, 10-minute read timeout
-- `OutOfMemoryError` caught explicitly (not caught by `catch (e: Exception)`)
-- States: `NoUrl`, `Downloading`, `Ready(file, sizeBytes, timestamp)`, `Failed(reason)`, `Error(reason, file?)`
-- On `initialize()`: applies timezone override to `XmltvParser`, triggers indexing if file exists
-- After download completes (`Ready` state): triggers `EpgIndexer` to build/rebuild SQLite index
-- `reindexIfNeeded()`: public method called from Settings when timezone override changes
-- Settings UI shows download status, file size, last refreshed date, index status, and timezone override
+**Data Model:** `EpgSourceEntity` in `epg_index.db` (Room v4) — stores URL, label, per-source timezone override, enabled flag, last ingested timestamp, last error.
+
+**EpgFileManager** (`core/network/.../xmltv/EpgFileManager.kt`): Singleton managing multi-source download lifecycle. Uses raw `HttpURLConnection` (not Ktor) for large files. `.gz` URLs: download then decompress. WiFi-only, 3 retries with exponential backoff, 64KB I/O buffers. `MultiSourceState`: Idle/Processing(source,index,total,phase)/Completed(count,errors)/Error. Auto-migrates legacy `AppSettings.epgUrl` to `EpgSourceEntity` on first init.
+
+**UI:** TV (`TvEpgManagementScreen`) and Mobile (`MobileEpgManagementScreen`). Source list with status dots (green=recent, yellow=>24h, red=error, gray=disabled), add/edit dialog (URL, label, timezone cycle), actions (Refresh All, Cleanup Files, Purge >7d, Clear All Data with confirmation).
+
+**Key Files:** `epgindex/EpgSourceEntity.kt`, `epgindex/EpgSourceDao.kt`, `EpgFileManager.kt`, `EpgManagementViewModel.kt`, `EpgManagementViewModelFactory.kt`
 
 ### Multi-Provider Architecture
-The app supports 4 provider types through a unified domain model abstraction. All providers map to generic types — screens never see provider-specific types.
-
-**Supported Provider Types:**
+4 provider types through unified domain model. Screens never see provider-specific types.
 
 | Provider | Live TV | Movies | TV Shows | EPG | Search | Auth | Progress Sync |
 |----------|---------|--------|----------|-----|--------|------|---------------|
@@ -542,188 +188,18 @@ The app supports 4 provider types through a unified domain model abstraction. Al
 | **SMB** | No | Yes | No | No | Yes | Optional | No |
 | **Local** | M3U only | Yes | No | No | Yes | No | No |
 
-**Domain Models** (in `core/player/.../domain/`):
-- `MediaProvider` - Interface all providers implement
-- `MediaCategory`, `MediaItem` - Provider-agnostic content types
-- `SeriesDetail`, `MovieDetail` - Detail models
-- `PlayableStream` - Resolved stream URI with headers
-- `ProviderCapabilities` - What each provider supports
-- `ProviderType` - Enum of provider types
+**Domain Models** (`core/player/.../domain/`): `MediaProvider`, `MediaCategory`, `MediaItem`, `SeriesDetail`, `MovieDetail`, `PlayableStream`, `ProviderCapabilities`, `ProviderType`
 
-**Key Architecture Files:**
-- `core/network/.../MediaRepository.kt` - Unified repository delegating to active `MediaProvider`
-- `core/network/.../MediaProviderFactory.kt` - Creates provider instances by type
-- `core/network/.../XtreamMediaProvider.kt` - Xtream adapter wrapping `XtreamApiService`
-- `core/network/.../XtreamMapper.kt` - Maps Xtream types to domain types
-- `core/network/.../jellyfin/JellyfinMediaProvider.kt` - Jellyfin REST API provider
-- `core/network/.../jellyfin/JellyfinApiService.kt` - Jellyfin HTTP client (Ktor)
-- `core/network/.../jellyfin/JellyfinModels.kt` - Jellyfin JSON models
-- `core/network/.../smb/SmbMediaProvider.kt` - SMB network share provider
-- `core/network/.../smb/SmbClient.kt` - SMB2/3 client wrapper (smbj)
-- `core/network/.../local/LocalMediaProvider.kt` - Local media/M3U provider
-- `core/network/.../local/LocalFileScanner.kt` - SAF directory scanner
-- `core/network/.../local/M3uParser.kt` - M3U/M3U8 playlist parser
+**Key Files:** `MediaRepository.kt` (unified repository), `MediaProviderFactory.kt`, `XtreamMediaProvider.kt`/`XtreamMapper.kt`, `jellyfin/JellyfinMediaProvider.kt`/`JellyfinApiService.kt`, `smb/SmbMediaProvider.kt`/`SmbClient.kt`, `local/LocalMediaProvider.kt`/`LocalFileScanner.kt`/`M3uParser.kt`
 
-**Storage:**
-- **Room database** (`ProviderEntity`) stores provider metadata (name, URL, username, type, config, active flag)
-- **Per-provider EncryptedSharedPreferences** for passwords (keyed by provider ID)
-- **Per-provider cache SharedPreferences** files (`xtream_cache_{id}`)
-- `ProviderEntity.type` field: `XTREAM`, `JELLYFIN`, `SMB`, or `LOCAL`
-- `ProviderEntity.config` field: JSON blob for type-specific configuration
+**Storage:** Room `ProviderEntity` (name, URL, username, type, config JSON, active flag), per-provider EncryptedSharedPreferences for passwords, per-provider cache SharedPreferences (`xtream_cache_{id}`).
 
-**Screens:**
-- **Provider Selection** (`Screen.ProviderSelection`): List all providers with select/edit/delete
-- **Add/Edit Provider** (`Screen.AddProvider`): Type-specific form fields per provider type; edit mode includes inline provider settings (auto-resume, history/favorites sizes, clear buttons, category filters, caching toggle)
-- **Content Type Selection**: Provider name clickable to open provider switcher dialog (dark-themed `AlertDialog` with `CinemaSurface` background); shows provider type in dev mode
+**Navigation IDs:** All `String` (not `Int`) for Jellyfin/SMB/Local compatibility.
+**Migration:** First launch auto-migrates single-provider `AccountManager` credentials to Room.
 
-**Navigation IDs:** All navigation uses `String` IDs (not `Int`) to support non-numeric IDs from Jellyfin/SMB/Local providers.
+**Provider Files:** `provider/ProviderEntity.kt`, `provider/ProviderDao.kt`, `provider/ProviderDatabase.kt` (v2), `provider/ProviderRepository.kt`, `ProviderViewModel.kt`, `Tv/MobileProviderSelectionScreen.kt`, `Tv/MobileAddProviderScreen.kt`
 
-**Migration:** On first launch after upgrade, existing single-provider credentials from `AccountManager` are automatically migrated to Room in both NavHosts before the `hasProvider` check.
-
-**Key Files:**
-- `core/network/.../provider/ProviderEntity.kt` - Room entity (with `type` and `config` fields)
-- `core/network/.../provider/ProviderDao.kt` - Data access object
-- `core/network/.../provider/ProviderDatabase.kt` - Room database singleton (version 2 with migration)
-- `core/network/.../provider/ProviderRepository.kt` - Repository wrapping DAO + encrypted prefs
-- `core/ui/.../viewmodels/ProviderViewModel.kt` - ViewModel with migration logic
-- `tv/.../feature/provider/TvProviderSelectionScreen.kt` - TV provider list
-- `tv/.../feature/provider/TvAddProviderScreen.kt` - TV add/edit form (type-specific fields)
-- `mobile/.../feature/provider/MobileProviderSelectionScreen.kt` - Mobile provider list
-- `mobile/.../feature/provider/MobileAddProviderScreen.kt` - Mobile add/edit form (type-specific fields)
-
-### Player UI Features
-
-#### Channel Switching Feedback
-**Toast Notification:** Visual confirmation when changing channels.
-- Appears at top-center of screen
-- Shows "Now Playing" label with channel name
-- Auto-dismisses after 3 seconds
-- Smooth slide-in/fade animations
-- Doesn't obstruct video content
-- Triggered automatically on D-pad up/down during Live TV
-
-**Important:** Channel switching (D-pad up/down) only works for **Live TV content**. For VOD (Movies/TV Shows), D-pad up/down does nothing to prevent accidental stream switching during playback. This is intentional design to protect the viewing experience.
-
-#### VOD Time Display
-**Feature:** Enhanced time information for on-demand content.
-
-**Information Displayed:**
-- **Progress Bar:** Visual indicator of playback progress
-- **Current Position / Total Duration:** Time counters below progress bar
-- **Remaining Time:** Shows time left until video ends (e.g., "Remaining: 1:23:45")
-- **Ends At:** Estimated completion time in 12-hour format (e.g., "Ends at 11:30 PM")
-  - Uses device timezone for accurate local time
-  - Automatically handles date rollovers (crossing midnight)
-  - Updates in real-time as playback progresses
-
-**Technical Details:**
-- Uses `Calendar.getInstance()` for timezone-aware calculations
-- Handles videos of any length (supports 2+ hour movies)
-- Time format adapts to device locale settings
-
-#### Stats Overlay ("Stats for Nerds")
-**Advanced Metrics:** Comprehensive playback statistics for power users.
-
-**Access:** Double-tap OK button during playback
-
-**Information Displayed:**
-- **Video:** Codec, resolution, frame rate, bitrate
-- **Audio:** Codec, sample rate, channels, bitrate
-- **Network:** Speed, buffer health, buffered position
-- **Performance:** Dropped frames, drop rate (color-coded)
-  - Green (< 0.5%): Excellent
-  - Yellow (0.5-2%): Acceptable
-  - Red (> 2%): Poor
-- **Playback:** Current position, duration
-- **Stream:** Type (Live/VOD), URL preview
-- **Device:** Model, Android API level
-
-**Features:**
-- 75% background opacity for excellent readability
-- Large fonts optimized for TV viewing distance (10ft+)
-- 3dp primary color border when focused
-- Repositionable with D-pad (4 corner positions)
-- Default position: bottom-right
-- Real-time performance monitoring
-- Double-tap OK to hide
-
-#### Subtitle/Caption Support
-**Feature:** Accessibility and multi-language subtitle selection.
-
-**Access:** Press OK → Navigate to "💬 Subtitle" button
-
-**Capabilities:**
-- Detect available subtitle tracks
-- "Off" option to disable all subtitles
-- Display language and format (SRT, VTT, CEA-608/708, TTML)
-- Instant subtitle switching
-- Visual indication of active subtitle
-
-**Supported Formats:**
-- SRT (SubRip)
-- VTT (WebVTT)
-- TTML (Timed Text Markup Language)
-- CEA-608/708 (Closed Captions)
-
-#### Quality/Bitrate Selection
-**Feature:** Manual video quality control for adaptive streams.
-
-**Access:** Press OK → Navigate to "⚙️ Quality" button
-
-**Capabilities:**
-- "Auto (Adaptive)" mode (recommended)
-- Manual quality selection (4K, 1440p, 1080p, 720p, 480p)
-- Display resolution, bitrate, frame rate
-- Instant quality switching
-- Visual indication of active quality
-
-**Use Cases:**
-- Bandwidth control
-- Data usage management
-- Device capability matching
-- Troubleshooting playback
-
-#### Control Discoverability Hints
-**Feature:** First-time user guidance overlay.
-
-**Behavior:**
-- Appears automatically on first playback
-- Lists all available controls with descriptions
-- Auto-dismisses after 7 seconds
-- "Got it!" to dismiss immediately
-- "Don't show again" to disable permanently
-
-**Controls Explained:**
-- OK Button → Show/hide controls
-- Double-tap OK → Toggle stats overlay
-- BACK Button → Exit player
-- D-pad Up/Down → Change channel (Live TV)
-- Pause/Resume → Control playback
-- Audio Button → Select audio track
-- Subtitle Button → Enable/disable subtitles
-- Quality Button → Select video quality
-
-#### Player Controls
-**TV Controls (D-pad):**
-- **Pause/Resume:** Toggle playback
-- **Audio Track:** Open audio track selector
-- **Subtitle:** Enable/disable subtitles
-- **Quality:** Select video quality
-- **Favorite:** Toggle stream favorite
-- **Back:** Exit to category grid
-- **D-pad Up/Down:** Previous/Next channel (Live TV only)
-- **Double-tap OK:** Toggle stats overlay
-
-**Mobile Controls (touch):**
-- Same feature set as TV: audio/subtitle/quality selectors, favorite toggle
-- Tap screen to show/hide controls
-- Controls displayed as horizontally scrollable button row
-- VOD: remaining time and "Ends at" display
-- Auto-resume from saved playback position (2-95% range)
-- Periodic position save every 5 seconds
-- Orientation unlocks to sensor during playback, locks back to portrait on exit
-
-## ⚠️ Workflow Rules
+## Workflow Rules
 - Read this file at the start of every session.
 - Before coding a UI feature, ask: "Is this D-pad friendly?"
 - Use Haiku model for metadata, manifest updates, and documentation.
