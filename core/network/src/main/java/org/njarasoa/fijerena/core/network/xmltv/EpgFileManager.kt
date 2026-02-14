@@ -27,7 +27,8 @@ import java.util.zip.GZIPInputStream
  * Singleton managing multi-source EPG download-ingest-delete pipeline.
  *
  * For each source: download to temp file -> parse into SQLite -> delete temp file.
- * No permanent XML files on disk.
+ * No permanent XML files on disk. Database stays searchable during sync
+ * (append-only with REPLACE deduplication via unique index).
  *
  * Uses raw HttpURLConnection instead of Ktor to avoid in-memory buffering
  * of large (500MB+) responses.
@@ -55,19 +56,37 @@ class EpgFileManager private constructor(private val context: Context) {
             }
         }
 
-        fun extractDomainLabel(url: String): String {
+        fun extractLabel(url: String): String {
             return try {
-                URL(url).host
-                    .removePrefix("www.")
-                    .removeSuffix(".com")
-                    .removeSuffix(".org")
-                    .removeSuffix(".net")
-                    .take(30)
+                val path = URL(url).path.trimEnd('/')
+                val filename = path.substringAfterLast('/')
+                    .removeSuffix(".gz")
+                    .removeSuffix(".xml")
+                    .removeSuffix(".xmltv")
+                if (filename.isNotBlank()) {
+                    filename.take(30)
+                } else {
+                    URL(url).host
+                        .removePrefix("www.")
+                        .take(30)
+                }
             } catch (e: Exception) {
                 "Source"
             }
         }
     }
+
+    /**
+     * Per-source stats collected during processing.
+     */
+    data class SourceStats(
+        val sourceId: Long,
+        val label: String,
+        val downloadBytes: Long = 0,
+        val channelsIngested: Int = 0,
+        val programmesIngested: Int = 0,
+        val error: String? = null
+    )
 
     sealed interface MultiSourceState {
         data object Idle : MultiSourceState
@@ -75,11 +94,20 @@ class EpgFileManager private constructor(private val context: Context) {
             val sourceLabel: String,
             val sourceIndex: Int,
             val totalSources: Int,
-            val phase: String // "Downloading" or "Ingesting"
+            val phase: String, // "Downloading" or "Ingesting"
+            val downloadedBytes: Long = 0,
+            val downloadTotalBytes: Long = -1, // -1 = unknown
+            val sourceChannels: Int = 0,
+            val sourceProgrammes: Int = 0,
+            val completedSourceStats: List<SourceStats> = emptyList()
         ) : MultiSourceState
         data class Completed(
             val sourcesProcessed: Int,
-            val errors: Int
+            val errors: Int,
+            val sourceStats: List<SourceStats> = emptyList(),
+            val totalChannels: Int = 0,
+            val totalProgrammes: Int = 0,
+            val totalDownloadBytes: Long = 0
         ) : MultiSourceState
         data class Error(val reason: String) : MultiSourceState
     }
@@ -91,10 +119,12 @@ class EpgFileManager private constructor(private val context: Context) {
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
     val state: StateFlow<MultiSourceState> = _state.asStateFlow()
 
-    /**
-     * Initialize the EPG file manager. Call from MainActivity.onCreate().
-     * Handles migration from old single-URL AppSettings to EpgSourceEntity.
-     */
+    // Track download bytes for current source (updated during download)
+    @Volatile
+    private var currentDownloadBytes: Long = 0
+    @Volatile
+    private var currentDownloadTotalBytes: Long = -1
+
     fun initialize() {
         scope.launch {
             migrateFromAppSettings()
@@ -104,10 +134,6 @@ class EpgFileManager private constructor(private val context: Context) {
         }
     }
 
-    /**
-     * One-time migration: if old AppSettings.epgUrl is non-blank and no sources exist,
-     * create an EpgSourceEntity from it, then clear the old settings.
-     */
     private suspend fun migrateFromAppSettings() {
         if (prefs.getBoolean(KEY_MIGRATED_TO_SOURCES, false)) return
 
@@ -120,7 +146,7 @@ class EpgFileManager private constructor(private val context: Context) {
                 val db = EpgIndexDatabase.getInstance(context)
                 val sourceDao = db.epgSourceDao()
                 if (sourceDao.getSourceCount() == 0) {
-                    val label = extractDomainLabel(oldUrl)
+                    val label = extractLabel(oldUrl)
                     sourceDao.insertSource(
                         EpgSourceEntity(
                             url = oldUrl,
@@ -132,7 +158,6 @@ class EpgFileManager private constructor(private val context: Context) {
                 }
             }
 
-            // Delete old xmltv_global.xml if it exists
             val oldFile = File(context.cacheDir, "xmltv_global.xml")
             if (oldFile.exists()) {
                 oldFile.delete()
@@ -147,7 +172,7 @@ class EpgFileManager private constructor(private val context: Context) {
 
     /**
      * Process all enabled sources: download-ingest-delete each sequentially.
-     * First source clears existing data (full rebuild), subsequent sources append.
+     * Append-only: database stays searchable throughout.
      */
     suspend fun processAllSources(sources: List<EpgSourceEntity>) {
         processJob?.cancel()
@@ -168,88 +193,184 @@ class EpgFileManager private constructor(private val context: Context) {
         val indexer = EpgIndexer.getInstance(context)
 
         var errorCount = 0
+        val allStats = mutableListOf<SourceStats>()
 
         sources.forEachIndexed { index, source ->
-            val label = source.label.ifBlank { extractDomainLabel(source.url) }
-
-            _state.value = MultiSourceState.Processing(
-                sourceLabel = label,
-                sourceIndex = index + 1,
-                totalSources = sources.size,
-                phase = "Downloading"
-            )
-
-            val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
-            val tmpGzFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp.gz")
-
-            try {
-                // Download
-                val downloaded = downloadToFile(source.url, tmpFile, tmpGzFile)
-                if (!downloaded) {
-                    sourceDao.markError(source.id, "Download failed")
-                    errorCount++
-                    return@forEachIndexed
-                }
-
-                // Validate
-                if (!validateXmltvFile(tmpFile)) {
-                    tmpFile.delete()
-                    sourceDao.markError(source.id, "Invalid XMLTV file")
-                    errorCount++
-                    return@forEachIndexed
-                }
-
-                _state.value = MultiSourceState.Processing(
-                    sourceLabel = label,
-                    sourceIndex = index + 1,
-                    totalSources = sources.size,
-                    phase = "Ingesting"
-                )
-
-                // Ingest
-                if (index == 0) {
-                    // First source: full rebuild (clears DB)
-                    indexer.startIndexing(tmpFile)
-                } else {
-                    // Subsequent sources: append
-                    indexer.appendFromFile(tmpFile, source.timezoneOffsetHours)
-                }
-
-                // Mark success
-                sourceDao.markIngested(source.id, System.currentTimeMillis())
-                Log.d(TAG, "Source ${index + 1}/${sources.size} ingested: $label")
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Error processing source: $label", e)
-                sourceDao.markError(source.id, e.message ?: "Unknown error")
-                errorCount++
-            } finally {
-                // Always delete temp files
-                tmpFile.delete()
-                tmpGzFile.delete()
-            }
+            val label = source.label.ifBlank { extractLabel(source.url) }
+            val stats = processSource(source, label, index, sources.size, sourceDao, indexer, allStats)
+            allStats.add(stats)
+            if (stats.error != null) errorCount++
         }
 
-        // If multiple sources, rebuild FTS once at the end
-        if (sources.size > 1) {
-            indexer.rebuildFtsAndUpdateState()
-        }
+        // Rebuild FTS once at the end
+        indexer.rebuildFtsAndUpdateState()
+
+        val totalChannels = allStats.sumOf { it.channelsIngested }
+        val totalProgrammes = allStats.sumOf { it.programmesIngested }
+        val totalBytes = allStats.sumOf { it.downloadBytes }
 
         _state.value = MultiSourceState.Completed(
             sourcesProcessed = sources.size,
-            errors = errorCount
+            errors = errorCount,
+            sourceStats = allStats,
+            totalChannels = totalChannels,
+            totalProgrammes = totalProgrammes,
+            totalDownloadBytes = totalBytes
         )
 
-        // Reset to Idle after a brief display period
         scope.launch {
-            delay(3000)
-            _state.value = MultiSourceState.Idle
+            delay(10000)
+            if (_state.value is MultiSourceState.Completed) {
+                _state.value = MultiSourceState.Idle
+            }
         }
     }
 
     /**
-     * Delete any stray xmltv_* files in the cache directory.
+     * Process a single source by ID. Used for per-source refresh.
      */
+    suspend fun processSingleSource(sourceId: Long) {
+        val networkType = NetworkMonitor.currentNetworkType
+        if (networkType == NetworkType.CELLULAR) {
+            _state.value = MultiSourceState.Error("WiFi required for EPG downloads")
+            return
+        }
+
+        val db = EpgIndexDatabase.getInstance(context)
+        val sourceDao = db.epgSourceDao()
+        val source = sourceDao.getSourceById(sourceId) ?: run {
+            _state.value = MultiSourceState.Error("Source not found")
+            return
+        }
+        val indexer = EpgIndexer.getInstance(context)
+        val label = source.label.ifBlank { extractLabel(source.url) }
+
+        val stats = processSource(source, label, 0, 1, sourceDao, indexer, emptyList())
+
+        // Rebuild FTS
+        indexer.rebuildFtsAndUpdateState()
+
+        _state.value = MultiSourceState.Completed(
+            sourcesProcessed = 1,
+            errors = if (stats.error != null) 1 else 0,
+            sourceStats = listOf(stats),
+            totalChannels = stats.channelsIngested,
+            totalProgrammes = stats.programmesIngested,
+            totalDownloadBytes = stats.downloadBytes
+        )
+
+        scope.launch {
+            delay(10000)
+            if (_state.value is MultiSourceState.Completed) {
+                _state.value = MultiSourceState.Idle
+            }
+        }
+    }
+
+    /**
+     * Process a single source: download, ingest, delete temp file.
+     * Returns stats for this source.
+     */
+    private suspend fun processSource(
+        source: EpgSourceEntity,
+        label: String,
+        index: Int,
+        total: Int,
+        sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
+        indexer: EpgIndexer,
+        completedStats: List<SourceStats>
+    ): SourceStats {
+        currentDownloadBytes = 0
+        currentDownloadTotalBytes = -1
+
+        _state.value = MultiSourceState.Processing(
+            sourceLabel = label,
+            sourceIndex = index + 1,
+            totalSources = total,
+            phase = "Downloading",
+            downloadedBytes = 0,
+            downloadTotalBytes = -1,
+            completedSourceStats = completedStats
+        )
+
+        val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
+        val tmpGzFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp.gz")
+
+        try {
+            // Download
+            val downloadedBytes = downloadToFile(source.url, tmpFile, tmpGzFile) { bytes, totalBytes ->
+                currentDownloadBytes = bytes
+                currentDownloadTotalBytes = totalBytes
+                _state.value = MultiSourceState.Processing(
+                    sourceLabel = label,
+                    sourceIndex = index + 1,
+                    totalSources = total,
+                    phase = "Downloading",
+                    downloadedBytes = bytes,
+                    downloadTotalBytes = totalBytes,
+                    completedSourceStats = completedStats
+                )
+            }
+
+            if (downloadedBytes < 0) {
+                sourceDao.markError(source.id, "Download failed")
+                return SourceStats(source.id, label, error = "Download failed")
+            }
+
+            // Validate
+            if (!validateXmltvFile(tmpFile)) {
+                tmpFile.delete()
+                sourceDao.markError(source.id, "Invalid XMLTV file")
+                return SourceStats(source.id, label, downloadBytes = downloadedBytes, error = "Invalid XMLTV file")
+            }
+
+            _state.value = MultiSourceState.Processing(
+                sourceLabel = label,
+                sourceIndex = index + 1,
+                totalSources = total,
+                phase = "Ingesting",
+                downloadedBytes = downloadedBytes,
+                downloadTotalBytes = downloadedBytes,
+                completedSourceStats = completedStats
+            )
+
+            // Ingest with per-source timezone
+            val previousTz = XmltvParser.timezoneOverrideHours
+            XmltvParser.timezoneOverrideHours = source.timezoneOffsetHours
+            try {
+                indexer.startIndexing(tmpFile)
+            } finally {
+                XmltvParser.timezoneOverrideHours = previousTz
+            }
+
+            val ingestionStats = indexer.lastIngestionStats
+            sourceDao.markIngested(
+                id = source.id,
+                timestamp = System.currentTimeMillis(),
+                channels = ingestionStats.channelsIngested,
+                programmes = ingestionStats.programmesIngested,
+                downloadBytes = downloadedBytes
+            )
+            Log.d(TAG, "Source ${index + 1}/$total ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg, ${downloadedBytes / 1024}KB)")
+
+            return SourceStats(
+                sourceId = source.id,
+                label = label,
+                downloadBytes = downloadedBytes,
+                channelsIngested = ingestionStats.channelsIngested,
+                programmesIngested = ingestionStats.programmesIngested
+            )
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error processing source: $label", e)
+            sourceDao.markError(source.id, e.message ?: "Unknown error")
+            return SourceStats(source.id, label, downloadBytes = currentDownloadBytes, error = e.message ?: "Unknown error")
+        } finally {
+            tmpFile.delete()
+            tmpGzFile.delete()
+        }
+    }
+
     fun cleanupStrayFiles() {
         try {
             val cacheDir = context.cacheDir
@@ -267,9 +388,15 @@ class EpgFileManager private constructor(private val context: Context) {
 
     /**
      * Download a URL to a temp file, handling .gz decompression.
-     * Returns true on success.
+     * Returns downloaded bytes on success, -1 on failure.
+     * Calls [onProgress] with (bytesDownloaded, totalBytes) during download.
      */
-    private suspend fun downloadToFile(url: String, tmpFile: File, tmpGzFile: File): Boolean {
+    private suspend fun downloadToFile(
+        url: String,
+        tmpFile: File,
+        tmpGzFile: File,
+        onProgress: (Long, Long) -> Unit
+    ): Long {
         val isGzip = url.endsWith(".gz", ignoreCase = true)
         var lastError: String? = null
 
@@ -294,6 +421,7 @@ class EpgFileManager private constructor(private val context: Context) {
                     break
                 }
 
+                val contentLength = connection.contentLengthLong
                 val downloadTarget = if (isGzip) tmpGzFile else tmpFile
 
                 downloadTarget.delete()
@@ -311,11 +439,18 @@ class EpgFileManager private constructor(private val context: Context) {
                                 Log.d(TAG, "XMLTV download: ${currentMb}MB written")
                                 lastLoggedMb = currentMb
                             }
+                            // Report progress every 256KB
+                            if (totalBytes % (256 * 1024) < BUFFER_SIZE.toLong()) {
+                                onProgress(totalBytes, contentLength)
+                            }
                         }
                         output.flush()
+                        onProgress(totalBytes, totalBytes)
                         Log.d(TAG, "XMLTV download complete: ${totalBytes / (1024 * 1024)}MB")
                     }
                 }
+
+                val rawDownloadSize = downloadTarget.length()
 
                 if (isGzip) {
                     Log.d(TAG, "Decompressing .gz file (${tmpGzFile.length() / (1024 * 1024)}MB)")
@@ -342,12 +477,12 @@ class EpgFileManager private constructor(private val context: Context) {
                     tmpGzFile.delete()
                 }
 
-                return true
+                return rawDownloadSize
 
             } catch (e: java.net.UnknownHostException) {
                 tmpFile.delete(); tmpGzFile.delete()
                 Log.w(TAG, "No internet connection")
-                return false
+                return -1
             } catch (e: OutOfMemoryError) {
                 tmpFile.delete(); tmpGzFile.delete()
                 System.gc()
@@ -378,7 +513,7 @@ class EpgFileManager private constructor(private val context: Context) {
                 connection?.disconnect()
             }
         }
-        return false
+        return -1
     }
 
     private fun validateXmltvFile(file: File): Boolean {

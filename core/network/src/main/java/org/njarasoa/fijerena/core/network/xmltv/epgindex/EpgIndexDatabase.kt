@@ -13,7 +13,7 @@ import androidx.room.RoomDatabase
         EpgIndexMetadata::class,
         EpgSourceEntity::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class EpgIndexDatabase : RoomDatabase() {

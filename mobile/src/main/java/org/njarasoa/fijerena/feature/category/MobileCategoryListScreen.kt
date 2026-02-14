@@ -250,42 +250,80 @@ private fun CategoryChipRow(
     selectedCategoryId: String?,
     onCategorySelected: (String) -> Unit
 ) {
+    val virtualCategoryIds = setOf(
+        CategoryViewModel.FAVORITES_CATEGORY_ID,
+        CategoryViewModel.LAST_WATCHED_CATEGORY_ID
+    )
+    val virtualCategories = categories.filter { it.id in virtualCategoryIds }
+    val regularCategories = categories.filter { it.id !in virtualCategoryIds }
+
     val listState = rememberLazyListState()
 
     LaunchedEffect(selectedCategoryId) {
-        if (selectedCategoryId != null) {
-            val index = categories.indexOfFirst { it.id == selectedCategoryId }
+        if (selectedCategoryId != null && selectedCategoryId !in virtualCategoryIds) {
+            val index = regularCategories.indexOfFirst { it.id == selectedCategoryId }
             if (index >= 0) {
                 listState.animateScrollToItem(index)
             }
         }
     }
 
-    LazyRow(
-        state = listState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        itemsIndexed(categories, key = { _, cat -> cat.id }) { _, category ->
-            val isSelected = category.id == selectedCategoryId
-            FilterChip(
-                selected = isSelected,
-                onClick = { onCategorySelected(category.id) },
-                label = {
-                    Text(
-                        text = category.name,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarquee()
+    Column {
+        // Virtual categories row (Favorites, Last Watched)
+        if (virtualCategories.isNotEmpty()) {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = CinemaSpacing.sm, bottom = CinemaSpacing.xs),
+                contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+            ) {
+                items(virtualCategories, key = { it.id }) { category ->
+                    FilterChip(
+                        selected = category.id == selectedCategoryId,
+                        onClick = { onCategorySelected(category.id) },
+                        label = {
+                            Text(
+                                text = category.name,
+                                maxLines = 1,
+                                modifier = Modifier.basicMarquee()
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                }
+            }
+        }
+
+        // Regular categories row
+        LazyRow(
+            state = listState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = CinemaSpacing.sm),
+            contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+        ) {
+            items(regularCategories, key = { it.id }) { category ->
+                FilterChip(
+                    selected = category.id == selectedCategoryId,
+                    onClick = { onCategorySelected(category.id) },
+                    label = {
+                        Text(
+                            text = category.name,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 )
-            )
+            }
         }
     }
 }
