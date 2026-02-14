@@ -83,7 +83,10 @@ fun EpgBrowserScreen(
     val indexState by viewModel.indexState.collectAsState()
     val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
     val isDevMode = appSettings.isDevMode
-    val epgFileSizeBytes = viewModel.epgFileSizeBytes
+    val epgDbStats = when (val idx = indexState) {
+        is EpgIndexState.Indexed -> "${idx.programmeCount} progs, ${idx.channelCount} channels"
+        else -> null
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -133,7 +136,7 @@ fun EpgBrowserScreen(
                         uiState = state,
                         indexState = indexState,
                         isDevMode = isDevMode,
-                        epgFileSizeBytes = epgFileSizeBytes,
+                        epgDbStats = epgDbStats,
                         onSearch = { viewModel.performSearch(it) }
                     )
                 }
@@ -147,7 +150,7 @@ private fun EpgBrowserContent(
     uiState: EpgBrowserViewModel.UiState,
     indexState: EpgIndexState,
     isDevMode: Boolean,
-    epgFileSizeBytes: Long?,
+    epgDbStats: String?,
     onSearch: (String) -> Unit
 ) {
     val searchFocusRequester = remember { FocusRequester() }
@@ -205,10 +208,10 @@ private fun EpgBrowserContent(
             searchFocusRequester.requestFocus()
         }
 
-        // Dev mode: show EPG file size
-        if (isDevMode && epgFileSizeBytes != null) {
+        // Dev mode: show EPG DB stats
+        if (isDevMode && epgDbStats != null) {
             Text(
-                text = "EPG file: ${formatFileSize(epgFileSizeBytes)}",
+                text = "EPG: $epgDbStats",
                 style = MaterialTheme.typography.labelSmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
                 modifier = Modifier.padding(top = Spacing.xs)

@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.feature.category.CategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.epg.EpgGuideScreen
+import org.njarasoa.fijerena.feature.epg.TvEpgManagementScreen
 import org.njarasoa.fijerena.feature.epgbrowser.EpgBrowserScreen
 import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
@@ -80,18 +81,6 @@ fun TvNavHost(
                     providerRepo.addProvider(name, url, username, password)
                 }
             }
-            // One-time migration: copy provider epgUrl to global AppSettings.epgUrl
-            val appSettingsMigration = org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext)
-            if (appSettingsMigration.epgUrl.isBlank()) {
-                val activeProvider = providerRepo.getActiveProvider()
-                if (activeProvider != null) {
-                    val ps = providerRepo.getProviderSettings(activeProvider.id)
-                    if (ps.epgUrl.isNotBlank()) {
-                        appSettingsMigration.epgUrl = ps.epgUrl
-                    }
-                }
-            }
-
             providerRepo.getProviderCount() > 0
         }
     }
@@ -464,6 +453,13 @@ fun TvNavHost(
                 )
             }
 
+            // EPG Management Screen
+            composable<Screen.EpgManagement> {
+                TvEpgManagementScreen(
+                    onBack = { navController.navigateUp() }
+                )
+            }
+
             // Settings Screen
             composable<Screen.Settings> {
                 // Prevent back from exiting if Settings is the start destination (no provider)
@@ -475,6 +471,9 @@ fun TvNavHost(
                     onThemeChanged = onThemeChanged,
                     onManageProviders = {
                         navController.navigate(Screen.ProviderSelection)
+                    },
+                    onManageEpg = {
+                        navController.navigate(Screen.EpgManagement)
                     },
                     onProviderChanged = {
                         coroutineScope.launch {

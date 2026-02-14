@@ -313,8 +313,7 @@ class CategoryViewModel(
         if (contentType != "LIVE_TV") return
         viewModelScope.launch {
             val caps = repository.getCapabilities()
-            val appSettings = repository.getAppSettings()
-            val hasExternalEpg = appSettings.epgUrl.isNotBlank()
+            val hasExternalEpg = repository.hasIndexedEpgData()
             if (caps?.supportsEpg != true && !hasExternalEpg) return@launch
             val epgData = repository.getEpgBulkForItems(
                 items.take(50)

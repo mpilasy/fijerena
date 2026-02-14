@@ -108,11 +108,11 @@ fun ContentTypeSelectionScreen(
         mutableStateOf(org.njarasoa.fijerena.core.network.provider.CategoryFilters())
     }
 
-    // Only show EPG Browser button when a local EPG file exists
-    val hasEpgFile = remember {
-        java.io.File(context.applicationContext.cacheDir, "xmltv_global.xml").let {
-            it.exists() && it.length() > 0
-        }
+    // Show EPG Browser button when EPG index has data
+    val hasEpgData = remember {
+        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+            .getInstance(context.applicationContext).state.value is
+            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
     }
 
 
@@ -236,7 +236,7 @@ fun ContentTypeSelectionScreen(
                             )
                         }
                     }
-                    if (hasEpgFile) {
+                    if (hasEpgData) {
                         CinemaIconButton(
                             onClick = onEpgBrowser,
                             icon = {

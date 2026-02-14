@@ -339,6 +339,206 @@ class EpgIndexer private constructor(private val context: Context) {
     }
 
     /**
+     * Append data from a file without clearing existing data.
+     * Uses REPLACE for channels (handles overlapping channel IDs across sources)
+     * and accumulates programmes.
+     *
+     * @param file The XMLTV file to parse
+     * @param timezoneOverride Per-source timezone offset applied during parsing
+     */
+    suspend fun appendFromFile(file: File, timezoneOverride: Int) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Appending from ${file.name} (${file.length() / (1024 * 1024)}MB) tz=$timezoneOverride")
+
+        val previousTz = XmltvParser.timezoneOverrideHours
+        XmltvParser.timezoneOverrideHours = timezoneOverride
+
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+
+            val fileSize = file.length()
+            var channelCount = 0
+            var programmeCount = 0
+
+            val allChannels = mutableListOf<EpgChannelEntity>()
+            val programmeBatch = mutableListOf<EpgProgrammeEntity>()
+
+            val factory = XmlPullParserFactory.newInstance()
+            factory.isNamespaceAware = false
+            val parser = factory.newPullParser()
+
+            val countingStream = CountingInputStream(
+                BufferedInputStream(FileInputStream(file), STREAM_BUFFER_SIZE)
+            )
+            parser.setInput(countingStream, null)
+
+            var eventType = parser.eventType
+            var channelsFinished = false
+
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                if (eventType == XmlPullParser.START_TAG) {
+                    when (parser.name) {
+                        "channel" -> {
+                            val channel = XmltvParser.parseChannelForIndex(parser)
+                            if (channel != null) {
+                                allChannels.add(channel)
+                                channelCount++
+                            }
+                        }
+                        "programme" -> {
+                            if (!channelsFinished) {
+                                channelsFinished = true
+                                if (allChannels.isNotEmpty()) {
+                                    for (batch in allChannels.chunked(BATCH_SIZE)) {
+                                        dao.insertChannels(batch)
+                                    }
+                                }
+                            }
+
+                            val programme = XmltvParser.parseProgrammeForIndex(parser)
+                            if (programme != null) {
+                                programmeBatch.add(programme)
+                                programmeCount++
+                                if (programmeBatch.size >= BATCH_SIZE) {
+                                    dao.insertProgrammes(programmeBatch.toList())
+                                    programmeBatch.clear()
+
+                                    val bytesProcessed = countingStream.bytesRead
+                                    val percent = if (fileSize > 0) {
+                                        ((bytesProcessed * 100) / fileSize).toInt().coerceIn(0, 99)
+                                    } else 0
+                                    _state.value = EpgIndexState.Indexing(
+                                        progressPercent = percent,
+                                        channelsIndexed = channelCount,
+                                        programmesIndexed = programmeCount
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+
+            if (!channelsFinished && allChannels.isNotEmpty()) {
+                for (batch in allChannels.chunked(BATCH_SIZE)) {
+                    dao.insertChannels(batch)
+                }
+            }
+
+            if (programmeBatch.isNotEmpty()) {
+                dao.insertProgrammes(programmeBatch.toList())
+            }
+
+            Log.d(TAG, "Append complete: $channelCount channels, $programmeCount programmes")
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            Log.e(TAG, "Out of memory during append", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Append failed: ${e.message}", e)
+        } finally {
+            XmltvParser.timezoneOverrideHours = previousTz
+        }
+    }
+
+    /**
+     * Rebuild FTS index and update metadata/state from current DB contents.
+     */
+    suspend fun rebuildFtsAndUpdateState() = withContext(Dispatchers.IO) {
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+
+            Log.d(TAG, "Rebuilding FTS index...")
+            db.openHelper.writableDatabase.execSQL(
+                "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')"
+            )
+
+            val now = System.currentTimeMillis()
+            val finalChannelCount = dao.getChannelCount()
+            val finalProgrammeCount = dao.getProgrammeCount()
+
+            dao.insertMetadata(
+                EpgIndexMetadata(
+                    fileSizeBytes = 0,
+                    fileLastModifiedMs = 0,
+                    indexedAtMs = now,
+                    channelCount = finalChannelCount,
+                    programmeCount = finalProgrammeCount,
+                    timezoneOffsetHours = 0
+                )
+            )
+
+            _state.value = EpgIndexState.Indexed(
+                channelCount = finalChannelCount,
+                programmeCount = finalProgrammeCount,
+                indexedAtMs = now
+            )
+            Log.d(TAG, "FTS rebuild complete: $finalChannelCount channels, $finalProgrammeCount programmes")
+        } catch (e: Exception) {
+            Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
+            _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild failed")
+        }
+    }
+
+    /**
+     * Clear all EPG data from the database and reset state to NotIndexed.
+     */
+    suspend fun clearAll() = withContext(Dispatchers.IO) {
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            dao.deleteAllProgrammes()
+            dao.deleteAllChannels()
+            dao.deleteAllMetadata()
+            _state.value = EpgIndexState.NotIndexed
+            Log.d(TAG, "All EPG data cleared")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to clear EPG data: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Delete programmes older than the given epoch and rebuild FTS.
+     */
+    suspend fun purgeOldProgrammes(cutoffEpoch: Long) = withContext(Dispatchers.IO) {
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            dao.deleteStaleProgrammes(cutoffEpoch)
+
+            db.openHelper.writableDatabase.execSQL(
+                "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')"
+            )
+
+            val now = System.currentTimeMillis()
+            val channelCount = dao.getChannelCount()
+            val programmeCount = dao.getProgrammeCount()
+
+            dao.insertMetadata(
+                EpgIndexMetadata(
+                    fileSizeBytes = 0,
+                    fileLastModifiedMs = 0,
+                    indexedAtMs = now,
+                    channelCount = channelCount,
+                    programmeCount = programmeCount,
+                    timezoneOffsetHours = 0
+                )
+            )
+
+            _state.value = if (programmeCount > 0) {
+                EpgIndexState.Indexed(channelCount, programmeCount, now)
+            } else {
+                EpgIndexState.NotIndexed
+            }
+
+            Log.d(TAG, "Purge complete: $channelCount channels, $programmeCount programmes remaining")
+        } catch (e: Exception) {
+            Log.e(TAG, "Purge failed: ${e.message}", e)
+        }
+    }
+
+    /**
      * Tracks bytes read from the underlying stream for progress reporting.
      */
     private class CountingInputStream(

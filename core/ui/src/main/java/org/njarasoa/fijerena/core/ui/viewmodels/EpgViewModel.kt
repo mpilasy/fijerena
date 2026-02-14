@@ -66,7 +66,7 @@ class EpgViewModel(
 
             // Check if provider supports EPG (allow if external XMLTV URL is configured)
             val capabilities = repository.getCapabilities()
-            val hasExternalEpg = repository.getProviderSettings().epgUrl.isNotBlank()
+            val hasExternalEpg = repository.hasIndexedEpgData()
             if (capabilities != null && !capabilities.supportsEpg && !hasExternalEpg) {
                 _uiState.value = UiState.Error("EPG is not supported by this provider")
                 return@launch

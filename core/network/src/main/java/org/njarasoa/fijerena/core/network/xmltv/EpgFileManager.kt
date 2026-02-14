@@ -13,7 +13,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import java.io.File
@@ -22,9 +24,10 @@ import java.net.URL
 import java.util.zip.GZIPInputStream
 
 /**
- * Singleton managing background EPG file download lifecycle.
- * Downloads the XMLTV EPG file in the background, refreshes every 24h,
- * and exposes state for UI to show/hide EPG buttons.
+ * Singleton managing multi-source EPG download-ingest-delete pipeline.
+ *
+ * For each source: download to temp file -> parse into SQLite -> delete temp file.
+ * No permanent XML files on disk.
  *
  * Uses raw HttpURLConnection instead of Ktor to avoid in-memory buffering
  * of large (500MB+) responses.
@@ -34,16 +37,14 @@ class EpgFileManager private constructor(private val context: Context) {
     companion object {
         private const val TAG = "EpgFileManager"
         private const val PREFS_NAME = "epg_file_manager"
-        private const val KEY_DOWNLOAD_TIMESTAMP = "file_download_timestamp"
-        private const val KEY_FILE_URL = "file_url"
-        private const val REFRESH_INTERVAL_MS = 24L * 60 * 60 * 1000 // 24 hours
-        private const val BUFFER_SIZE = 65536 // 64KB for faster large-file I/O
+        private const val KEY_MIGRATED_TO_SOURCES = "migrated_to_sources_v1"
+        private const val BUFFER_SIZE = 65536
         private const val GZIP_BUFFER_SIZE = 65536
-        private const val LOG_INTERVAL_BYTES = 50L * 1024 * 1024 // 50MB
+        private const val LOG_INTERVAL_BYTES = 50L * 1024 * 1024
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 5000L
         private const val CONNECT_TIMEOUT_MS = 60_000
-        private const val READ_TIMEOUT_MS = 600_000 // 10 minutes for large XMLTV files
+        private const val READ_TIMEOUT_MS = 600_000
 
         @Volatile
         private var instance: EpgFileManager? = null
@@ -53,120 +54,222 @@ class EpgFileManager private constructor(private val context: Context) {
                 instance ?: EpgFileManager(context.applicationContext).also { instance = it }
             }
         }
+
+        fun extractDomainLabel(url: String): String {
+            return try {
+                URL(url).host
+                    .removePrefix("www.")
+                    .removeSuffix(".com")
+                    .removeSuffix(".org")
+                    .removeSuffix(".net")
+                    .take(30)
+            } catch (e: Exception) {
+                "Source"
+            }
+        }
     }
 
-    sealed interface EpgFileState {
-        data object NoUrl : EpgFileState
-        data object Downloading : EpgFileState
-        data class Ready(val file: File, val sizeBytes: Long, val lastModifiedMs: Long) : EpgFileState
-        data class Failed(val reason: String) : EpgFileState
-        data class Error(val reason: String, val file: File? = null) : EpgFileState
+    sealed interface MultiSourceState {
+        data object Idle : MultiSourceState
+        data class Processing(
+            val sourceLabel: String,
+            val sourceIndex: Int,
+            val totalSources: Int,
+            val phase: String // "Downloading" or "Ingesting"
+        ) : MultiSourceState
+        data class Completed(
+            val sourcesProcessed: Int,
+            val errors: Int
+        ) : MultiSourceState
+        data class Error(val reason: String) : MultiSourceState
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val appSettings = AppSettings(context)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var downloadJob: Job? = null
+    private var processJob: Job? = null
 
-    private val xmltvFile = File(context.cacheDir, "xmltv_global.xml")
-    private val tmpFile = File(context.cacheDir, "xmltv_global_tmp")
-    private val tmpGzFile = File(context.cacheDir, "xmltv_global_tmp.gz")
-
-    private val _state = MutableStateFlow<EpgFileState>(EpgFileState.NoUrl)
-    val state: StateFlow<EpgFileState> = _state.asStateFlow()
+    private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
+    val state: StateFlow<MultiSourceState> = _state.asStateFlow()
 
     /**
      * Initialize the EPG file manager. Call from MainActivity.onCreate().
+     * Handles migration from old single-URL AppSettings to EpgSourceEntity.
      */
     fun initialize() {
-        // Apply timezone override to parser
-        XmltvParser.timezoneOverrideHours = appSettings.epgTimezoneOffsetHours
-
-        initializeManualMode()
-    }
-
-    private fun initializeManualMode() {
-        val url = appSettings.epgUrl
-        if (url.isBlank()) {
-            _state.value = EpgFileState.NoUrl
-            return
-        }
-
-        val savedUrl = prefs.getString(KEY_FILE_URL, null)
-        val savedTimestamp = prefs.getLong(KEY_DOWNLOAD_TIMESTAMP, 0L)
-        val age = System.currentTimeMillis() - savedTimestamp
-        val refreshInterval = REFRESH_INTERVAL_MS
-
-        if (xmltvFile.exists() && savedUrl == url && savedTimestamp > 0) {
-            _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), savedTimestamp)
-            triggerIndexing(xmltvFile)
-
-            if (age >= refreshInterval) {
-                Log.d(TAG, "EPG file stale (${age / 3600000}h old), refreshing in background")
-                scheduleDownload(url, keepReadyDuringRefresh = true)
-            } else {
-                val remaining = refreshInterval - age
-                Log.d(TAG, "EPG file fresh, next refresh in ${remaining / 60000}min")
-                scheduleRefreshAfter(url, remaining)
-            }
-        } else {
-            Log.d(TAG, "No valid EPG file, starting download")
-            scheduleDownload(url, keepReadyDuringRefresh = false)
+        scope.launch {
+            migrateFromAppSettings()
+            val indexer = EpgIndexer.getInstance(context)
+            indexer.initialize()
+            cleanupStrayFiles()
         }
     }
 
     /**
-     * Trigger a fresh download. Called when user changes EPG URL in settings.
+     * One-time migration: if old AppSettings.epgUrl is non-blank and no sources exist,
+     * create an EpgSourceEntity from it, then clear the old settings.
      */
-    fun triggerDownload() {
-        downloadJob?.cancel()
-        val url = appSettings.epgUrl
-        if (url.isBlank()) {
-            _state.value = EpgFileState.NoUrl
-            return
+    private suspend fun migrateFromAppSettings() {
+        if (prefs.getBoolean(KEY_MIGRATED_TO_SOURCES, false)) return
+
+        try {
+            val appSettings = AppSettings(context)
+            val oldUrl = appSettings.epgUrl
+            val oldTz = appSettings.epgTimezoneOffsetHours
+
+            if (oldUrl.isNotBlank()) {
+                val db = EpgIndexDatabase.getInstance(context)
+                val sourceDao = db.epgSourceDao()
+                if (sourceDao.getSourceCount() == 0) {
+                    val label = extractDomainLabel(oldUrl)
+                    sourceDao.insertSource(
+                        EpgSourceEntity(
+                            url = oldUrl,
+                            label = label,
+                            timezoneOffsetHours = oldTz
+                        )
+                    )
+                    Log.d(TAG, "Migrated old EPG URL to source entity: $oldUrl (tz=$oldTz)")
+                }
+            }
+
+            // Delete old xmltv_global.xml if it exists
+            val oldFile = File(context.cacheDir, "xmltv_global.xml")
+            if (oldFile.exists()) {
+                oldFile.delete()
+                Log.d(TAG, "Deleted legacy xmltv_global.xml")
+            }
+
+            prefs.edit().putBoolean(KEY_MIGRATED_TO_SOURCES, true).apply()
+        } catch (e: Exception) {
+            Log.w(TAG, "Migration from AppSettings failed", e)
         }
-        scheduleDownload(url, keepReadyDuringRefresh = false)
     }
 
     /**
-     * Get the EPG file if available. Returns null if not ready.
+     * Process all enabled sources: download-ingest-delete each sequentially.
+     * First source clears existing data (full rebuild), subsequent sources append.
      */
-    fun getEpgFile(): File? {
-        val currentState = _state.value
-        return when (currentState) {
-            is EpgFileState.Ready -> currentState.file
-            is EpgFileState.Error -> currentState.file
-            else -> null
-        }
-    }
+    suspend fun processAllSources(sources: List<EpgSourceEntity>) {
+        processJob?.cancel()
 
-    private fun scheduleDownload(url: String, keepReadyDuringRefresh: Boolean) {
-        downloadJob?.cancel()
-        downloadJob = scope.launch {
-            if (!keepReadyDuringRefresh) {
-                _state.value = EpgFileState.Downloading
-            }
-            downloadFile(url, keepReadyDuringRefresh)
+        if (sources.isEmpty()) {
+            _state.value = MultiSourceState.Error("No sources to process")
+            return
         }
-    }
 
-    private fun scheduleRefreshAfter(url: String, delayMs: Long) {
-        downloadJob?.cancel()
-        downloadJob = scope.launch {
-            delay(delayMs)
-            downloadFile(url, keepReadyDuringRefresh = true)
-        }
-    }
-
-    private suspend fun downloadFile(url: String, keepReadyDuringRefresh: Boolean) {
-        // Only download on WiFi/Ethernet — EPG files can be hundreds of MB
         val networkType = NetworkMonitor.currentNetworkType
         if (networkType == NetworkType.CELLULAR) {
-            Log.d(TAG, "Skipping EPG download: on cellular network")
-            handleError("EPG download skipped: WiFi required for large EPG files", keepReadyDuringRefresh)
+            _state.value = MultiSourceState.Error("WiFi required for EPG downloads")
             return
         }
 
+        val db = EpgIndexDatabase.getInstance(context)
+        val sourceDao = db.epgSourceDao()
+        val indexer = EpgIndexer.getInstance(context)
+
+        var errorCount = 0
+
+        sources.forEachIndexed { index, source ->
+            val label = source.label.ifBlank { extractDomainLabel(source.url) }
+
+            _state.value = MultiSourceState.Processing(
+                sourceLabel = label,
+                sourceIndex = index + 1,
+                totalSources = sources.size,
+                phase = "Downloading"
+            )
+
+            val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
+            val tmpGzFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp.gz")
+
+            try {
+                // Download
+                val downloaded = downloadToFile(source.url, tmpFile, tmpGzFile)
+                if (!downloaded) {
+                    sourceDao.markError(source.id, "Download failed")
+                    errorCount++
+                    return@forEachIndexed
+                }
+
+                // Validate
+                if (!validateXmltvFile(tmpFile)) {
+                    tmpFile.delete()
+                    sourceDao.markError(source.id, "Invalid XMLTV file")
+                    errorCount++
+                    return@forEachIndexed
+                }
+
+                _state.value = MultiSourceState.Processing(
+                    sourceLabel = label,
+                    sourceIndex = index + 1,
+                    totalSources = sources.size,
+                    phase = "Ingesting"
+                )
+
+                // Ingest
+                if (index == 0) {
+                    // First source: full rebuild (clears DB)
+                    indexer.startIndexing(tmpFile)
+                } else {
+                    // Subsequent sources: append
+                    indexer.appendFromFile(tmpFile, source.timezoneOffsetHours)
+                }
+
+                // Mark success
+                sourceDao.markIngested(source.id, System.currentTimeMillis())
+                Log.d(TAG, "Source ${index + 1}/${sources.size} ingested: $label")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error processing source: $label", e)
+                sourceDao.markError(source.id, e.message ?: "Unknown error")
+                errorCount++
+            } finally {
+                // Always delete temp files
+                tmpFile.delete()
+                tmpGzFile.delete()
+            }
+        }
+
+        // If multiple sources, rebuild FTS once at the end
+        if (sources.size > 1) {
+            indexer.rebuildFtsAndUpdateState()
+        }
+
+        _state.value = MultiSourceState.Completed(
+            sourcesProcessed = sources.size,
+            errors = errorCount
+        )
+
+        // Reset to Idle after a brief display period
+        scope.launch {
+            delay(3000)
+            _state.value = MultiSourceState.Idle
+        }
+    }
+
+    /**
+     * Delete any stray xmltv_* files in the cache directory.
+     */
+    fun cleanupStrayFiles() {
+        try {
+            val cacheDir = context.cacheDir
+            val strayFiles = cacheDir.listFiles { file ->
+                file.name.startsWith("xmltv_") && file.isFile
+            }
+            strayFiles?.forEach { file ->
+                file.delete()
+                Log.d(TAG, "Cleaned up stray file: ${file.name}")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Cleanup failed", e)
+        }
+    }
+
+    /**
+     * Download a URL to a temp file, handling .gz decompression.
+     * Returns true on success.
+     */
+    private suspend fun downloadToFile(url: String, tmpFile: File, tmpGzFile: File): Boolean {
         val isGzip = url.endsWith(".gz", ignoreCase = true)
         var lastError: String? = null
 
@@ -179,7 +282,6 @@ class EpgFileManager private constructor(private val context: Context) {
                     connectTimeout = CONNECT_TIMEOUT_MS
                     readTimeout = READ_TIMEOUT_MS
                     instanceFollowRedirects = true
-                    // Disable automatic gzip decompression — we handle .gz ourselves
                     setRequestProperty("Accept-Encoding", "identity")
                 }
 
@@ -187,14 +289,13 @@ class EpgFileManager private constructor(private val context: Context) {
                 if (statusCode !in 200..299) {
                     lastError = "server returned HTTP $statusCode"
                     Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
-                    if (statusCode in 400..499) break // Client errors won't recover
+                    if (statusCode in 400..499) break
                     if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
                     break
                 }
 
                 val downloadTarget = if (isGzip) tmpGzFile else tmpFile
 
-                // Stream directly from network to disk — zero in-memory buffering
                 downloadTarget.delete()
                 connection.inputStream.buffered(BUFFER_SIZE).use { input ->
                     downloadTarget.outputStream().buffered(BUFFER_SIZE).use { output ->
@@ -216,7 +317,6 @@ class EpgFileManager private constructor(private val context: Context) {
                     }
                 }
 
-                // If .gz, decompress to tmpFile
                 if (isGzip) {
                     Log.d(TAG, "Decompressing .gz file (${tmpGzFile.length() / (1024 * 1024)}MB)")
                     tmpFile.delete()
@@ -242,35 +342,12 @@ class EpgFileManager private constructor(private val context: Context) {
                     tmpGzFile.delete()
                 }
 
-                // Basic validation: check it starts with XML-ish content
-                if (!validateXmltvFile(tmpFile)) {
-                    tmpFile.delete()
-                    handleError("EPG file invalid: not a valid XMLTV file", keepReadyDuringRefresh)
-                    return
-                }
-
-                // Atomic rename
-                xmltvFile.delete()
-                tmpFile.renameTo(xmltvFile)
-
-                val now = System.currentTimeMillis()
-                prefs.edit()
-                    .putString(KEY_FILE_URL, url)
-                    .putLong(KEY_DOWNLOAD_TIMESTAMP, now)
-                    .apply()
-
-                _state.value = EpgFileState.Ready(xmltvFile, xmltvFile.length(), now)
-                Log.d(TAG, "EPG file ready: ${xmltvFile.length() / (1024 * 1024)}MB")
-                triggerIndexing(xmltvFile)
-
-                // Schedule next refresh
-                scheduleRefreshAfter(url, REFRESH_INTERVAL_MS)
-                return // Success — exit retry loop
+                return true
 
             } catch (e: java.net.UnknownHostException) {
                 tmpFile.delete(); tmpGzFile.delete()
-                handleError("EPG download failed: no internet connection", keepReadyDuringRefresh)
-                return // No point retrying without network
+                Log.w(TAG, "No internet connection")
+                return false
             } catch (e: OutOfMemoryError) {
                 tmpFile.delete(); tmpGzFile.delete()
                 System.gc()
@@ -290,7 +367,7 @@ class EpgFileManager private constructor(private val context: Context) {
                     e.message ?: "I/O error"
                 }
                 Log.w(TAG, "EPG download I/O error (attempt $attempt): $lastError", e)
-                if (lastError == "insufficient storage") break // Won't recover
+                if (lastError == "insufficient storage") break
                 if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
             } catch (e: Exception) {
                 tmpFile.delete(); tmpGzFile.delete()
@@ -301,53 +378,7 @@ class EpgFileManager private constructor(private val context: Context) {
                 connection?.disconnect()
             }
         }
-        // All retries exhausted
-        handleError("EPG download failed: $lastError", keepReadyDuringRefresh)
-    }
-
-    /**
-     * Trigger re-indexing if the EPG file exists and the index is stale.
-     * Called from settings when timezone override changes.
-     */
-    fun reindexIfNeeded() {
-        if (xmltvFile.exists()) {
-            triggerIndexing(xmltvFile)
-        }
-    }
-
-    private fun triggerIndexing(file: File) {
-        scope.launch {
-            val indexer = EpgIndexer.getInstance(context)
-            if (indexer.needsReindex(file)) {
-                val fileSizeMb = file.length() / (1024 * 1024)
-                // Use transactional indexing for small-to-medium files (<100MB)
-                // to guarantee atomic updates. Larger files stream in batches.
-                if (fileSizeMb < 100) {
-                    Log.d(TAG, "EPG file changed (${fileSizeMb}MB), starting transactional indexing")
-                    indexer.startTransactionalIndexing(file)
-                } else {
-                    Log.d(TAG, "EPG file changed (${fileSizeMb}MB), starting streaming indexing")
-                    indexer.startIndexing(file)
-                }
-            } else {
-                Log.d(TAG, "EPG index up-to-date, restoring state")
-                indexer.initialize()
-            }
-        }
-    }
-
-    private fun handleError(reason: String, keepReadyDuringRefresh: Boolean) {
-        Log.e(TAG, reason)
-        if (keepReadyDuringRefresh && xmltvFile.exists()) {
-            // Stale file still usable — report error with file reference
-            _state.value = EpgFileState.Error(reason, xmltvFile)
-        } else if (xmltvFile.exists()) {
-            // File exists but we weren't in Ready state
-            _state.value = EpgFileState.Error(reason, xmltvFile)
-        } else {
-            // No file at all
-            _state.value = EpgFileState.Failed(reason)
-        }
+        return false
     }
 
     private fun validateXmltvFile(file: File): Boolean {
@@ -364,4 +395,5 @@ class EpgFileManager private constructor(private val context: Context) {
             false
         }
     }
+
 }
