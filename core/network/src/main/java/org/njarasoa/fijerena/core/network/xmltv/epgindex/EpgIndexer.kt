@@ -86,7 +86,7 @@ class EpgIndexer private constructor(private val context: Context) {
      * for programmes (unique index on channel_id + start_epoch deduplicates).
      * The database remains searchable throughout ingestion.
      */
-    suspend fun startIndexing(file: File) = ingestFile(file)
+    suspend fun startIndexing(file: File, sourceId: Long = 0) = ingestFile(file, sourceId)
 
     /**
      * Append data from a file without clearing existing data.
@@ -95,11 +95,11 @@ class EpgIndexer private constructor(private val context: Context) {
      * @param file The XMLTV file to parse
      * @param timezoneOverride Per-source timezone offset applied during parsing
      */
-    suspend fun appendFromFile(file: File, timezoneOverride: Int) {
+    suspend fun appendFromFile(file: File, timezoneOverride: Int, sourceId: Long = 0) {
         val previousTz = XmltvParser.timezoneOverrideHours
         XmltvParser.timezoneOverrideHours = timezoneOverride
         try {
-            ingestFile(file)
+            ingestFile(file, sourceId)
         } finally {
             XmltvParser.timezoneOverrideHours = previousTz
         }
@@ -109,14 +109,20 @@ class EpgIndexer private constructor(private val context: Context) {
      * Core ingestion: streaming parse + batch insert.
      * Append-only — never clears existing data.
      */
-    private suspend fun ingestFile(file: File) = withContext(Dispatchers.IO) {
+    private suspend fun ingestFile(file: File, sourceId: Long = 0) = withContext(Dispatchers.IO) {
         Log.d(TAG, "Ingesting ${file.name} (${file.length() / (1024 * 1024)}MB)")
 
-        _state.value = EpgIndexState.Indexing(
-            progressPercent = 0,
-            channelsIndexed = 0,
-            programmesIndexed = 0
-        )
+        // Only switch to Indexing state if no data exists yet.
+        // When refreshing with existing data, keep Indexed state so the
+        // database remains usable (EPG browser, TV guide, search all work).
+        val wasIndexed = _state.value is EpgIndexState.Indexed
+        if (!wasIndexed) {
+            _state.value = EpgIndexState.Indexing(
+                progressPercent = 0,
+                channelsIndexed = 0,
+                programmesIndexed = 0
+            )
+        }
 
         try {
             val db = EpgIndexDatabase.getInstance(context)
@@ -162,7 +168,7 @@ class EpgIndexer private constructor(private val context: Context) {
                                 }
                             }
 
-                            val programme = XmltvParser.parseProgrammeForIndex(parser)
+                            val programme = XmltvParser.parseProgrammeForIndex(parser, sourceId)
                             if (programme != null) {
                                 programmeBatch.add(programme)
                                 programmeCount++
@@ -174,11 +180,13 @@ class EpgIndexer private constructor(private val context: Context) {
                                     val percent = if (fileSize > 0) {
                                         ((bytesProcessed * 100) / fileSize).toInt().coerceIn(0, 99)
                                     } else 0
-                                    _state.value = EpgIndexState.Indexing(
-                                        progressPercent = percent,
-                                        channelsIndexed = channelCount,
-                                        programmesIndexed = programmeCount
-                                    )
+                                    if (!wasIndexed) {
+                                        _state.value = EpgIndexState.Indexing(
+                                            progressPercent = percent,
+                                            channelsIndexed = channelCount,
+                                            programmesIndexed = programmeCount
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -212,12 +220,12 @@ class EpgIndexer private constructor(private val context: Context) {
             val msg = "Out of memory during indexing"
             Log.e(TAG, msg, e)
             lastIngestionStats = IngestionStats()
-            _state.value = EpgIndexState.Failed(msg)
+            if (!wasIndexed) _state.value = EpgIndexState.Failed(msg)
         } catch (e: Exception) {
             val msg = e.message ?: "Indexing failed"
             Log.e(TAG, msg, e)
             lastIngestionStats = IngestionStats()
-            _state.value = EpgIndexState.Failed(msg)
+            if (!wasIndexed) _state.value = EpgIndexState.Failed(msg)
         }
     }
 

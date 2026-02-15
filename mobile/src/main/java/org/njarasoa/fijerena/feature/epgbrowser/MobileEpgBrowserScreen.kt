@@ -71,8 +71,8 @@ fun MobileEpgBrowserScreen(
     val indexState by viewModel.indexState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
-    val isDevMode = appSettings.isDevMode
+    val isDevMode = viewModel.isDevMode
+    val sourceLabels by viewModel.sourceLabels.collectAsState()
     val epgDbStats = when (val idx = indexState) {
         is EpgIndexState.Indexed -> "${idx.programmeCount} progs, ${idx.channelCount} channels"
         else -> null
@@ -214,7 +214,7 @@ fun MobileEpgBrowserScreen(
                     }
                 }
                 is EpgBrowserViewModel.UiState.Results -> {
-                    MobileResultsContent(results = state)
+                    MobileResultsContent(results = state, isDevMode = isDevMode, sourceLabels = sourceLabels)
                 }
                 is EpgBrowserViewModel.UiState.Error -> {
                     Box(
@@ -234,7 +234,7 @@ fun MobileEpgBrowserScreen(
 }
 
 @Composable
-private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results) {
+private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
     Column {
         // Stats row
         val timeStr = "%.1f".format(results.searchTimeMs / 1000.0)
@@ -269,7 +269,7 @@ private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results) {
                     .padding(horizontal = Spacing.md)
             ) {
                 items(results.programs, key = { it.title }) { program ->
-                    MobileProgramCard(program = program)
+                    MobileProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels)
                 }
             }
         }
@@ -277,7 +277,7 @@ private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results) {
 }
 
 @Composable
-private fun MobileProgramCard(program: EpgBrowserProgram) {
+private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
     var expanded by remember { mutableStateOf(false) }
     val showExpander = program.airings.size > 3
 
@@ -336,7 +336,7 @@ private fun MobileProgramCard(program: EpgBrowserProgram) {
                 program.airings.take(3)
             }
             visibleAirings.forEach { airing ->
-                MobileAiringRow(airing = airing)
+                MobileAiringRow(airing = airing, isDevMode = isDevMode, sourceLabels = sourceLabels)
             }
 
             // Expand/collapse toggle
@@ -367,7 +367,7 @@ private fun MobileProgramCard(program: EpgBrowserProgram) {
 }
 
 @Composable
-private fun MobileAiringRow(airing: EpgBrowserAiring) {
+private fun MobileAiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -383,6 +383,17 @@ private fun MobileAiringRow(airing: EpgBrowserAiring) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
+        if (isDevMode && airing.sourceId > 0) {
+            val sourceName = sourceLabels[airing.sourceId]
+            if (sourceName != null) {
+                Text(
+                    text = sourceName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = CinemaAlpha.textLow),
+                    modifier = Modifier.padding(end = CinemaSpacing.xs)
+                )
+            }
+        }
         Text(
             text = formatAiringTime(airing.startEpoch, airing.endEpoch),
             style = MaterialTheme.typography.bodySmall,
@@ -397,19 +408,33 @@ private fun formatAiringTime(startEpoch: Long, endEpoch: Long): String {
 
     val startDate = Date(startEpoch * 1000L)
     val endDate = Date(endEpoch * 1000L)
+    val now = Date()
 
     val todayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
     todayFormat.timeZone = TimeZone.getDefault()
-    val today = todayFormat.format(Date())
+    val today = todayFormat.format(now)
     val startDay = todayFormat.format(startDate)
 
-    val dayPrefix = if (startDay == today) "Today" else {
-        SimpleDateFormat("EEE", Locale.getDefault()).apply {
+    val cal = java.util.Calendar.getInstance()
+    cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+    val tomorrow = todayFormat.format(cal.time)
+
+    val diffMs = startDate.time - now.time
+    val diffDays = diffMs / (24 * 60 * 60 * 1000L)
+
+    val timePart = "${timeOnlyFormat.format(startDate)} – ${timeOnlyFormat.format(endDate)}"
+    val dayPrefix = when {
+        startDay == today -> "Today"
+        startDay == tomorrow -> "Tomorrow"
+        diffDays <= 2 -> SimpleDateFormat("EEE", Locale.getDefault()).apply {
+            timeZone = TimeZone.getDefault()
+        }.format(startDate)
+        else -> SimpleDateFormat("EEE MMM d", Locale.getDefault()).apply {
             timeZone = TimeZone.getDefault()
         }.format(startDate)
     }
 
-    return "$dayPrefix ${timeOnlyFormat.format(startDate)} – ${timeOnlyFormat.format(endDate)}"
+    return "$dayPrefix $timePart"
 }
 
 private fun formatFileSize(bytes: Long): String {

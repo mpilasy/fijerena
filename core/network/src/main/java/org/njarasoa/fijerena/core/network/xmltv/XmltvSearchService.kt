@@ -31,11 +31,10 @@ class XmltvSearchService(private val context: Context) {
         }
 
         val now = System.currentTimeMillis() / 1000L
-        val pastOneDay = now - 86400L
         val futureSixDays = now + 6 * 86400L
 
         return try {
-            searchFromIndex(query, pastOneDay, futureSixDays)
+            searchFromIndex(query, now, futureSixDays)
         } catch (e: Exception) {
             Log.w(TAG, "SQLite search failed", e)
             null
@@ -108,7 +107,8 @@ class XmltvSearchService(private val context: Context) {
                     endEpoch = row.endEpoch,
                     title = row.title,
                     description = row.description,
-                    category = row.category
+                    category = row.category,
+                    sourceId = row.sourceId
                 )
             )
         }

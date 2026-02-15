@@ -12,5 +12,6 @@ data class EpgBrowserAiring(
     val channelName: String,
     val channelIconUrl: String?,
     val startEpoch: Long,
-    val endEpoch: Long
+    val endEpoch: Long,
+    val sourceId: Long = 0
 )

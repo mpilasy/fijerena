@@ -70,6 +70,10 @@ class EpgManagementViewModel(
         }
     }
 
+    suspend fun getLatestProgrammeTime(sourceId: Long): Long? = withContext(Dispatchers.IO) {
+        db.epgIndexDao().getLatestProgrammeEndTimeForSource(sourceId)
+    }
+
     fun addSource(url: String, label: String, timezoneOffsetHours: Int) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {

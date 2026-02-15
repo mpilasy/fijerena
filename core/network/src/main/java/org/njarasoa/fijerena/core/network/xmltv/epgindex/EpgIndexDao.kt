@@ -180,6 +180,9 @@ interface EpgIndexDao {
     @Query("SELECT COUNT(*) FROM epg_channel")
     suspend fun getChannelCount(): Int
 
+    @Query("SELECT MAX(end_epoch) FROM epg_programme WHERE source_id = :sourceId")
+    suspend fun getLatestProgrammeEndTimeForSource(sourceId: Long): Long?
+
     // --------------- Transactional ingestion ---------------
 
     @Transaction

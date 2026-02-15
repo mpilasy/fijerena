@@ -13,6 +13,9 @@ interface EpgSourceDao {
     @Query("SELECT * FROM epg_source ORDER BY added_at_ms ASC")
     fun getAllSources(): Flow<List<EpgSourceEntity>>
 
+    @Query("SELECT * FROM epg_source ORDER BY added_at_ms ASC")
+    suspend fun getAllSourcesOnce(): List<EpgSourceEntity>
+
     @Query("SELECT * FROM epg_source WHERE enabled = 1 ORDER BY added_at_ms ASC")
     suspend fun getEnabledSources(): List<EpgSourceEntity>
 

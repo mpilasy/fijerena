@@ -191,40 +191,46 @@ class EpgFileManager private constructor(private val context: Context) {
             return
         }
 
-        val db = EpgIndexDatabase.getInstance(context)
-        val sourceDao = db.epgSourceDao()
-        val indexer = EpgIndexer.getInstance(context)
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val sourceDao = db.epgSourceDao()
+            val indexer = EpgIndexer.getInstance(context)
 
-        var errorCount = 0
-        val allStats = mutableListOf<SourceStats>()
+            var errorCount = 0
+            val allStats = mutableListOf<SourceStats>()
 
-        sources.forEachIndexed { index, source ->
-            val label = source.label.ifBlank { extractLabel(source.url) }
-            val stats = processSource(source, label, index, sources.size, sourceDao, indexer, allStats)
-            allStats.add(stats)
-            if (stats.error != null) errorCount++
+            sources.forEachIndexed { index, source ->
+                val label = source.label.ifBlank { extractLabel(source.url) }
+                val stats = processSource(source, label, index, sources.size, sourceDao, indexer, allStats)
+                allStats.add(stats)
+                if (stats.error != null) errorCount++
+            }
+
+            // Rebuild FTS once at the end, then reclaim freed pages
+            indexer.rebuildFtsAndUpdateState()
+            indexer.incrementalVacuum()
+
+            val totalChannels = allStats.sumOf { it.channelsIngested }
+            val totalProgrammes = allStats.sumOf { it.programmesIngested }
+            val totalBytes = allStats.sumOf { it.downloadBytes }
+
+            _state.value = MultiSourceState.Completed(
+                sourcesProcessed = sources.size,
+                errors = errorCount,
+                sourceStats = allStats,
+                totalChannels = totalChannels,
+                totalProgrammes = totalProgrammes,
+                totalDownloadBytes = totalBytes
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "processAllSources failed: ${e.message}", e)
+            _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
         }
-
-        // Rebuild FTS once at the end, then reclaim freed pages
-        indexer.rebuildFtsAndUpdateState()
-        indexer.incrementalVacuum()
-
-        val totalChannels = allStats.sumOf { it.channelsIngested }
-        val totalProgrammes = allStats.sumOf { it.programmesIngested }
-        val totalBytes = allStats.sumOf { it.downloadBytes }
-
-        _state.value = MultiSourceState.Completed(
-            sourcesProcessed = sources.size,
-            errors = errorCount,
-            sourceStats = allStats,
-            totalChannels = totalChannels,
-            totalProgrammes = totalProgrammes,
-            totalDownloadBytes = totalBytes
-        )
 
         scope.launch {
             delay(10000)
-            if (_state.value is MultiSourceState.Completed) {
+            val current = _state.value
+            if (current is MultiSourceState.Completed || current is MultiSourceState.Error) {
                 _state.value = MultiSourceState.Idle
             }
         }
@@ -240,32 +246,38 @@ class EpgFileManager private constructor(private val context: Context) {
             return
         }
 
-        val db = EpgIndexDatabase.getInstance(context)
-        val sourceDao = db.epgSourceDao()
-        val source = sourceDao.getSourceById(sourceId) ?: run {
-            _state.value = MultiSourceState.Error("Source not found")
-            return
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val sourceDao = db.epgSourceDao()
+            val source = sourceDao.getSourceById(sourceId) ?: run {
+                _state.value = MultiSourceState.Error("Source not found")
+                return
+            }
+            val indexer = EpgIndexer.getInstance(context)
+            val label = source.label.ifBlank { extractLabel(source.url) }
+
+            val stats = processSource(source, label, 0, 1, sourceDao, indexer, emptyList())
+
+            // Rebuild FTS
+            indexer.rebuildFtsAndUpdateState()
+
+            _state.value = MultiSourceState.Completed(
+                sourcesProcessed = 1,
+                errors = if (stats.error != null) 1 else 0,
+                sourceStats = listOf(stats),
+                totalChannels = stats.channelsIngested,
+                totalProgrammes = stats.programmesIngested,
+                totalDownloadBytes = stats.downloadBytes
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "processSingleSource failed: ${e.message}", e)
+            _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
         }
-        val indexer = EpgIndexer.getInstance(context)
-        val label = source.label.ifBlank { extractLabel(source.url) }
-
-        val stats = processSource(source, label, 0, 1, sourceDao, indexer, emptyList())
-
-        // Rebuild FTS
-        indexer.rebuildFtsAndUpdateState()
-
-        _state.value = MultiSourceState.Completed(
-            sourcesProcessed = 1,
-            errors = if (stats.error != null) 1 else 0,
-            sourceStats = listOf(stats),
-            totalChannels = stats.channelsIngested,
-            totalProgrammes = stats.programmesIngested,
-            totalDownloadBytes = stats.downloadBytes
-        )
 
         scope.launch {
             delay(10000)
-            if (_state.value is MultiSourceState.Completed) {
+            val current = _state.value
+            if (current is MultiSourceState.Completed || current is MultiSourceState.Error) {
                 _state.value = MultiSourceState.Idle
             }
         }
@@ -342,7 +354,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val previousTz = XmltvParser.timezoneOverrideHours
             XmltvParser.timezoneOverrideHours = source.timezoneOffsetHours
             try {
-                indexer.startIndexing(tmpFile)
+                indexer.startIndexing(tmpFile, sourceId = source.id)
             } finally {
                 XmltvParser.timezoneOverrideHours = previousTz
             }

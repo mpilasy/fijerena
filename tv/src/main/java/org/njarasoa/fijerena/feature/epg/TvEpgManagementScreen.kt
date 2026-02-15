@@ -19,6 +19,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -46,6 +47,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
@@ -279,13 +281,24 @@ fun TvEpgManagementScreen(
                                         style = MaterialTheme.typography.labelSmall,
                                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                     )
+                                    var latestTime by remember { mutableStateOf<Long?>(null) }
+                                    LaunchedEffect(source.id, source.lastIngestedAtMs) {
+                                        latestTime = viewModel.getLatestProgrammeTime(source.id)
+                                    }
+                                    latestTime?.let { epoch ->
+                                        Text(
+                                            text = "Latest: ${formatEpochDate(epoch)}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
+                                        )
+                                    }
                                 }
                             }
 
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             CinemaPrimaryButton(
                                 onClick = { viewModel.refreshSource(source.id) },
-                                enabled = processingState is EpgFileManager.MultiSourceState.Idle,
+                                enabled = processingState !is EpgFileManager.MultiSourceState.Processing,
                                 text = "Refresh"
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs))
@@ -338,7 +351,7 @@ fun TvEpgManagementScreen(
                         ) {
                             CinemaPrimaryButton(
                                 onClick = { viewModel.refreshAll() },
-                                enabled = sources.isNotEmpty() && processingState is EpgFileManager.MultiSourceState.Idle,
+                                enabled = sources.isNotEmpty() && processingState !is EpgFileManager.MultiSourceState.Processing,
                                 text = "Refresh All"
                             )
                             CinemaSecondaryButton(
@@ -386,6 +399,9 @@ fun TvEpgManagementScreen(
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
+            containerColor = CinemaSurface,
+            titleContentColor = CinemaTextPrimary,
+            textContentColor = CinemaTextSecondary,
             title = { Text("Clear All EPG Data") },
             text = { Text("This will delete all indexed programmes and channels. Sources will be kept.") },
             confirmButton = {
@@ -410,6 +426,9 @@ fun TvEpgManagementScreen(
     showDeleteConfirm?.let { sourceId ->
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = null },
+            containerColor = CinemaSurface,
+            titleContentColor = CinemaTextPrimary,
+            textContentColor = CinemaTextSecondary,
             title = { Text("Delete Source") },
             text = { Text("Remove this EPG source?") },
             confirmButton = {
@@ -443,6 +462,9 @@ private fun SourceDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = CinemaSurface,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
         title = { Text(if (source != null) "Edit Source" else "Add Source") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -544,4 +566,10 @@ private fun formatTimestamp(millis: Long): String {
     val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
     format.timeZone = java.util.TimeZone.getDefault()
     return format.format(java.util.Date(millis))
+}
+
+private fun formatEpochDate(epochSeconds: Long): String {
+    val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
+    format.timeZone = java.util.TimeZone.getDefault()
+    return format.format(java.util.Date(epochSeconds * 1000L))
 }

@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         EpgIndexMetadata::class,
         EpgSourceEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class EpgIndexDatabase : RoomDatabase() {

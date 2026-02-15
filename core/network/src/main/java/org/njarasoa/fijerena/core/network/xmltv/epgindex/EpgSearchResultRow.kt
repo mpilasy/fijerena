@@ -23,6 +23,9 @@ data class EpgSearchResultRow(
     @ColumnInfo(name = "end_epoch")
     val endEpoch: Long,
 
+    @ColumnInfo(name = "source_id")
+    val sourceId: Long = 0,
+
     @ColumnInfo(name = "channelDisplayName")
     val channelDisplayName: String,
 

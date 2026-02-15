@@ -30,6 +30,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -243,6 +244,17 @@ fun MobileEpgManagementScreen(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                                 )
+                                var latestTime by remember { mutableStateOf<Long?>(null) }
+                                LaunchedEffect(source.id, source.lastIngestedAtMs) {
+                                    latestTime = viewModel.getLatestProgrammeTime(source.id)
+                                }
+                                latestTime?.let { epoch ->
+                                    Text(
+                                        text = "Latest: ${formatEpochDate(epoch)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                    )
+                                }
                             }
                         }
                     }
@@ -252,7 +264,7 @@ fun MobileEpgManagementScreen(
                     ) {
                         OutlinedButton(
                             onClick = { viewModel.refreshSource(source.id) },
-                            enabled = processingState is EpgFileManager.MultiSourceState.Idle
+                            enabled = processingState !is EpgFileManager.MultiSourceState.Processing
                         ) {
                             Text("Refresh")
                         }
@@ -291,7 +303,7 @@ fun MobileEpgManagementScreen(
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Button(
                     onClick = { viewModel.refreshAll() },
-                    enabled = sources.isNotEmpty() && processingState is EpgFileManager.MultiSourceState.Idle,
+                    enabled = sources.isNotEmpty() && processingState !is EpgFileManager.MultiSourceState.Processing,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Refresh All Sources")
@@ -492,4 +504,10 @@ private fun formatTimestamp(millis: Long): String {
     val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
     format.timeZone = java.util.TimeZone.getDefault()
     return format.format(java.util.Date(millis))
+}
+
+private fun formatEpochDate(epochSeconds: Long): String {
+    val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
+    format.timeZone = java.util.TimeZone.getDefault()
+    return format.format(java.util.Date(epochSeconds * 1000L))
 }
