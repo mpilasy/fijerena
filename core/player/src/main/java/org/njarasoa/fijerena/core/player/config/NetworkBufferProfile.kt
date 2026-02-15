@@ -44,10 +44,11 @@ object NetworkBufferProfile {
     const val CELLULAR_VOD_BACK_BUFFER_MS = 10_000
 
     // ── Retry policy ────────────────────────────────────────────────
-    const val WIFI_MIN_RETRY_COUNT = 3
-    const val CELLULAR_MIN_RETRY_COUNT = 6
-    const val RETRY_BASE_DELAY_MS = 1_000L
-    const val RETRY_MAX_DELAY_MS = 10_000L
+    // Increase retries to handle initial connection failures without showing user errors
+    const val WIFI_MIN_RETRY_COUNT = 5
+    const val CELLULAR_MIN_RETRY_COUNT = 8
+    const val RETRY_BASE_DELAY_MS = 500L
+    const val RETRY_MAX_DELAY_MS = 5_000L
 
     // ── HTTP timeouts ───────────────────────────────────────────────
     const val WIFI_CONNECT_TIMEOUT_MS = 30_000

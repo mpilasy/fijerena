@@ -462,7 +462,8 @@ class EpgFileManager private constructor(private val context: Context) {
                         timestamp = System.currentTimeMillis(),
                         channels = ingestionStats.channelsIngested,
                         programmes = ingestionStats.programmesIngested,
-                        downloadBytes = 0
+                        downloadBytes = 0,
+                        ingestMethod = "STREAMED"
                     )
                     Log.d(TAG, "Source ${index + 1}/$total streamed: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
 
@@ -658,7 +659,8 @@ class EpgFileManager private constructor(private val context: Context) {
                 timestamp = System.currentTimeMillis(),
                 channels = ingestionStats.channelsIngested,
                 programmes = ingestionStats.programmesIngested,
-                downloadBytes = downloadedBytes
+                downloadBytes = downloadedBytes,
+                ingestMethod = "DOWNLOADED"
             )
             Log.d(TAG, "Source ${index + 1}/$total downloaded+ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg, ${downloadedBytes / 1024}KB)")
 
