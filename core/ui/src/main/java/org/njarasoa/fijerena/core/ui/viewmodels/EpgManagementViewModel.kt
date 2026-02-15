@@ -116,21 +116,16 @@ class EpgManagementViewModel(
     }
 
     fun refreshAll() {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                val enabledSources = sourceDao.getEnabledSources()
-                epgFileManager.processAllSources(enabledSources)
-                refreshDbStats()
-            }
+        // Launch on the file manager's own scope so the job survives
+        // navigation away from this screen.
+        epgFileManager.launchProcessAllSources {
+            refreshDbStats()
         }
     }
 
     fun refreshSource(sourceId: Long) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                epgFileManager.processSingleSource(sourceId)
-                refreshDbStats()
-            }
+        epgFileManager.launchProcessSingleSource(sourceId) {
+            refreshDbStats()
         }
     }
 

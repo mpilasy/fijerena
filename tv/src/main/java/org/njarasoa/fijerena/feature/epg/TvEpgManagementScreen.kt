@@ -298,7 +298,6 @@ fun TvEpgManagementScreen(
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             CinemaPrimaryButton(
                                 onClick = { viewModel.refreshSource(source.id) },
-                                enabled = processingState !is EpgFileManager.MultiSourceState.Processing,
                                 text = "Refresh"
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs))
@@ -351,7 +350,7 @@ fun TvEpgManagementScreen(
                         ) {
                             CinemaPrimaryButton(
                                 onClick = { viewModel.refreshAll() },
-                                enabled = sources.isNotEmpty() && processingState !is EpgFileManager.MultiSourceState.Processing,
+                                enabled = sources.isNotEmpty(),
                                 text = "Refresh All"
                             )
                             CinemaSecondaryButton(

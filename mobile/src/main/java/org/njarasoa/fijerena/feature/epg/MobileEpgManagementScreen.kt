@@ -263,8 +263,7 @@ fun MobileEpgManagementScreen(
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm, Alignment.End)
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.refreshSource(source.id) },
-                            enabled = processingState !is EpgFileManager.MultiSourceState.Processing
+                            onClick = { viewModel.refreshSource(source.id) }
                         ) {
                             Text("Refresh")
                         }
@@ -303,7 +302,7 @@ fun MobileEpgManagementScreen(
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Button(
                     onClick = { viewModel.refreshAll() },
-                    enabled = sources.isNotEmpty() && processingState !is EpgFileManager.MultiSourceState.Processing,
+                    enabled = sources.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Refresh All Sources")
