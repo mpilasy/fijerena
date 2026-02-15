@@ -110,7 +110,9 @@ fun PlayerScreen(
     onNextChannel: () -> Unit = {},
     onPreviousChannel: () -> Unit = {},
     isFavorite: Boolean = false,
-    onToggleFavorite: (() -> Unit)? = null
+    onToggleFavorite: (() -> Unit)? = null,
+    currentEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null,
+    nextEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null
 ) {
     val playbackState = viewModel.playbackState.collectAsState().value
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
@@ -430,7 +432,9 @@ fun PlayerScreen(
                 StreamInfoDisplay(
                     livePosition = livePosition,
                     liveDuration = liveDuration,
-                    metadata = displayedMetadata
+                    metadata = displayedMetadata,
+                    currentEpgProgram = currentEpgProgram,
+                    nextEpgProgram = nextEpgProgram
                 )
             }
         }
@@ -1854,7 +1858,9 @@ private fun MetadataOverlay(
 private fun StreamInfoDisplay(
     livePosition: Long,
     liveDuration: Long,
-    metadata: PlayerMetadata
+    metadata: PlayerMetadata,
+    currentEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null,
+    nextEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null
 ) {
     val position = livePosition
     val duration = liveDuration
@@ -1877,6 +1883,45 @@ private fun StreamInfoDisplay(
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
+        }
+
+        // EPG programme info (Live TV only)
+        if (metadata.isLive && currentEpgProgram != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Now playing programme with time range
+                val nowStart = formatEpochTime(currentEpgProgram.startTime)
+                val nowEnd = formatEpochTime(currentEpgProgram.endTime)
+                Text(
+                    text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = CinemaAlpha.overlayMedium),
+                    fontWeight = FontWeight.Medium
+                )
+
+                // Programme progress bar
+                val nowEpoch = System.currentTimeMillis() / 1000
+                val epgProgress = if (currentEpgProgram.duration > 0) {
+                    ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(0f, 1f)
+                } else 0f
+                LinearProgressIndicator(
+                    progress = epgProgress,
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .height(TvDimensions.progressBar),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                )
+
+                // Up next programme
+                if (nextEpgProgram != null) {
+                    val nextStart = formatEpochTime(nextEpgProgram.startTime)
+                    Text(
+                        text = "Up Next: ${nextEpgProgram.title}  ($nextStart)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = CinemaAlpha.tint)
+                    )
+                }
+            }
         }
 
         // Progress bar (for non-live streams) or LIVE indicator
@@ -2155,6 +2200,11 @@ private fun formatTime(millis: Long): String {
     } else {
         String.format("%d:%02d", minutes, seconds)
     }
+}
+
+private fun formatEpochTime(epochSeconds: Long): String {
+    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+    return sdf.format(java.util.Date(epochSeconds * 1000))
 }
 
 @Composable

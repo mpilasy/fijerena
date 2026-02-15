@@ -39,6 +39,14 @@ data class FavoriteItem(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+@Serializable
+data class RecentCategory(
+    val categoryId: String,
+    val categoryName: String,
+    val contentType: String,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
 class MediaRepository(
     private val context: Context,
     private val providerId: Long,
@@ -67,6 +75,8 @@ class MediaRepository(
     companion object {
         private const val KEY_WATCH_HISTORY = "watch_history_v2"
         private const val KEY_FAVORITES = "favorites_v2"
+        private const val KEY_RECENT_CATEGORIES = "recent_categories"
+        private const val MAX_RECENT_CATEGORIES = 20
 
         private const val KEY_LAST_LIVE_CATEGORY = "last_live_category"
         private const val KEY_LAST_LIVE_ITEM = "last_live_item"
@@ -264,6 +274,33 @@ class MediaRepository(
     }
 
     fun getLastContentType(): String? = cache.getString(KEY_LAST_CONTENT_TYPE, null)
+
+    // --- Recently Viewed Categories ---
+
+    fun addToCategoryHistory(categoryId: String, categoryName: String, contentType: String) {
+        val key = KEY_RECENT_CATEGORIES + "_" + contentType
+        val existing = getRecentCategoryList(key)
+        // Remove existing entry for same category, add new one at front
+        val updated = existing.filter { it.categoryId != categoryId }.toMutableList()
+        updated.add(0, RecentCategory(categoryId, categoryName, contentType, System.currentTimeMillis()))
+        // Keep max 20 entries
+        val trimmed = updated.take(MAX_RECENT_CATEGORIES)
+        cache.edit().putString(key, json.encodeToString(trimmed)).apply()
+    }
+
+    fun getRecentlyViewedCategories(contentType: String): List<RecentCategory> {
+        val key = KEY_RECENT_CATEGORIES + "_" + contentType
+        return getRecentCategoryList(key)
+    }
+
+    private fun getRecentCategoryList(key: String): List<RecentCategory> {
+        val raw = cache.getString(key, null) ?: return emptyList()
+        return try {
+            json.decodeFromString(raw)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
 
     private fun addToWatchHistory(
         itemId: String,
