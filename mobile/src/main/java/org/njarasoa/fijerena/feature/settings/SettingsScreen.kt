@@ -44,6 +44,7 @@ fun MobileSettingsScreen(
     onThemeChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onManageEpg: () -> Unit = {},
+    onCellularBuffers: () -> Unit = {},
     onProviderChanged: () -> Unit
 ) {
     val context = LocalContext.current
@@ -227,6 +228,16 @@ fun MobileSettingsScreen(
                             appSettings.isDevMode = enabled
                         }
                     )
+                }
+
+                if (isDevMode) {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                    Button(
+                        onClick = onCellularBuffers,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Configure Cellular Buffers")
+                    }
                 }
             }
 

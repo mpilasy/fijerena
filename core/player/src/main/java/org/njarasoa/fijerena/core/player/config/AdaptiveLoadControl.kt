@@ -21,7 +21,9 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
  * collection), read from ExoPlayer's loading thread. Single-writer/multi-reader.
  */
 class AdaptiveLoadControl(
-    private val contentType: PlayerConfigFactory.ContentType
+    private val contentType: PlayerConfigFactory.ContentType,
+    private val cellularLiveMultiplier: Float = 1.0f,
+    private val cellularVodMultiplier: Float = 1.0f
 ) : LoadControl {
 
     private val sharedAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
@@ -56,10 +58,10 @@ class AdaptiveLoadControl(
                 rebuffer = NetworkBufferProfile.WIFI_LIVE_REBUFFER_MS
                 backBuffer = NetworkBufferProfile.WIFI_LIVE_BACK_BUFFER_MS
             } else {
-                minBuffer = NetworkBufferProfile.CELLULAR_LIVE_MIN_BUFFER_MS
-                maxBuffer = NetworkBufferProfile.CELLULAR_LIVE_MAX_BUFFER_MS
-                playback = NetworkBufferProfile.CELLULAR_LIVE_PLAYBACK_MS
-                rebuffer = NetworkBufferProfile.CELLULAR_LIVE_REBUFFER_MS
+                minBuffer = NetworkBufferProfile.getCellularLiveMinBuffer(cellularLiveMultiplier)
+                maxBuffer = NetworkBufferProfile.getCellularLiveMaxBuffer(cellularLiveMultiplier)
+                playback = NetworkBufferProfile.getCellularLivePlayback(cellularLiveMultiplier)
+                rebuffer = NetworkBufferProfile.getCellularLiveRebuffer(cellularLiveMultiplier)
                 backBuffer = NetworkBufferProfile.CELLULAR_LIVE_BACK_BUFFER_MS
             }
             retainKeyframe = false
@@ -71,10 +73,10 @@ class AdaptiveLoadControl(
                 rebuffer = NetworkBufferProfile.WIFI_VOD_REBUFFER_MS
                 backBuffer = NetworkBufferProfile.WIFI_VOD_BACK_BUFFER_MS
             } else {
-                minBuffer = NetworkBufferProfile.CELLULAR_VOD_MIN_BUFFER_MS
-                maxBuffer = NetworkBufferProfile.CELLULAR_VOD_MAX_BUFFER_MS
-                playback = NetworkBufferProfile.CELLULAR_VOD_PLAYBACK_MS
-                rebuffer = NetworkBufferProfile.CELLULAR_VOD_REBUFFER_MS
+                minBuffer = NetworkBufferProfile.getCellularVodMinBuffer(cellularVodMultiplier)
+                maxBuffer = NetworkBufferProfile.getCellularVodMaxBuffer(cellularVodMultiplier)
+                playback = NetworkBufferProfile.getCellularVodPlayback(cellularVodMultiplier)
+                rebuffer = NetworkBufferProfile.getCellularVodRebuffer(cellularVodMultiplier)
                 backBuffer = NetworkBufferProfile.CELLULAR_VOD_BACK_BUFFER_MS
             }
             retainKeyframe = true
