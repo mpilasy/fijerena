@@ -208,7 +208,16 @@ fun MobileCategoryListScreen(
                                 selectedCategoryId = state.selectedCategoryId,
                                 nowPlaying = nowPlaying,
                                 onItemSelected = { itemId, itemName, categoryId ->
-                                    onStreamSelected(itemId, itemName, categoryId, contentType)
+                                    // Check if this is a category reference from "Recently Viewed"
+                                    val item = state.streams?.firstOrNull { it.id == itemId }
+                                    if (item?.providerData?.get("isCategoryRef") == "true") {
+                                        val targetCategoryId = item.providerData["categoryId"]
+                                        if (targetCategoryId != null) {
+                                            viewModel.loadStreams(targetCategoryId)
+                                        }
+                                    } else {
+                                        onStreamSelected(itemId, itemName, categoryId, contentType)
+                                    }
                                 }
                             )
                         }
@@ -252,7 +261,9 @@ private fun CategoryChipRow(
 ) {
     val virtualCategoryIds = setOf(
         CategoryViewModel.FAVORITES_CATEGORY_ID,
-        CategoryViewModel.LAST_WATCHED_CATEGORY_ID
+        CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
+        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
+        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
     )
     val virtualCategories = categories.filter { it.id in virtualCategoryIds }
     val regularCategories = categories.filter { it.id !in virtualCategoryIds }

@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -115,6 +116,10 @@ fun MobilePlayerScreen(
     var currentStreamIndex by remember { mutableStateOf(0) }
     var showChannelToast by remember { mutableStateOf(false) }
 
+    // EPG state for current and next programme
+    var currentEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
+    var nextEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
+
     var streamUrl by remember { mutableStateOf<String?>(null) }
     var streamHeaders by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -184,6 +189,28 @@ fun MobilePlayerScreen(
         if (showChannelToast) {
             delay(CinemaAnimation.toastDismissMs)
             showChannelToast = false
+        }
+    }
+
+    // Fetch EPG data for current channel (Live TV only)
+    LaunchedEffect(currentStreamId, streamList) {
+        if (contentType != "LIVE_TV" || streamList.isEmpty()) {
+            currentEpgProgram = null
+            nextEpgProgram = null
+            return@LaunchedEffect
+        }
+        val currentItem = streamList.firstOrNull { it.id == currentStreamId } ?: return@LaunchedEffect
+        try {
+            val epgData = mediaRepository.getEpgBulkForItems(listOf(currentItem)).getOrNull()
+            val listings = epgData?.get(currentStreamId)?.listings ?: emptyList()
+            val now = System.currentTimeMillis() / 1000
+            currentEpgProgram = listings.firstOrNull { now in it.startTime..it.endTime }
+            nextEpgProgram = if (currentEpgProgram != null) {
+                listings.firstOrNull { it.startTime >= currentEpgProgram!!.endTime }
+            } else null
+        } catch (_: Exception) {
+            currentEpgProgram = null
+            nextEpgProgram = null
         }
     }
 
@@ -434,6 +461,8 @@ fun MobilePlayerScreen(
                         isFavorite = isFavorite,
                         livePosition = livePosition,
                         liveDuration = liveDuration,
+                        currentEpgProgram = currentEpgProgram,
+                        nextEpgProgram = nextEpgProgram,
                         onPlayPause = {
                             if (playbackState is PlaybackState.Paused) {
                                 viewModel.resume()
@@ -505,7 +534,10 @@ fun MobilePlayerScreen(
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.TopCenter)
                 ) {
-                    ChannelToast(channelName = currentStreamName)
+                    ChannelToast(
+                        channelName = currentStreamName,
+                        currentEpgProgram = currentEpgProgram
+                    )
                 }
             }
 
@@ -634,6 +666,8 @@ private fun ControlsOverlay(
     isFavorite: Boolean,
     livePosition: Long,
     liveDuration: Long,
+    currentEpgProgram: EpgProgram? = null,
+    nextEpgProgram: EpgProgram? = null,
     onPlayPause: () -> Unit,
     onBack: () -> Unit,
     onStats: () -> Unit,
@@ -776,22 +810,55 @@ private fun ControlsOverlay(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             } else {
-                // Live indicator
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(MobileDimensions.liveDotSize)
-                            .background(Color.Red, shape = MaterialTheme.shapes.small)
-                    )
-                    Text(
-                        text = "LIVE",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White
-                    )
+                // Live indicator with EPG info
+                Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(MobileDimensions.liveDotSize)
+                                .background(Color.Red, shape = MaterialTheme.shapes.small)
+                        )
+                        Text(
+                            text = "LIVE",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White
+                        )
+                    }
+                    if (currentEpgProgram != null) {
+                        val nowStart = formatEpochTime(currentEpgProgram.startTime)
+                        val nowEnd = formatEpochTime(currentEpgProgram.endTime)
+                        Text(
+                            text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = CinemaAlpha.textMedium),
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                        // Programme progress bar
+                        val nowEpoch = System.currentTimeMillis() / 1000
+                        val epgProgress = if (currentEpgProgram.duration > 0) {
+                            ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(0f, 1f)
+                        } else 0f
+                        LinearProgressIndicator(
+                            progress = { epgProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp)
+                                .height(2.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                        )
+                        if (nextEpgProgram != null) {
+                            Text(
+                                text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(nextEpgProgram.startTime)})",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                color = Color.White.copy(alpha = CinemaAlpha.tint),
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -1360,8 +1427,16 @@ private fun formatTime(millis: Long): String {
     }
 }
 
+private fun formatEpochTime(epochSeconds: Long): String {
+    val sdf = java.text.SimpleDateFormat("HH:mm", Locale.getDefault())
+    return sdf.format(Date(epochSeconds * 1000))
+}
+
 @Composable
-private fun ChannelToast(channelName: String) {
+private fun ChannelToast(
+    channelName: String,
+    currentEpgProgram: EpgProgram? = null
+) {
     GlassPanel(
         modifier = Modifier.padding(top = CinemaSpacing.xl)
     ) {
@@ -1385,6 +1460,14 @@ private fun ChannelToast(channelName: String) {
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
+            if (currentEpgProgram != null) {
+                Text(
+                    text = currentEpgProgram.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = CinemaAlpha.textMedium),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.ui.player.PlayerScreen
@@ -90,6 +91,10 @@ fun TvPlayerScreen(
     var currentStreamIndex by remember { mutableIntStateOf(0) }
     var currentStreamId by remember { mutableStateOf(streamId) }
     var currentStreamName by remember { mutableStateOf(streamName) }
+
+    // EPG state for current and next programme
+    var currentEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
+    var nextEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -169,6 +174,28 @@ fun TvPlayerScreen(
                 // Keep empty list, disable navigation
             }
         )
+    }
+
+    // Fetch EPG data for current channel (Live TV only)
+    LaunchedEffect(currentStreamId, streamList) {
+        if (contentType != "LIVE_TV" || streamList.isEmpty()) {
+            currentEpgProgram = null
+            nextEpgProgram = null
+            return@LaunchedEffect
+        }
+        val currentItem = streamList.firstOrNull { it.id == currentStreamId } ?: return@LaunchedEffect
+        try {
+            val epgData = mediaRepository.getEpgBulkForItems(listOf(currentItem)).getOrNull()
+            val listings = epgData?.get(currentStreamId)?.listings ?: emptyList()
+            val now = System.currentTimeMillis() / 1000
+            currentEpgProgram = listings.firstOrNull { now in it.startTime..it.endTime }
+            nextEpgProgram = if (currentEpgProgram != null) {
+                listings.firstOrNull { it.startTime >= currentEpgProgram!!.endTime }
+            } else null
+        } catch (_: Exception) {
+            currentEpgProgram = null
+            nextEpgProgram = null
+        }
     }
 
     // Channel switching functions
@@ -323,6 +350,8 @@ fun TvPlayerScreen(
                 onNextChannel = { switchToNextChannel() },
                 onPreviousChannel = { switchToPreviousChannel() },
                 isFavorite = isFavorite,
+                currentEpgProgram = currentEpgProgram,
+                nextEpgProgram = nextEpgProgram,
                 onToggleFavorite = {
                     coroutineScope.launch {
                         if (isFavorite) {

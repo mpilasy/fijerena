@@ -22,6 +22,7 @@ class CategoryViewModel(
         const val CONTINUE_WATCHING_CATEGORY_ID = "continue_watching"
         const val FAVORITES_CATEGORY_ID = "favorites"
         const val LAST_WATCHED_CATEGORY_ID = "last_watched"
+        const val RECENTLY_VIEWED_CATEGORIES_ID = "recently_viewed_categories"
     }
 
     sealed class UiState {
@@ -161,6 +162,16 @@ class CategoryViewModel(
             isVirtual = true
         ))
 
+        // Only show Recently Viewed if there's history
+        val recentCategories = repository.getRecentlyViewedCategories(contentType)
+        if (recentCategories.isNotEmpty()) {
+            virtualCategories.add(MediaCategory(
+                id = RECENTLY_VIEWED_CATEGORIES_ID,
+                name = "Recently Viewed",
+                isVirtual = true
+            ))
+        }
+
         categories = virtualCategories + fetchedCategories
 
         val lastItemId = repository.getLastItemId(contentType)
@@ -187,7 +198,8 @@ class CategoryViewModel(
                 val firstRegularCategory = categories.firstOrNull {
                     it.id != FAVORITES_CATEGORY_ID &&
                     it.id != LAST_WATCHED_CATEGORY_ID &&
-                    it.id != CONTINUE_WATCHING_CATEGORY_ID
+                    it.id != CONTINUE_WATCHING_CATEGORY_ID &&
+                    it.id != RECENTLY_VIEWED_CATEGORIES_ID
                 }
                 firstRegularCategory?.id ?: categories.first().id
             }
@@ -258,6 +270,39 @@ class CategoryViewModel(
                 return@launch
             }
 
+            if (categoryId == RECENTLY_VIEWED_CATEGORIES_ID) {
+                val recentCategories = repository.getRecentlyViewedCategories(contentType)
+                currentStreams = recentCategories.map { recent ->
+                    MediaItem(
+                        id = "recent_cat_${recent.categoryId}",
+                        name = recent.categoryName,
+                        mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
+                        categoryId = RECENTLY_VIEWED_CATEGORIES_ID,
+                        providerData = mapOf(
+                            "isCategoryRef" to "true",
+                            "categoryId" to recent.categoryId
+                        )
+                    )
+                }
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedItemId = lastItemId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null
+                )
+                return@launch
+            }
+
+            // Track non-virtual category views
+            val categoryName = categories.firstOrNull { it.id == categoryId }?.name
+            if (categoryName != null) {
+                repository.addToCategoryHistory(categoryId, categoryName, contentType)
+            }
+
             val result = repository.getItems(categoryId, contentType)
 
             result.fold(
@@ -279,7 +324,8 @@ class CategoryViewModel(
                     if (isInitialLoad && items.isEmpty() && !initialLoadRetried &&
                         categoryId != CONTINUE_WATCHING_CATEGORY_ID &&
                         categoryId != FAVORITES_CATEGORY_ID &&
-                        categoryId != LAST_WATCHED_CATEGORY_ID) {
+                        categoryId != LAST_WATCHED_CATEGORY_ID &&
+                        categoryId != RECENTLY_VIEWED_CATEGORIES_ID) {
                         initialLoadRetried = true
                         delay(1500)
                         loadStreams(categoryId)
@@ -346,17 +392,33 @@ class CategoryViewModel(
 
             result.fold(
                 onSuccess = { fetchedCategories ->
-                    val favoritesCategory = MediaCategory(
+                    val virtualCats = mutableListOf<MediaCategory>()
+                    if (contentType != "LIVE_TV") {
+                        virtualCats.add(MediaCategory(
+                            id = CONTINUE_WATCHING_CATEGORY_ID,
+                            name = "Continue Watching",
+                            isVirtual = true
+                        ))
+                    }
+                    virtualCats.add(MediaCategory(
                         id = FAVORITES_CATEGORY_ID,
                         name = "Favorites",
                         isVirtual = true
-                    )
-                    val lastWatchedCategory = MediaCategory(
+                    ))
+                    virtualCats.add(MediaCategory(
                         id = LAST_WATCHED_CATEGORY_ID,
                         name = "Last Watched",
                         isVirtual = true
-                    )
-                    categories = listOf(favoritesCategory, lastWatchedCategory) + fetchedCategories
+                    ))
+                    val recentCategories = repository.getRecentlyViewedCategories(contentType)
+                    if (recentCategories.isNotEmpty()) {
+                        virtualCats.add(MediaCategory(
+                            id = RECENTLY_VIEWED_CATEGORIES_ID,
+                            name = "Recently Viewed",
+                            isVirtual = true
+                        ))
+                    }
+                    categories = virtualCats + fetchedCategories
 
                     val lastItemId = repository.getLastItemId(contentType)
                     _uiState.value = UiState.Success(
@@ -438,6 +500,33 @@ class CategoryViewModel(
                     lastPlayedItemId = lastItemId,
                     categoriesPayloadSize = getCategoriesPayloadSize(),
                     streamsPayloadSize = getPayloadSize(categoryId)
+                )
+                return@launch
+            }
+
+            if (categoryId == RECENTLY_VIEWED_CATEGORIES_ID) {
+                val recentCategories = repository.getRecentlyViewedCategories(contentType)
+                currentStreams = recentCategories.map { recent ->
+                    MediaItem(
+                        id = "recent_cat_${recent.categoryId}",
+                        name = recent.categoryName,
+                        mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
+                        categoryId = RECENTLY_VIEWED_CATEGORIES_ID,
+                        providerData = mapOf(
+                            "isCategoryRef" to "true",
+                            "categoryId" to recent.categoryId
+                        )
+                    )
+                }
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedItemId = lastItemId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null
                 )
                 return@launch
             }

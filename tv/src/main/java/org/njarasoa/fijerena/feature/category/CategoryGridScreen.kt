@@ -409,7 +409,18 @@ private fun TwoColumnLayout(
                 contentType = contentType,
                 categoryViewModel = categoryViewModel,
                 isDevMode = appSettings.isDevMode,
-                onStreamSelected = onStreamSelected,
+                onStreamSelected = { streamId, streamName, categoryId ->
+                    // Check if this is a category reference from "Recently Viewed"
+                    val item = streams?.firstOrNull { it.id == streamId }
+                    if (item?.providerData?.get("isCategoryRef") == "true") {
+                        val targetCategoryId = item.providerData["categoryId"]
+                        if (targetCategoryId != null) {
+                            onCategorySelected(targetCategoryId)
+                        }
+                    } else {
+                        onStreamSelected(streamId, streamName, categoryId)
+                    }
+                },
                 onRefreshStreams = onRefreshStreams,
                 modifier = Modifier
                     .weight(0.7f)
@@ -432,7 +443,8 @@ private fun CategoryList(
     val virtualCategoryIds = setOf(
         CategoryViewModel.FAVORITES_CATEGORY_ID,
         CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
-        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID
+        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
+        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
     )
 
     val virtualCategories = categories.filter { it.id in virtualCategoryIds }
