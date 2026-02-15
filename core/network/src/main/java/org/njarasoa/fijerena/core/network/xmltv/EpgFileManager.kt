@@ -208,14 +208,33 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Start processing all enabled sources. The job runs on the file manager's
-     * own scope so it survives ViewModel clearing and auto-refresh rescheduling.
+     * Start processing all enabled sources. Shows confirmation dialog on cellular.
+     * The job runs on the file manager's own scope so it survives ViewModel
+     * clearing and auto-refresh rescheduling.
      * Only one processing job runs at a time — a new request cancels the old one.
+     *
+     * @param onComplete Callback invoked after processing completes (on WiFi or after confirmation).
+     * @param onCellularConfirm Callback invoked if user must confirm on cellular.
+     *                          Return false to cancel processing.
      */
-    fun launchProcessAllSources(onComplete: (suspend () -> Unit)? = null) {
+    fun launchProcessAllSources(
+        onComplete: (suspend () -> Unit)? = null,
+        onCellularConfirm: (suspend () -> Boolean)? = null
+    ) {
         processJob?.cancel()
 
         processJob = scope.launch {
+            val networkType = NetworkMonitor.currentNetworkType
+            val shouldProceed = if (networkType == NetworkType.CELLULAR && onCellularConfirm != null) {
+                onCellularConfirm()
+            } else {
+                true
+            }
+
+            if (!shouldProceed) {
+                return@launch
+            }
+
             val db = EpgIndexDatabase.getInstance(context)
             val sources = db.epgSourceDao().getEnabledSources()
             processAllSourcesInternal(sources)
@@ -224,12 +243,33 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Start processing a single source. Same lifecycle guarantees as above.
+     * Start processing a single source. Shows confirmation dialog on cellular.
+     * Same lifecycle guarantees as [launchProcessAllSources].
+     *
+     * @param sourceId The source to refresh
+     * @param onComplete Callback invoked after processing completes (on WiFi or after confirmation).
+     * @param onCellularConfirm Callback invoked if user must confirm on cellular.
+     *                          Return false to cancel processing.
      */
-    fun launchProcessSingleSource(sourceId: Long, onComplete: (suspend () -> Unit)? = null) {
+    fun launchProcessSingleSource(
+        sourceId: Long,
+        onComplete: (suspend () -> Unit)? = null,
+        onCellularConfirm: (suspend () -> Boolean)? = null
+    ) {
         processJob?.cancel()
 
         processJob = scope.launch {
+            val networkType = NetworkMonitor.currentNetworkType
+            val shouldProceed = if (networkType == NetworkType.CELLULAR && onCellularConfirm != null) {
+                onCellularConfirm()
+            } else {
+                true
+            }
+
+            if (!shouldProceed) {
+                return@launch
+            }
+
             processSingleSourceInternal(sourceId)
             onComplete?.invoke()
         }
@@ -250,12 +290,6 @@ class EpgFileManager private constructor(private val context: Context) {
     private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) {
         if (sources.isEmpty()) {
             _state.value = MultiSourceState.Error("No sources to process")
-            return
-        }
-
-        val networkType = NetworkMonitor.currentNetworkType
-        if (networkType == NetworkType.CELLULAR) {
-            _state.value = MultiSourceState.Error("WiFi required for EPG downloads")
             return
         }
 
@@ -299,12 +333,6 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     private suspend fun processSingleSourceInternal(sourceId: Long) {
-        val networkType = NetworkMonitor.currentNetworkType
-        if (networkType == NetworkType.CELLULAR) {
-            _state.value = MultiSourceState.Error("WiFi required for EPG downloads")
-            return
-        }
-
         try {
             val db = EpgIndexDatabase.getInstance(context)
             val sourceDao = db.epgSourceDao()
@@ -657,11 +685,6 @@ class EpgFileManager private constructor(private val context: Context) {
         val sourceDao = db.epgSourceDao()
         val sources = sourceDao.getEnabledSources()
         if (sources.isEmpty()) return
-
-        if (NetworkMonitor.currentNetworkType == NetworkType.CELLULAR) {
-            Log.d(TAG, "Auto-refresh skipped: not on WiFi")
-            return
-        }
 
         if (_state.value is MultiSourceState.Processing) {
             Log.d(TAG, "Auto-refresh skipped: already processing")

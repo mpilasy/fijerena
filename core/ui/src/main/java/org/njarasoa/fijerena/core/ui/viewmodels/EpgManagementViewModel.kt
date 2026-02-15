@@ -50,6 +50,15 @@ class EpgManagementViewModel(
     private val _dbStats = MutableStateFlow(DbStats())
     val dbStats: StateFlow<DbStats> = _dbStats.asStateFlow()
 
+    sealed interface CellularConfirmDialog {
+        data object Hidden : CellularConfirmDialog
+        data class RefreshAll(val onConfirm: suspend () -> Unit, val onDismiss: () -> Unit) : CellularConfirmDialog
+        data class RefreshSource(val sourceId: Long, val onConfirm: suspend () -> Unit, val onDismiss: () -> Unit) : CellularConfirmDialog
+    }
+
+    private val _cellularDialog = MutableStateFlow<CellularConfirmDialog>(CellularConfirmDialog.Hidden)
+    val cellularDialog: StateFlow<CellularConfirmDialog> = _cellularDialog.asStateFlow()
+
     init {
         refreshDbStats()
     }
@@ -118,15 +127,47 @@ class EpgManagementViewModel(
     fun refreshAll() {
         // Launch on the file manager's own scope so the job survives
         // navigation away from this screen.
-        epgFileManager.launchProcessAllSources {
-            refreshDbStats()
-        }
+        epgFileManager.launchProcessAllSources(
+            onComplete = {
+                refreshDbStats()
+                _cellularDialog.value = CellularConfirmDialog.Hidden
+            },
+            onCellularConfirm = {
+                _cellularDialog.value = CellularConfirmDialog.RefreshAll(
+                    onConfirm = {
+                        epgFileManager.launchProcessAllSources(onComplete = {
+                            refreshDbStats()
+                            _cellularDialog.value = CellularConfirmDialog.Hidden
+                        })
+                    },
+                    onDismiss = { _cellularDialog.value = CellularConfirmDialog.Hidden }
+                )
+                false  // Don't proceed yet, wait for dialog confirmation
+            }
+        )
     }
 
     fun refreshSource(sourceId: Long) {
-        epgFileManager.launchProcessSingleSource(sourceId) {
-            refreshDbStats()
-        }
+        epgFileManager.launchProcessSingleSource(
+            sourceId,
+            onComplete = {
+                refreshDbStats()
+                _cellularDialog.value = CellularConfirmDialog.Hidden
+            },
+            onCellularConfirm = {
+                _cellularDialog.value = CellularConfirmDialog.RefreshSource(
+                    sourceId = sourceId,
+                    onConfirm = {
+                        epgFileManager.launchProcessSingleSource(sourceId, onComplete = {
+                            refreshDbStats()
+                            _cellularDialog.value = CellularConfirmDialog.Hidden
+                        })
+                    },
+                    onDismiss = { _cellularDialog.value = CellularConfirmDialog.Hidden }
+                )
+                false  // Don't proceed yet, wait for dialog confirmation
+            }
+        )
     }
 
     fun cleanupFiles() {
