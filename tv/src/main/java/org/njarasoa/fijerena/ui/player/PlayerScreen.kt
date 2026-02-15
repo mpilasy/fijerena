@@ -230,15 +230,17 @@ fun PlayerScreen(
                             if (showControls) {
                                 false
                             } else if (!showStats) {
-                                // Show controls and toggle pause/resume for all content types
-                                val newState = !showControls
-                                showControls = newState
-                                showStreamInfo = newState
+                                // Show controls overlay
+                                showControls = true
+                                showStreamInfo = true
 
-                                when (playbackState) {
-                                    is PlaybackState.Playing -> viewModel.pause()
-                                    is PlaybackState.Paused -> viewModel.resume()
-                                    else -> {}
+                                // Only toggle pause/resume for VOD, never for live streams
+                                if (!currentMetadata.isLive) {
+                                    when (playbackState) {
+                                        is PlaybackState.Playing -> viewModel.pause()
+                                        is PlaybackState.Paused -> viewModel.resume()
+                                        else -> {}
+                                    }
                                 }
                                 true
                             } else {
@@ -1978,25 +1980,27 @@ private fun ControlButtonsRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Pause/Resume for all content types
-            if (isPaused) {
-                Button(onClick = { onResume?.invoke() }) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                        Text("Resume")
+            // Pause/Resume for VOD only — live streams are never pausable
+            if (!isLive) {
+                if (isPaused) {
+                    Button(onClick = { onResume?.invoke() }) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                            Text("Resume")
+                        }
                     }
-                }
-            } else {
-                Button(onClick = { onPause?.invoke() }) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.Pause, contentDescription = null)
-                        Text("Pause")
+                } else {
+                    Button(onClick = { onPause?.invoke() }) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Filled.Pause, contentDescription = null)
+                            Text("Pause")
+                        }
                     }
                 }
             }
