@@ -55,4 +55,31 @@ object NetworkBufferProfile {
     const val WIFI_READ_TIMEOUT_MS = 60_000
     const val CELLULAR_CONNECT_TIMEOUT_MS = 45_000
     const val CELLULAR_READ_TIMEOUT_MS = 30_000
+
+    // ── Cellular buffer multiplier functions ─────────────────────────
+    // Apply multiplier to cellular buffers (WiFi always uses 1.0x)
+
+    fun getCellularLiveMinBuffer(multiplier: Float): Int =
+        (CELLULAR_LIVE_MIN_BUFFER_MS * multiplier).toInt()
+
+    fun getCellularLiveMaxBuffer(multiplier: Float): Int =
+        (CELLULAR_LIVE_MAX_BUFFER_MS * multiplier).toInt()
+
+    fun getCellularLivePlayback(multiplier: Float): Int =
+        (CELLULAR_LIVE_PLAYBACK_MS * multiplier).toInt()
+
+    fun getCellularLiveRebuffer(multiplier: Float): Int =
+        (CELLULAR_LIVE_REBUFFER_MS * multiplier).toInt()
+
+    fun getCellularVodMinBuffer(multiplier: Float): Int =
+        (CELLULAR_VOD_MIN_BUFFER_MS * multiplier).toInt()
+
+    fun getCellularVodMaxBuffer(multiplier: Float): Int =
+        (CELLULAR_VOD_MAX_BUFFER_MS * multiplier).toInt()
+
+    fun getCellularVodPlayback(multiplier: Float): Int =
+        (CELLULAR_VOD_PLAYBACK_MS * multiplier).toInt()
+
+    fun getCellularVodRebuffer(multiplier: Float): Int =
+        (CELLULAR_VOD_REBUFFER_MS * multiplier).toInt()
 }

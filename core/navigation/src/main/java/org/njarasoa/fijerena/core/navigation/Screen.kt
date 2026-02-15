@@ -141,6 +141,13 @@ sealed interface Screen {
     data object EpgManagement : Screen
 
     /**
+     * Cellular Buffer Settings screen destination (developer mode only).
+     * Configure cellular buffer multipliers for Live TV and VOD.
+     */
+    @Serializable
+    data object CellularBufferSettings : Screen
+
+    /**
      * Player screen destination with stream parameters.
      *
      * @param streamId The Xtream stream ID to play (or episode ID for TV shows as string converted to int hash)

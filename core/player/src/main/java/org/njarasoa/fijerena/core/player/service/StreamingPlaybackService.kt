@@ -98,7 +98,16 @@ class StreamingPlaybackService : MediaSessionService() {
             .setEnableAudioFloatOutput(true) // Better audio quality if hardware supports it
 
         // Use AdaptiveLoadControl for network-aware buffer management
-        val loadControl = AdaptiveLoadControl(contentType)
+        // Read cellular buffer multipliers from SharedPreferences (avoids circular dependency)
+        val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
+        val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
+        val cellularVodMultiplier = prefs.getFloat("cellular_vod_multiplier", 1.0f)
+
+        val loadControl = AdaptiveLoadControl(
+            contentType = contentType,
+            cellularLiveMultiplier = cellularLiveMultiplier,
+            cellularVodMultiplier = cellularVodMultiplier
+        )
         adaptiveLoadControl = loadControl
 
         val player = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)

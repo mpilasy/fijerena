@@ -24,11 +24,16 @@ class AppSettings(context: Context) {
         private const val KEY_EPG_URL = "epg_url"
         private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
         private const val KEY_EPG_AUTO_REFRESH = "epg_auto_refresh"
+        private const val KEY_CELLULAR_LIVE_MULTIPLIER = "cellular_live_multiplier"
+        private const val KEY_CELLULAR_VOD_MULTIPLIER = "cellular_vod_multiplier"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
         const val DEFAULT_UI_SCALE = 1.0f
         const val DEFAULT_EPG_URL = ""
+        const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
+        const val MIN_CELLULAR_MULTIPLIER = 0.5f
+        const val MAX_CELLULAR_MULTIPLIER = 3.0f
     }
 
     /**
@@ -129,4 +134,34 @@ class AppSettings(context: Context) {
             val clamped = value.coerceIn(-12, 14)
             prefs.edit().putInt(KEY_EPG_TIMEZONE_OFFSET, clamped).apply()
         }
+
+    /**
+     * Get or set the cellular buffer multiplier for Live TV (0.5x - 3.0x).
+     * Default: 1.0x (use baseline values)
+     */
+    var cellularLiveMultiplier: Float
+        get() = prefs.getFloat(KEY_CELLULAR_LIVE_MULTIPLIER, DEFAULT_CELLULAR_MULTIPLIER)
+        set(value) {
+            val clamped = value.coerceIn(MIN_CELLULAR_MULTIPLIER, MAX_CELLULAR_MULTIPLIER)
+            prefs.edit().putFloat(KEY_CELLULAR_LIVE_MULTIPLIER, clamped).apply()
+        }
+
+    /**
+     * Get or set the cellular buffer multiplier for VOD (0.5x - 3.0x).
+     * Default: 1.0x (use baseline values)
+     */
+    var cellularVodMultiplier: Float
+        get() = prefs.getFloat(KEY_CELLULAR_VOD_MULTIPLIER, DEFAULT_CELLULAR_MULTIPLIER)
+        set(value) {
+            val clamped = value.coerceIn(MIN_CELLULAR_MULTIPLIER, MAX_CELLULAR_MULTIPLIER)
+            prefs.edit().putFloat(KEY_CELLULAR_VOD_MULTIPLIER, clamped).apply()
+        }
+
+    /**
+     * Reset both cellular buffer multipliers to default (1.0x).
+     */
+    fun resetCellularBuffers() {
+        cellularLiveMultiplier = DEFAULT_CELLULAR_MULTIPLIER
+        cellularVodMultiplier = DEFAULT_CELLULAR_MULTIPLIER
+    }
 }

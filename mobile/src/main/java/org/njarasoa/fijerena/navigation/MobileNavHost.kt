@@ -37,6 +37,7 @@ import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
 import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
 import org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen
+import org.njarasoa.fijerena.feature.settings.MobileCellularBufferSettingsScreen
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 
 /**
@@ -330,6 +331,9 @@ fun MobileNavHost(
                     onManageEpg = {
                         navController.navigate(Screen.EpgManagement)
                     },
+                    onCellularBuffers = {
+                        navController.navigate(Screen.CellularBufferSettings)
+                    },
                     onProviderChanged = {
                         coroutineScope.launch {
                             val providerRepo = ProviderRepository(context.applicationContext)
@@ -352,6 +356,15 @@ fun MobileNavHost(
                                 popUpTo(Screen.Settings) { inclusive = false }
                             }
                         }
+                    }
+                )
+            }
+
+            // Cellular Buffer Settings Screen
+            composable<Screen.CellularBufferSettings> {
+                MobileCellularBufferSettingsScreen(
+                    onBack = {
+                        navController.navigateUp()
                     }
                 )
             }
