@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
@@ -15,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         EpgIndexMetadata::class,
         EpgSourceEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class EpgIndexDatabase : RoomDatabase() {
@@ -26,6 +27,14 @@ abstract class EpgIndexDatabase : RoomDatabase() {
     companion object {
         private const val TAG = "EpgIndexDatabase"
         private const val DB_NAME = "epg_index.db"
+
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE epg_source ADD COLUMN ingest_method TEXT NOT NULL DEFAULT 'DOWNLOADED'"
+                )
+            }
+        }
 
         @Volatile
         private var INSTANCE: EpgIndexDatabase? = null
@@ -42,6 +51,7 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                 EpgIndexDatabase::class.java,
                 DB_NAME
             )
+                .addMigrations(MIGRATION_7_8)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
