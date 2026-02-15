@@ -29,7 +29,7 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
                  ┌────────────▼────────────┐
                  │    EpgFileManager        │
                  │   (singleton, WiFi-only) │
-                 │  → xmltv_global.xml      │
+                 │  → dual-mode ingest      │
                  └────────────┬─────────────┘
                               │
                  ┌────────────▼────────────┐
@@ -59,16 +59,17 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
 **Singleton** (`core/network/.../xmltv/EpgFileManager.kt`) managing the multi-source download-ingest-delete pipeline.
 
 **Key design decisions:**
-- Uses `java.net.HttpURLConnection` instead of Ktor to avoid in-memory buffering of 500MB+ files
+- Uses Ktor `HttpClient(OkHttp)` engine for concurrent requests
 - `Accept-Encoding: identity` prevents automatic gzip decompression
 - WiFi-only enforcement via `NetworkMonitor.currentNetworkType`
 - 3 retries with exponential backoff (5s base)
-- 64KB I/O buffers, 10-minute read timeout
+- 128KB I/O buffers, 10-minute read timeout
 - `OutOfMemoryError` caught explicitly
 
-**Two ingestion paths based on URL suffix:**
-- **`.gz` URLs → streaming path:** HTTP → `GZIPInputStream` → `BufferedInputStream` → `EpgIndexer.ingestFromStream()`. Zero disk writes. Progress reported as channel/programme counts ("Streaming" phase).
-- **Non-`.gz` URLs → disk-based path:** Download to temp file → validate XML header → `EpgIndexer.startIndexing()` → delete temp file. Progress reported as download bytes ("Downloading"/"Ingesting" phases).
+**Dual-mode architecture based on device type (via `DeviceDetector`):**
+- **TV/fixed devices:** Stream directly from network to database (zero disk I/O)
+- **Mobile devices:** Download to `cacheDir` first, then ingest from file
+- Both paths handle `.gz` (GZIPInputStream) and plain XML
 
 **State machine (`MultiSourceState`):**
 
@@ -85,7 +86,7 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
 - `launchProcessSingleSource(sourceId)` — process one source
 - Auto-refresh: checks for stale sources (>24h) periodically
 
-Each source URL is managed via `EpgSourceEntity` in Room. The `openConnection()` helper shares HTTP setup (timeouts, retries, headers) between both ingestion paths.
+Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync via `EpgSyncWorker` (WorkManager, 24h periodic). The `openConnection()` helper shares HTTP setup (timeouts, retries, headers) between both ingestion paths.
 
 ### XmltvParser
 
@@ -154,15 +155,9 @@ The FTS4 virtual table with `unicode61` tokenizer enables sub-100ms full-text se
 
 **Key functions:**
 - `initialize()` — restores `Indexed` state from metadata without re-indexing
-- `startIndexing(file)` — file-based streaming ingestion: 1000-row batch INSERTs with `CountingInputStream` for byte-level progress
-- `ingestFromStream(inputStream)` — stream-based ingestion for `.gz` URLs: Channel-based producer-consumer (capacity=4) for concurrent XML parsing and SQLite batch inserts. Zero disk writes.
-- `appendFromFile(file, timezoneOverride)` — append with per-source timezone
+- `ingestFromStream(inputStream)` — all inserts wrapped in Room `withTransaction` for atomicity. On error, transaction rolls back. 500-row batch INSERTs with progress via callback.
 - `rebuildFtsAndUpdateState()` — rebuild FTS index and update metadata after all sources processed
 - `clearAll()` / `purgeOldProgrammes(cutoffEpoch)` — data management with incremental vacuum
-
-**Fast-write PRAGMAs:** Both `startIndexing()` and `ingestFromStream()` wrap batch inserts with `withIngestionPragmas()` which sets `synchronous=OFF` and `journal_mode=WAL` during ingestion, restoring `synchronous=FULL` afterwards. PRAGMAs use `query()` instead of `execSQL()` due to Room restrictions.
-
-**Producer-consumer (`ingestFromStream`):** The parser produces `IngestionBatch.Channels` and `IngestionBatch.Programmes` batches through a bounded `Channel<IngestionBatch>` (capacity=4 for backpressure). A consumer coroutine reads batches and inserts into SQLite. This allows the network/decompression I/O and SQLite writes to overlap.
 
 After all sources are ingested, `EpgFileManager` calls `rebuildFtsAndUpdateState()` to rebuild the FTS index:
 ```sql
@@ -272,9 +267,9 @@ Results are grouped by normalized title, sorted by airing count descending. Pagi
 - 3 retries with exponential backoff
 
 **Memory safety:**
-- `HttpURLConnection` instead of Ktor (avoids buffering entire response)
+- Ktor `HttpClient(OkHttp)` with streaming response
 - Streaming `XmlPullParser` (no in-memory DOM tree)
-- 1000-row batch INSERTs (~200KB per batch)
+- 500-row batch INSERTs in Room `withTransaction`
 - `OutOfMemoryError` caught at every I/O boundary with `System.gc()` and fallback paths
 
 ---
@@ -346,6 +341,7 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 | `XmltvEpgService.kt` | Class | XMLTV → EpgResponse adapter for grid |
 | `XmltvModels.kt` | Data | XMLTV channel/programme/search models |
 | `EpgBrowserModels.kt` | Data | Browser UI models (program + airings) |
+| `EpgSyncWorker.kt` | CoroutineWorker | Mobile background EPG sync (WorkManager) |
 
 ### SQLite Indexing (`core/network/.../xmltv/epgindex/`)
 
