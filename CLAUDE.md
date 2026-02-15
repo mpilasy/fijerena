@@ -159,7 +159,7 @@ Results grouped by title, sorted by airing count. Time window: -1 to +6 days, ma
 
 **Search:** SQLite FTS4 MATCH query (<100ms). Falls back to LIKE if FTS returns empty.
 
-**Indexing:** `EpgIndexer` singleton parses XMLTV into Room DB with FTS4. Streaming parse, 1000-row batch INSERTs. States: `NotIndexed`, `Indexing(progress)`, `Indexed(counts)`, `Failed(reason)`. Triggered by `EpgFileManager` after source ingestion. Incremental auto_vacuum reclaims dead pages after clear/purge/refresh operations. Fast-write PRAGMAs (`synchronous=OFF`, `journal_mode=WAL`) applied during ingestion via `withIngestionPragmas()`. For `.gz` URLs, `ingestFromStream()` uses a Channel-based producer-consumer (capacity=4) for concurrent parse + SQLite insert with zero disk writes.
+**Indexing:** `EpgIndexer` singleton parses XMLTV into Room DB with FTS4. Streaming parse, 500-row batch INSERTs wrapped in Room `withTransaction` for atomicity. States: `NotIndexed`, `Indexing(progress)`, `Indexed(counts)`, `Failed(reason)`. Triggered by `EpgFileManager` after source ingestion. Incremental auto_vacuum reclaims dead pages after clear/purge/refresh operations. On network drop or parse error, transaction rolls back — DB stays consistent.
 
 **Timezone Override:** Per-source `timezoneOffsetHours` overrides XMLTV timestamps during parsing via `XmltvParser.timezoneOverrideHours`.
 
@@ -172,11 +172,11 @@ Dedicated screen (`Screen.EpgManagement`) for managing multiple XMLTV EPG source
 
 **Data Model:** `EpgSourceEntity` in `epg_index.db` (Room v6) — stores URL, label, per-source timezone override, enabled flag, last ingested timestamp, last error. Database uses `auto_vacuum=INCREMENTAL` with one-time full VACUUM on upgrade from older mode.
 
-**EpgFileManager** (`core/network/.../xmltv/EpgFileManager.kt`): Singleton managing multi-source download lifecycle. Uses raw `HttpURLConnection` (not Ktor) for large files. Two ingestion paths: `.gz` URLs stream directly (HTTP → GZIPInputStream → XmlPullParser, zero disk writes, "Streaming" phase); non-`.gz` URLs use disk-based download → validate → ingest → delete. WiFi-only, 3 retries with exponential backoff, 64KB I/O buffers. `MultiSourceState`: Idle/Processing(source,index,total,phase)/Completed(count,errors)/Error. Auto-migrates legacy `AppSettings.epgUrl` to `EpgSourceEntity` on first init.
+**EpgFileManager** (`core/network/.../xmltv/EpgFileManager.kt`): Singleton managing multi-source ingestion lifecycle. Uses Ktor `HttpClient(OkHttp)` for HTTP requests. Dual-mode architecture via `isFixedDevice()` (uses `DeviceDetector`): TV/fixed devices stream directly from network to database (zero disk I/O); mobile devices download to `cacheDir` first, then ingest from file. Both paths use 128KB buffers, 3 retries with exponential backoff. WiFi-only enforcement. `MultiSourceState`: Idle/Processing(source,index,total,phase)/Completed(count,errors)/Error. Auto-migrates legacy `AppSettings.epgUrl` to `EpgSourceEntity` on first init. Mobile background sync via WorkManager `EpgSyncWorker` (24h periodic).
 
 **UI:** TV (`TvEpgManagementScreen`) and Mobile (`MobileEpgManagementScreen`). Source list with status dots (green=recent, yellow=>24h, red=error, gray=disabled), add/edit dialog (URL, label, timezone cycle), actions (Refresh All, Cleanup Files, Purge >7d, Clear All Data with confirmation).
 
-**Key Files:** `epgindex/EpgSourceEntity.kt`, `epgindex/EpgSourceDao.kt`, `EpgFileManager.kt`, `EpgManagementViewModel.kt`, `EpgManagementViewModelFactory.kt`
+**Key Files:** `epgindex/EpgSourceEntity.kt`, `epgindex/EpgSourceDao.kt`, `EpgFileManager.kt`, `EpgSyncWorker.kt`, `EpgManagementViewModel.kt`, `EpgManagementViewModelFactory.kt`
 
 ### Multi-Provider Architecture
 4 provider types through unified domain model. Screens never see provider-specific types.

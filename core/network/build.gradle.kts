@@ -33,6 +33,9 @@ dependencies {
     // Ktor HTTP client for Jellyfin API
     implementation(libs.bundles.networking)
 
+    // WorkManager
+    implementation(libs.work.runtime.ktx)
+
     // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

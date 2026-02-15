@@ -3,6 +3,11 @@ package org.njarasoa.fijerena.core.network.xmltv
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,22 +22,29 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 import org.njarasoa.fijerena.core.player.config.NetworkType
+import org.njarasoa.fijerena.core.player.device.DeviceDetector
+import org.njarasoa.fijerena.core.player.device.DeviceType
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType as WorkNetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import java.io.BufferedInputStream
 import java.io.File
-import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 
 /**
- * Singleton managing multi-source EPG download-ingest-delete pipeline.
+ * Singleton managing multi-source EPG download-ingest pipeline.
  *
- * For each source: download to temp file -> parse into SQLite -> delete temp file.
- * No permanent XML files on disk. Database stays searchable during sync
- * (append-only with REPLACE deduplication via unique index).
+ * Dual-mode architecture based on device type:
+ * - **TV/fixed devices:** Stream directly from network to database (zero disk I/O)
+ * - **Mobile:** Download to cache first, then ingest from file
  *
- * Uses raw HttpURLConnection instead of Ktor to avoid in-memory buffering
- * of large (500MB+) responses.
+ * Both modes use Room withTransaction in EpgIndexer for atomic ingestion.
+ * Uses Ktor HttpClient(OkHttp) for HTTP requests.
  */
 class EpgFileManager private constructor(private val context: Context) {
 
@@ -40,13 +52,9 @@ class EpgFileManager private constructor(private val context: Context) {
         private const val TAG = "EpgFileManager"
         private const val PREFS_NAME = "epg_file_manager"
         private const val KEY_MIGRATED_TO_SOURCES = "migrated_to_sources_v1"
-        private const val BUFFER_SIZE = 65536
-        private const val GZIP_BUFFER_SIZE = 65536
-        private const val LOG_INTERVAL_BYTES = 50L * 1024 * 1024
+        private const val STREAM_BUFFER_SIZE = 131072 // 128KB
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 5000L
-        private const val CONNECT_TIMEOUT_MS = 60_000
-        private const val READ_TIMEOUT_MS = 600_000
         private const val STALE_THRESHOLD_MS = 24L * 3600 * 1000
 
         @Volatile
@@ -96,7 +104,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val sourceLabel: String,
             val sourceIndex: Int,
             val totalSources: Int,
-            val phase: String, // "Downloading" or "Ingesting"
+            val phase: String, // "Streaming" or "Downloading" or "Ingesting"
             val downloadedBytes: Long = 0,
             val downloadTotalBytes: Long = -1, // -1 = unknown
             val sourceChannels: Int = 0,
@@ -122,11 +130,21 @@ class EpgFileManager private constructor(private val context: Context) {
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
     val state: StateFlow<MultiSourceState> = _state.asStateFlow()
 
-    // Track download bytes for current source (updated during download)
-    @Volatile
-    private var currentDownloadBytes: Long = 0
-    @Volatile
-    private var currentDownloadTotalBytes: Long = -1
+    private val httpClient = HttpClient(OkHttp) {
+        engine {
+            config {
+                followRedirects(true)
+                followSslRedirects(true)
+                connectTimeout(60, TimeUnit.SECONDS)
+                readTimeout(10, TimeUnit.MINUTES)
+            }
+        }
+    }
+
+    private fun isFixedDevice(): Boolean {
+        val type = DeviceDetector.detect().deviceType
+        return type != DeviceType.GENERIC_MOBILE
+    }
 
     fun initialize() {
         scope.launch {
@@ -135,6 +153,21 @@ class EpgFileManager private constructor(private val context: Context) {
             indexer.initialize()
             cleanupStrayFiles()
             scheduleAutoRefresh()
+
+            // Schedule WorkManager periodic sync on mobile only
+            if (!isFixedDevice()) {
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(WorkNetworkType.CONNECTED)
+                    .build()
+                val request = PeriodicWorkRequestBuilder<EpgSyncWorker>(24, TimeUnit.HOURS)
+                    .setConstraints(constraints)
+                    .build()
+                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                    "epg_sync",
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    request
+                )
+            }
         }
     }
 
@@ -203,7 +236,7 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Process all enabled sources: download-ingest-delete each sequentially.
+     * Process all enabled sources: ingest each sequentially.
      * Append-only: database stays searchable throughout.
      *
      * Must be called via [launchProcessAllSources] to ensure proper job tracking.
@@ -314,23 +347,7 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Open an HTTP connection with standard timeouts and headers.
-     * Shared between disk-based download and streaming paths.
-     */
-    private fun openConnection(url: String): HttpURLConnection {
-        return (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
-            instanceFollowRedirects = true
-            setRequestProperty("Accept-Encoding", "identity")
-        }
-    }
-
-    /**
-     * Process a single source: download, ingest, delete temp file.
-     * .gz URLs use a streaming path (HTTP → GZIPInputStream → parser, zero disk writes).
-     * Non-.gz URLs use the existing disk-based path (download → validate → ingest → delete).
-     * Returns stats for this source.
+     * Process a single source. Dispatches to streaming (TV) or download (mobile) path.
      */
     private suspend fun processSource(
         source: EpgSourceEntity,
@@ -341,27 +358,25 @@ class EpgFileManager private constructor(private val context: Context) {
         indexer: EpgIndexer,
         completedStats: List<SourceStats>
     ): SourceStats {
-        currentDownloadBytes = 0
-        currentDownloadTotalBytes = -1
-
         val isGzip = source.url.endsWith(".gz", ignoreCase = true)
 
-        if (isGzip) {
-            return processSourceStreaming(source, label, index, total, sourceDao, indexer, completedStats)
+        return if (isFixedDevice()) {
+            processSourceStream(source, label, index, total, isGzip, sourceDao, indexer, completedStats)
         } else {
-            return processSourceDisk(source, label, index, total, sourceDao, indexer, completedStats)
+            processSourceDownload(source, label, index, total, isGzip, sourceDao, indexer, completedStats)
         }
     }
 
     /**
-     * Streaming path for .gz URLs: HTTP → GZIPInputStream → BufferedInputStream → XmlPullParser.
-     * No temp files written to disk. Retries re-establish the HTTP connection.
+     * TV path: stream directly from network to database. Zero disk writes.
+     * Ktor HttpClient → InputStream → BufferedInputStream → GZIPInputStream (if .gz) → XmlPullParser → DB.
      */
-    private suspend fun processSourceStreaming(
+    private suspend fun processSourceStream(
         source: EpgSourceEntity,
         label: String,
         index: Int,
         total: Int,
+        isGzip: Boolean,
         sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
         indexer: EpgIndexer,
         completedStats: List<SourceStats>
@@ -377,58 +392,69 @@ class EpgFileManager private constructor(private val context: Context) {
         var lastError: String? = null
 
         for (attempt in 1..MAX_RETRIES) {
-            var connection: HttpURLConnection? = null
             try {
-                Log.d(TAG, "Streaming .gz EPG from: ${source.url} (attempt $attempt/$MAX_RETRIES)")
-                connection = openConnection(source.url)
+                Log.d(TAG, "Streaming EPG from: ${source.url} (attempt $attempt/$MAX_RETRIES)")
 
-                val statusCode = connection.responseCode
-                if (statusCode !in 200..299) {
-                    lastError = "server returned HTTP $statusCode"
-                    Log.w(TAG, "EPG streaming: $lastError (attempt $attempt)")
-                    if (statusCode in 400..499) break
-                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-                    break
-                }
-
-                val gzipStream = GZIPInputStream(connection.inputStream, GZIP_BUFFER_SIZE)
-                val bufferedStream = BufferedInputStream(gzipStream, BUFFER_SIZE)
-
-                val previousTz = XmltvParser.timezoneOverrideHours
-                XmltvParser.timezoneOverrideHours = source.timezoneOffsetHours
-                try {
-                    indexer.ingestFromStream(bufferedStream, sourceId = source.id) { ch, prg ->
-                        _state.value = MultiSourceState.Processing(
-                            sourceLabel = label,
-                            sourceIndex = index + 1,
-                            totalSources = total,
-                            phase = "Streaming",
-                            sourceChannels = ch,
-                            sourceProgrammes = prg,
-                            completedSourceStats = completedStats
-                        )
+                httpClient.prepareGet(source.url).execute { response ->
+                    val statusCode = response.status.value
+                    if (statusCode !in 200..299) {
+                        lastError = "server returned HTTP $statusCode"
+                        Log.w(TAG, "EPG streaming: $lastError (attempt $attempt)")
+                        if (statusCode in 400..499) return@execute
+                        return@execute
                     }
-                } finally {
-                    XmltvParser.timezoneOverrideHours = previousTz
-                    bufferedStream.close()
+
+                    val rawStream = response.bodyAsChannel().toInputStream()
+                    val buffered = BufferedInputStream(rawStream, STREAM_BUFFER_SIZE)
+                    val stream = if (isGzip) GZIPInputStream(buffered, STREAM_BUFFER_SIZE) else buffered
+
+                    val previousTz = XmltvParser.timezoneOverrideHours
+                    XmltvParser.timezoneOverrideHours = source.timezoneOffsetHours
+                    try {
+                        stream.use {
+                            indexer.ingestFromStream(it, sourceId = source.id) { ch, prg ->
+                                _state.value = MultiSourceState.Processing(
+                                    sourceLabel = label,
+                                    sourceIndex = index + 1,
+                                    totalSources = total,
+                                    phase = "Streaming",
+                                    sourceChannels = ch,
+                                    sourceProgrammes = prg,
+                                    completedSourceStats = completedStats
+                                )
+                            }
+                        }
+                    } finally {
+                        XmltvParser.timezoneOverrideHours = previousTz
+                    }
+
+                    val ingestionStats = indexer.lastIngestionStats
+                    sourceDao.markIngested(
+                        id = source.id,
+                        timestamp = System.currentTimeMillis(),
+                        channels = ingestionStats.channelsIngested,
+                        programmes = ingestionStats.programmesIngested,
+                        downloadBytes = 0
+                    )
+                    Log.d(TAG, "Source ${index + 1}/$total streamed: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
+
+                    lastError = null // Success — clear error
                 }
 
-                val ingestionStats = indexer.lastIngestionStats
-                sourceDao.markIngested(
-                    id = source.id,
-                    timestamp = System.currentTimeMillis(),
-                    channels = ingestionStats.channelsIngested,
-                    programmes = ingestionStats.programmesIngested,
-                    downloadBytes = 0
-                )
-                Log.d(TAG, "Source ${index + 1}/$total streamed: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
+                // If we got here without error, return success
+                if (lastError == null) {
+                    val ingestionStats = indexer.lastIngestionStats
+                    return SourceStats(
+                        sourceId = source.id,
+                        label = label,
+                        channelsIngested = ingestionStats.channelsIngested,
+                        programmesIngested = ingestionStats.programmesIngested
+                    )
+                }
 
-                return SourceStats(
-                    sourceId = source.id,
-                    label = label,
-                    channelsIngested = ingestionStats.channelsIngested,
-                    programmesIngested = ingestionStats.programmesIngested
-                )
+                // 4xx error — don't retry
+                if (lastError?.contains("HTTP 4") == true) break
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
 
             } catch (e: java.net.UnknownHostException) {
                 Log.w(TAG, "No internet connection")
@@ -455,8 +481,6 @@ class EpgFileManager private constructor(private val context: Context) {
                 lastError = e.message ?: "unknown error"
                 Log.w(TAG, "EPG streaming error (attempt $attempt): $lastError", e)
                 if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-            } finally {
-                connection?.disconnect()
             }
         }
 
@@ -466,13 +490,16 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Disk-based path for non-.gz URLs: download → validate → ingest → delete.
+     * Mobile path: download to cache file, then ingest from file.
+     * Ktor HttpClient → File → BufferedInputStream → GZIPInputStream (if .gz) → XmlPullParser → DB.
+     * Temp file deleted after ingestion.
      */
-    private suspend fun processSourceDisk(
+    private suspend fun processSourceDownload(
         source: EpgSourceEntity,
         label: String,
         index: Int,
         total: Int,
+        isGzip: Boolean,
         sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
         indexer: EpgIndexer,
         completedStats: List<SourceStats>
@@ -482,42 +509,86 @@ class EpgFileManager private constructor(private val context: Context) {
             sourceIndex = index + 1,
             totalSources = total,
             phase = "Downloading",
-            downloadedBytes = 0,
-            downloadTotalBytes = -1,
             completedSourceStats = completedStats
         )
 
         val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
-        val tmpGzFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp.gz")
+        var downloadedBytes = 0L
+        var lastError: String? = null
 
         try {
-            // Download
-            val downloadedBytes = downloadToFile(source.url, tmpFile, tmpGzFile) { bytes, totalBytes ->
-                currentDownloadBytes = bytes
-                currentDownloadTotalBytes = totalBytes
-                _state.value = MultiSourceState.Processing(
-                    sourceLabel = label,
-                    sourceIndex = index + 1,
-                    totalSources = total,
-                    phase = "Downloading",
-                    downloadedBytes = bytes,
-                    downloadTotalBytes = totalBytes,
-                    completedSourceStats = completedStats
-                )
+            // Download to cache file
+            for (attempt in 1..MAX_RETRIES) {
+                try {
+                    Log.d(TAG, "Downloading EPG to cache: ${source.url} (attempt $attempt/$MAX_RETRIES)")
+
+                    httpClient.prepareGet(source.url).execute { response ->
+                        val statusCode = response.status.value
+                        if (statusCode !in 200..299) {
+                            lastError = "server returned HTTP $statusCode"
+                            Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
+                            return@execute
+                        }
+
+                        val channel = response.bodyAsChannel()
+                        tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
+                            val buffer = ByteArray(STREAM_BUFFER_SIZE)
+                            val input = channel.toInputStream()
+                            var bytesRead: Int
+                            var totalBytes = 0L
+                            while (input.read(buffer).also { bytesRead = it } != -1) {
+                                output.write(buffer, 0, bytesRead)
+                                totalBytes += bytesRead
+                                if (totalBytes % (256 * 1024) < STREAM_BUFFER_SIZE.toLong()) {
+                                    _state.value = MultiSourceState.Processing(
+                                        sourceLabel = label,
+                                        sourceIndex = index + 1,
+                                        totalSources = total,
+                                        phase = "Downloading",
+                                        downloadedBytes = totalBytes,
+                                        completedSourceStats = completedStats
+                                    )
+                                }
+                            }
+                            downloadedBytes = totalBytes
+                        }
+                        lastError = null
+                    }
+
+                    if (lastError == null) break
+                    if (lastError?.contains("HTTP 4") == true) break
+                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+
+                } catch (e: java.net.UnknownHostException) {
+                    Log.w(TAG, "No internet connection")
+                    sourceDao.markError(source.id, "No internet connection")
+                    return SourceStats(source.id, label, error = "No internet connection")
+                } catch (e: OutOfMemoryError) {
+                    System.gc()
+                    lastError = "out of memory during download"
+                    Log.e(TAG, "OOM during EPG download (attempt $attempt)", e)
+                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                } catch (e: java.net.SocketTimeoutException) {
+                    lastError = "connection timed out"
+                    Log.w(TAG, "EPG download timeout (attempt $attempt)", e)
+                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                } catch (e: java.io.IOException) {
+                    lastError = e.message ?: "I/O error"
+                    Log.w(TAG, "EPG download I/O error (attempt $attempt): $lastError", e)
+                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                } catch (e: Exception) {
+                    lastError = e.message ?: "unknown error"
+                    Log.w(TAG, "EPG download error (attempt $attempt): $lastError", e)
+                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                }
             }
 
-            if (downloadedBytes < 0) {
-                sourceDao.markError(source.id, "Download failed")
-                return SourceStats(source.id, label, error = "Download failed")
+            if (lastError != null) {
+                sourceDao.markError(source.id, lastError!!)
+                return SourceStats(source.id, label, downloadBytes = downloadedBytes, error = lastError)
             }
 
-            // Validate
-            if (!validateXmltvFile(tmpFile)) {
-                tmpFile.delete()
-                sourceDao.markError(source.id, "Invalid XMLTV file")
-                return SourceStats(source.id, label, downloadBytes = downloadedBytes, error = "Invalid XMLTV file")
-            }
-
+            // Ingest from file
             _state.value = MultiSourceState.Processing(
                 sourceLabel = label,
                 sourceIndex = index + 1,
@@ -528,11 +599,27 @@ class EpgFileManager private constructor(private val context: Context) {
                 completedSourceStats = completedStats
             )
 
-            // Ingest with per-source timezone
+            val fileStream = BufferedInputStream(tmpFile.inputStream(), STREAM_BUFFER_SIZE)
+            val stream = if (isGzip) GZIPInputStream(fileStream, STREAM_BUFFER_SIZE) else fileStream
+
             val previousTz = XmltvParser.timezoneOverrideHours
             XmltvParser.timezoneOverrideHours = source.timezoneOffsetHours
             try {
-                indexer.startIndexing(tmpFile, sourceId = source.id)
+                stream.use {
+                    indexer.ingestFromStream(it, sourceId = source.id) { ch, prg ->
+                        _state.value = MultiSourceState.Processing(
+                            sourceLabel = label,
+                            sourceIndex = index + 1,
+                            totalSources = total,
+                            phase = "Ingesting",
+                            downloadedBytes = downloadedBytes,
+                            downloadTotalBytes = downloadedBytes,
+                            sourceChannels = ch,
+                            sourceProgrammes = prg,
+                            completedSourceStats = completedStats
+                        )
+                    }
+                }
             } finally {
                 XmltvParser.timezoneOverrideHours = previousTz
             }
@@ -545,7 +632,7 @@ class EpgFileManager private constructor(private val context: Context) {
                 programmes = ingestionStats.programmesIngested,
                 downloadBytes = downloadedBytes
             )
-            Log.d(TAG, "Source ${index + 1}/$total ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg, ${downloadedBytes / 1024}KB)")
+            Log.d(TAG, "Source ${index + 1}/$total downloaded+ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg, ${downloadedBytes / 1024}KB)")
 
             return SourceStats(
                 sourceId = source.id,
@@ -558,10 +645,10 @@ class EpgFileManager private constructor(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error processing source: $label", e)
             sourceDao.markError(source.id, e.message ?: "Unknown error")
-            return SourceStats(source.id, label, downloadBytes = currentDownloadBytes, error = e.message ?: "Unknown error")
+            return SourceStats(source.id, label, downloadBytes = downloadedBytes, error = e.message ?: "Unknown error")
         } finally {
             tmpFile.delete()
-            tmpGzFile.delete()
+            indexer.incrementalVacuum()
         }
     }
 
@@ -634,146 +721,6 @@ class EpgFileManager private constructor(private val context: Context) {
             }
         } catch (e: Exception) {
             Log.w(TAG, "Cleanup failed", e)
-        }
-    }
-
-    /**
-     * Download a URL to a temp file, handling .gz decompression.
-     * Returns downloaded bytes on success, -1 on failure.
-     * Calls [onProgress] with (bytesDownloaded, totalBytes) during download.
-     */
-    private suspend fun downloadToFile(
-        url: String,
-        tmpFile: File,
-        tmpGzFile: File,
-        onProgress: (Long, Long) -> Unit
-    ): Long {
-        val isGzip = url.endsWith(".gz", ignoreCase = true)
-        var lastError: String? = null
-
-        for (attempt in 1..MAX_RETRIES) {
-            var connection: HttpURLConnection? = null
-            try {
-                Log.d(TAG, "Downloading XMLTV from: $url (attempt $attempt/$MAX_RETRIES)")
-
-                connection = openConnection(url)
-
-                val statusCode = connection.responseCode
-                if (statusCode !in 200..299) {
-                    lastError = "server returned HTTP $statusCode"
-                    Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
-                    if (statusCode in 400..499) break
-                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-                    break
-                }
-
-                val contentLength = connection.contentLengthLong
-                val downloadTarget = if (isGzip) tmpGzFile else tmpFile
-
-                downloadTarget.delete()
-                connection.inputStream.buffered(BUFFER_SIZE).use { input ->
-                    downloadTarget.outputStream().buffered(BUFFER_SIZE).use { output ->
-                        val buffer = ByteArray(BUFFER_SIZE)
-                        var bytesRead: Int
-                        var totalBytes = 0L
-                        var lastLoggedMb = 0L
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            output.write(buffer, 0, bytesRead)
-                            totalBytes += bytesRead
-                            val currentMb = totalBytes / (1024 * 1024)
-                            if (currentMb >= lastLoggedMb + (LOG_INTERVAL_BYTES / (1024 * 1024))) {
-                                Log.d(TAG, "XMLTV download: ${currentMb}MB written")
-                                lastLoggedMb = currentMb
-                            }
-                            // Report progress every 256KB
-                            if (totalBytes % (256 * 1024) < BUFFER_SIZE.toLong()) {
-                                onProgress(totalBytes, contentLength)
-                            }
-                        }
-                        output.flush()
-                        onProgress(totalBytes, totalBytes)
-                        Log.d(TAG, "XMLTV download complete: ${totalBytes / (1024 * 1024)}MB")
-                    }
-                }
-
-                val rawDownloadSize = downloadTarget.length()
-
-                if (isGzip) {
-                    Log.d(TAG, "Decompressing .gz file (${tmpGzFile.length() / (1024 * 1024)}MB)")
-                    tmpFile.delete()
-                    GZIPInputStream(tmpGzFile.inputStream().buffered(BUFFER_SIZE), GZIP_BUFFER_SIZE).use { gzInput ->
-                        tmpFile.outputStream().buffered(BUFFER_SIZE).use { output ->
-                            val buffer = ByteArray(BUFFER_SIZE)
-                            var bytesRead: Int
-                            var totalBytes = 0L
-                            var lastLoggedMb = 0L
-                            while (gzInput.read(buffer).also { bytesRead = it } != -1) {
-                                output.write(buffer, 0, bytesRead)
-                                totalBytes += bytesRead
-                                val currentMb = totalBytes / (1024 * 1024)
-                                if (currentMb >= lastLoggedMb + (LOG_INTERVAL_BYTES / (1024 * 1024))) {
-                                    Log.d(TAG, "XMLTV decompress: ${currentMb}MB written")
-                                    lastLoggedMb = currentMb
-                                }
-                            }
-                            output.flush()
-                            Log.d(TAG, "XMLTV decompress complete: ${totalBytes / (1024 * 1024)}MB")
-                        }
-                    }
-                    tmpGzFile.delete()
-                }
-
-                return rawDownloadSize
-
-            } catch (e: java.net.UnknownHostException) {
-                tmpFile.delete(); tmpGzFile.delete()
-                Log.w(TAG, "No internet connection")
-                return -1
-            } catch (e: OutOfMemoryError) {
-                tmpFile.delete(); tmpGzFile.delete()
-                System.gc()
-                lastError = "out of memory during download"
-                Log.e(TAG, "OOM during EPG download (attempt $attempt)", e)
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-            } catch (e: java.net.SocketTimeoutException) {
-                tmpFile.delete(); tmpGzFile.delete()
-                lastError = "connection timed out"
-                Log.w(TAG, "EPG download timeout (attempt $attempt)", e)
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-            } catch (e: java.io.IOException) {
-                tmpFile.delete(); tmpGzFile.delete()
-                lastError = if (e.message?.contains("No space", ignoreCase = true) == true) {
-                    "insufficient storage"
-                } else {
-                    e.message ?: "I/O error"
-                }
-                Log.w(TAG, "EPG download I/O error (attempt $attempt): $lastError", e)
-                if (lastError == "insufficient storage") break
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-            } catch (e: Exception) {
-                tmpFile.delete(); tmpGzFile.delete()
-                lastError = e.message ?: "unknown error"
-                Log.w(TAG, "EPG download error (attempt $attempt): $lastError", e)
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-            } finally {
-                connection?.disconnect()
-            }
-        }
-        return -1
-    }
-
-    private fun validateXmltvFile(file: File): Boolean {
-        return try {
-            file.bufferedReader().use { reader ->
-                val header = CharArray(256)
-                val read = reader.read(header)
-                if (read <= 0) return false
-                val headerStr = String(header, 0, read)
-                headerStr.contains("<?xml", ignoreCase = true) ||
-                    headerStr.contains("<tv", ignoreCase = true)
-            }
-        } catch (e: Exception) {
-            false
         }
     }
 
