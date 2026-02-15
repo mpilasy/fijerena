@@ -1214,6 +1214,11 @@ private fun MobileStatsOverlay(
     val serviceDroppedFrames = StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsState()
     val serviceTotalFrames = StreamingPlaybackService.getInstance()?.totalFrames?.collectAsState()
 
+    // Collect stream stats from service
+    val serviceRetryCount = StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsState()
+    val serviceStartTimeMs = StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsState()
+    var streamElapsed by remember { mutableStateOf("0:00") }
+
     LaunchedEffect(Unit) {
         while (true) {
             StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
@@ -1255,6 +1260,21 @@ private fun MobileStatsOverlay(
                 }
                 networkSpeed = if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
             }
+
+            // Update stream elapsed time
+            val startTime = serviceStartTimeMs?.value ?: 0L
+            if (startTime > 0L) {
+                val elapsedSec = (android.os.SystemClock.elapsedRealtime() - startTime) / 1000
+                val hours = elapsedSec / 3600
+                val minutes = (elapsedSec % 3600) / 60
+                val seconds = elapsedSec % 60
+                streamElapsed = if (hours > 0) {
+                    String.format("%d:%02d:%02d", hours, minutes, seconds)
+                } else {
+                    String.format("%d:%02d", minutes, seconds)
+                }
+            }
+
             delay(CinemaAnimation.statsUpdateMs)
         }
     }
@@ -1351,6 +1371,8 @@ private fun MobileStatsOverlay(
 
                 SectionHeader("STREAM")
                 StatRow("Type", if (metadata.isLive) "Live" else "VOD")
+                StatRow("Retries", "${serviceRetryCount?.value ?: 0}")
+                StatRow("Uptime", streamElapsed)
                 StatRow("URL", metadata.streamUrl.substringAfterLast("/").take(25))
 
                 SectionHeader("DEVICE")
