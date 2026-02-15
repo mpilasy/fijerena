@@ -15,7 +15,9 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
  *
  * Reads [NetworkMonitor.currentNetworkType] at call time — no state to maintain.
  */
-class AdaptiveLoadErrorPolicy : LoadErrorHandlingPolicy {
+class AdaptiveLoadErrorPolicy(
+    private val onRetry: (() -> Unit)? = null
+) : LoadErrorHandlingPolicy {
 
     override fun getMinimumLoadableRetryCount(dataType: Int): Int {
         return when (NetworkMonitor.currentNetworkType) {
@@ -33,6 +35,7 @@ class AdaptiveLoadErrorPolicy : LoadErrorHandlingPolicy {
         // Exponential backoff: baseDelay * 2^(errorCount-1), capped at maxDelay
         val delay = NetworkBufferProfile.RETRY_BASE_DELAY_MS *
             (1L shl (errorCount - 1).coerceAtMost(30))
+        onRetry?.invoke()
         return delay.coerceAtMost(NetworkBufferProfile.RETRY_MAX_DELAY_MS)
     }
 
