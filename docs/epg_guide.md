@@ -56,7 +56,7 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
 
 ### EpgFileManager
 
-**Singleton** (`core/network/.../xmltv/EpgFileManager.kt`) managing the download lifecycle.
+**Singleton** (`core/network/.../xmltv/EpgFileManager.kt`) managing the multi-source download-ingest-delete pipeline.
 
 **Key design decisions:**
 - Uses `java.net.HttpURLConnection` instead of Ktor to avoid in-memory buffering of 500MB+ files
@@ -66,23 +66,26 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
 - 64KB I/O buffers, 10-minute read timeout
 - `OutOfMemoryError` caught explicitly
 
-**State machine:**
+**Two ingestion paths based on URL suffix:**
+- **`.gz` URLs → streaming path:** HTTP → `GZIPInputStream` → `BufferedInputStream` → `EpgIndexer.ingestFromStream()`. Zero disk writes. Progress reported as channel/programme counts ("Streaming" phase).
+- **Non-`.gz` URLs → disk-based path:** Download to temp file → validate XML header → `EpgIndexer.startIndexing()` → delete temp file. Progress reported as download bytes ("Downloading"/"Ingesting" phases).
+
+**State machine (`MultiSourceState`):**
 
 | State | Description |
 |-------|-------------|
-| `NoUrl` | No URL configured |
-| `Downloading` | Actively downloading |
-| `Ready(file, sizeBytes, lastModifiedMs)` | File available on disk |
-| `Failed(reason)` | Download failed, no cached file |
-| `Error(reason, file?)` | Error occurred, stale file may exist |
+| `Idle` | No processing active |
+| `Processing(source, index, total, phase)` | Actively processing a source |
+| `Completed(count, errors, stats)` | All sources processed |
+| `Error(reason)` | Processing failed |
 
 **Lifecycle:**
-- `initialize()` — called from `MainActivity.onCreate()`
-- `triggerDownload()` — called when user changes EPG URL in settings
-- `reindexIfNeeded()` — called from settings when timezone override changes
-- `getEpgFile()` — returns the cached file or null
+- `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, schedules auto-refresh
+- `launchProcessAllSources()` — process all enabled sources sequentially
+- `launchProcessSingleSource(sourceId)` — process one source
+- Auto-refresh: checks for stale sources (>24h) periodically
 
-The user pastes an XMLTV URL in Settings. `EpgFileManager` downloads the file using `HttpURLConnection` with streaming I/O (64KB buffers). Supports both `.xml` and `.gz` files (gzip is decompressed in a second file-to-file pass). The file is saved to `cache/xmltv_global.xml` and refreshed every 24 hours.
+Each source URL is managed via `EpgSourceEntity` in Room. The `openConnection()` helper shares HTTP setup (timeouts, retries, headers) between both ingestion paths.
 
 ### XmltvParser
 
@@ -145,17 +148,23 @@ The FTS4 virtual table with `unicode61` tokenizer enables sub-100ms full-text se
 
 ### EpgIndexer
 
-**Singleton** (`core/network/.../xmltv/epgindex/EpgIndexer.kt`) building the SQLite index from XMLTV files.
+**Singleton** (`core/network/.../xmltv/epgindex/EpgIndexer.kt`) building the SQLite index from XMLTV files or streams.
 
 **State machine:** `NotIndexed` → `Indexing(progressPercent, channelsIndexed, programmesIndexed)` → `Indexed(channelCount, programmeCount, indexedAtMs)` | `Failed(reason)`
 
 **Key functions:**
-- `needsReindex(file)` — compares file size, last modified, and timezone offset against stored metadata
 - `initialize()` — restores `Indexed` state from metadata without re-indexing
-- `startIndexing(file)` — streaming ingestion: destroys DB, 1000-row batch INSERTs
-- `startTransactionalIndexing(file)` — atomic ingestion for files <100MB (single `@Transaction`); OOM falls back to streaming
+- `startIndexing(file)` — file-based streaming ingestion: 1000-row batch INSERTs with `CountingInputStream` for byte-level progress
+- `ingestFromStream(inputStream)` — stream-based ingestion for `.gz` URLs: Channel-based producer-consumer (capacity=4) for concurrent XML parsing and SQLite batch inserts. Zero disk writes.
+- `appendFromFile(file, timezoneOverride)` — append with per-source timezone
+- `rebuildFtsAndUpdateState()` — rebuild FTS index and update metadata after all sources processed
+- `clearAll()` / `purgeOldProgrammes(cutoffEpoch)` — data management with incremental vacuum
 
-Progress is tracked via `CountingInputStream`. After all inserts, the FTS index is rebuilt:
+**Fast-write PRAGMAs:** Both `startIndexing()` and `ingestFromStream()` wrap batch inserts with `withIngestionPragmas()` which sets `synchronous=OFF` and `journal_mode=WAL` during ingestion, restoring `synchronous=FULL` afterwards. PRAGMAs use `query()` instead of `execSQL()` due to Room restrictions.
+
+**Producer-consumer (`ingestFromStream`):** The parser produces `IngestionBatch.Channels` and `IngestionBatch.Programmes` batches through a bounded `Channel<IngestionBatch>` (capacity=4 for backpressure). A consumer coroutine reads batches and inserts into SQLite. This allows the network/decompression I/O and SQLite writes to overlap.
+
+After all sources are ingested, `EpgFileManager` calls `rebuildFtsAndUpdateState()` to rebuild the FTS index:
 ```sql
 INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')
 ```
