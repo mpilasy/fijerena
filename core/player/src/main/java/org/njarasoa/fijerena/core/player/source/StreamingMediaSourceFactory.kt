@@ -19,7 +19,8 @@ object StreamingMediaSourceFactory {
         context: Context,
         streamUrl: String,
         headers: Map<String, String> = emptyMap(),
-        isLive: Boolean = false
+        isLive: Boolean = false,
+        onRetry: (() -> Unit)? = null
     ): MediaSource {
         val isCellular = NetworkMonitor.currentNetworkType == NetworkType.CELLULAR
 
@@ -43,7 +44,7 @@ object StreamingMediaSourceFactory {
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(headers)
 
-        val errorPolicy = AdaptiveLoadErrorPolicy()
+        val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
 
         // Strip query parameters before checking extension
         val urlPath = streamUrl.substringBefore("?").substringBefore("#")

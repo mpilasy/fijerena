@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.player.service
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -46,6 +47,13 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private val _totalFrames = MutableStateFlow(0L)
     val totalFrames: StateFlow<Long> = _totalFrames.asStateFlow()
+
+    // Stream stats: retry count (load-level + live-level) and stream start time
+    private val _streamRetryCount = MutableStateFlow(0)
+    val streamRetryCount: StateFlow<Int> = _streamRetryCount.asStateFlow()
+
+    private val _streamStartTimeMs = MutableStateFlow(0L)
+    val streamStartTimeMs: StateFlow<Long> = _streamStartTimeMs.asStateFlow()
 
     private var onPositionSaveListener: ((Long, Long) -> Unit)? = null
 
@@ -178,6 +186,8 @@ class StreamingPlaybackService : MediaSessionService() {
         // Reset error state and retry counter on new stream
         playerListener?.resetErrorState()
         liveRetryCount = 0
+        _streamRetryCount.value = 0
+        _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
 
         // Use StreamingMediaSourceFactory for proper HLS/DASH/MPEG-TS detection
@@ -185,7 +195,8 @@ class StreamingPlaybackService : MediaSessionService() {
             context = this,
             streamUrl = metadata.streamUrl,
             headers = metadata.headers,
-            isLive = metadata.isLive
+            isLive = metadata.isLive,
+            onRetry = { _streamRetryCount.value++ }
         )
 
         player.setMediaSource(mediaSource)
@@ -208,6 +219,7 @@ class StreamingPlaybackService : MediaSessionService() {
         }
 
         liveRetryCount++
+        _streamRetryCount.value++
         val delayMs = LIVE_RETRY_BASE_DELAY_MS * liveRetryCount
         Log.i(TAG, "Live stream retry $liveRetryCount/$MAX_LIVE_RETRIES in ${delayMs}ms")
 
@@ -221,7 +233,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 context = this,
                 streamUrl = metadata.streamUrl,
                 headers = metadata.headers,
-                isLive = metadata.isLive
+                isLive = metadata.isLive,
+                onRetry = { _streamRetryCount.value++ }
             )
 
             player.setMediaSource(mediaSource)
