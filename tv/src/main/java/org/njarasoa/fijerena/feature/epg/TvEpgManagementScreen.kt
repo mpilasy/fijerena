@@ -130,6 +130,13 @@ fun TvEpgManagementScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CinemaTextSecondary
                             )
+                            if (procState.phase == "Streaming" && (procState.sourceChannels > 0 || procState.sourceProgrammes > 0)) {
+                                Text(
+                                    text = "${formatCount(procState.sourceChannels)}ch, ${formatCount(procState.sourceProgrammes)}prg",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = CinemaTextSecondary
+                                )
+                            }
                             if (viewModel.isDevMode) {
                                 if (procState.phase == "Downloading" && procState.downloadedBytes > 0) {
                                     val progress = if (procState.downloadTotalBytes > 0) {

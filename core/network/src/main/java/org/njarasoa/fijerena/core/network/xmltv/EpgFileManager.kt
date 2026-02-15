@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+import java.io.BufferedInputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -313,7 +314,22 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
+     * Open an HTTP connection with standard timeouts and headers.
+     * Shared between disk-based download and streaming paths.
+     */
+    private fun openConnection(url: String): HttpURLConnection {
+        return (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            instanceFollowRedirects = true
+            setRequestProperty("Accept-Encoding", "identity")
+        }
+    }
+
+    /**
      * Process a single source: download, ingest, delete temp file.
+     * .gz URLs use a streaming path (HTTP → GZIPInputStream → parser, zero disk writes).
+     * Non-.gz URLs use the existing disk-based path (download → validate → ingest → delete).
      * Returns stats for this source.
      */
     private suspend fun processSource(
@@ -328,6 +344,139 @@ class EpgFileManager private constructor(private val context: Context) {
         currentDownloadBytes = 0
         currentDownloadTotalBytes = -1
 
+        val isGzip = source.url.endsWith(".gz", ignoreCase = true)
+
+        if (isGzip) {
+            return processSourceStreaming(source, label, index, total, sourceDao, indexer, completedStats)
+        } else {
+            return processSourceDisk(source, label, index, total, sourceDao, indexer, completedStats)
+        }
+    }
+
+    /**
+     * Streaming path for .gz URLs: HTTP → GZIPInputStream → BufferedInputStream → XmlPullParser.
+     * No temp files written to disk. Retries re-establish the HTTP connection.
+     */
+    private suspend fun processSourceStreaming(
+        source: EpgSourceEntity,
+        label: String,
+        index: Int,
+        total: Int,
+        sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
+        indexer: EpgIndexer,
+        completedStats: List<SourceStats>
+    ): SourceStats {
+        _state.value = MultiSourceState.Processing(
+            sourceLabel = label,
+            sourceIndex = index + 1,
+            totalSources = total,
+            phase = "Streaming",
+            completedSourceStats = completedStats
+        )
+
+        var lastError: String? = null
+
+        for (attempt in 1..MAX_RETRIES) {
+            var connection: HttpURLConnection? = null
+            try {
+                Log.d(TAG, "Streaming .gz EPG from: ${source.url} (attempt $attempt/$MAX_RETRIES)")
+                connection = openConnection(source.url)
+
+                val statusCode = connection.responseCode
+                if (statusCode !in 200..299) {
+                    lastError = "server returned HTTP $statusCode"
+                    Log.w(TAG, "EPG streaming: $lastError (attempt $attempt)")
+                    if (statusCode in 400..499) break
+                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                    break
+                }
+
+                val gzipStream = GZIPInputStream(connection.inputStream, GZIP_BUFFER_SIZE)
+                val bufferedStream = BufferedInputStream(gzipStream, BUFFER_SIZE)
+
+                val previousTz = XmltvParser.timezoneOverrideHours
+                XmltvParser.timezoneOverrideHours = source.timezoneOffsetHours
+                try {
+                    indexer.ingestFromStream(bufferedStream, sourceId = source.id) { ch, prg ->
+                        _state.value = MultiSourceState.Processing(
+                            sourceLabel = label,
+                            sourceIndex = index + 1,
+                            totalSources = total,
+                            phase = "Streaming",
+                            sourceChannels = ch,
+                            sourceProgrammes = prg,
+                            completedSourceStats = completedStats
+                        )
+                    }
+                } finally {
+                    XmltvParser.timezoneOverrideHours = previousTz
+                    bufferedStream.close()
+                }
+
+                val ingestionStats = indexer.lastIngestionStats
+                sourceDao.markIngested(
+                    id = source.id,
+                    timestamp = System.currentTimeMillis(),
+                    channels = ingestionStats.channelsIngested,
+                    programmes = ingestionStats.programmesIngested,
+                    downloadBytes = 0
+                )
+                Log.d(TAG, "Source ${index + 1}/$total streamed: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
+
+                return SourceStats(
+                    sourceId = source.id,
+                    label = label,
+                    channelsIngested = ingestionStats.channelsIngested,
+                    programmesIngested = ingestionStats.programmesIngested
+                )
+
+            } catch (e: java.net.UnknownHostException) {
+                Log.w(TAG, "No internet connection")
+                sourceDao.markError(source.id, "No internet connection")
+                return SourceStats(source.id, label, error = "No internet connection")
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                lastError = "out of memory during streaming"
+                Log.e(TAG, "OOM during EPG streaming (attempt $attempt)", e)
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+            } catch (e: java.net.SocketTimeoutException) {
+                lastError = "connection timed out"
+                Log.w(TAG, "EPG streaming timeout (attempt $attempt)", e)
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+            } catch (e: org.xmlpull.v1.XmlPullParserException) {
+                lastError = "Invalid XMLTV data: ${e.message}"
+                Log.e(TAG, "EPG streaming parse error: $lastError", e)
+                break // No point retrying invalid data
+            } catch (e: java.io.IOException) {
+                lastError = e.message ?: "I/O error"
+                Log.w(TAG, "EPG streaming I/O error (attempt $attempt): $lastError", e)
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+            } catch (e: Exception) {
+                lastError = e.message ?: "unknown error"
+                Log.w(TAG, "EPG streaming error (attempt $attempt): $lastError", e)
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+        val error = lastError ?: "Streaming failed"
+        sourceDao.markError(source.id, error)
+        return SourceStats(source.id, label, error = error)
+    }
+
+    /**
+     * Disk-based path for non-.gz URLs: download → validate → ingest → delete.
+     */
+    private suspend fun processSourceDisk(
+        source: EpgSourceEntity,
+        label: String,
+        index: Int,
+        total: Int,
+        sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
+        indexer: EpgIndexer,
+        completedStats: List<SourceStats>
+    ): SourceStats {
         _state.value = MultiSourceState.Processing(
             sourceLabel = label,
             sourceIndex = index + 1,
@@ -507,12 +656,7 @@ class EpgFileManager private constructor(private val context: Context) {
             try {
                 Log.d(TAG, "Downloading XMLTV from: $url (attempt $attempt/$MAX_RETRIES)")
 
-                connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = CONNECT_TIMEOUT_MS
-                    readTimeout = READ_TIMEOUT_MS
-                    instanceFollowRedirects = true
-                    setRequestProperty("Accept-Encoding", "identity")
-                }
+                connection = openConnection(url)
 
                 val statusCode = connection.responseCode
                 if (statusCode !in 200..299) {

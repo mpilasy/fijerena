@@ -3,9 +3,11 @@ package org.njarasoa.fijerena.core.network.xmltv.epgindex
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
 import org.xmlpull.v1.XmlPullParser
@@ -13,6 +15,7 @@ import org.xmlpull.v1.XmlPullParserFactory
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
+import java.io.InputStream
 
 /**
  * Singleton that indexes XMLTV files into SQLite for fast FTS search.
@@ -37,6 +40,23 @@ class EpgIndexer private constructor(private val context: Context) {
             return instance ?: synchronized(this) {
                 instance ?: EpgIndexer(context.applicationContext).also { instance = it }
             }
+        }
+    }
+
+    private sealed interface IngestionBatch {
+        data class Channels(val rows: List<EpgChannelEntity>) : IngestionBatch
+        data class Programmes(val rows: List<EpgProgrammeEntity>) : IngestionBatch
+    }
+
+    private suspend fun withIngestionPragmas(db: EpgIndexDatabase, block: suspend () -> Unit) {
+        val sqlDb = db.openHelper.writableDatabase
+        // Use query() instead of execSQL() — Room restricts execSQL for PRAGMAs
+        sqlDb.query("PRAGMA synchronous = OFF").close()
+        sqlDb.query("PRAGMA journal_mode = WAL").close()
+        try {
+            block()
+        } finally {
+            sqlDb.query("PRAGMA synchronous = FULL").close()
         }
     }
 
@@ -106,6 +126,124 @@ class EpgIndexer private constructor(private val context: Context) {
     }
 
     /**
+     * Ingest EPG data directly from an InputStream (e.g. HTTP → GZIPInputStream).
+     * Uses a Channel-based producer-consumer: the parser sends batches through
+     * a bounded channel, a consumer coroutine inserts them into SQLite.
+     * Zero disk writes — the stream is parsed in a single pass.
+     */
+    suspend fun ingestFromStream(
+        inputStream: InputStream,
+        sourceId: Long = 0,
+        onProgress: ((channels: Int, programmes: Int) -> Unit)? = null
+    ) = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Ingesting from stream (sourceId=$sourceId)")
+
+        val wasIndexed = _state.value is EpgIndexState.Indexed
+        if (!wasIndexed) {
+            _state.value = EpgIndexState.Indexing(
+                progressPercent = 0,
+                channelsIndexed = 0,
+                programmesIndexed = 0
+            )
+        }
+
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            val channel = Channel<IngestionBatch>(capacity = 4)
+
+            // Consumer coroutine — reads batches, inserts into SQLite
+            val consumer = launch {
+                withIngestionPragmas(db) {
+                    for (batch in channel) {
+                        when (batch) {
+                            is IngestionBatch.Channels -> dao.insertChannelsIgnore(batch.rows)
+                            is IngestionBatch.Programmes -> dao.insertProgrammes(batch.rows)
+                        }
+                    }
+                }
+            }
+
+            // Producer — streaming XML parse, sends batches
+            var channelCount = 0
+            var programmeCount = 0
+            val channelBatch = mutableListOf<EpgChannelEntity>()
+            val programmeBatch = mutableListOf<EpgProgrammeEntity>()
+            var channelsFlushed = false
+
+            val factory = XmlPullParserFactory.newInstance()
+            factory.isNamespaceAware = false
+            val parser = factory.newPullParser()
+            parser.setInput(inputStream, null)
+
+            var eventType = parser.eventType
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                if (eventType == XmlPullParser.START_TAG) {
+                    when (parser.name) {
+                        "channel" -> {
+                            XmltvParser.parseChannelForIndex(parser)?.let {
+                                channelBatch.add(it)
+                                channelCount++
+                                if (channelBatch.size >= BATCH_SIZE) {
+                                    channel.send(IngestionBatch.Channels(channelBatch.toList()))
+                                    channelBatch.clear()
+                                }
+                            }
+                        }
+                        "programme" -> {
+                            if (!channelsFlushed) {
+                                channelsFlushed = true
+                                if (channelBatch.isNotEmpty()) {
+                                    channel.send(IngestionBatch.Channels(channelBatch.toList()))
+                                    channelBatch.clear()
+                                }
+                            }
+                            XmltvParser.parseProgrammeForIndex(parser, sourceId)?.let {
+                                programmeBatch.add(it)
+                                programmeCount++
+                                if (programmeBatch.size >= BATCH_SIZE) {
+                                    channel.send(IngestionBatch.Programmes(programmeBatch.toList()))
+                                    programmeBatch.clear()
+                                    onProgress?.invoke(channelCount, programmeCount)
+                                    if (!wasIndexed) {
+                                        _state.value = EpgIndexState.Indexing(
+                                            progressPercent = 0,
+                                            channelsIndexed = channelCount,
+                                            programmesIndexed = programmeCount
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+
+            // Flush remaining
+            if (channelBatch.isNotEmpty()) channel.send(IngestionBatch.Channels(channelBatch.toList()))
+            if (programmeBatch.isNotEmpty()) channel.send(IngestionBatch.Programmes(programmeBatch.toList()))
+            channel.close()
+            consumer.join()
+
+            lastIngestionStats = IngestionStats(channelCount, programmeCount)
+            Log.d(TAG, "Stream ingestion complete: $channelCount channels, $programmeCount programmes")
+
+        } catch (e: OutOfMemoryError) {
+            System.gc()
+            val msg = "Out of memory during stream indexing"
+            Log.e(TAG, msg, e)
+            lastIngestionStats = IngestionStats()
+            if (!wasIndexed) _state.value = EpgIndexState.Failed(msg)
+        } catch (e: Exception) {
+            val msg = e.message ?: "Stream indexing failed"
+            Log.e(TAG, msg, e)
+            lastIngestionStats = IngestionStats()
+            if (!wasIndexed) _state.value = EpgIndexState.Failed(msg)
+        }
+    }
+
+    /**
      * Core ingestion: streaming parse + batch insert.
      * Append-only — never clears existing data.
      */
@@ -147,64 +285,66 @@ class EpgIndexer private constructor(private val context: Context) {
             var eventType = parser.eventType
             var channelsFinished = false
 
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG) {
-                    when (parser.name) {
-                        "channel" -> {
-                            val channel = XmltvParser.parseChannelForIndex(parser)
-                            if (channel != null) {
-                                allChannels.add(channel)
-                                channelCount++
-                            }
-                        }
-                        "programme" -> {
-                            // First programme encountered — flush channels (IGNORE keeps existing)
-                            if (!channelsFinished) {
-                                channelsFinished = true
-                                if (allChannels.isNotEmpty()) {
-                                    for (batch in allChannels.chunked(BATCH_SIZE)) {
-                                        dao.insertChannelsIgnore(batch)
-                                    }
+            withIngestionPragmas(db) {
+                while (eventType != XmlPullParser.END_DOCUMENT) {
+                    if (eventType == XmlPullParser.START_TAG) {
+                        when (parser.name) {
+                            "channel" -> {
+                                val channel = XmltvParser.parseChannelForIndex(parser)
+                                if (channel != null) {
+                                    allChannels.add(channel)
+                                    channelCount++
                                 }
                             }
+                            "programme" -> {
+                                // First programme encountered — flush channels (IGNORE keeps existing)
+                                if (!channelsFinished) {
+                                    channelsFinished = true
+                                    if (allChannels.isNotEmpty()) {
+                                        for (batch in allChannels.chunked(BATCH_SIZE)) {
+                                            dao.insertChannelsIgnore(batch)
+                                        }
+                                    }
+                                }
 
-                            val programme = XmltvParser.parseProgrammeForIndex(parser, sourceId)
-                            if (programme != null) {
-                                programmeBatch.add(programme)
-                                programmeCount++
-                                if (programmeBatch.size >= BATCH_SIZE) {
-                                    dao.insertProgrammes(programmeBatch.toList())
-                                    programmeBatch.clear()
+                                val programme = XmltvParser.parseProgrammeForIndex(parser, sourceId)
+                                if (programme != null) {
+                                    programmeBatch.add(programme)
+                                    programmeCount++
+                                    if (programmeBatch.size >= BATCH_SIZE) {
+                                        dao.insertProgrammes(programmeBatch.toList())
+                                        programmeBatch.clear()
 
-                                    val bytesProcessed = countingStream.bytesRead
-                                    val percent = if (fileSize > 0) {
-                                        ((bytesProcessed * 100) / fileSize).toInt().coerceIn(0, 99)
-                                    } else 0
-                                    if (!wasIndexed) {
-                                        _state.value = EpgIndexState.Indexing(
-                                            progressPercent = percent,
-                                            channelsIndexed = channelCount,
-                                            programmesIndexed = programmeCount
-                                        )
+                                        val bytesProcessed = countingStream.bytesRead
+                                        val percent = if (fileSize > 0) {
+                                            ((bytesProcessed * 100) / fileSize).toInt().coerceIn(0, 99)
+                                        } else 0
+                                        if (!wasIndexed) {
+                                            _state.value = EpgIndexState.Indexing(
+                                                progressPercent = percent,
+                                                channelsIndexed = channelCount,
+                                                programmesIndexed = programmeCount
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+                    eventType = parser.next()
                 }
-                eventType = parser.next()
-            }
 
-            // Flush remaining channels
-            if (!channelsFinished && allChannels.isNotEmpty()) {
-                for (batch in allChannels.chunked(BATCH_SIZE)) {
-                    dao.insertChannelsIgnore(batch)
+                // Flush remaining channels
+                if (!channelsFinished && allChannels.isNotEmpty()) {
+                    for (batch in allChannels.chunked(BATCH_SIZE)) {
+                        dao.insertChannelsIgnore(batch)
+                    }
                 }
-            }
 
-            // Flush remaining programme batch
-            if (programmeBatch.isNotEmpty()) {
-                dao.insertProgrammes(programmeBatch.toList())
+                // Flush remaining programme batch
+                if (programmeBatch.isNotEmpty()) {
+                    dao.insertProgrammes(programmeBatch.toList())
+                }
             }
 
             // Record per-file stats
