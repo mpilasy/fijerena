@@ -174,12 +174,46 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Process all enabled sources: download-ingest-delete each sequentially.
-     * Append-only: database stays searchable throughout.
+     * Start processing all enabled sources. The job runs on the file manager's
+     * own scope so it survives ViewModel clearing and auto-refresh rescheduling.
+     * Only one processing job runs at a time — a new request cancels the old one.
      */
-    suspend fun processAllSources(sources: List<EpgSourceEntity>) {
+    fun launchProcessAllSources(onComplete: (suspend () -> Unit)? = null) {
         processJob?.cancel()
 
+        processJob = scope.launch {
+            val db = EpgIndexDatabase.getInstance(context)
+            val sources = db.epgSourceDao().getEnabledSources()
+            processAllSourcesInternal(sources)
+            onComplete?.invoke()
+        }
+    }
+
+    /**
+     * Start processing a single source. Same lifecycle guarantees as above.
+     */
+    fun launchProcessSingleSource(sourceId: Long, onComplete: (suspend () -> Unit)? = null) {
+        processJob?.cancel()
+
+        processJob = scope.launch {
+            processSingleSourceInternal(sourceId)
+            onComplete?.invoke()
+        }
+    }
+
+    /**
+     * Process all enabled sources: download-ingest-delete each sequentially.
+     * Append-only: database stays searchable throughout.
+     *
+     * Must be called via [launchProcessAllSources] to ensure proper job tracking.
+     * The [processAllSources] suspend overload is kept for [autoRefreshIfStale]
+     * which already runs inside a tracked [processJob].
+     */
+    suspend fun processAllSources(sources: List<EpgSourceEntity>) {
+        processAllSourcesInternal(sources)
+    }
+
+    private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) {
         if (sources.isEmpty()) {
             _state.value = MultiSourceState.Error("No sources to process")
             return
@@ -227,19 +261,10 @@ class EpgFileManager private constructor(private val context: Context) {
             _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
         }
 
-        scope.launch {
-            delay(10000)
-            val current = _state.value
-            if (current is MultiSourceState.Completed || current is MultiSourceState.Error) {
-                _state.value = MultiSourceState.Idle
-            }
-        }
+        scheduleIdleReset()
     }
 
-    /**
-     * Process a single source by ID. Used for per-source refresh.
-     */
-    suspend fun processSingleSource(sourceId: Long) {
+    private suspend fun processSingleSourceInternal(sourceId: Long) {
         val networkType = NetworkMonitor.currentNetworkType
         if (networkType == NetworkType.CELLULAR) {
             _state.value = MultiSourceState.Error("WiFi required for EPG downloads")
@@ -274,6 +299,10 @@ class EpgFileManager private constructor(private val context: Context) {
             _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
         }
 
+        scheduleIdleReset()
+    }
+
+    private fun scheduleIdleReset() {
         scope.launch {
             delay(10000)
             val current = _state.value
@@ -404,13 +433,17 @@ class EpgFileManager private constructor(private val context: Context) {
         }
 
         val now = System.currentTimeMillis()
-        val hasStale = sources.any { source ->
+        val staleSources = sources.filter { source ->
             source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > STALE_THRESHOLD_MS
         }
 
-        if (hasStale) {
-            Log.d(TAG, "Auto-refresh: found stale sources, refreshing all")
-            processAllSources(sources)
+        if (staleSources.isNotEmpty()) {
+            Log.d(TAG, "Auto-refresh: ${staleSources.size} of ${sources.size} sources stale, refreshing those")
+            processJob?.cancel()
+            processJob = scope.launch {
+                processAllSourcesInternal(staleSources)
+            }
+            processJob?.join()
         } else {
             Log.d(TAG, "Auto-refresh: all sources fresh, skipping")
         }
