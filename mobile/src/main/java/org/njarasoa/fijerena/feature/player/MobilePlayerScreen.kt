@@ -353,9 +353,7 @@ fun MobilePlayerScreen(
                     .fillMaxSize()
                     .background(Color.Black)
                     .clickable {
-                        if (showStats) {
-                            showStats = false
-                        } else {
+                        if (!showStats) {
                             showControls = !showControls
                         }
                     }
@@ -1217,6 +1215,10 @@ private fun MobileStatsOverlay(
     // Collect stream stats from service
     val serviceRetryCount = StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsState()
     val serviceStartTimeMs = StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsState()
+    val serviceRebufferCount = StreamingPlaybackService.getInstance()?.rebufferCount?.collectAsState()
+    val serviceRebufferTimeMs = StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsState()
+    val serviceBandwidth = StreamingPlaybackService.getInstance()?.bandwidthEstimate?.collectAsState()
+    val serviceQualitySwitches = StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsState()
     var streamElapsed by remember { mutableStateOf("0:00") }
 
     LaunchedEffect(Unit) {
@@ -1301,10 +1303,6 @@ private fun MobileStatsOverlay(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = CinemaAlpha.scrim))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onClose() }
     ) {
         GlassPanel(
             modifier = Modifier
@@ -1356,8 +1354,25 @@ private fun MobileStatsOverlay(
 
                 SectionHeader("NETWORK")
                 StatRow("Speed", networkSpeed)
+                val bwEstimate = serviceBandwidth?.value ?: 0L
+                StatRow("Bandwidth", if (bwEstimate > 0) formatBitrate(bwEstimate.toInt()) else "N/A")
                 StatRow("Buffer", "${bufferHealth}s")
                 StatRow("Buffered", formatTime(bufferedPosition))
+                val rebuffers = serviceRebufferCount?.value ?: 0
+                val rebufferTimeMs = serviceRebufferTimeMs?.value ?: 0L
+                val rebufferColor = when {
+                    rebuffers == 0 -> CinemaSuccess
+                    rebuffers <= 3 -> CinemaWarning
+                    else -> CinemaError
+                }
+                StatRowColored("Rebuffers", "$rebuffers", rebufferColor)
+                if (rebufferTimeMs > 0) {
+                    StatRowColored("Rebuf Time", "${rebufferTimeMs / 1000}.${(rebufferTimeMs % 1000) / 100}s", rebufferColor)
+                }
+                val qSwitches = serviceQualitySwitches?.value ?: 0
+                if (qSwitches > 0) {
+                    StatRow("ABR Switches", "$qSwitches")
+                }
 
                 SectionHeader("PLAYBACK")
                 StatRow("Position", formatTime(position))

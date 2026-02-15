@@ -41,7 +41,7 @@ Singleton via `ConnectivityManager.NetworkCallback`. `StateFlow<NetworkType>` fo
 - **Channel switching:** D-pad up/down for Live TV only (disabled for VOD to prevent accidents). Toast notification at top-center, auto-dismiss 3s.
 - **VOD time display:** Progress bar, remaining time, "Ends at" with timezone-aware calculation
 - **EPG in player (Live TV):** Shows current programme title + time range, programme progress bar, and "Up Next" in stream info overlay (TV `StreamInfoDisplay`) and mobile `ControlsOverlay`/`ChannelToast`. Fetched via `getEpgBulkForItems()` on stream start and channel switch. Graceful degradation if no EPG data.
-- **Stats overlay:** Double-tap OK. Video/audio codec info, network stats, dropped frames (color-coded), stream retries, uptime, repositionable (4 corners)
+- **Stats overlay:** Double-tap OK. Video/audio codec info, network stats (measured bandwidth, rebuffer count/duration, ABR quality switches), dropped frames (color-coded), stream retries, uptime, repositionable (4 corners). Mobile: dismissible only via X button.
 - **Control hints:** First-playback overlay listing all controls, auto-dismiss 7s, "Don't show again" option
 - **Wake lock:** Acquired on play, released on pause/stop. `PARTIAL_WAKE_LOCK` + `WAKE_MODE_NETWORK`.
 - **Auto-resume:** Saved position every 5s, resume if 2-95% progress

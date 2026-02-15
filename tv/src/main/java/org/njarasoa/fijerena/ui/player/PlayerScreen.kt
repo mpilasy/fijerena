@@ -1265,6 +1265,10 @@ private fun StatsOverlay(
     // Collect stream stats from service
     val serviceRetryCount = StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsState()
     val serviceStartTimeMs = StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsState()
+    val serviceRebufferCount = StreamingPlaybackService.getInstance()?.rebufferCount?.collectAsState()
+    val serviceRebufferTimeMs = StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsState()
+    val serviceBandwidth = StreamingPlaybackService.getInstance()?.bandwidthEstimate?.collectAsState()
+    val serviceQualitySwitches = StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsState()
     var streamElapsed by remember { mutableStateOf("0:00") }
 
     // Update stats periodically
@@ -1482,8 +1486,25 @@ private fun StatsOverlay(
                         // Network stats
                         SectionHeader("NETWORK")
                         CompactStatRow("Speed", networkSpeed)
+                        val bwEstimate = serviceBandwidth?.value ?: 0L
+                        CompactStatRow("Bandwidth", if (bwEstimate > 0) formatBitrate(bwEstimate.toInt()) else "N/A")
                         CompactStatRow("Buffer", "${bufferHealth}s")
                         CompactStatRow("Buffered", formatTime(bufferedPosition))
+                        val rebuffers = serviceRebufferCount?.value ?: 0
+                        val rebufferTimeMs = serviceRebufferTimeMs?.value ?: 0L
+                        val rebufferColor = when {
+                            rebuffers == 0 -> CinemaSuccess
+                            rebuffers <= 3 -> CinemaWarning
+                            else -> CinemaError
+                        }
+                        CompactStatRowColored("Rebuffers", "$rebuffers", rebufferColor)
+                        if (rebufferTimeMs > 0) {
+                            CompactStatRowColored("Rebuf Time", "${rebufferTimeMs / 1000}.${(rebufferTimeMs % 1000) / 100}s", rebufferColor)
+                        }
+                        val qSwitches = serviceQualitySwitches?.value ?: 0
+                        if (qSwitches > 0) {
+                            CompactStatRow("ABR Switches", "$qSwitches")
+                        }
                     }
 
                     // Right Column
