@@ -40,7 +40,8 @@ Singleton via `ConnectivityManager.NetworkCallback`. `StateFlow<NetworkType>` fo
 - **Audio/Subtitle/Quality selection:** In-playback track switching dialogs (D-pad navigable)
 - **Channel switching:** D-pad up/down for Live TV only (disabled for VOD to prevent accidents). Toast notification at top-center, auto-dismiss 3s.
 - **VOD time display:** Progress bar, remaining time, "Ends at" with timezone-aware calculation
-- **Stats overlay:** Double-tap OK. Video/audio codec info, network stats, dropped frames (color-coded), repositionable (4 corners)
+- **EPG in player (Live TV):** Shows current programme title + time range, programme progress bar, and "Up Next" in stream info overlay (TV `StreamInfoDisplay`) and mobile `ControlsOverlay`/`ChannelToast`. Fetched via `getEpgBulkForItems()` on stream start and channel switch. Graceful degradation if no EPG data.
+- **Stats overlay:** Double-tap OK. Video/audio codec info, network stats, dropped frames (color-coded), stream retries, uptime, repositionable (4 corners)
 - **Control hints:** First-playback overlay listing all controls, auto-dismiss 7s, "Don't show again" option
 - **Wake lock:** Acquired on play, released on pause/stop. `PARTIAL_WAKE_LOCK` + `WAKE_MODE_NETWORK`.
 - **Auto-resume:** Saved position every 5s, resume if 2-95% progress
@@ -132,6 +133,7 @@ Auto-resume (default: on), Last Watched queue size (1-100, default: 25), Favorit
 - **Continue Watching:** In-progress VOD items (not for Live TV)
 - **Favorites:** User-curated, star button in player, per-content-type, configurable max size
 - **Last Watched:** Chronological history, auto-updated on play, per-content-type, configurable queue size
+- **Recently Viewed:** Shows recently browsed categories (max 20, per content type, deduplicated). Clicking navigates to that category. Only visible when history exists. Tracked automatically on non-virtual category loads. Data stored as JSON in per-provider SharedPreferences.
 
 ### Episode Details (Inline)
 Inline detail panel before playback (no separate route). Thumbnail, metadata, Play/Resume buttons, plot/cast/director with series fallback. Collapsible season accordion (one expanded at a time, auto-expands next unwatched). Resume if 2-95% progress.
