@@ -246,8 +246,13 @@ fun MobileEpgManagementScreen(
                                 )
                             }
                             if (viewModel.isDevMode && source.lastIngestedAtMs > 0) {
+                                val sizeStr = if (source.ingestMethod != "STREAMED") {
+                                    ", ${formatBytes(source.lastDownloadBytes)}"
+                                } else {
+                                    ""
+                                }
                                 Text(
-                                    text = "${formatCount(source.lastChannels)}ch, ${formatCount(source.lastProgrammes)}prg, ${formatBytes(source.lastDownloadBytes)}",
+                                    text = "${formatCount(source.lastChannels)}ch, ${formatCount(source.lastProgrammes)}prg$sizeStr",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                                 )

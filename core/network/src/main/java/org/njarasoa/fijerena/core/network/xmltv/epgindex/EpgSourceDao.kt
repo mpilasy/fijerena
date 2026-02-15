@@ -34,8 +34,8 @@ interface EpgSourceDao {
     @Query("DELETE FROM epg_source")
     suspend fun deleteAllSources()
 
-    @Query("UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_channels = :channels, last_programmes = :programmes, last_download_bytes = :downloadBytes WHERE id = :id")
-    suspend fun markIngested(id: Long, timestamp: Long, channels: Int, programmes: Int, downloadBytes: Long)
+    @Query("UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_channels = :channels, last_programmes = :programmes, last_download_bytes = :downloadBytes, ingest_method = :ingestMethod WHERE id = :id")
+    suspend fun markIngested(id: Long, timestamp: Long, channels: Int, programmes: Int, downloadBytes: Long, ingestMethod: String = "DOWNLOADED")
 
     @Query("UPDATE epg_source SET last_error = :error WHERE id = :id")
     suspend fun markError(id: Long, error: String)
