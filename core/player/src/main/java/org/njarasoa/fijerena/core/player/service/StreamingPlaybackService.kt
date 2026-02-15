@@ -55,6 +55,19 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _streamStartTimeMs = MutableStateFlow(0L)
     val streamStartTimeMs: StateFlow<Long> = _streamStartTimeMs.asStateFlow()
 
+    // Network stutter metrics
+    private val _rebufferCount = MutableStateFlow(0)
+    val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
+
+    private val _totalRebufferTimeMs = MutableStateFlow(0L)
+    val totalRebufferTimeMs: StateFlow<Long> = _totalRebufferTimeMs.asStateFlow()
+
+    private val _bandwidthEstimate = MutableStateFlow(0L)
+    val bandwidthEstimate: StateFlow<Long> = _bandwidthEstimate.asStateFlow()
+
+    private val _qualitySwitchCount = MutableStateFlow(0)
+    val qualitySwitchCount: StateFlow<Int> = _qualitySwitchCount.asStateFlow()
+
     private var onPositionSaveListener: ((Long, Long) -> Unit)? = null
 
     // Live stream auto-retry
@@ -159,6 +172,16 @@ class StreamingPlaybackService : MediaSessionService() {
             onMetricsUpdate = { dropped, total ->
                 _droppedFrames.value = dropped
                 _totalFrames.value = total
+            },
+            onRebuffer = { count, totalTimeMs ->
+                _rebufferCount.value = count
+                _totalRebufferTimeMs.value = totalTimeMs
+            },
+            onBandwidthUpdate = { bitrateEstimate ->
+                _bandwidthEstimate.value = bitrateEstimate
+            },
+            onQualitySwitch = { count ->
+                _qualitySwitchCount.value = count
             }
         )
         player.addAnalyticsListener(analyticsListener!!)
@@ -187,6 +210,10 @@ class StreamingPlaybackService : MediaSessionService() {
         playerListener?.resetErrorState()
         liveRetryCount = 0
         _streamRetryCount.value = 0
+        _rebufferCount.value = 0
+        _totalRebufferTimeMs.value = 0L
+        _bandwidthEstimate.value = 0L
+        _qualitySwitchCount.value = 0
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
 
@@ -578,17 +605,25 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     private class PerformanceAnalyticsListener(
-        private val onMetricsUpdate: (droppedFrames: Long, totalFrames: Long) -> Unit
+        private val onMetricsUpdate: (droppedFrames: Long, totalFrames: Long) -> Unit,
+        private val onRebuffer: (count: Int, totalTimeMs: Long) -> Unit,
+        private val onBandwidthUpdate: (bitrateEstimate: Long) -> Unit,
+        private val onQualitySwitch: (count: Int) -> Unit
     ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
         private var droppedFrames = 0L
         private var totalFrames = 0L
+        private var rebufferCount = 0
+        private var totalRebufferTimeMs = 0L
+        private var rebufferStartTimeMs = 0L
+        private var wasPlaying = false
+        private var qualitySwitchCount = 0
+        private var lastVideoHeight = -1
 
         override fun onVideoFrameProcessingOffset(
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
             totalProcessingOffsetUs: Long,
             frameCount: Int
         ) {
-            // This method is called periodically with frame processing metrics
             totalFrames += frameCount
         }
 
@@ -599,6 +634,57 @@ class StreamingPlaybackService : MediaSessionService() {
         ) {
             this.droppedFrames += droppedFrames
             onMetricsUpdate(this.droppedFrames, totalFrames)
+        }
+
+        override fun onPlaybackStateChanged(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            state: Int
+        ) {
+            when (state) {
+                Player.STATE_BUFFERING -> {
+                    // Only count as rebuffer if we were previously playing (not initial buffer)
+                    if (wasPlaying) {
+                        rebufferCount++
+                        rebufferStartTimeMs = SystemClock.elapsedRealtime()
+                    }
+                }
+                Player.STATE_READY -> {
+                    if (rebufferStartTimeMs > 0) {
+                        totalRebufferTimeMs += SystemClock.elapsedRealtime() - rebufferStartTimeMs
+                        rebufferStartTimeMs = 0L
+                        onRebuffer(rebufferCount, totalRebufferTimeMs)
+                    }
+                    wasPlaying = true
+                }
+                Player.STATE_IDLE, Player.STATE_ENDED -> {
+                    wasPlaying = false
+                    rebufferStartTimeMs = 0L
+                }
+            }
+        }
+
+        override fun onBandwidthEstimate(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            totalLoadTimeMs: Int,
+            totalBytesLoaded: Long,
+            bitrateEstimate: Long
+        ) {
+            onBandwidthUpdate(bitrateEstimate)
+        }
+
+        override fun onDownstreamFormatChanged(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData
+        ) {
+            // Track video quality switches (ignore audio/subtitle format changes)
+            if (mediaLoadData.trackType == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
+                val newHeight = mediaLoadData.trackFormat?.height ?: return
+                if (lastVideoHeight > 0 && newHeight != lastVideoHeight) {
+                    qualitySwitchCount++
+                    onQualitySwitch(qualitySwitchCount)
+                }
+                lastVideoHeight = newHeight
+            }
         }
     }
 
