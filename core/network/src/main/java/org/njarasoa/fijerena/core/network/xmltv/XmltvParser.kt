@@ -334,7 +334,7 @@ object XmltvParser {
      * Parse a <programme> element and return a Room entity for indexing.
      * Reuses the same parsing logic as [parseProgramme].
      */
-    fun parseProgrammeForIndex(parser: XmlPullParser): EpgProgrammeEntity? {
+    fun parseProgrammeForIndex(parser: XmlPullParser, sourceId: Long = 0): EpgProgrammeEntity? {
         val programme = parseProgramme(parser) ?: return null
         return EpgProgrammeEntity(
             channelId = programme.channelId,
@@ -343,7 +343,8 @@ object XmltvParser {
             description = programme.description,
             category = programme.category,
             startEpoch = programme.startEpoch,
-            endEpoch = programme.endEpoch
+            endEpoch = programme.endEpoch,
+            sourceId = sourceId
         )
     }
 

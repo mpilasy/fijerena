@@ -16,7 +16,8 @@ data class XmltvProgramme(
     val endEpoch: Long,
     val title: String,
     val description: String? = null,
-    val category: String? = null
+    val category: String? = null,
+    val sourceId: Long = 0
 )
 
 @Serializable

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
@@ -61,6 +62,11 @@ class EpgBrowserViewModel(
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
 
+    val isDevMode: Boolean get() = AppSettings(context).isDevMode
+
+    private val _sourceLabels = MutableStateFlow<Map<Long, String>>(emptyMap())
+    val sourceLabels: StateFlow<Map<Long, String>> = _sourceLabels.asStateFlow()
+
     // --------------- Paging flows ---------------
 
     private val _pagedNowPlaying = MutableStateFlow<Flow<PagingData<EpgSearchResultRow>>>(emptyFlow())
@@ -76,6 +82,19 @@ class EpgBrowserViewModel(
             initPagedNowPlaying()
         } else {
             _uiState.value = UiState.NoEpgFile
+        }
+        loadSourceLabels()
+    }
+
+    private fun loadSourceLabels() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    val db = EpgIndexDatabase.getInstance(context)
+                    val sources = db.epgSourceDao().getAllSourcesOnce()
+                    _sourceLabels.value = sources.associate { it.id to it.label }
+                } catch (_: Exception) { }
+            }
         }
     }
 
@@ -133,7 +152,8 @@ class EpgBrowserViewModel(
                                     channelName = channel?.displayName ?: prog.channelId,
                                     channelIconUrl = channel?.iconUrl,
                                     startEpoch = prog.startEpoch,
-                                    endEpoch = prog.endEpoch
+                                    endEpoch = prog.endEpoch,
+                                    sourceId = prog.sourceId
                                 )
                             }.sortedBy { it.startEpoch }
                         )
@@ -166,7 +186,7 @@ class EpgBrowserViewModel(
         val indexer = EpgIndexer.getInstance(context)
         if (indexer.state.value is EpgIndexState.Indexed) {
             val now = System.currentTimeMillis() / 1000L
-            val windowStart = now - 86400L
+            val windowStart = now
             val windowEnd = now + 6 * 86400L
 
             val sanitized = query

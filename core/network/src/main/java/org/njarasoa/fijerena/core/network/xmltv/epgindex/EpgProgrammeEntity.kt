@@ -14,7 +14,8 @@ import androidx.room.PrimaryKey
         Index(value = ["start_epoch", "end_epoch"], name = "idx_programme_time_range"),
         Index(value = ["channel_id"], name = "idx_programme_channel"),
         Index(value = ["title_lowercase"], name = "idx_programme_title_lower"),
-        Index(value = ["channel_id", "start_epoch"], name = "idx_programme_dedup", unique = true)
+        Index(value = ["channel_id", "start_epoch"], name = "idx_programme_dedup", unique = true),
+        Index(value = ["source_id"], name = "idx_programme_source")
     ]
 )
 data class EpgProgrammeEntity(
@@ -37,7 +38,10 @@ data class EpgProgrammeEntity(
     val startEpoch: Long,
 
     @ColumnInfo(name = "end_epoch")
-    val endEpoch: Long
+    val endEpoch: Long,
+
+    @ColumnInfo(name = "source_id")
+    val sourceId: Long = 0
 )
 
 @Fts4(contentEntity = EpgProgrammeEntity::class, tokenizer = "unicode61")
