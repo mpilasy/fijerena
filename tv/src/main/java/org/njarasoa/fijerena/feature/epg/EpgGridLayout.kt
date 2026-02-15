@@ -57,6 +57,9 @@ import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -174,11 +177,13 @@ private fun EpgHeader(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "TV Guide - $categoryName",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                color = CinemaTextPrimary
             )
             Text(
                 text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextSecondary
             )
         }
 
@@ -225,7 +230,8 @@ private fun EmptyEpgMessage() {
     ) {
         Text(
             text = "No EPG data available for these channels",
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            color = CinemaTextSecondary
         )
     }
 }
@@ -276,7 +282,9 @@ private fun ChannelItem(
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
-            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint)
+            contentColor = CinemaTextPrimary,
+            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint),
+            focusedContentColor = CinemaTextPrimary
         ),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
@@ -299,6 +307,7 @@ private fun ChannelItem(
             Text(
                 text = channel.name,
                 style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -390,7 +399,8 @@ private fun TimeHeaderRow(
                 Text(
                     text = TimeFormat.formatTime(slot.startTime),
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isCurrent) CinemaTextPrimary else CinemaTextSecondary
                 )
                 }
             }
@@ -439,7 +449,9 @@ private fun ProgramCell(
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark else org.njarasoa.fijerena.ui.theme.CinemaSurface,
-            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint)
+            contentColor = CinemaTextPrimary,
+            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint),
+            focusedContentColor = CinemaTextPrimary
         ),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
@@ -462,11 +474,13 @@ private fun ProgramCell(
             Text(
                 text = TimeFormat.formatTime(program.startTime),
                 style = MaterialTheme.typography.labelSmall,
+                color = CinemaTextSecondary,
                 maxLines = 1
             )
             Text(
                 text = program.title,
                 style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -499,7 +513,8 @@ private fun EpgSearchContent(
             ) {
                 Text(
                     text = "No programs found matching \"$searchQuery\"",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = CinemaTextSecondary
                 )
             }
         } else {
@@ -533,7 +548,9 @@ private fun SearchResultItem(
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
-            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint)
+            contentColor = CinemaTextPrimary,
+            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint),
+            focusedContentColor = CinemaTextPrimary
         ),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
@@ -559,12 +576,14 @@ private fun SearchResultItem(
                     text = result.program.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
+                    color = CinemaTextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = result.channel.name,
                     style = MaterialTheme.typography.bodySmall,
+                    color = CinemaTextSecondary,
                     maxLines = 1
                 )
                 Text(
@@ -572,13 +591,15 @@ private fun SearchResultItem(
                         result.program.startTime,
                         result.program.endTime
                     ),
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CinemaTextSecondary
                 )
                 result.program.description?.let { desc ->
                     if (desc.isNotBlank()) {
                         Text(
                             text = desc,
                             style = MaterialTheme.typography.bodySmall,
+                            color = CinemaTextSecondary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )

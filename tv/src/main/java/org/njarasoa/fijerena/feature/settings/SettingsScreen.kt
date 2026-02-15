@@ -135,12 +135,35 @@ fun SettingsScreen(
     var currentUsername by remember { mutableStateOf("") }
     var activeProviderId by remember { mutableStateOf<Long?>(null) }
 
+    // Track whether we had a provider at initial load
+    var hadProviderOnLoad by remember { mutableStateOf<Boolean?>(null) }
+
     LaunchedEffect(Unit) {
         val activeProvider = providerRepo.getActiveProvider()
         providerName = activeProvider?.name ?: "No provider"
         currentUrl = activeProvider?.url ?: ""
         currentUsername = activeProvider?.username ?: ""
         activeProviderId = activeProvider?.id
+        hadProviderOnLoad = activeProvider != null
+    }
+
+    // Re-check provider when returning from provider management screens
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
+    LaunchedEffect(lifecycleState) {
+        if (lifecycleState == androidx.lifecycle.Lifecycle.State.RESUMED) {
+            val activeProvider = providerRepo.getActiveProvider()
+            val hadProvider = hadProviderOnLoad
+            providerName = activeProvider?.name ?: "No provider"
+            currentUrl = activeProvider?.url ?: ""
+            currentUsername = activeProvider?.username ?: ""
+            activeProviderId = activeProvider?.id
+            // Navigate to content selection if we just got our first provider
+            if (hadProvider == false && activeProvider != null) {
+                hadProviderOnLoad = true
+                onProviderChanged()
+            }
+        }
     }
 
     // Global settings (remain in AppSettings)
