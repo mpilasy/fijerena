@@ -49,6 +49,7 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -101,7 +102,47 @@ fun SettingsScreen(
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val appSettings = remember { AppSettings(context.applicationContext) }
     val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
+    val exportManager = remember { SettingsExportManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Export/Import state
+    var exportImportMessage by remember { mutableStateOf<String?>(null) }
+
+    // SAF launcher for export (create file)
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                val success = exportManager.exportToUri(uri)
+                exportImportMessage = if (success) "Settings exported successfully" else "Export failed"
+            }
+        }
+    }
+
+    // SAF launcher for import (open file)
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                val result = exportManager.importFromUri(uri)
+                exportImportMessage = result.toSummary()
+                if (result.isSuccess) {
+                    // Refresh displayed settings after import
+                    selectedThemeId = appSettings.themeId
+                    onThemeChanged(appSettings.themeId)
+                    uiScale = appSettings.uiScale
+                    isDevMode = appSettings.isDevMode
+                    val activeProvider = providerRepo.getActiveProvider()
+                    providerName = activeProvider?.name ?: "No provider"
+                    currentUrl = activeProvider?.url ?: ""
+                    currentUsername = activeProvider?.username ?: ""
+                    activeProviderId = activeProvider?.id
+                }
+            }
+        }
+    }
 
     // Drive sync state
     val syncStatus by syncManager.syncStatus.collectAsState()
@@ -529,6 +570,55 @@ fun SettingsScreen(
                                 color = CinemaError
                             )
                         }
+                    }
+                }
+                }
+            }
+
+            // Export / Import Settings
+            item {
+                GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
+                Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
+                    Text(
+                        text = "Export / Import",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
+                        color = CinemaAccent
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+                    Text(
+                        text = "Export all settings to a file or import from another device",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                    ) {
+                        CinemaPrimaryButton(
+                            onClick = { exportLauncher.launch("fijerena_settings.json") },
+                            text = "Export Settings",
+                            modifier = Modifier.weight(1f)
+                        )
+                        CinemaSecondaryButton(
+                            onClick = { importLauncher.launch(arrayOf("application/json")) },
+                            text = "Import Settings",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (exportImportMessage != null) {
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        Text(
+                            text = exportImportMessage ?: "",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextSecondary
+                        )
                     }
                 }
                 }

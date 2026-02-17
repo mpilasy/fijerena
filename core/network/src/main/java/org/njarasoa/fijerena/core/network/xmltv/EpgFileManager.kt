@@ -56,6 +56,7 @@ class EpgFileManager private constructor(private val context: Context) {
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 5000L
         private const val STALE_THRESHOLD_MS = 24L * 3600 * 1000
+        private const val AUTO_REFRESH_CHECK_INTERVAL_MS = 4L * 3600 * 1000 // Check every 4 hours
 
         @Volatile
         private var instance: EpgFileManager? = null
@@ -722,7 +723,7 @@ class EpgFileManager private constructor(private val context: Context) {
                         Log.w(TAG, "Auto-refresh failed", e)
                     }
                 }
-                delay(STALE_THRESHOLD_MS)
+                delay(AUTO_REFRESH_CHECK_INTERVAL_MS)
             }
         }
     }
