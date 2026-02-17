@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.core.network.jellyfin
 
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.http.HttpStatusCode
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
@@ -47,32 +49,28 @@ class JellyfinMediaProvider(
     override fun isConnected(): Boolean = api.isAuthenticated()
 
     override suspend fun getCategories(contentType: String): Result<List<MediaCategory>> {
-        if (!isConnected()) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return connectResult.map { emptyList() }
-        }
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
-        return api.getLibraries().map { libraries ->
-            libraries.filter { library ->
-                when (contentType) {
-                    "MOVIES" -> library.collectionType == "movies"
-                    "TV_SHOWS" -> library.collectionType == "tvshows"
-                    else -> true
+        return withAutoReconnect {
+            api.getLibraries().map { libraries ->
+                libraries.filter { library ->
+                    when (contentType) {
+                        "MOVIES" -> library.collectionType == "movies"
+                        "TV_SHOWS" -> library.collectionType == "tvshows"
+                        else -> true
+                    }
+                }.map { library ->
+                    MediaCategory(
+                        id = library.id,
+                        name = library.name
+                    )
                 }
-            }.map { library ->
-                MediaCategory(
-                    id = library.id,
-                    name = library.name
-                )
             }
         }
     }
 
     override suspend fun getItems(categoryId: String, contentType: String): Result<List<MediaItem>> {
-        if (!isConnected()) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return connectResult.map { emptyList() }
-        }
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
         val includeTypes = when (contentType) {
             "MOVIES" -> "Movie"
@@ -80,16 +78,15 @@ class JellyfinMediaProvider(
             else -> null
         }
 
-        return api.getItems(parentId = categoryId, includeItemTypes = includeTypes).map { items ->
-            items.map { item -> item.toDomainItem(categoryId, contentType) }
+        return withAutoReconnect {
+            api.getItems(parentId = categoryId, includeItemTypes = includeTypes).map { items ->
+                items.map { item -> item.toDomainItem(categoryId, contentType) }
+            }
         }
     }
 
     override suspend fun search(query: String, contentType: String): Result<List<MediaItem>> {
-        if (!isConnected()) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return connectResult.map { emptyList() }
-        }
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
         val includeTypes = when (contentType) {
             "MOVIES" -> "Movie"
@@ -97,17 +94,20 @@ class JellyfinMediaProvider(
             else -> null
         }
 
-        return api.searchItems(query = query, includeItemTypes = includeTypes).map { items ->
-            items.map { item -> item.toDomainItem(categoryId = "", contentType = contentType) }
+        return withAutoReconnect {
+            api.searchItems(query = query, includeItemTypes = includeTypes).map { items ->
+                items.map { item -> item.toDomainItem(categoryId = "", contentType = contentType) }
+            }
         }
     }
 
     override suspend fun getSeriesDetail(seriesId: String): Result<SeriesDetail> {
-        if (!isConnected()) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return Result.failure(connectResult.exceptionOrNull()!!)
-        }
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
+        return withAutoReconnect { fetchSeriesDetail(seriesId) }
+    }
+
+    private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> {
         // Fetch the series item itself for its name and metadata
         val seriesResult = api.getItemById(seriesId)
         if (seriesResult.isFailure) return Result.failure(seriesResult.exceptionOrNull()!!)
@@ -169,12 +169,11 @@ class JellyfinMediaProvider(
     }
 
     override suspend fun getMovieDetail(movieId: String): Result<MovieDetail> {
-        if (!isConnected()) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return Result.failure(connectResult.exceptionOrNull()!!)
-        }
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
-        return api.getItemById(movieId).map { item -> itemToMovieDetail(item) }
+        return withAutoReconnect {
+            api.getItemById(movieId).map { item -> itemToMovieDetail(item) }
+        }
     }
 
     override suspend fun resolvePlayableStream(
@@ -183,10 +182,7 @@ class JellyfinMediaProvider(
         episodeId: String?,
         extension: String?
     ): Result<PlayableStream> {
-        if (!isConnected()) {
-            val connectResult = connect()
-            if (connectResult.isFailure) return Result.failure(connectResult.exceptionOrNull()!!)
-        }
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
         val streamItemId = episodeId ?: itemId
 
@@ -280,6 +276,22 @@ class JellyfinMediaProvider(
     private suspend fun ensureConnected(): Boolean {
         if (isConnected()) return true
         return connect().isSuccess
+    }
+
+    private suspend fun <T> withAutoReconnect(block: suspend () -> Result<T>): Result<T> {
+        val result = block()
+        if (result.isFailure) {
+            val cause = result.exceptionOrNull()
+            if (cause is ClientRequestException && cause.response.status == HttpStatusCode.Unauthorized) {
+                api.disconnect()
+                val reconnect = connect()
+                if (reconnect.isSuccess) {
+                    return block()
+                }
+                return Result.failure(Exception("Authentication failed"))
+            }
+        }
+        return result
     }
 
     private fun contentTypeToJellyfinType(contentType: String): String? {
