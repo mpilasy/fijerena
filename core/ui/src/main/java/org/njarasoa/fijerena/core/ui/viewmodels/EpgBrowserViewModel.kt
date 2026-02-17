@@ -134,9 +134,12 @@ class EpgBrowserViewModel(
                     return@launch
                 }
 
-                // Group programmes by normalized title
+                // Group programmes by normalized title + description
+                // so shows with the same title but different descriptions appear separately
                 val grouped = result.programmes
-                    .groupBy { it.title.trim().lowercase() }
+                    .groupBy {
+                        it.title.trim().lowercase() to (it.description?.trim()?.lowercase() ?: "")
+                    }
                     .map { (_, programmes) ->
                         val representative = programmes.first()
                         EpgBrowserProgram(
