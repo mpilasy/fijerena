@@ -49,40 +49,89 @@ class XmltvSearchService(private val context: Context) {
         val db = EpgIndexDatabase.getInstance(context)
         val dao = db.epgIndexDao()
 
+        // 1. Try FTS phrase match ("word1 word2"*)
         val rows: List<EpgSearchResultRow> = try {
             val ftsQuery = buildFtsQuery(query)
             kotlinx.coroutines.runBlocking {
                 dao.searchByTitleFts(ftsQuery, windowStart, windowEnd)
             }
         } catch (e: Exception) {
-            Log.d(TAG, "FTS query failed ('$query'), falling back to LIKE: ${e.message}")
-            val queryLower = query.lowercase(Locale.ROOT)
-            kotlinx.coroutines.runBlocking {
-                dao.searchByTitleLike(queryLower, windowStart, windowEnd)
+            Log.d(TAG, "FTS phrase query failed ('$query'): ${e.message}")
+            emptyList()
+        }
+
+        if (rows.isNotEmpty()) {
+            return rowsToSearchResult(rows, searchedFromIndex = true)
+        }
+
+        // 2. Try FTS AND match (word1* word2* — each word independently, any order)
+        val andFtsQuery = buildFtsAndQuery(query)
+        if (andFtsQuery != null) {
+            val andRows = try {
+                kotlinx.coroutines.runBlocking {
+                    dao.searchByTitleFts(andFtsQuery, windowStart, windowEnd)
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "FTS AND query failed ('$query'): ${e.message}")
+                emptyList()
+            }
+            if (andRows.isNotEmpty()) {
+                return rowsToSearchResult(andRows, searchedFromIndex = true)
             }
         }
 
-        if (rows.isEmpty()) {
-            val queryLower = query.lowercase(Locale.ROOT)
-            val likeRows = kotlinx.coroutines.runBlocking {
-                dao.searchByTitleLike(queryLower, windowStart, windowEnd)
-            }
+        // 3. Fall back to LIKE with full query
+        val queryLower = query.lowercase(Locale.ROOT)
+        val likeRows = kotlinx.coroutines.runBlocking {
+            dao.searchByTitleLike(queryLower, windowStart, windowEnd)
+        }
+        if (likeRows.isNotEmpty()) {
             return rowsToSearchResult(likeRows, searchedFromIndex = true)
         }
 
-        return rowsToSearchResult(rows, searchedFromIndex = true)
+        // 4. Fall back to LIKE AND: search by shortest word, then filter for all words in memory
+        val words = queryLower.split("\\s+".toRegex()).filter { it.length >= 2 }
+        if (words.size >= 2) {
+            val shortestWord = words.minBy { it.length }
+            val broadRows = kotlinx.coroutines.runBlocking {
+                dao.searchByTitleLike(shortestWord, windowStart, windowEnd)
+            }
+            val filtered = broadRows.filter { row ->
+                val titleLower = row.title.lowercase(Locale.ROOT)
+                words.all { word -> titleLower.contains(word) }
+            }
+            return rowsToSearchResult(filtered, searchedFromIndex = true)
+        }
+
+        return rowsToSearchResult(emptyList(), searchedFromIndex = true)
     }
 
-    private fun buildFtsQuery(query: String): String {
-        val sanitized = query
+    private fun sanitizeQuery(query: String): String {
+        return query
             .replace("\"", "")
             .replace("*", "")
             .replace("(", "")
             .replace(")", "")
             .replace(":", "")
             .trim()
+    }
+
+    private fun buildFtsQuery(query: String): String {
+        val sanitized = sanitizeQuery(query)
         if (sanitized.isBlank()) throw IllegalArgumentException("Empty query after sanitization")
         return "\"$sanitized\"*"
+    }
+
+    /**
+     * Build an FTS AND query: each word becomes a prefix token, implicit AND.
+     * "sports news" → "sports* news*"
+     * Returns null if query has fewer than 2 words (AND not applicable).
+     */
+    private fun buildFtsAndQuery(query: String): String? {
+        val sanitized = sanitizeQuery(query)
+        val words = sanitized.split("\\s+".toRegex()).filter { it.isNotBlank() }
+        if (words.size < 2) return null
+        return words.joinToString(" ") { "$it*" }
     }
 
     private fun rowsToSearchResult(

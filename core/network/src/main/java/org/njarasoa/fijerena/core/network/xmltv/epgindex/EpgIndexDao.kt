@@ -36,7 +36,7 @@ interface EpgIndexDao {
         INNER JOIN epg_programme_fts fts ON fts.rowid = p.id
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id
         WHERE epg_programme_fts MATCH :query
-          AND p.start_epoch >= :windowStart AND p.end_epoch <= :windowEnd
+          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         LIMIT :maxResults
         """
@@ -54,7 +54,7 @@ interface EpgIndexDao {
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id
         WHERE p.title_lowercase LIKE '%' || :queryLower || '%'
-          AND p.start_epoch >= :windowStart AND p.end_epoch <= :windowEnd
+          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         LIMIT :maxResults
         """
@@ -86,7 +86,7 @@ interface EpgIndexDao {
         SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id
-        WHERE p.start_epoch >= :windowStart AND p.end_epoch <= :windowEnd
+        WHERE p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         """
     )
@@ -112,7 +112,7 @@ interface EpgIndexDao {
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id
         WHERE p.channel_id = :channelId
-          AND p.start_epoch >= :windowStart AND p.end_epoch <= :windowEnd
+          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         """
     )
@@ -129,7 +129,7 @@ interface EpgIndexDao {
         INNER JOIN epg_programme_fts fts ON fts.rowid = p.id
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id
         WHERE epg_programme_fts MATCH :query
-          AND p.start_epoch >= :windowStart AND p.end_epoch <= :windowEnd
+          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         """
     )
@@ -150,7 +150,7 @@ interface EpgIndexDao {
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id
         WHERE p.channel_id IN (:channelIds)
-          AND p.start_epoch >= :windowStart AND p.end_epoch <= :windowEnd
+          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         """
     )
