@@ -24,6 +24,7 @@ class JellyfinApiService(
     private var serverId: String? = null
 
     private val client = HttpClient(Android) {
+        expectSuccess = true
         install(ContentNegotiation) {
             json(Json {
                 ignoreUnknownKeys = true
