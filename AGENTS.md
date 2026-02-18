@@ -107,7 +107,6 @@ Apply TV-safe margins to all root containers to compensate for overscan:
 ---
 
 ## 🤖 Agent Workflow Rules
-1. **Start** every session by reading `CLAUDE.md` and this file.
+1. **Start** every session by reading project documentation and this file.
 2. **Verify** every UI change: "Is this D-pad friendly?"
 3. **Never** hardcode dimensions or colors.
-4. **Use** Haiku model for metadata/documentation tasks to save costs.
