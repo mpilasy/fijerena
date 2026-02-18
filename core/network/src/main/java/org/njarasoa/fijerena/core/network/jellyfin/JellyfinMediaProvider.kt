@@ -27,6 +27,10 @@ class JellyfinMediaProvider(
 
     private val api = JellyfinApiService(serverUrl, deviceId)
 
+    // PlaySessionId per item, used for transcoding session reporting
+    private val playSessionIds = mutableMapOf<String, String>()
+    private val mediaSourceIds = mutableMapOf<String, String>()
+
     override val capabilities = ProviderCapabilities(
         supportedContentTypes = setOf("MOVIES", "TV_SHOWS"),
         supportsEpg = false,
@@ -185,26 +189,61 @@ class JellyfinMediaProvider(
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
         val streamItemId = episodeId ?: itemId
+        val userId = api.getUserId() ?: return Result.failure(Exception("Not authenticated"))
+        val token = api.getAccessToken()
+        val headers = if (token != null) mapOf("X-Emby-Token" to token) else emptyMap()
 
-        // Determine container extension for proper media source detection
-        // Jellyfin container can be comma-separated (e.g., "mov,mp4,m4a,3gp,3g2,mj2")
-        val rawContainer = extension ?: run {
-            val itemResult = api.getItemById(streamItemId)
-            itemResult.getOrNull()?.let { item ->
-                item.container ?: item.mediaSources.firstOrNull()?.container
+        // Ask Jellyfin whether to direct-play or transcode based on our DeviceProfile
+        val playbackInfo = api.getPlaybackInfo(streamItemId, userId)
+
+        if (playbackInfo.isSuccess) {
+            val info = playbackInfo.getOrThrow()
+            val source = info.mediaSources.firstOrNull()
+
+            // Store session IDs for accurate progress reporting
+            info.playSessionId?.let { playSessionIds[streamItemId] = it }
+            source?.id?.let { mediaSourceIds[streamItemId] = it }
+
+            val streamUrl = when {
+                source == null -> {
+                    // No source in response — fall back to static direct play
+                    api.buildStreamUrl(streamItemId)
+                }
+                source.supportsDirectPlay -> {
+                    // Jellyfin confirms the device can decode this file natively
+                    val container = source.container?.split(",")?.firstOrNull()?.trim()
+                    api.buildStreamUrl(streamItemId, container, source.id)
+                }
+                source.transcodingUrl != null -> {
+                    // Jellyfin will transcode to HLS; the URL includes all params + api_key
+                    "$serverUrl${source.transcodingUrl}"
+                }
+                source.supportsDirectStream -> {
+                    // Server streams the file without re-encoding (seeking handled by server)
+                    val container = source.container?.split(",")?.firstOrNull()?.trim()
+                    api.buildStreamUrl(streamItemId, container, source.id)
+                }
+                else -> api.buildStreamUrl(streamItemId)
             }
+
+            return Result.success(
+                PlayableStream(uri = streamUrl, headers = headers, isLive = false, title = "")
+            )
+        }
+
+        // PlaybackInfo failed — fall back to legacy static direct play
+        val rawContainer = extension ?: run {
+            api.getItemById(streamItemId).getOrNull()
+                ?.let { it.container ?: it.mediaSources.firstOrNull()?.container }
         }
         val container = rawContainer?.split(",")?.firstOrNull { ext ->
-            ext.trim().lowercase() in setOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd", "flv", "mpeg")
+            ext.trim().lowercase() in setOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd")
         }?.trim() ?: rawContainer?.split(",")?.firstOrNull()?.trim()
-
-        val streamUrl = api.buildStreamUrl(streamItemId, container)
-        val token = api.getAccessToken()
 
         return Result.success(
             PlayableStream(
-                uri = streamUrl,
-                headers = if (token != null) mapOf("X-Emby-Token" to token) else emptyMap(),
+                uri = api.buildStreamUrl(streamItemId, container),
+                headers = headers,
                 isLive = false,
                 title = ""
             )
@@ -213,9 +252,13 @@ class JellyfinMediaProvider(
 
     override suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long) {
         if (!isConnected()) return
-        val positionTicks = positionMs * 10_000
-        val isPaused = false
-        api.reportPlaybackProgress(itemId, positionTicks, isPaused)
+        api.reportPlaybackProgress(
+            itemId = itemId,
+            positionTicks = positionMs * 10_000,
+            isPaused = false,
+            playSessionId = playSessionIds[itemId],
+            mediaSourceId = mediaSourceIds[itemId]
+        )
     }
 
     override suspend fun setFavorite(itemId: String, isFavorite: Boolean): Result<Unit> {
@@ -265,12 +308,24 @@ class JellyfinMediaProvider(
 
     override suspend fun onPlaybackStarted(itemId: String) {
         if (!isConnected()) return
-        api.reportPlaybackStart(itemId)
+        api.reportPlaybackStart(
+            itemId = itemId,
+            playSessionId = playSessionIds[itemId],
+            mediaSourceId = mediaSourceIds[itemId]
+        )
     }
 
     override suspend fun onPlaybackStopped(itemId: String, positionMs: Long, durationMs: Long) {
         if (!isConnected()) return
-        api.reportPlaybackStopped(itemId, positionMs * 10_000)
+        api.reportPlaybackStopped(
+            itemId = itemId,
+            positionTicks = positionMs * 10_000,
+            playSessionId = playSessionIds[itemId],
+            mediaSourceId = mediaSourceIds[itemId]
+        )
+        // Clean up session tracking after stop
+        playSessionIds.remove(itemId)
+        mediaSourceIds.remove(itemId)
     }
 
     private suspend fun ensureConnected(): Boolean {
