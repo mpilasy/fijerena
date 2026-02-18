@@ -479,9 +479,33 @@ Background pre-fetching warms cache on category screen init.
 
 Native server-side search via Jellyfin REST API.
 
+**Auth:** `JellyfinApiService` uses an `HttpSend` interceptor to inject both `Authorization: MediaBrowser ...` and `X-Emby-Authorization: MediaBrowser ...` on every request. Jellyfin 10.10+ requires `Authorization`; older versions used `X-Emby-Authorization`. The interceptor ensures compatibility with both. Body: `{"Username": "...", "Pw": "..."}` as required by the Jellyfin 10.9+ OpenAPI spec (`additionalProperties: false`).
+
 ### Local / SMB
 
 Client-side filename matching against scanned file list.
+
+---
+
+## Settings Export / Import
+
+`SettingsExportManager` (`core/network/`) serializes all app configuration to a JSON file via the Storage Access Framework.
+
+**Exported data:**
+- Global `AppSettings`: theme, UI scale, dev mode, EPG auto-refresh, cellular buffer multipliers
+- All provider configurations: name, URL, username, type, config JSON, per-provider settings, active flag
+- All EPG sources: URL, label, timezone offset, enabled state
+
+**NOT exported** (security): passwords (EncryptedSharedPreferences), cache data, EPG programme data, timestamps.
+
+**Import conflict resolution:** When an imported provider name matches an existing one, a dialog prompts the user to choose:
+- **Overwrite** — updates URL, username, type, config, and per-provider settings of the existing entry
+- **Duplicate** — adds as a new provider with `(imported)` suffix
+- **Skip** — leaves the existing entry unchanged
+
+**SAF pattern:** File picker callbacks only set URI state; actual import/export work runs in `LaunchedEffect` to survive composable recomposition (`ForgottenCoroutineScopeException` prevention). Import MIME type filter includes `*/*` for compatibility with older Android file managers.
+
+**Key file:** `core/network/.../SettingsExportManager.kt`
 
 ---
 

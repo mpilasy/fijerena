@@ -120,6 +120,8 @@ TV and mobile share `applicationId` — use `adb -s <device>` when deploying to 
 - **Cache Management:** Total size, per-content-type breakdown with clear buttons
 - **UI Scale:** 70-100% for category/grid views
 - **Developer Mode:** Payload size tracking, debug info, provider type display
+- **Export Settings:** Saves providers + EPG sources + global settings to a JSON file via SAF. Passwords excluded.
+- **Import Settings:** Reads JSON file via SAF. On provider name conflict, dialog prompts Overwrite / Duplicate / Skip. EPG sources merged by URL (duplicates skipped). `SettingsExportManager` in `core/network/`.
 
 ### Provider Settings (Inline in Edit Provider)
 Auto-resume (default: on), Last Watched queue size (1-100, default: 25), Favorites max (10-500, default: 100), clear favorites/progress, category filters (Xtream only), caching toggle (Xtream only).
@@ -157,7 +159,7 @@ Grid: channel list (20%) + time grid (80%), 48×30min slots, auto-scroll to now,
 ### EPG Browser
 Standalone programme search screen. Access: Content Type Selection → book icon (visible when `EpgIndexer.state` is `Indexed`).
 
-Results grouped by title, sorted by airing count. Time window: -1 to +6 days, max 500 results. TV: GlassPanel/TvLazyColumn. Mobile: expandable cards/LazyColumn.
+Results grouped by title, sorted by airing count. Time window: -1 to +6 days, max 500 results. TV: GlassPanel/TvLazyColumn. Mobile: expandable cards/LazyColumn. Programme titles and channel names use `basicMarquee()` for overflow scrolling. LazyColumn keys use `"${title}::${description}"` (not title alone) to avoid duplicates.
 
 **Search:** SQLite FTS4 MATCH query (<100ms). Falls back to LIKE if FTS returns empty.
 

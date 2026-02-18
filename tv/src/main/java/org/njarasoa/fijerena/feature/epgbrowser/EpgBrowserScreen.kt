@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.epgbrowser
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -325,7 +326,7 @@ private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMo
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(results.programs, key = { it.title }) { program ->
+                items(results.programs, key = { "${it.title}::${it.description}" }) { program ->
                     ProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels)
                 }
             }
@@ -376,7 +377,7 @@ private fun ProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, 
                     color = CinemaTextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).basicMarquee()
                 )
                 val category = program.category
                 if (category != null) {
@@ -433,7 +434,7 @@ private fun AiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sour
             color = CinemaAccentLight,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).basicMarquee()
         )
         if (isDevMode && airing.sourceId > 0) {
             val sourceName = sourceLabels[airing.sourceId]

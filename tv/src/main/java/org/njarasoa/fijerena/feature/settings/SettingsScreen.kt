@@ -105,31 +105,58 @@ fun SettingsScreen(
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
+    // Get active provider info from ProviderEntity (not legacy AppSettings)
+    var providerName by remember { mutableStateOf("") }
+    var currentUrl by remember { mutableStateOf("") }
+    var currentUsername by remember { mutableStateOf("") }
+    var activeProviderId by remember { mutableStateOf<Long?>(null) }
+
+    // Track whether we had a provider at initial load
+    var hadProviderOnLoad by remember { mutableStateOf<Boolean?>(null) }
+
+    // Global settings
+    var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
+    var uiScale by remember { mutableStateOf(appSettings.uiScale) }
+    var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
+
     // Export/Import state
     var exportImportMessage by remember { mutableStateOf<String?>(null) }
+    var epgRefreshTrigger by remember { mutableStateOf(0) }
+    var pendingExportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingParsedImport by remember { mutableStateOf<SettingsExportManager.ParsedImport?>(null) }
+    var showConflictDialog by remember { mutableStateOf(false) }
 
     // SAF launcher for export (create file)
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        if (uri != null) {
-            coroutineScope.launch {
-                val success = exportManager.exportToUri(uri)
-                exportImportMessage = if (success) "Settings exported successfully" else "Export failed"
-            }
-        }
-    }
+    ) { uri -> pendingExportUri = uri }
 
     // SAF launcher for import (open file)
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            coroutineScope.launch {
-                val result = exportManager.importFromUri(uri)
+    ) { uri -> pendingImportUri = uri }
+
+    // Process export in LaunchedEffect (survives recomposition)
+    LaunchedEffect(pendingExportUri) {
+        val uri = pendingExportUri ?: return@LaunchedEffect
+        val success = exportManager.exportToUri(uri)
+        exportImportMessage = if (success) "Settings exported successfully" else "Export failed"
+        pendingExportUri = null
+    }
+
+    // Parse import file and check for conflicts
+    LaunchedEffect(pendingImportUri) {
+        val uri = pendingImportUri ?: return@LaunchedEffect
+        val parseResult = exportManager.parseImportUri(uri)
+        parseResult.onSuccess { parsed ->
+            if (parsed.hasConflicts) {
+                pendingParsedImport = parsed
+                showConflictDialog = true
+            } else {
+                val result = exportManager.importFromParsed(parsed)
                 exportImportMessage = result.toSummary()
                 if (result.isSuccess) {
-                    // Refresh displayed settings after import
                     selectedThemeId = appSettings.themeId
                     onThemeChanged(appSettings.themeId)
                     uiScale = appSettings.uiScale
@@ -139,9 +166,110 @@ fun SettingsScreen(
                     currentUrl = activeProvider?.url ?: ""
                     currentUsername = activeProvider?.username ?: ""
                     activeProviderId = activeProvider?.id
+                    epgRefreshTrigger++
                 }
             }
+        }.onFailure { e ->
+            exportImportMessage = "Import failed: ${e.message}"
         }
+        pendingImportUri = null
+    }
+
+    // Conflict resolution dialog
+    if (showConflictDialog && pendingParsedImport != null) {
+        val conflicts = pendingParsedImport!!.conflictingProviders
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {
+                showConflictDialog = false
+                pendingParsedImport = null
+            },
+            title = { Text("Provider Conflict") },
+            text = {
+                Text(
+                    "The following provider(s) already exist:\n\n" +
+                        conflicts.joinToString("\n") { "• $it" } +
+                        "\n\nWhat would you like to do?"
+                )
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                    CinemaPrimaryButton(
+                        onClick = {
+                            showConflictDialog = false
+                            val parsed = pendingParsedImport!!
+                            pendingParsedImport = null
+                            coroutineScope.launch {
+                                val result = exportManager.importFromParsed(parsed, SettingsExportManager.ConflictResolution.OVERWRITE)
+                                exportImportMessage = result.toSummary()
+                                if (result.isSuccess) {
+                                    selectedThemeId = appSettings.themeId
+                                    onThemeChanged(appSettings.themeId)
+                                    uiScale = appSettings.uiScale
+                                    isDevMode = appSettings.isDevMode
+                                    val activeProvider = providerRepo.getActiveProvider()
+                                    providerName = activeProvider?.name ?: "No provider"
+                                    currentUrl = activeProvider?.url ?: ""
+                                    currentUsername = activeProvider?.username ?: ""
+                                    activeProviderId = activeProvider?.id
+                                    epgRefreshTrigger++
+                                }
+                            }
+                        },
+                        text = "Overwrite"
+                    )
+                    CinemaSecondaryButton(
+                        onClick = {
+                            showConflictDialog = false
+                            val parsed = pendingParsedImport!!
+                            pendingParsedImport = null
+                            coroutineScope.launch {
+                                val result = exportManager.importFromParsed(parsed, SettingsExportManager.ConflictResolution.DUPLICATE)
+                                exportImportMessage = result.toSummary()
+                                if (result.isSuccess) {
+                                    selectedThemeId = appSettings.themeId
+                                    onThemeChanged(appSettings.themeId)
+                                    uiScale = appSettings.uiScale
+                                    isDevMode = appSettings.isDevMode
+                                    val activeProvider = providerRepo.getActiveProvider()
+                                    providerName = activeProvider?.name ?: "No provider"
+                                    currentUrl = activeProvider?.url ?: ""
+                                    currentUsername = activeProvider?.username ?: ""
+                                    activeProviderId = activeProvider?.id
+                                    epgRefreshTrigger++
+                                }
+                            }
+                        },
+                        text = "Duplicate"
+                    )
+                }
+            },
+            dismissButton = {
+                CinemaSecondaryButton(
+                    onClick = {
+                        showConflictDialog = false
+                        val parsed = pendingParsedImport!!
+                        pendingParsedImport = null
+                        coroutineScope.launch {
+                            val result = exportManager.importFromParsed(parsed, SettingsExportManager.ConflictResolution.SKIP)
+                            exportImportMessage = result.toSummary()
+                            if (result.isSuccess) {
+                                selectedThemeId = appSettings.themeId
+                                onThemeChanged(appSettings.themeId)
+                                uiScale = appSettings.uiScale
+                                isDevMode = appSettings.isDevMode
+                                val activeProvider = providerRepo.getActiveProvider()
+                                providerName = activeProvider?.name ?: "No provider"
+                                currentUrl = activeProvider?.url ?: ""
+                                currentUsername = activeProvider?.username ?: ""
+                                activeProviderId = activeProvider?.id
+                                epgRefreshTrigger++
+                            }
+                        }
+                    },
+                    text = "Skip"
+                )
+            }
+        )
     }
 
     // Drive sync state
@@ -170,15 +298,6 @@ fun SettingsScreen(
         syncManager.initialize()
     }
 
-    // Get active provider info from ProviderEntity (not legacy AppSettings)
-    var providerName by remember { mutableStateOf("") }
-    var currentUrl by remember { mutableStateOf("") }
-    var currentUsername by remember { mutableStateOf("") }
-    var activeProviderId by remember { mutableStateOf<Long?>(null) }
-
-    // Track whether we had a provider at initial load
-    var hadProviderOnLoad by remember { mutableStateOf<Boolean?>(null) }
-
     LaunchedEffect(Unit) {
         val activeProvider = providerRepo.getActiveProvider()
         providerName = activeProvider?.name ?: "No provider"
@@ -206,11 +325,6 @@ fun SettingsScreen(
             }
         }
     }
-
-    // Global settings (remain in AppSettings)
-    var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
-    var uiScale by remember { mutableStateOf(appSettings.uiScale) }
-    var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
 
     androidx.compose.runtime.CompositionLocalProvider(LocalUiScale provides uiScale) {
     val scale = LocalUiScale.current
@@ -366,10 +480,14 @@ fun SettingsScreen(
 
                     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
                     val indexState by epgIndexer.state.collectAsState()
+                    var sourceCount by remember { mutableStateOf(0) }
+                    LaunchedEffect(epgRefreshTrigger) {
+                        sourceCount = epgIndexer.getSourceCount()
+                    }
                     val summaryText = when (val idx = indexState) {
                         is EpgIndexState.Indexed -> "${formatProgrammeCount(idx.programmeCount)} programmes, ${formatProgrammeCount(idx.channelCount)} channels"
                         is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
-                        is EpgIndexState.NotIndexed -> "No sources configured"
+                        is EpgIndexState.NotIndexed -> if (sourceCount > 0) "$sourceCount source(s) configured, not yet indexed" else "No sources configured"
                         is EpgIndexState.Failed -> "Error: ${idx.reason}"
                     }
                     Text(
@@ -605,7 +723,7 @@ fun SettingsScreen(
                             modifier = Modifier.weight(1f)
                         )
                         CinemaSecondaryButton(
-                            onClick = { importLauncher.launch(arrayOf("application/json")) },
+                            onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
                             text = "Import Settings",
                             modifier = Modifier.weight(1f)
                         )
