@@ -5,28 +5,21 @@
 ✅ **Code**: All Kotlin code compiles successfully
 ✅ **Dependencies**: All libraries resolve correctly
 ✅ **Configuration**: Mobile module properly configured
-❌ **Environment**: Missing JDK compiler and Android SDK tools
+✅ **Environment**: JDK 21 and Android SDK tools installed and working
 
-## Prerequisites Needed
+## Prerequisites
 
-### 1. Install Full JDK (Required for building APK)
+JDK 21 and Android SDK are required. If not already installed:
+
+### Install Full JDK
 ```bash
 # Ubuntu/Debian
-sudo apt-get update
 sudo apt-get install openjdk-21-jdk
-
-# Verify installation
 javac -version  # Should show: javac 21.x.x
 ```
 
-### 2. Install Android SDK Platform Tools (Required for installing APK)
-```bash
-# Download Android command-line tools from:
-# https://developer.android.com/studio#command-line-tools-only
-
-# Or install Android Studio which includes everything:
-# https://developer.android.com/studio
-```
+### Install Android SDK
+Download Android command-line tools or Android Studio from developer.android.com/studio.
 
 ## Building the Mobile APK
 
@@ -256,16 +249,18 @@ adb logcat *:E
 adb logcat > crash_log.txt
 ```
 
-## Next Steps
+## Quick Start
 
-Once environment is set up:
+```bash
+# Build
+./gradlew :mobile:assembleDebug
 
-1. ✅ Install JDK 21
-2. ✅ Install Android SDK / Android Studio
-3. ✅ Build mobile APK: `./gradlew :mobile:assembleDebug`
-4. ✅ Connect Android device or start emulator
-5. ✅ Install: `./gradlew :mobile:installDebug`
-6. ✅ Run and test streaming functionality
+# Install on connected device
+./gradlew :mobile:installDebug
+
+# Or install specific APK
+adb -s BH9044V7BZ install -r mobile/build/outputs/apk/debug/mobile-debug.apk
+```
 
 ## Quick Start Script
 
@@ -304,5 +299,4 @@ Run: `./run_mobile.sh`
 
 ---
 
-**Current Limitation**: Cannot build APK without JDK compiler (`javac`)
-**Code Status**: ✅ Ready for production - all code compiles successfully
+**Build Status**: ✅ Fully operational — JDK 21 and Android SDK installed, builds and deploys successfully.

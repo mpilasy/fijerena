@@ -6,9 +6,8 @@ Complete guide for the type-safe navigation system using kotlinx.serialization.
 
 ```
 :core:navigation    → Screen sealed interface definitions
-:core:data          → AuthViewModel (shared auth state)
 :core:ui            → ProviderViewModel, shared ViewModels
-:core:network       → Room database, ProviderRepository, AccountManager
+:core:network       → Room database, ProviderRepository, provider implementations
 :mobile             → MobileNavHost (Material3 transitions)
 :tv                 → TvNavHost (TV Material3, D-pad focus)
 ```
@@ -25,18 +24,24 @@ sealed interface Screen {
     @Serializable data object ContentTypeSelection : Screen
     @Serializable data object EditProvider : Screen  // Legacy
     @Serializable data object Settings : Screen
-    @Serializable data class CategoryList(val contentType: String) : Screen
-    @Serializable data class EpisodeSelection(val seriesId: Int, val seriesName: String, val categoryId: String) : Screen
-    @Serializable data class MovieDetails(val movieId: Int, val movieName: String, val categoryId: String) : Screen
+    @Serializable data class CategoryList(val contentType: String, val initialCategoryId: String? = null) : Screen
+    @Serializable data class EpisodeSelection(val seriesId: String, val seriesName: String, val categoryId: String) : Screen
+    @Serializable data class MovieDetails(val movieId: String, val movieName: String, val categoryId: String) : Screen
     @Serializable data class Search(val contentType: String) : Screen
     @Serializable data class EpgGuide(val categoryId: String, val categoryName: String) : Screen
+    @Serializable data object EpgBrowser : Screen
+    @Serializable data object EpgManagement : Screen
+    @Serializable data object CellularBufferSettings : Screen  // Dev mode only
     @Serializable data class Player(
-        val streamId: Int, val streamName: String, val categoryId: String, val contentType: String,
+        val streamId: String, val streamName: String, val categoryId: String, val contentType: String,
         val episodeId: String? = null, val episodeExtension: String? = null,
-        val seriesId: Int? = null, val seriesName: String? = null
+        val seriesId: String? = null, val seriesName: String? = null,
+        val startFromBeginning: Boolean = false
     ) : Screen
 }
 ```
+
+**Note:** All IDs are `String` (not `Int`) for compatibility across Xtream (numeric), Jellyfin (UUID), SMB, and Local providers.
 
 ### Usage
 
@@ -60,9 +65,10 @@ navController.navigate(Screen.AddProvider(editId = 5L))  // Edit provider with I
 ```
 App Startup
 ├─ No provider configured → Settings
-└─ Provider configured → Auto-restore session → ContentTypeSelection
+└─ Provider configured → last content type → CategoryList (or ContentTypeSelection)
 
 ContentTypeSelection
+├─→ EpgBrowser (book icon, visible when EPG indexed)
 ├─→ CategoryList(LIVE_TV)
 │     ├─→ Player (direct)
 │     ├─→ Search(LIVE_TV)
@@ -74,9 +80,11 @@ ContentTypeSelection
 │     ├─→ EpisodeSelection → Player
 │     └─→ Search(TV_SHOWS)
 └─→ Settings
-      └─→ ProviderSelection
-            ├─→ AddProvider (new)
-            └─→ AddProvider(editId) (edit)
+      ├─→ ProviderSelection
+      │     ├─→ AddProvider (new)
+      │     └─→ AddProvider(editId) (edit)
+      ├─→ EpgManagement
+      └─→ CellularBufferSettings (dev mode only)
 ```
 
 ### Navigation Rules
@@ -117,16 +125,8 @@ Located in `:mobile/navigation/MobileNavHost.kt`
 - No login screen (Settings-based provider configuration)
 
 ### Startup Logic
-```kotlin
-val hasProvider = remember { accountManager.hasStoredCredentials() }
-val startDestination = if (hasProvider) Screen.ContentTypeSelection else Screen.Settings
 
-LaunchedEffect(hasProvider, isAuthenticated) {
-    if (hasProvider && isAuthenticated == null) {
-        repository.restoreSession()  // Auto-authenticate
-    }
-}
-```
+On startup, the app checks for a configured provider via `ProviderRepository`. If a provider exists, it auto-navigates to the last used content type (CategoryList) or ContentTypeSelection. If not, it navigates to Settings.
 
 ### Transitions
 - **Enter**: Slide left + fade in

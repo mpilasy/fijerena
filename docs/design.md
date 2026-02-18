@@ -481,6 +481,28 @@ Native server-side search via Jellyfin REST API.
 
 **Auth:** `JellyfinApiService` uses an `HttpSend` interceptor to inject both `Authorization: MediaBrowser ...` and `X-Emby-Authorization: MediaBrowser ...` on every request. Jellyfin 10.10+ requires `Authorization`; older versions used `X-Emby-Authorization`. The interceptor ensures compatibility with both. Body: `{"Username": "...", "Pw": "..."}` as required by the Jellyfin 10.9+ OpenAPI spec (`additionalProperties: false`).
 
+### Jellyfin Playback — DeviceProfile & PlaybackInfo Negotiation
+
+Before every Jellyfin playback, the app negotiates the stream format via `POST /Items/{id}/PlaybackInfo`:
+
+1. **DeviceProfile** built lazily by `JellyfinApiService.buildDeviceProfile()` using `buildJsonObject` DSL. Declares:
+   - Direct play containers: MP4/M4V, MKV, WebM, TS — covering H.264, HEVC, VP9, AV1, AC3, EAC3, DTS, TrueHD, FLAC, Opus
+   - Transcode profile: HLS/TS container, H.264 video + AAC/MP3 audio, `BreakOnNonKeyFrames=true`
+   - CodecProfiles: H.264 up to High@L5.2, HEVC Main/Main10 up to L6
+   - `MaxStreamingBitrate`: 140 Mbps
+
+2. **PlaybackInfo response** (`JellyfinPlaybackInfoResponse`) contains `mediaSources` and a `PlaySessionId`. The app picks the first `JellyfinPlaybackMediaSource` and resolves the URL:
+   - `supportsDirectPlay=true` → `buildStreamUrl(itemId, container, mediaSourceId)`
+   - `transcodingUrl` present → `$serverUrl${transcodingUrl}` (HLS m3u8)
+   - `supportsDirectStream=true` → direct stream URL
+   - Fallback → legacy `?static=true` URL
+
+3. **Session tracking:** `playSessionId` and `mediaSourceId` stored in `JellyfinMediaProvider` maps and included in all subsequent progress/stop reports so the server can manage the transcoding session lifecycle.
+
+4. **Fallback:** If `getPlaybackInfo()` fails (network error, non-200), falls back to `buildStreamUrl(itemId)` with `?static=true`. Jellyfin's `readTimeout` extended to 60s to handle transcoding startup.
+
+**Key files:** `JellyfinApiService.kt` (`buildDeviceProfile`, `getPlaybackInfo`, `postCapabilities`), `JellyfinMediaProvider.kt` (`resolvePlayableStream`, `playSessionIds`, `mediaSourceIds`), `JellyfinModels.kt` (`JellyfinPlaybackInfoRequest`, `JellyfinPlaybackInfoResponse`, `JellyfinPlaybackMediaSource`)
+
 ### Local / SMB
 
 Client-side filename matching against scanned file list.
