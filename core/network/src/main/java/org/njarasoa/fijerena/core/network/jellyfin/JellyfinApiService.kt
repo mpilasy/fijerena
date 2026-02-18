@@ -4,19 +4,24 @@ import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpSend
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.plugin
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.client.request.parameter
 import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.plugins.HttpSend
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import java.util.concurrent.TimeUnit
 
 class JellyfinApiService(
@@ -42,7 +47,7 @@ class JellyfinApiService(
         engine {
             config {
                 connectTimeout(30, TimeUnit.SECONDS)
-                readTimeout(30, TimeUnit.SECONDS)
+                readTimeout(60, TimeUnit.SECONDS)
                 writeTimeout(30, TimeUnit.SECONDS)
             }
         }
@@ -55,7 +60,7 @@ class JellyfinApiService(
         }
     }.also { httpClient ->
         // Inject both Authorization and X-Emby-Authorization on every request.
-        // Jellyfin 10.9+ requires "Authorization"; older Emby/Jellyfin used "X-Emby-Authorization".
+        // Jellyfin 10.10+ requires "Authorization"; older versions used "X-Emby-Authorization".
         httpClient.plugin(HttpSend).intercept { request ->
             val h = authHeader
             request.headers["Authorization"] = h
@@ -64,7 +69,14 @@ class JellyfinApiService(
         }
     }
 
+    // DeviceProfile describing ExoPlayer + Jellyfin FFmpeg extension capabilities.
+    // Jellyfin uses this to decide: direct play, direct stream, or transcode.
+    private val deviceProfile: JsonObject by lazy { buildDeviceProfile() }
+
     fun getAccessToken(): String? = accessToken
+    fun getUserId(): String? = userId
+
+    // ---- Auth ----
 
     suspend fun authenticate(username: String, password: String): Result<JellyfinAuthResponse> {
         return try {
@@ -77,6 +89,8 @@ class JellyfinApiService(
             userId = response.user.id
             serverId = response.serverId
             Log.d(TAG, "Authentication successful for user ${response.user.name}")
+            // Register client capabilities so Jellyfin knows what we can play
+            postCapabilities()
             Result.success(response)
         } catch (e: io.ktor.client.plugins.ClientRequestException) {
             Log.e(TAG, "Auth client error: ${e.response.status}", e)
@@ -91,7 +105,7 @@ class JellyfinApiService(
             val message = if (e.response.status.value == 500 && password.isBlank()) {
                 "Authentication failed: no password configured. Edit the provider to enter your password."
             } else {
-                "Server error (${e.response.status.value}). Check that the server URL is correct and the server is running."
+                "Server error (${e.response.status.value}). Check that the server URL is correct."
             }
             Result.failure(Exception(message, e))
         } catch (e: Exception) {
@@ -101,6 +115,63 @@ class JellyfinApiService(
     }
 
     fun isAuthenticated(): Boolean = accessToken != null && userId != null
+
+    // ---- Capabilities ----
+
+    /**
+     * POST /Sessions/Capabilities/Full — tells Jellyfin this session is a capable
+     * playback client. Called automatically after successful authentication.
+     */
+    suspend fun postCapabilities() {
+        try {
+            client.post("$serverUrl/Sessions/Capabilities/Full") {
+                contentType(ContentType.Application.Json)
+                setBody(JellyfinClientCapabilities())
+            }
+            Log.d(TAG, "Capabilities registered")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to post capabilities (non-fatal)", e)
+        }
+    }
+
+    // ---- PlaybackInfo negotiation ----
+
+    /**
+     * POST /Items/{itemId}/PlaybackInfo with a DeviceProfile.
+     *
+     * Jellyfin responds with:
+     * - [JellyfinPlaybackMediaSource.supportsDirectPlay] = true → stream file as-is
+     * - [JellyfinPlaybackMediaSource.transcodingUrl] set → server will transcode to HLS
+     * - [JellyfinPlaybackInfoResponse.playSessionId] → include in progress reports
+     */
+    suspend fun getPlaybackInfo(
+        itemId: String,
+        userId: String,
+        startTimeTicks: Long = 0
+    ): Result<JellyfinPlaybackInfoResponse> {
+        return try {
+            val request = JellyfinPlaybackInfoRequest(
+                userId = userId,
+                startTimeTicks = startTimeTicks,
+                deviceProfile = deviceProfile
+            )
+            val response = client.post("$serverUrl/Items/$itemId/PlaybackInfo") {
+                contentType(ContentType.Application.Json)
+                parameter("UserId", userId)
+                setBody(request)
+            }.body<JellyfinPlaybackInfoResponse>()
+            Log.d(TAG, "PlaybackInfo for $itemId: " +
+                    "${response.mediaSources.firstOrNull()?.run {
+                        "directPlay=$supportsDirectPlay transcoding=${transcodingUrl != null}"
+                    }}, sessionId=${response.playSessionId}")
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e(TAG, "PlaybackInfo request failed for $itemId", e)
+            Result.failure(e)
+        }
+    }
+
+    // ---- Catalog browsing ----
 
     suspend fun getLibraries(): Result<List<JellyfinItem>> {
         return try {
@@ -187,28 +258,82 @@ class JellyfinApiService(
         }
     }
 
-    fun buildStreamUrl(itemId: String, container: String? = null): String {
+    // ---- URL builders ----
+
+    /**
+     * Build a direct-play stream URL. Appends MediaSourceId when known.
+     */
+    fun buildStreamUrl(
+        itemId: String,
+        container: String? = null,
+        mediaSourceId: String? = null
+    ): String {
         val ext = container?.let { ".$it" } ?: ""
-        return "$serverUrl/Videos/$itemId/stream${ext}?static=true&api_key=$accessToken"
+        val sourceParam = mediaSourceId?.let { "&MediaSourceId=$it" } ?: ""
+        return "$serverUrl/Videos/$itemId/stream$ext?Static=true&api_key=$accessToken$sourceParam"
     }
 
     fun buildImageUrl(itemId: String, imageType: String = "Primary", maxHeight: Int = 400): String {
         return "$serverUrl/Items/$itemId/Images/$imageType?maxHeight=$maxHeight&api_key=$accessToken"
     }
 
-    suspend fun reportPlaybackProgress(itemId: String, positionTicks: Long, isPaused: Boolean) {
+    // ---- Playback reporting ----
+
+    suspend fun reportPlaybackProgress(
+        itemId: String,
+        positionTicks: Long,
+        isPaused: Boolean,
+        playSessionId: String? = null,
+        mediaSourceId: String? = null
+    ) {
         try {
             client.post("$serverUrl/Sessions/Playing/Progress") {
                 contentType(ContentType.Application.Json)
                 setBody(JellyfinPlaybackProgress(
                     itemId = itemId,
                     positionTicks = positionTicks,
-                    isPaused = isPaused
+                    isPaused = isPaused,
+                    playSessionId = playSessionId,
+                    mediaSourceId = mediaSourceId
                 ))
             }
-        } catch (_: Exception) {
-            // Best-effort progress reporting
-        }
+        } catch (_: Exception) { }
+    }
+
+    suspend fun reportPlaybackStart(
+        itemId: String,
+        playSessionId: String? = null,
+        mediaSourceId: String? = null
+    ) {
+        try {
+            client.post("$serverUrl/Sessions/Playing") {
+                contentType(ContentType.Application.Json)
+                setBody(JellyfinPlaybackStart(
+                    itemId = itemId,
+                    playSessionId = playSessionId,
+                    mediaSourceId = mediaSourceId
+                ))
+            }
+        } catch (_: Exception) { }
+    }
+
+    suspend fun reportPlaybackStopped(
+        itemId: String,
+        positionTicks: Long,
+        playSessionId: String? = null,
+        mediaSourceId: String? = null
+    ) {
+        try {
+            client.post("$serverUrl/Sessions/Playing/Stopped") {
+                contentType(ContentType.Application.Json)
+                setBody(JellyfinPlaybackStopped(
+                    itemId = itemId,
+                    positionTicks = positionTicks,
+                    playSessionId = playSessionId,
+                    mediaSourceId = mediaSourceId
+                ))
+            }
+        } catch (_: Exception) { }
     }
 
     suspend fun addFavorite(itemId: String): Result<Unit> {
@@ -229,10 +354,7 @@ class JellyfinApiService(
         }
     }
 
-    suspend fun getResumableItems(
-        includeItemTypes: String? = null,
-        limit: Int = 50
-    ): Result<List<JellyfinItem>> {
+    suspend fun getResumableItems(includeItemTypes: String? = null, limit: Int = 50): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Users/$userId/Items") {
                 parameter("Filters", "IsResumable")
@@ -249,10 +371,7 @@ class JellyfinApiService(
         }
     }
 
-    suspend fun getFavoriteItems(
-        includeItemTypes: String? = null,
-        limit: Int = 50
-    ): Result<List<JellyfinItem>> {
+    suspend fun getFavoriteItems(includeItemTypes: String? = null, limit: Int = 50): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Users/$userId/Items") {
                 parameter("Filters", "IsFavorite")
@@ -269,10 +388,7 @@ class JellyfinApiService(
         }
     }
 
-    suspend fun getRecentlyPlayed(
-        includeItemTypes: String? = null,
-        limit: Int = 50
-    ): Result<List<JellyfinItem>> {
+    suspend fun getRecentlyPlayed(includeItemTypes: String? = null, limit: Int = 50): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Users/$userId/Items") {
                 parameter("IsPlayed", true)
@@ -289,35 +405,148 @@ class JellyfinApiService(
         }
     }
 
-    suspend fun reportPlaybackStart(itemId: String) {
-        try {
-            client.post("$serverUrl/Sessions/Playing") {
-                contentType(ContentType.Application.Json)
-                setBody(JellyfinPlaybackStart(itemId = itemId))
-            }
-        } catch (_: Exception) {
-            // Best-effort reporting
-        }
-    }
-
-    suspend fun reportPlaybackStopped(itemId: String, positionTicks: Long) {
-        try {
-            client.post("$serverUrl/Sessions/Playing/Stopped") {
-                contentType(ContentType.Application.Json)
-                setBody(JellyfinPlaybackStopped(
-                    itemId = itemId,
-                    positionTicks = positionTicks
-                ))
-            }
-        } catch (_: Exception) {
-            // Best-effort reporting
-        }
-    }
-
     fun disconnect() {
         accessToken = null
         userId = null
         serverId = null
+    }
+
+    // ---- Device profile ----
+
+    /**
+     * Build a Jellyfin DeviceProfile for ExoPlayer on Android with the Jellyfin FFmpeg
+     * extension (adds AC3, EAC3, DTS, TrueHD, MLP software decoding).
+     *
+     * Priority:
+     *   1. Direct play  — server streams the original file, client decodes it
+     *   2. Transcoding  — server encodes to HLS/H.264+AAC, client plays HLS
+     *
+     * Max bitrate is set to 140 Mbps to handle 4K HDR content.
+     */
+    private fun buildDeviceProfile(): JsonObject = buildJsonObject {
+        put("MaxStreamingBitrate", 140_000_000)
+        put("MaxStaticBitrate", 140_000_000)
+        put("MusicStreamingTranscodingBitrate", 384_000)
+
+        putJsonArray("DirectPlayProfiles") {
+            // MP4 / M4V — most common VOD format
+            addJsonObject {
+                put("Container", "mp4,m4v")
+                put("Type", "Video")
+                put("VideoCodec", "h264,hevc,vp9,av1,mpeg4")
+                put("AudioCodec", "aac,mp3,ac3,eac3,dts,truehd,mlp,flac,opus,vorbis,pcm")
+            }
+            // MKV — common for high-quality rips
+            addJsonObject {
+                put("Container", "mkv")
+                put("Type", "Video")
+                put("VideoCodec", "h264,hevc,vp9,av1,mpeg4")
+                put("AudioCodec", "aac,mp3,ac3,eac3,dts,truehd,mlp,flac,opus,vorbis,pcm")
+            }
+            // WebM
+            addJsonObject {
+                put("Container", "webm")
+                put("Type", "Video")
+                put("VideoCodec", "vp8,vp9,av1")
+                put("AudioCodec", "opus,vorbis")
+            }
+            // MPEG-TS (broadcast/recording)
+            addJsonObject {
+                put("Container", "ts,mpegts,m2ts")
+                put("Type", "Video")
+                put("VideoCodec", "h264,hevc,mpeg2video")
+                put("AudioCodec", "aac,mp3,ac3,eac3")
+            }
+            // Audio-only
+            addJsonObject {
+                put("Container", "mp3,flac,ogg,opus,wav,aac,m4a,wma")
+                put("Type", "Audio")
+            }
+        }
+
+        putJsonArray("TranscodingProfiles") {
+            // HLS/H.264+AAC — universally supported by ExoPlayer
+            addJsonObject {
+                put("Container", "ts")
+                put("Type", "Video")
+                put("VideoCodec", "h264")
+                put("AudioCodec", "aac,mp3")
+                put("Protocol", "hls")
+                put("Context", "Streaming")
+                put("BreakOnNonKeyFrames", true)
+                put("MinSegments", 1)
+                put("SegmentLength", 0)
+                put("EstimateContentLength", false)
+            }
+            // Audio transcoding fallback
+            addJsonObject {
+                put("Container", "mp3")
+                put("Type", "Audio")
+                put("AudioCodec", "mp3")
+                put("Protocol", "http")
+                put("Context", "Streaming")
+            }
+        }
+
+        putJsonArray("ContainerProfiles") { }
+
+        putJsonArray("CodecProfiles") {
+            // H.264: up to High@L5.2
+            addJsonObject {
+                put("Type", "Video")
+                put("Codec", "h264")
+                putJsonArray("Conditions") {
+                    addJsonObject {
+                        put("Condition", "EqualsAny")
+                        put("Property", "VideoProfile")
+                        put("Value", "high|main|baseline|constrained baseline|high 10|constrained high")
+                        put("IsRequired", false)
+                    }
+                    addJsonObject {
+                        put("Condition", "LessThanEqual")
+                        put("Property", "VideoLevel")
+                        put("Value", "52")
+                        put("IsRequired", false)
+                    }
+                }
+            }
+            // HEVC/H.265: main/main10 up to L6 (4K HDR)
+            addJsonObject {
+                put("Type", "Video")
+                put("Codec", "hevc")
+                putJsonArray("Conditions") {
+                    addJsonObject {
+                        put("Condition", "EqualsAny")
+                        put("Property", "VideoProfile")
+                        put("Value", "main|main 10|main still picture")
+                        put("IsRequired", false)
+                    }
+                    addJsonObject {
+                        put("Condition", "LessThanEqual")
+                        put("Property", "VideoLevel")
+                        put("Value", "183")
+                        put("IsRequired", false)
+                    }
+                }
+            }
+        }
+
+        putJsonArray("SubtitleProfiles") {
+            addJsonObject { put("Format", "srt"); put("Method", "External") }
+            addJsonObject { put("Format", "vtt"); put("Method", "External") }
+            addJsonObject { put("Format", "ass"); put("Method", "External") }
+            addJsonObject { put("Format", "ssa"); put("Method", "External") }
+            addJsonObject { put("Format", "sub"); put("Method", "External") }
+            addJsonObject { put("Format", "smi"); put("Method", "External") }
+        }
+
+        putJsonArray("ResponseProfiles") {
+            addJsonObject {
+                put("Type", "Video")
+                put("Container", "m4v")
+                put("MimeType", "video/mp4")
+            }
+        }
     }
 
     companion object {

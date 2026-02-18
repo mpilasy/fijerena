@@ -2,12 +2,13 @@ package org.njarasoa.fijerena.core.network.jellyfin
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class JellyfinAuthResponse(
     @SerialName("User") val user: JellyfinUser,
     @SerialName("AccessToken") val accessToken: String,
-    @SerialName("ServerId") val serverId: String
+    @SerialName("ServerId") val serverId: String? = null
 )
 
 @Serializable
@@ -101,26 +102,82 @@ data class JellyfinUserData(
     @SerialName("PlayedPercentage") val playedPercentage: Double? = null
 )
 
+// ---- Playback reporting ----
+
 @Serializable
 data class JellyfinPlaybackProgress(
     @SerialName("ItemId") val itemId: String,
     @SerialName("PositionTicks") val positionTicks: Long,
-    @SerialName("IsPaused") val isPaused: Boolean
+    @SerialName("IsPaused") val isPaused: Boolean,
+    @SerialName("PlaySessionId") val playSessionId: String? = null,
+    @SerialName("MediaSourceId") val mediaSourceId: String? = null
 )
 
 @Serializable
 data class JellyfinPlaybackStopped(
     @SerialName("ItemId") val itemId: String,
-    @SerialName("PositionTicks") val positionTicks: Long
+    @SerialName("PositionTicks") val positionTicks: Long,
+    @SerialName("PlaySessionId") val playSessionId: String? = null,
+    @SerialName("MediaSourceId") val mediaSourceId: String? = null
 )
 
 @Serializable
 data class JellyfinPlaybackStart(
-    @SerialName("ItemId") val itemId: String
+    @SerialName("ItemId") val itemId: String,
+    @SerialName("PlaySessionId") val playSessionId: String? = null,
+    @SerialName("MediaSourceId") val mediaSourceId: String? = null
 )
+
+// ---- Auth ----
 
 @Serializable
 data class JellyfinAuthBody(
     @SerialName("Username") val username: String,
     @SerialName("Pw") val password: String
+)
+
+// ---- Capabilities ----
+
+@Serializable
+data class JellyfinClientCapabilities(
+    @SerialName("PlayableMediaTypes") val playableMediaTypes: List<String> = listOf("Audio", "Video"),
+    @SerialName("SupportedCommands") val supportedCommands: List<String> = emptyList(),
+    @SerialName("SupportsMediaControl") val supportsMediaControl: Boolean = false,
+    @SerialName("SupportsContentUploading") val supportsContentUploading: Boolean = false,
+    @SerialName("SupportsPersistentIdentifier") val supportsPersistentIdentifier: Boolean = true
+)
+
+// ---- PlaybackInfo negotiation ----
+
+@Serializable
+data class JellyfinPlaybackInfoRequest(
+    @SerialName("UserId") val userId: String,
+    @SerialName("MaxStreamingBitrate") val maxStreamingBitrate: Long = 140_000_000,
+    @SerialName("StartTimeTicks") val startTimeTicks: Long = 0,
+    @SerialName("AudioStreamIndex") val audioStreamIndex: Int? = null,
+    @SerialName("SubtitleStreamIndex") val subtitleStreamIndex: Int? = null,
+    @SerialName("MediaSourceId") val mediaSourceId: String? = null,
+    @SerialName("DeviceProfile") val deviceProfile: JsonElement
+)
+
+@Serializable
+data class JellyfinPlaybackInfoResponse(
+    @SerialName("MediaSources") val mediaSources: List<JellyfinPlaybackMediaSource> = emptyList(),
+    @SerialName("PlaySessionId") val playSessionId: String? = null
+)
+
+/**
+ * MediaSource entry returned by /Items/{id}/PlaybackInfo.
+ * Distinct from [JellyfinMediaSource] (used for catalog browsing) — this one
+ * carries transcoding decision fields.
+ */
+@Serializable
+data class JellyfinPlaybackMediaSource(
+    @SerialName("Id") val id: String,
+    @SerialName("Container") val container: String? = null,
+    @SerialName("SupportsDirectPlay") val supportsDirectPlay: Boolean = false,
+    @SerialName("SupportsDirectStream") val supportsDirectStream: Boolean = false,
+    @SerialName("SupportsTranscoding") val supportsTranscoding: Boolean = false,
+    @SerialName("TranscodingUrl") val transcodingUrl: String? = null,
+    @SerialName("DirectStreamUrl") val directStreamUrl: String? = null
 )
