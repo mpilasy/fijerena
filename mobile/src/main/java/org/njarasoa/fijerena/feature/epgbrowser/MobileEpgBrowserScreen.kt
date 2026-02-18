@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.epgbrowser
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -268,7 +269,7 @@ private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, i
                     .fillMaxSize()
                     .padding(horizontal = Spacing.md)
             ) {
-                items(results.programs, key = { it.title }) { program ->
+                items(results.programs, key = { "${it.title}::${it.description}" }) { program ->
                     MobileProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels)
                 }
             }
@@ -302,7 +303,7 @@ private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = f
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).basicMarquee()
                 )
                 val category = program.category
                 if (category != null) {
@@ -381,7 +382,7 @@ private fun MobileAiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false
             color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).basicMarquee()
         )
         if (isDevMode && airing.sourceId > 0) {
             val sourceName = sourceLabels[airing.sourceId]

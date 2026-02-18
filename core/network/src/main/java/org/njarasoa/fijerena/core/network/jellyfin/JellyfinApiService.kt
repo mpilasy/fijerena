@@ -5,12 +5,14 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.plugin
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.request.delete
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.plugins.HttpSend
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
@@ -24,6 +26,16 @@ class JellyfinApiService(
     private var accessToken: String? = null
     private var userId: String? = null
     private var serverId: String? = null
+
+    private val authHeader: String
+        get() = buildString {
+            append("MediaBrowser ")
+            append("Client=\"Fijerena\", ")
+            append("Device=\"Android\", ")
+            append("DeviceId=\"$deviceId\", ")
+            append("Version=\"1.0.0\"")
+            accessToken?.let { append(", Token=\"$it\"") }
+        }
 
     private val client = HttpClient(OkHttp) {
         expectSuccess = true
@@ -41,17 +53,16 @@ class JellyfinApiService(
                 coerceInputValues = true
             })
         }
-    }
-
-    private val authHeader: String
-        get() = buildString {
-            append("MediaBrowser ")
-            append("Client=\"Fijerena\", ")
-            append("Device=\"Android\", ")
-            append("DeviceId=\"$deviceId\", ")
-            append("Version=\"1.0.0\"")
-            accessToken?.let { append(", Token=\"$it\"") }
+    }.also { httpClient ->
+        // Inject both Authorization and X-Emby-Authorization on every request.
+        // Jellyfin 10.9+ requires "Authorization"; older Emby/Jellyfin used "X-Emby-Authorization".
+        httpClient.plugin(HttpSend).intercept { request ->
+            val h = authHeader
+            request.headers["Authorization"] = h
+            request.headers["X-Emby-Authorization"] = h
+            execute(request)
         }
+    }
 
     fun getAccessToken(): String? = accessToken
 
@@ -60,7 +71,6 @@ class JellyfinApiService(
             Log.d(TAG, "Authenticating to $serverUrl as $username")
             val response = client.post("$serverUrl/Users/AuthenticateByName") {
                 contentType(ContentType.Application.Json)
-                header("X-Emby-Authorization", authHeader)
                 setBody(JellyfinAuthBody(username = username, password = password))
             }.body<JellyfinAuthResponse>()
             accessToken = response.accessToken
@@ -78,10 +88,12 @@ class JellyfinApiService(
             Result.failure(Exception(message, e))
         } catch (e: io.ktor.client.plugins.ServerResponseException) {
             Log.e(TAG, "Auth server error: ${e.response.status}", e)
-            Result.failure(Exception(
-                "Server error (${e.response.status.value}). Check that the server URL is correct and the server is running.",
-                e
-            ))
+            val message = if (e.response.status.value == 500 && password.isBlank()) {
+                "Authentication failed: no password configured. Edit the provider to enter your password."
+            } else {
+                "Server error (${e.response.status.value}). Check that the server URL is correct and the server is running."
+            }
+            Result.failure(Exception(message, e))
         } catch (e: Exception) {
             Log.e(TAG, "Auth failed", e)
             Result.failure(e)
@@ -92,9 +104,8 @@ class JellyfinApiService(
 
     suspend fun getLibraries(): Result<List<JellyfinItem>> {
         return try {
-            val response = client.get("$serverUrl/Users/$userId/Views") {
-                header("X-Emby-Authorization", authHeader)
-            }.body<JellyfinItemsResponse>()
+            val response = client.get("$serverUrl/Users/$userId/Views")
+                .body<JellyfinItemsResponse>()
             Result.success(response.items)
         } catch (e: Exception) {
             Result.failure(e)
@@ -109,7 +120,6 @@ class JellyfinApiService(
     ): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Users/$userId/Items") {
-                header("X-Emby-Authorization", authHeader)
                 parameter("ParentId", parentId)
                 includeItemTypes?.let { parameter("IncludeItemTypes", it) }
                 parameter("SortBy", sortBy)
@@ -126,7 +136,6 @@ class JellyfinApiService(
     suspend fun getSeasons(seriesId: String): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Shows/$seriesId/Seasons") {
-                header("X-Emby-Authorization", authHeader)
                 parameter("UserId", userId)
             }.body<JellyfinItemsResponse>()
             Result.success(response.items)
@@ -138,7 +147,6 @@ class JellyfinApiService(
     suspend fun getEpisodes(seriesId: String, seasonId: String): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Shows/$seriesId/Episodes") {
-                header("X-Emby-Authorization", authHeader)
                 parameter("SeasonId", seasonId)
                 parameter("UserId", userId)
                 parameter("Fields", "Overview,MediaSources,UserData")
@@ -152,7 +160,6 @@ class JellyfinApiService(
     suspend fun getItemById(itemId: String): Result<JellyfinItem> {
         return try {
             val response = client.get("$serverUrl/Users/$userId/Items/$itemId") {
-                header("X-Emby-Authorization", authHeader)
                 parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData")
             }.body<JellyfinItem>()
             Result.success(response)
@@ -168,7 +175,6 @@ class JellyfinApiService(
     ): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Users/$userId/Items") {
-                header("X-Emby-Authorization", authHeader)
                 parameter("SearchTerm", query)
                 includeItemTypes?.let { parameter("IncludeItemTypes", it) }
                 parameter("Limit", limit)
@@ -194,7 +200,6 @@ class JellyfinApiService(
         try {
             client.post("$serverUrl/Sessions/Playing/Progress") {
                 contentType(ContentType.Application.Json)
-                header("X-Emby-Authorization", authHeader)
                 setBody(JellyfinPlaybackProgress(
                     itemId = itemId,
                     positionTicks = positionTicks,
@@ -208,9 +213,7 @@ class JellyfinApiService(
 
     suspend fun addFavorite(itemId: String): Result<Unit> {
         return try {
-            client.post("$serverUrl/Users/$userId/FavoriteItems/$itemId") {
-                header("X-Emby-Authorization", authHeader)
-            }
+            client.post("$serverUrl/Users/$userId/FavoriteItems/$itemId")
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -219,9 +222,7 @@ class JellyfinApiService(
 
     suspend fun removeFavorite(itemId: String): Result<Unit> {
         return try {
-            client.delete("$serverUrl/Users/$userId/FavoriteItems/$itemId") {
-                header("X-Emby-Authorization", authHeader)
-            }
+            client.delete("$serverUrl/Users/$userId/FavoriteItems/$itemId")
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -234,7 +235,6 @@ class JellyfinApiService(
     ): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Users/$userId/Items") {
-                header("X-Emby-Authorization", authHeader)
                 parameter("Filters", "IsResumable")
                 parameter("SortBy", "DatePlayed")
                 parameter("SortOrder", "Descending")
@@ -255,7 +255,6 @@ class JellyfinApiService(
     ): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Users/$userId/Items") {
-                header("X-Emby-Authorization", authHeader)
                 parameter("Filters", "IsFavorite")
                 parameter("SortBy", "SortName")
                 parameter("SortOrder", "Ascending")
@@ -276,7 +275,6 @@ class JellyfinApiService(
     ): Result<List<JellyfinItem>> {
         return try {
             val response = client.get("$serverUrl/Users/$userId/Items") {
-                header("X-Emby-Authorization", authHeader)
                 parameter("IsPlayed", true)
                 parameter("SortBy", "DatePlayed")
                 parameter("SortOrder", "Descending")
@@ -295,7 +293,6 @@ class JellyfinApiService(
         try {
             client.post("$serverUrl/Sessions/Playing") {
                 contentType(ContentType.Application.Json)
-                header("X-Emby-Authorization", authHeader)
                 setBody(JellyfinPlaybackStart(itemId = itemId))
             }
         } catch (_: Exception) {
@@ -307,7 +304,6 @@ class JellyfinApiService(
         try {
             client.post("$serverUrl/Sessions/Playing/Stopped") {
                 contentType(ContentType.Application.Json)
-                header("X-Emby-Authorization", authHeader)
                 setBody(JellyfinPlaybackStopped(
                     itemId = itemId,
                     positionTicks = positionTicks

@@ -289,6 +289,19 @@ class EpgIndexer private constructor(private val context: Context) {
      * Requires auto_vacuum=INCREMENTAL (set in EpgIndexDatabase onOpen callback).
      * No page limit = free all available pages.
      */
+    /**
+     * Get the number of configured EPG sources (regardless of index state).
+     */
+    suspend fun getSourceCount(): Int = withContext(Dispatchers.IO) {
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            db.epgSourceDao().getSourceCount()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get source count: ${e.message}")
+            0
+        }
+    }
+
     fun incrementalVacuum() {
         try {
             val db = EpgIndexDatabase.getInstance(context)

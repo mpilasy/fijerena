@@ -78,6 +78,21 @@ class SettingsExportManager(private val context: Context) {
         val enabled: Boolean = true
     )
 
+    enum class ConflictResolution {
+        OVERWRITE, DUPLICATE, SKIP
+    }
+
+    /**
+     * Parsed import data with conflict information.
+     */
+    data class ParsedImport(
+        val settings: ExportedSettings,
+        val jsonString: String,
+        val conflictingProviders: List<String>
+    ) {
+        val hasConflicts: Boolean get() = conflictingProviders.isNotEmpty()
+    }
+
     /**
      * Export all settings to a JSON string.
      */
@@ -144,20 +159,45 @@ class SettingsExportManager(private val context: Context) {
     }
 
     /**
+     * Parse an import file and detect provider conflicts.
+     * Call this before importFromJson() to check if user confirmation is needed.
+     */
+    suspend fun parseImportUri(uri: Uri): kotlin.Result<ParsedImport> = withContext(Dispatchers.IO) {
+        try {
+            val jsonString = context.contentResolver.openInputStream(uri)?.use { input ->
+                input.bufferedReader().readText()
+            } ?: return@withContext kotlin.Result.failure(Exception("Could not read file"))
+
+            val exported = json.decodeFromString<ExportedSettings>(jsonString)
+            val providerRepo = ProviderRepository(context)
+            val existingProviders = providerRepo.getAllProvidersList()
+
+            val conflicts = exported.providers
+                .filter { ep -> existingProviders.any { it.name == ep.name } }
+                .map { it.name }
+
+            kotlin.Result.success(ParsedImport(exported, jsonString, conflicts))
+        } catch (e: kotlinx.serialization.SerializationException) {
+            kotlin.Result.failure(Exception("Invalid settings file format"))
+        } catch (e: Exception) {
+            kotlin.Result.failure(e)
+        }
+    }
+
+    /**
      * Import settings from a URI (file) via the Storage Access Framework.
-     * Merges providers (adds new ones, skips duplicates by name+url).
-     * EPG sources are merged (adds new ones, skips duplicates by URL).
-     * Global settings are overwritten.
-     *
      * @return A summary of what was imported, or null on error.
      */
-    suspend fun importFromUri(uri: Uri): ImportResult = withContext(Dispatchers.IO) {
+    suspend fun importFromUri(
+        uri: Uri,
+        conflictResolution: ConflictResolution = ConflictResolution.SKIP
+    ): ImportResult = withContext(Dispatchers.IO) {
         try {
             val jsonString = context.contentResolver.openInputStream(uri)?.use { input ->
                 input.bufferedReader().readText()
             } ?: return@withContext ImportResult(error = "Could not read file")
 
-            importFromJson(jsonString)
+            importFromJson(jsonString, conflictResolution)
         } catch (e: Exception) {
             Log.e(TAG, "Import failed", e)
             ImportResult(error = e.message ?: "Import failed")
@@ -165,9 +205,22 @@ class SettingsExportManager(private val context: Context) {
     }
 
     /**
+     * Import from a pre-parsed import (avoids re-reading the file).
+     */
+    suspend fun importFromParsed(
+        parsed: ParsedImport,
+        conflictResolution: ConflictResolution = ConflictResolution.SKIP
+    ): ImportResult {
+        return importFromJson(parsed.jsonString, conflictResolution)
+    }
+
+    /**
      * Import settings from a JSON string.
      */
-    suspend fun importFromJson(jsonString: String): ImportResult = withContext(Dispatchers.IO) {
+    suspend fun importFromJson(
+        jsonString: String,
+        conflictResolution: ConflictResolution = ConflictResolution.SKIP
+    ): ImportResult = withContext(Dispatchers.IO) {
         try {
             val exported = json.decodeFromString<ExportedSettings>(jsonString)
 
@@ -180,35 +233,48 @@ class SettingsExportManager(private val context: Context) {
             appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
             appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
 
-            // Import providers (merge: add new, skip existing by name+url)
+            // Import providers
             val providerRepo = ProviderRepository(context)
             val existingProviders = providerRepo.getAllProvidersList()
             var providersAdded = 0
+            var providersUpdated = 0
             var providersSkipped = 0
 
             for (ep in exported.providers) {
-                val exists = existingProviders.any { it.name == ep.name && it.url == ep.url }
-                if (exists) {
-                    providersSkipped++
+                val existing = existingProviders.find { it.name == ep.name }
+                if (existing != null) {
+                    when (conflictResolution) {
+                        ConflictResolution.SKIP -> {
+                            providersSkipped++
+                        }
+                        ConflictResolution.OVERWRITE -> {
+                            // Update existing provider's URL, username, type, config, settings
+                            providerRepo.updateProvider(
+                                id = existing.id,
+                                name = ep.name,
+                                url = ep.url,
+                                username = ep.username,
+                                password = "", // Passwords not exported
+                                type = ep.type,
+                                config = ep.config
+                            )
+                            if (ep.providerSettings != "{}") {
+                                try {
+                                    val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
+                                    providerRepo.updateProviderSettings(existing.id, settings)
+                                } catch (_: Exception) { }
+                            }
+                            providersUpdated++
+                        }
+                        ConflictResolution.DUPLICATE -> {
+                            // Add as new provider with "(imported)" suffix
+                            addNewProvider(providerRepo, ep.copy(name = "${ep.name} (imported)"))
+                            providersAdded++
+                        }
+                    }
                     continue
                 }
-                providerRepo.addProvider(
-                    name = ep.name,
-                    url = ep.url,
-                    username = ep.username,
-                    password = "",
-                    type = ep.type,
-                    config = ep.config
-                )
-                // Update the provider settings for the newly added provider
-                val allProviders = providerRepo.getAllProvidersList()
-                val newProvider = allProviders.find { it.name == ep.name && it.url == ep.url }
-                if (newProvider != null && ep.providerSettings != "{}") {
-                    try {
-                        val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
-                        providerRepo.updateProviderSettings(newProvider.id, settings)
-                    } catch (_: Exception) { }
-                }
+                addNewProvider(providerRepo, ep)
                 providersAdded++
             }
 
@@ -219,6 +285,7 @@ class SettingsExportManager(private val context: Context) {
                 if (currentActive == null) {
                     val allProviders = providerRepo.getAllProvidersList()
                     val matching = allProviders.find { it.name == activeExport.name && it.url == activeExport.url }
+                        ?: allProviders.find { it.name == "${activeExport.name} (imported)" }
                     if (matching != null) {
                         providerRepo.setActiveProvider(matching.id)
                     }
@@ -232,12 +299,15 @@ class SettingsExportManager(private val context: Context) {
             var sourcesAdded = 0
             var sourcesSkipped = 0
 
+            Log.d(TAG, "EPG import: ${exported.epgSources.size} sources in file, ${existingSources.size} existing in DB")
             for (es in exported.epgSources) {
                 val exists = existingSources.any { it.url == es.url }
                 if (exists) {
+                    Log.d(TAG, "EPG source already exists, skipping: ${es.url}")
                     sourcesSkipped++
                     continue
                 }
+                Log.d(TAG, "EPG source inserting: ${es.url} (label=${es.label})")
                 sourceDao.insertSource(
                     EpgSourceEntity(
                         url = es.url,
@@ -249,10 +319,11 @@ class SettingsExportManager(private val context: Context) {
                 sourcesAdded++
             }
 
-            Log.d(TAG, "Import complete: $providersAdded providers added, $sourcesAdded EPG sources added")
+            Log.d(TAG, "Import complete: $providersAdded added, $providersUpdated updated, $providersSkipped skipped, $sourcesAdded EPG sources added")
 
             ImportResult(
                 providersAdded = providersAdded,
+                providersUpdated = providersUpdated,
                 providersSkipped = providersSkipped,
                 epgSourcesAdded = sourcesAdded,
                 epgSourcesSkipped = sourcesSkipped
@@ -266,8 +337,30 @@ class SettingsExportManager(private val context: Context) {
         }
     }
 
+    private suspend fun addNewProvider(providerRepo: ProviderRepository, ep: ExportedProvider) {
+        providerRepo.addProvider(
+            name = ep.name,
+            url = ep.url,
+            username = ep.username,
+            password = "",
+            type = ep.type,
+            config = ep.config
+        )
+        if (ep.providerSettings != "{}") {
+            val allProviders = providerRepo.getAllProvidersList()
+            val newProvider = allProviders.find { it.name == ep.name && it.url == ep.url }
+            if (newProvider != null) {
+                try {
+                    val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
+                    providerRepo.updateProviderSettings(newProvider.id, settings)
+                } catch (_: Exception) { }
+            }
+        }
+    }
+
     data class ImportResult(
         val providersAdded: Int = 0,
+        val providersUpdated: Int = 0,
         val providersSkipped: Int = 0,
         val epgSourcesAdded: Int = 0,
         val epgSourcesSkipped: Int = 0,
@@ -279,10 +372,12 @@ class SettingsExportManager(private val context: Context) {
             if (error != null) return "Import failed: $error"
             val parts = mutableListOf<String>()
             if (providersAdded > 0) parts.add("$providersAdded provider(s) added")
-            if (providersSkipped > 0) parts.add("$providersSkipped provider(s) already existed")
+            if (providersUpdated > 0) parts.add("$providersUpdated provider(s) overwritten")
+            if (providersSkipped > 0) parts.add("$providersSkipped provider(s) skipped")
             if (epgSourcesAdded > 0) parts.add("$epgSourcesAdded EPG source(s) added")
             if (epgSourcesSkipped > 0) parts.add("$epgSourcesSkipped EPG source(s) already existed")
             if (parts.isEmpty()) parts.add("Settings updated")
+            if (providersAdded > 0) parts.add("Passwords must be re-entered in provider settings")
             return parts.joinToString(". ") + "."
         }
     }
