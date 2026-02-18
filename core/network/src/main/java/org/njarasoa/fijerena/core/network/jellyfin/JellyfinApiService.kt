@@ -1,8 +1,9 @@
 package org.njarasoa.fijerena.core.network.jellyfin
 
+import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.android.Android
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -14,6 +15,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import java.util.concurrent.TimeUnit
 
 class JellyfinApiService(
     private val serverUrl: String,
@@ -23,8 +25,15 @@ class JellyfinApiService(
     private var userId: String? = null
     private var serverId: String? = null
 
-    private val client = HttpClient(Android) {
+    private val client = HttpClient(OkHttp) {
         expectSuccess = true
+        engine {
+            config {
+                connectTimeout(30, TimeUnit.SECONDS)
+                readTimeout(30, TimeUnit.SECONDS)
+                writeTimeout(30, TimeUnit.SECONDS)
+            }
+        }
         install(ContentNegotiation) {
             json(Json {
                 ignoreUnknownKeys = true
@@ -48,6 +57,7 @@ class JellyfinApiService(
 
     suspend fun authenticate(username: String, password: String): Result<JellyfinAuthResponse> {
         return try {
+            Log.d(TAG, "Authenticating to $serverUrl as $username")
             val response = client.post("$serverUrl/Users/AuthenticateByName") {
                 contentType(ContentType.Application.Json)
                 header("X-Emby-Authorization", authHeader)
@@ -56,8 +66,24 @@ class JellyfinApiService(
             accessToken = response.accessToken
             userId = response.user.id
             serverId = response.serverId
+            Log.d(TAG, "Authentication successful for user ${response.user.name}")
             Result.success(response)
+        } catch (e: io.ktor.client.plugins.ClientRequestException) {
+            Log.e(TAG, "Auth client error: ${e.response.status}", e)
+            val message = when (e.response.status.value) {
+                401 -> "Invalid username or password"
+                403 -> "Access denied. Account may be disabled."
+                else -> "Authentication failed (${e.response.status})"
+            }
+            Result.failure(Exception(message, e))
+        } catch (e: io.ktor.client.plugins.ServerResponseException) {
+            Log.e(TAG, "Auth server error: ${e.response.status}", e)
+            Result.failure(Exception(
+                "Server error (${e.response.status.value}). Check that the server URL is correct and the server is running.",
+                e
+            ))
         } catch (e: Exception) {
+            Log.e(TAG, "Auth failed", e)
             Result.failure(e)
         }
     }
@@ -296,5 +322,9 @@ class JellyfinApiService(
         accessToken = null
         userId = null
         serverId = null
+    }
+
+    companion object {
+        private const val TAG = "JellyfinApi"
     }
 }
