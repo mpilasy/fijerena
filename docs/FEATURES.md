@@ -1,379 +1,227 @@
-# Xtream IPTV Client - Features Documentation
+# Fijerena — Feature Reference
 
-A native Android application for streaming IPTV content across Android Mobile, NVIDIA Shield, Chromecast with Google TV, and Sony Bravia (Android TV) devices.
+A native Android media player supporting Xtream IPTV, Jellyfin, SMB shares, Local files, and Remote M3U. Targets Android phones/tablets and Android TV (NVIDIA Shield, Chromecast with Google TV, Sony Bravia).
 
-## Core Features
+---
 
-### 1. Authentication & Provider Management
-- **No Login Screen:** Authentication happens automatically on startup or after configuring a provider in Settings
-- **Session Management:** Automatic session restoration from stored credentials on app restart
-- **Multiple Providers:** Room database stores provider metadata; add, edit, delete, and switch between providers
-- **Credential Storage:** Per-provider EncryptedSharedPreferences for passwords
-- **Provider Migration:** Automatic one-time migration of legacy single-provider credentials to Room on first launch
-- **Provider Support:** HTTP/Cleartext support for legacy Xtream providers
+## Provider Types
 
-### 2. Content Management
+| Provider | Live TV | Movies | TV Shows | Search | Progress Sync | Auth |
+|----------|---------|--------|----------|--------|---------------|------|
+| **Xtream** | Yes | Yes | Yes | Client-side | No | Yes |
+| **Jellyfin** | No | Yes | Yes | Server-side | Yes | Yes |
+| **SMB** | No | Yes | No | Filename | No | Optional |
+| **Local** | M3U only | Yes | No | Filename | No | No |
+| **Remote M3U** | Yes | No | No | No | No | No |
 
-#### Content Types
-The application supports three primary content types:
+Multiple providers can be configured simultaneously. Switch active provider from Settings → Manage Providers.
 
-| Content Type | Description | Navigation |
-|---|---|---|
-| **Live TV** | Live television channels and streams | Direct playback from category grid |
-| **Movies (VOD)** | Video-on-demand movie content | Select movie → Movie details → Play |
-| **TV Shows** | Series with seasons and episodes | Select series → Episode selection → Play |
+---
 
-#### Content Discovery
-- **Categories:** Organize content by provider-defined categories
-- **Category Grid:** Two-column layout with categories on the left and streams on the right
-- **Last Watched:** Virtual category displaying recently viewed streams (configurable size)
-- **Multi-Type Support:** Separate category lists for each content type
+## Content
 
-### 3. Playback Features
+### Live TV
+Channels organized by provider-defined categories. D-pad Up/Down switches channels without leaving the player (Xtream/Remote M3U). Toasts display channel name for 3 seconds on switch.
 
-#### Stream Format Support
-The Media3 player supports multiple stream formats:
-- **HLS** (`.m3u8`) - HTTP Live Streaming
-- **DASH** (`.mpd`) - Dynamic Adaptive Streaming over HTTP
-- **MPEG-TS** (`.ts`, `.mpeg`) - MPEG Transport Stream
+### Movies (VOD)
+Movie details screen with plot, cast, director, genre, rating, year, duration, video/audio tech info. Play or Resume (if progress saved). Auto-resume saves position every 5 seconds, resumes if 2–95% complete.
 
-#### Playback Optimization
-- **Fast Channel Switching:** Optimized for live TV zapping (minimal latency)
-- **Hardware Acceleration:** Codec prioritization based on device capabilities:
-  - NVIDIA Shield: AV1 → HEVC → AVC
-  - Sony Bravia: HEVC → AVC
-  - Generic devices: AVC (H.264)
-- **4K/HDR Support:** Hardware-accelerated rendering for compatible devices
-- **Buffer Configuration:**
-  - Minimal buffering: 2000ms
-  - Maximum buffering: 5000ms
-  - Playback startup: 250ms
-  - Rebuffer recovery: 500ms
-  - No back buffer for live streams
+### TV Shows
+Season accordion with episode list. Auto-expands the next unwatched season. Episode thumbnails, per-episode metadata, resume support. Series-level metadata with season fallback.
 
-### 4. Settings & Configuration
+### EPG Guide (TV Guide)
+Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. 30-minute cache TTL.
 
-#### Settings Screen Features
+---
 
-**Active Provider Display**
-- Shows current provider name and URL
-- "Manage Providers" button navigates to provider selection screen
+## Search
 
-**Theme Selection**
-- 4 dark theme variants: Deep Night (default), AMOLED Black, Emerald, Crimson
-- Visual preview with color dots for each theme
-- Persists selection across app restarts via AppSettings
-- Dynamic runtime switching without app restart
+### Xtream (two-phase client-side)
+1. **Phase 1 (instant):** Sweeps cached categories for matches
+2. **Phase 2 (network):** Fetches uncached categories in parallel (semaphore = 20, up to 200 results)
 
-**Manage Providers**
-- View all configured providers in a list
-- Select a provider to make it active
-- Edit provider details (name, URL, username, password)
-- Delete providers with confirmation
-- Add new providers via form
+Minimum 2 characters, explicit trigger. Background pre-fetch warms cache on category screen load.
 
-**Last Watched Queue Size**
-- Adjustable configuration (range: 1-100 items)
-- Default: 25 items
-- Numeric validation with range enforcement
-- Real-time persistence to SharedPreferences
+### Jellyfin (server-side)
+Native Jellyfin REST search. Returns movies and series matching the query.
 
-**Developer Mode**
-- Toggle switch for enabling debug features
-- Real-time enable/disable without app restart
-- Persistent state storage
-- Stats for nerds: payload size tracking
+### Local / SMB
+Filename matching against scanned file list.
 
-#### AppSettings Configuration
-Configuration stored in `SharedPreferences` with key-value pairs:
-```kotlin
-- isDevMode: Boolean (default: false)
-- watchHistorySize: Int (default: 25, range: 1-100)
-- themeId: String (default: "deep_night")
-- favoritesMaxSize: Int (default: 100, range: 10-500)
-- autoResume: Boolean (default: true)
-- uiScale: Float (default: 1.0)
-```
+---
 
-### 5. Watch History & Last Watched
+## EPG Browser
 
-#### Watch History Tracking
-- **Content-Type Specific:** Separate tracking for Live TV, Movies, and TV Shows
-- **Automatic Recording:** Streams tracked when playback begins
-- **Chronological Order:** Most recently watched appears first
-- **Configurable Size:** User-adjustable queue size (1-100 items)
-- **Virtual Category:** "Last Watched" category dynamically generated
+Standalone programme title search across all indexed XMLTV data.
 
-#### Data Persistence
-- Watch history stored per content type
-- Automatic cleanup when queue exceeds configured size
-- Survives app restarts
+- Access: Content Type Selection → book icon (visible when EPG index is ready)
+- Results grouped by programme title, sorted by airing count
+- Time window: −1 to +6 days from now, max 500 results per query
+- SQLite FTS4 MATCH for fast search (<100ms); falls back to LIKE if FTS returns empty
+- Programme titles and channel names scroll with `basicMarquee` when they overflow
+- Mobile: expandable cards showing up to 3 airings (tap to expand all)
+- TV: GlassPanel cards with TvLazyColumn
 
-### 6. Navigation
+---
 
-#### Navigation Structure
-The application uses type-safe navigation with Jetpack Navigation Compose:
+## EPG Management (Multi-Source)
 
-```
-App Startup
-    ├─→ No provider → Settings
-    └─→ Provider exists → Auto-restore session
-                              ↓
-Content Type Selection (with Settings gear icon)
-    ├─→ Live TV Categories
-    │     ├─→ Live TV Stream Player
-    │     ├─→ Search
-    │     └─→ EPG Guide (TV Guide)
-    │
-    ├─→ Movie Categories
-    │     ├─→ Movie Details Screen → Movie Player
-    │     └─→ Search
-    │
-    └─→ TV Show Categories
-          ├─→ Episode Selection (by Season) → Episode Player
-          └─→ Search
+Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 
-Settings
-    └─→ Manage Providers
-          ├─→ Provider Selection (list, select, delete)
-          └─→ Add/Edit Provider (form)
-```
+- Per-source label and timezone offset override (applies during parsing)
+- Status indicator: green = ingested <24h, yellow = >24h, red = error, gray = disabled
+- Download-ingest-delete pipeline: XML downloaded to temp, parsed into SQLite, file deleted immediately
+- TV/fixed devices: stream directly from network to DB (zero disk I/O)
+- Mobile: download to cache dir first, then ingest
+- Auto-refresh on startup and 24h periodic WorkManager background sync
+- First source clears existing data (full rebuild); subsequent sources append
+- Actions: Refresh All, Cleanup Files, Purge >7 days, Clear All Data
 
-#### Navigation Destinations
-- **ContentTypeSelection:** Choose between Live TV, Movies, or TV Shows (main landing page)
-- **CategoryList:** Browse categories for selected content type
-- **MovieDetails:** View movie information and play options
-- **EpisodeSelection:** Browse TV show seasons and episodes
-- **Player:** Video playback screen with playback controls
-- **Search:** Search across categories for a content type
-- **EpgGuide:** TV Guide with 24-hour program grid (Live TV only)
-- **Settings:** App configuration, theme selection, provider management
-- **ProviderSelection:** List, select, edit, and delete providers
-- **AddProvider:** Form for adding or editing a provider
+**Indexer states:** NotIndexed → Indexing(progress%) → Indexed(programmes, channels) → Failed(reason)
 
-#### Navigation Features
-- **Type-Safe Navigation:** kotlinx.serialization for compile-time safety
-- **D-Pad Focus Management:** Full remote control support
-- **Back Stack Management:** Intelligent navigation back button handling
-- **Session Restoration:** Auto-navigate to last content type on app launch
+---
 
-### 7. Developer Mode Features
+## Settings Export / Import
 
-When enabled via Settings, Developer Mode provides:
+Settings → Export Settings / Import Settings.
 
-#### Payload Size Tracking
-- **API Response Monitoring:** Tracks size of network responses in bytes
-- **Performance Metrics:** Monitor bandwidth usage
-- **Debug Display:** Payload sizes shown in category grid and when loading from cache
-- **Network Analysis:** Identify bandwidth-heavy operations
+**Exported:** all provider configs (name, URL, username, type, config JSON, per-provider settings), all EPG source URLs, and global AppSettings (theme, UI scale, dev mode, EPG auto-refresh, cellular buffer multipliers).
 
-#### Debug Information
-- Network request/response statistics
-- Provider connectivity diagnostics
-- Content loading metrics
+**Not exported:** passwords (EncryptedSharedPreferences), cache, EPG programme data.
 
-### 8. User Interface
+**Import conflict resolution:** when an imported provider name matches an existing one, a dialog offers:
+- **Overwrite** — update URL, username, type, config, and per-provider settings in place
+- **Duplicate** — add as a new provider with `(imported)` suffix
+- **Skip** — leave the existing entry unchanged
 
-#### TV-Optimized Design
-- **D-Pad Navigation:** Full remote control support without touch
-- **Focus Management:** Visual focus indicators for all interactive elements
-- **Overscan Safety:** 5% padding from screen edges for TV display safety
-- **Material Design 3 (TV):** Using `androidx.tv.material3` components
+EPG sources are merged by URL; duplicates are skipped silently.
 
-#### Multi-Device Support
-- **Responsive Layouts:** Adapts to different screen sizes
-- **Device-Specific Optimization:**
-  - NVIDIA Shield: High-performance codec rendering
-  - Sony Bravia: Lean UI avoiding complex animations
-  - Chromecast: Responsive to compact window sizes
-- **WindowSizeClass:** Dynamic UI adaptation (Mobile vs TV)
+---
 
-#### Two-Column Layout
-- **Left Column:** Category list with vertical scrolling
-- **Right Column:** Stream/episode list for selected category
-- **Focus Navigation:** D-pad movement between columns
-- **Dynamic Scaling:** Content area adjusts based on selection
+## Player
 
-### 9. Authentication & Credentials
+### Format Support
+HLS (`.m3u8`), DASH (`.mpd`), MPEG-TS (`.ts`, `.mpeg`), MP4, MKV, WebM, and other containers via Media3/ExoPlayer.
 
-#### Credential Management
-- **Room Database:** Provider metadata (name, URL, username, active flag) stored in Room
-- **Encrypted Passwords:** Per-provider EncryptedSharedPreferences (AES256-GCM)
-- **Session Persistence:** Automatic session restoration on app restart
-- **Multiple Providers:** Add, edit, delete, and switch between IPTV providers
-- **Migration:** Automatic one-time migration from legacy single-provider storage to Room
+### Jellyfin Transcoding
+Before playback, the app POSTs a `DeviceProfile` to Jellyfin's `/Items/{id}/PlaybackInfo`. Jellyfin decides:
+- **Direct play** — file sent as-is; ExoPlayer decodes natively (H.264, HEVC, VP9, AV1, AC3/DTS/TrueHD via FFmpeg ext, FLAC, Opus)
+- **Transcode** — Jellyfin re-encodes to HLS/H.264+AAC for unsupported codecs; app receives `.m3u8`
 
-#### Provider URL Handling
-- **HTTP/Cleartext Support:** Compatibility with legacy providers
-- **Custom Headers:** Authentication header support
-- **Cross-Protocol Redirects:** Automatic redirect handling
-- **Connection Timeouts:** 8-second connect/read timeouts
+`PlaySessionId` is included in all playback progress/stop reports so Jellyfin can manage the transcoding session.
 
-### 10. Error Handling & Recovery
+### Buffer Strategy (network-aware)
+`AdaptiveLoadControl` swaps buffer parameters at runtime based on network type and content type.
 
-#### Network Error Handling
-- User-friendly error messages
-- Retry mechanisms for failed operations
-- Graceful degradation
-- Provider URL validation
+| Profile | Min | Max | Notes |
+|---------|-----|-----|-------|
+| WiFi Live TV | 2s | 5s | Low-latency |
+| WiFi VOD | 15s | 50s | Large pre-buffer |
+| Cellular Live TV | 10s | 40s | (multiplier-scaled) |
+| Cellular VOD | 75s | 150s | (multiplier-scaled) |
 
-#### Playback Error Handling
-- Stream availability checks
-- Format compatibility detection
-- Fallback options for unsupported content
-- Clear error reporting
+Cellular multipliers are tunable 0.5×–3.0× in dev mode via Settings → Cellular Buffer Settings.
 
-## Technical Architecture
+### In-Player EPG (Live TV)
+Current programme title, time range, and progress bar shown in stream info overlay. "Up Next" programme shown below. Fetched on stream start and channel switch. Degrades gracefully if no EPG data.
 
-### Dependency Injection
-- **ViewModel Factory:** Custom factories for screen-specific ViewModels
-- **Repository Pattern:** XtreamRepository as data layer, ProviderRepository for provider management
-- **Service Layer:** AccountManager for legacy credential management, ProviderRepository for multi-provider
-- **Database:** Room for provider metadata, EncryptedSharedPreferences for passwords
+### Stats for Nerds
+Double-tap OK (TV) or tap stats button (mobile) to show overlay. Repositionable to 4 corners on TV.
 
-### State Management
-- **Jetpack Compose State:** Local state for UI
-- **ViewModel State:** Screen-level state management
-- **SharedFlow/StateFlow:** Reactive data streams
-- **Coroutines:** Asynchronous operations
+**VIDEO:** Codec, Resolution, Frame Rate, Bitrate
+**AUDIO:** Codec, Sample Rate, Channels, Bitrate
+**NETWORK:** Speed, Measured Bandwidth, Buffer health, Buffered position, Rebuffer count/duration, ABR quality switches
+**PLAYBACK:** Position, Duration
+**PERFORMANCE:** Dropped frames (color-coded: <0.5% green, <2% yellow, ≥2% red)
+**STREAM:** Type (Live/VOD), Retries, Uptime, URL
 
-### Networking
-- **Ktor Client:** HTTP networking library
-- **kotlinx.serialization:** JSON deserialization
-- **Custom Interceptors:** Authentication and error handling
-- **Connection Pooling:** Efficient connection management
+Mobile stats overlay: dismissible only via X button.
 
-### Video Playback
-- **Media3 (ExoPlayer):** Modern video playback engine
-- **StreamingMediaSourceFactory:** Automatic stream type detection
-- **LoadControl:** Optimized buffer management
-- **Codec Selection:** Hardware-accelerated rendering
+### Track Selection
+In-playback dialogs for audio track, subtitle track, and video quality. D-pad navigable on TV.
 
-## Navigation Flow Details
+### Auto-Resume
+Position saved every 5 seconds. On re-open, resumes if progress is 2–95%. Resume prompt with "Continue" / "Start Over".
 
-### Live TV Flow
-1. User selects "Live TV" from ContentTypeSelection
-2. CategoryList displays Live TV categories
-3. User selects category → streams load
-4. User selects stream → Player starts playback
-5. Watch history automatically updated
+### Controls
+- **TV:** OK = show/hide controls, double-OK = stats, Back = exit, D-pad Up/Down = channel switch (Live TV)
+- **Mobile:** tap = controls, swipe up/down = channel switch (Live TV), slider seek bar (VOD)
 
-### Movie Flow
-1. User selects "Movies" from ContentTypeSelection
-2. CategoryList displays movie categories
-3. User selects movie → MovieDetails screen shows
-4. User presses Play → Player starts playback
-5. Watch history automatically updated
+---
 
-### TV Shows Flow
-1. User selects "TV Shows" from ContentTypeSelection
-2. CategoryList displays series categories
-3. User selects series → EpisodeSelection screen shows
-4. User selects episode → Player starts playback
-5. Watch history automatically updated with episode info
+## Virtual Categories
 
-### Settings Access
-- From ContentTypeSelection: Press gear icon button (bottom left)
-- Settings Screen options:
-  - Active Provider: View name and URL of current provider
-  - Manage Providers: Add, edit, delete, switch between providers
-  - Theme: Select from 4 dark themes
-  - Auto-Resume: Toggle VOD auto-resume
-  - Watch History Size: Configure queue length
-  - Favorites Max Size: Configure max favorites
-  - UI Scale: Adjust font and element sizes
-  - Cache Management: View and clear cached data
-  - Developer Mode: Toggle debug features
+Appear alongside provider categories in the category list:
 
-## File Structure
+| Category | Content Types | Description |
+|----------|---------------|-------------|
+| **Continue Watching** | Movies, TV Shows | Items with 2–95% progress, most recent first |
+| **Favorites** | All | Starred items, configurable max size (10–500) |
+| **Last Watched** | All | Chronological history, configurable size (1–100) |
+| **Recently Viewed** | All | Recently browsed categories (max 20, deduplicated) |
 
-```
-core/
-├── network/          # Networking and repository layer
-│   ├── AppSettings.kt       # Settings configuration (incl. themeId)
-│   ├── AccountManager.kt    # Legacy credential management
-│   ├── XtreamRepository.kt  # Data layer
-│   └── provider/             # Multi-provider support
-│       ├── ProviderEntity.kt     # Room entity
-│       ├── ProviderDao.kt        # Data access object
-│       ├── ProviderDatabase.kt   # Room database singleton
-│       └── ProviderRepository.kt # Repository (DAO + encrypted prefs)
-├── ui/               # Shared UI components
-│   ├── theme/
-│   │   └── CinemaThemePalette.kt  # Theme palettes + CinemaThemeHolder
-│   └── viewmodels/
-│       ├── ProviderViewModel.kt   # Provider management + migration
-│       └── ProviderViewModelFactory.kt
-├── player/           # Video playback
-│   └── StreamingMediaSourceFactory.kt  # Stream type detection
-└── navigation/       # Navigation types
-    ├── ContentType.kt       # Content type enum
-    └── Screen.kt            # Navigation destinations
+Favorites and Last Watched are per-provider. Continue Watching is derived from saved progress.
 
-tv/
-└── src/main/java/
-    ├── feature/
-    │   ├── category/           # Category browsing
-    │   ├── contentselection/   # Content type selection
-    │   ├── episode/            # TV show episodes
-    │   ├── movie/              # Movie details
-    │   ├── player/             # Video playback
-    │   ├── provider/           # Provider management
-    │   │   ├── TvProviderSelectionScreen.kt
-    │   │   └── TvAddProviderScreen.kt
-    │   ├── search/             # Search
-    │   ├── settings/           # App settings + theme picker
-    │   └── epg/                # Electronic Program Guide
-    ├── ui/theme/               # TV theme (CinemaColors re-exports, Theme.kt)
-    └── navigation/
-        └── TvNavHost.kt
+---
 
-mobile/
-└── src/main/java/
-    ├── feature/
-    │   ├── category/           # Category browsing
-    │   ├── contentselection/   # Content type selection
-    │   ├── episode/            # TV show episodes
-    │   ├── movie/              # Movie details
-    │   ├── player/             # Video playback
-    │   ├── provider/           # Provider management
-    │   │   ├── MobileProviderSelectionScreen.kt
-    │   │   └── MobileAddProviderScreen.kt
-    │   ├── search/             # Search
-    │   └── settings/           # App settings + theme picker
-    ├── ui/theme/               # Mobile theme (Color re-exports, Theme.kt)
-    └── navigation/
-        └── MobileNavHost.kt
-```
+## Themes
 
-## Performance Considerations
+4 dark themes switchable at runtime without restart:
 
-### Network Optimization
-- Connection pooling for efficient requests
-- 8-second timeouts for provider reliability
-- Payload size tracking in developer mode
-- Minimal bandwidth usage in live streaming
+| Theme | Accent | Background |
+|-------|--------|------------|
+| **Deep Night** (default) | Electric Blue `#2979FF` | `#0F1014` |
+| **AMOLED Black** | Electric Blue `#2979FF` | `#000000` |
+| **Emerald** | Green `#00C853` | `#0F1014` |
+| **Crimson** | Red `#FF1744` | `#0F1014` |
 
-### UI Performance
-- Efficient focus management
-- Lazy loading of content
-- Memory management for video playback
-- Responsive D-pad navigation
+---
 
-### Playback Optimization
-- Hardware-accelerated codec selection
-- Minimal buffering for live streams
-- Fast channel switching (250ms startup)
-- 4K/HDR hardware support
+## Developer Mode
 
-## Future Enhancement Opportunities
+Enable in Settings. Features gated behind dev mode:
 
-- Cloud sync for watch history and favorites
-- Recommendations based on watch history
-- Content filtering and sorting
-- Parental controls
-- Multiple profile support per provider
-- Scheduled recordings (if applicable)
-- Playback speed control for VOD (0.5x, 1.25x, 1.5x, 2x)
-- Picture-in-Picture mode (mobile only)
-- Audio/subtitle language persistence per stream
+- **Payload size tracking:** API response sizes shown in category grid
+- **EPG DB stats:** programme and channel counts in EPG Browser header
+- **Source labels:** EPG source name shown on each airing in EPG Browser
+- **Cellular Buffer Settings:** multiplier sliders (0.5×–3.0×) for Live and VOD profiles
+
+---
+
+## Settings Screen Reference
+
+| Setting | Description |
+|---------|-------------|
+| Active Provider | Shows current provider name and URL |
+| Manage Providers | CRUD for all providers; set active |
+| Theme | Select from 4 dark themes |
+| Manage EPG Data | Add/edit/delete XMLTV sources, trigger refresh |
+| Export Settings | Save providers + EPG sources + global config to JSON |
+| Import Settings | Load JSON; conflict dialog for name clashes |
+| Cache Management | View size breakdown; clear per content type or all |
+| UI Scale | 70–100%; scales category grid and item cards |
+| Developer Mode | Enables debug overlays and advanced settings |
+| Cellular Buffer Settings | (dev mode) Tune cellular buffer multipliers |
+
+### Per-Provider Settings (in Edit Provider)
+
+| Setting | Default | Range |
+|---------|---------|-------|
+| Auto-Resume | On | — |
+| Last Watched size | 25 | 1–100 |
+| Favorites max | 100 | 10–500 |
+| Category filters | Off | Xtream only |
+| Caching | On | Xtream only |
+
+---
+
+## Device-Specific Behaviour
+
+| Device | Behaviour |
+|--------|-----------|
+| **NVIDIA Shield** | AV1 → HEVC → AVC codec priority; hardware AV1 decode |
+| **Sony Bravia** | HEVC → AVC priority; reduced animations on mid-range processors |
+| **Chromecast with GTV** | Compact window layout |
+| **Android phone/tablet** | Portrait locked except during playback (sensor-based) |
+
+TV safe margins: 56dp horizontal, 32dp vertical on all root containers.

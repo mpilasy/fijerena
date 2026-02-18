@@ -653,18 +653,53 @@ val metadata = PlayerMetadata(
 
 ---
 
-## 🔮 Future Enhancements (Phase 6+)
+---
 
-### Planned Features:
-- **Playback Speed Control** - Variable speed for VOD content (0.5x, 1.25x, 1.5x, 2x)
-- **Picture-in-Picture** - Mobile only, watch while using other apps
-- **Audio Track Persistence** - Remember preferred language per stream
-- **Subtitle Persistence** - Remember subtitle preferences
-- **Keyboard Shortcuts** - Fast forward, rewind for Android TV keyboards
-- **Network Throughput Graph** - Visual bandwidth monitoring
-- **A/V Sync Adjustment** - Manual audio/video synchronization
-- **Bookmarks/Resume** - Remember playback position for VOD
-- **Screenshot Capture** - Save current frame as image
+## Phase 6: Multi-Provider Expansion (Commits #4–#8)
+
+**Release Date:** 2026-02-04 → 2026-02-18
+
+### #4 — Settings Export/Import, EPG Fixes
+
+- **Settings Export/Import:** Full configuration backup/restore via Storage Access Framework JSON file. Exports all providers (except passwords), EPG sources, and global AppSettings (theme, UI scale, dev mode, buffer multipliers). Import conflict resolution dialog: Overwrite / Duplicate / Skip.
+- **EPG search filtering:** Fixed EPG Browser search not filtering results correctly.
+- **EPG auto-refresh:** Fixed WorkManager-based 24h background EPG sync not triggering.
+
+### #5 — Jellyfin Catalog 401 Fix
+
+- Fixed crash when Jellyfin returns 401 (session expired) while loading catalog items. App now handles expired sessions gracefully and prompts re-authentication instead of crashing.
+
+### #6 — Jellyfin Auth Engine Fix
+
+- Switched Ktor HTTP engine from `Android` to `OkHttp` for Jellyfin requests. The Android engine had inconsistent header injection; OkHttp provides reliable header handling for the Jellyfin auth flow.
+
+### #7 — Jellyfin Auth Headers, EPG Browser Marquee
+
+- `JellyfinApiService` rewritten to use a Ktor `HttpSend` interceptor that injects both `Authorization: MediaBrowser ...` and `X-Emby-Authorization: MediaBrowser ...` on every request. Jellyfin 10.10+ requires `Authorization`; the interceptor ensures compatibility with both old and new server versions.
+- EPG Browser: Programme titles and channel names now scroll with `basicMarquee` when they overflow their container.
+- Settings Export updated: exports cellular buffer multipliers as part of `AppSettings`.
+
+### #8 — Jellyfin PlaybackInfo Negotiation + DeviceProfile
+
+- **Before**: App requested `?static=true` on all Jellyfin streams — Jellyfin sent the raw file with no codec negotiation.
+- **After**: Before each playback, the app POSTs a `DeviceProfile` to `POST /Items/{id}/PlaybackInfo`. Jellyfin evaluates the device capabilities and responds with either:
+  - **Direct play** URL — file served as-is (H.264/HEVC/VP9/AV1/AC3/DTS/TrueHD/FLAC)
+  - **Transcode URL** — Jellyfin re-encodes to HLS/H.264+AAC for unsupported codecs
+- `PlaySessionId` and `MediaSourceId` from the response are included in all progress/stop reports, enabling Jellyfin to manage the transcoding session lifecycle.
+- Graceful fallback: if PlaybackInfo fails, the app falls back to `?static=true`.
+- `postCapabilities()` called after auth to register the device with the Jellyfin server.
+
+---
+
+## 🔮 Future Enhancements
+
+- **Playback Speed Control** — Variable speed for VOD content (0.5×, 1.25×, 1.5×, 2×)
+- **Picture-in-Picture** — Mobile only, watch while using other apps
+- **Audio Track Persistence** — Remember preferred language per stream
+- **Subtitle Persistence** — Remember subtitle preferences
+- **Keyboard Shortcuts** — Fast forward, rewind for Android TV keyboards
+- **Network Throughput Graph** — Visual bandwidth monitoring
+- **A/V Sync Adjustment** — Manual audio/video synchronization
 
 ---
 

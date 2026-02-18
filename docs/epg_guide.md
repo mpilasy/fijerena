@@ -22,14 +22,15 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
 
 ```
                    ┌──────────────────────┐
-                   │    User Settings      │
-                   │  epgUrl: "https://…"  │
+                   │   EPG Management      │
+                   │  EpgSourceEntity[]    │
+                   │  (URL, label, tz)     │
                    └──────────┬───────────┘
                               │
                  ┌────────────▼────────────┐
                  │    EpgFileManager        │
                  │   (singleton, WiFi-only) │
-                 │  → dual-mode ingest      │
+                 │  → multi-source ingest   │
                  └────────────┬─────────────┘
                               │
                  ┌────────────▼────────────┐
@@ -99,7 +100,7 @@ Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync
 - `parseProgrammeForIndex(parser)` → `EpgProgrammeEntity` — used by EpgIndexer
 - `parseTimestamp(str)` — XMLTV timestamp parser with timezone override support
 
-**Timezone override:** `@Volatile var timezoneOverrideHours: Int` — applied in `parseTimestamp()` to fix XMLTV sources that encode local times but mislabel them as UTC. Set from `AppSettings.epgTimezoneOffsetHours`.
+**Timezone override:** `@Volatile var timezoneOverrideHours: Int` — applied in `parseTimestamp()` to fix XMLTV sources that encode local times but mislabel them as UTC. Set per-source from `EpgSourceEntity.timezoneOffsetHours` before each ingestion pass.
 
 ---
 
@@ -107,7 +108,7 @@ Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync
 
 ### Database Schema
 
-**Room database** `epg_index.db` (version 3, destructive migration):
+**Room database** `epg_index.db` (version 6):
 
 ```
 epg_channel
@@ -205,7 +206,7 @@ The EPG Grid is a 24-hour channel schedule view accessible from the Category Gri
 
 ## EPG Browser (Search)
 
-Standalone screen for full-text searching across the entire XMLTV dataset. Accessed from Content Type Selection via the book icon (only visible when `xmltv_global.xml` exists).
+Standalone screen for full-text searching across the entire XMLTV dataset. Accessed from Content Type Selection via the book icon (only visible when `EpgIndexer.state` is `Indexed`).
 
 ### XmltvSearchService
 
@@ -236,20 +237,25 @@ Results are grouped by normalized title, sorted by airing count descending. Pagi
 
 ## Settings & Configuration
 
-**AppSettings keys:**
+EPG is configured via **Settings → Manage EPG Data** (`Screen.EpgManagement`). Multiple XMLTV sources can be added, edited, and deleted.
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `epg_url` | String | `""` | User-provided XMLTV URL |
-| `epg_timezone_offset` | Int | `0` | Timezone override (-12 to +14 hours) |
+**`EpgSourceEntity` fields:**
 
-**Settings screen controls** (both TV and mobile):
-- EPG URL field with edit/save/clear buttons
-- Timezone override cycle button (Auto/UTC-12 to UTC+14)
-- Download button, status display (state, file size, last refreshed)
-- Index status (programme/channel counts or indexing progress)
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | Long | Auto-generated primary key |
+| `url` | String | XMLTV source URL |
+| `label` | String? | User-visible label |
+| `timezoneOffsetHours` | Int | Per-source timezone override (-12 to +14) |
+| `isEnabled` | Boolean | Whether source is included in refresh |
+| `lastIngestedAt` | Long? | Epoch ms of last successful ingest |
+| `lastError` | String? | Error message from last failed attempt |
 
-**Timezone override behavior:** Changing the timezone triggers automatic re-indexing because stored epoch values in SQLite depend on the parse-time timezone interpretation.
+**Status indicators (UI):** green = ingested <24h, yellow = >24h stale, red = error, gray = disabled.
+
+**Actions:** Refresh All, Cleanup Files, Purge >7 days, Clear All Data (with confirmation dialog).
+
+**Timezone override behavior:** The per-source offset is applied at parse time. Changing it requires re-ingesting the source because epoch values stored in SQLite depend on the parse-time timezone.
 
 ---
 
@@ -257,9 +263,11 @@ Results are grouped by normalized title, sorted by airing count descending. Pagi
 
 | Cache | Location | TTL | Purpose |
 |-------|----------|-----|---------|
-| XMLTV file | `cache/xmltv_global.xml` | 24h | EPG data |
-| SQLite index | `databases/epg_index.db` | Until XMLTV changes | FTS4 search index |
+| XMLTV temp file (mobile) | `cacheDir/<uuid>.xml[.gz]` | Deleted after ingest | Download staging |
+| SQLite index | `databases/epg_index.db` | Until next refresh | FTS4 search index |
 | Parsed EPG results | SharedPreferences per-provider | 12h | XmltvEpgService grid cache |
+
+No persistent XMLTV file. TV/fixed devices stream directly from network to database (zero disk I/O). Mobile downloads to a temp file first, then ingests from file, then deletes the temp file.
 
 **Network constraints:**
 - EPG downloads: WiFi/Ethernet only (skip on cellular, use stale cache)
@@ -348,7 +356,9 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 | File | Type | Description |
 |------|------|-------------|
 | `EpgIndexer.kt` | Singleton | Index builder (streaming + transactional) |
-| `EpgIndexDatabase.kt` | Room DB | Database singleton (v3, destructive migration) |
+| `EpgIndexDatabase.kt` | Room DB | Database singleton (v6) |
+| `EpgSourceEntity.kt` | Entity | EPG source config (URL, label, tz, enabled, status) |
+| `EpgSourceDao.kt` | DAO | CRUD for EPG sources |
 | `EpgIndexDao.kt` | DAO | FTS MATCH, LIKE, paged queries |
 | `EpgProgrammeEntity.kt` | Entity | Programme table + FTS4 virtual table |
 | `EpgChannelEntity.kt` | Entity | Channel table |
