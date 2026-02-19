@@ -193,7 +193,10 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = {
                 showImportOptionsDialog = false
-                pendingParsedImport = null
+                // Only clean up if not transitioning to conflict dialog
+                if (!showConflictDialog) {
+                    pendingParsedImport = null
+                }
             },
             title = { Text("Select What to Import") },
             text = {
@@ -229,7 +232,6 @@ fun SettingsScreen(
             confirmButton = {
                 CinemaPrimaryButton(
                     onClick = {
-                        showImportOptionsDialog = false
                         val options = SettingsExportManager.ImportOptions(
                             importProviders = optProviders,
                             importEpgSources = optEpg,
@@ -237,11 +239,13 @@ fun SettingsScreen(
                             importFavorites = optFavorites
                         )
                         pendingImportOptions = options
+                        val p = pendingParsedImport!!
                         if (optProviders && parsed.hasConflicts) {
                             showConflictDialog = true
+                            showImportOptionsDialog = false
                         } else {
-                            val p = pendingParsedImport!!
                             pendingParsedImport = null
+                            showImportOptionsDialog = false
                             doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
                         }
                     },
