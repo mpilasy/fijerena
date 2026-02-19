@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.epgbrowser
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -49,7 +51,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
@@ -369,11 +375,15 @@ private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = f
 
 @Composable
 private fun MobileAiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
+    val nowEpoch = remember { System.currentTimeMillis() / 1000L }
+    val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
+    val isSoon = !isOnAir && airing.startEpoch > nowEpoch && (airing.startEpoch - nowEpoch) <= 7200L
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = CinemaSpacing.xxs),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -390,15 +400,26 @@ private fun MobileAiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false
                 Text(
                     text = sourceName,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = CinemaAlpha.textLow),
-                    modifier = Modifier.padding(end = CinemaSpacing.xs)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = CinemaAlpha.textLow)
                 )
             }
+        }
+        if (isOnAir || isSoon) {
+            val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
+            val badgeLabel = if (isOnAir) "ON AIR" else "SOON"
+            Text(
+                text = badgeLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = CinemaBackground,
+                modifier = Modifier
+                    .background(badgeColor, RoundedCornerShape(CinemaCornerRadius.small))
+                    .padding(horizontal = CinemaSpacing.xs, vertical = CinemaSpacing.xxs)
+            )
         }
         Text(
             text = formatAiringTime(airing.startEpoch, airing.endEpoch),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (isOnAir) CinemaSuccess else if (isSoon) CinemaWarning else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

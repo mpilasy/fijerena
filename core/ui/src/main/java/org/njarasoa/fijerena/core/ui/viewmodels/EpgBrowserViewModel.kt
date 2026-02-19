@@ -161,7 +161,7 @@ class EpgBrowserViewModel(
                             }.sortedBy { it.startEpoch }
                         )
                     }
-                    .sortedByDescending { it.airings.size }
+                    .sortedBy { it.airings.minOfOrNull { a -> a.startEpoch } ?: Long.MAX_VALUE }
 
                 val totalAirings = grouped.sumOf { it.airings.size }
 
