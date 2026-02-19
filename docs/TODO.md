@@ -49,6 +49,7 @@ Prefer real hardware for validation:
 
 ## Recently Completed
 
+- Favorites export/import + selective import dialog (#9)
 - Jellyfin PlaybackInfo negotiation + DeviceProfile (#8)
 - Jellyfin auth fix (OkHttp engine + HttpSend interceptor) (#6, #7)
 - Jellyfin catalog 401 crash fix (#5)

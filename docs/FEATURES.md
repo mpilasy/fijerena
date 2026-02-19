@@ -85,16 +85,18 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 
 Settings → Export Settings / Import Settings.
 
-**Exported:** all provider configs (name, URL, username, type, config JSON, per-provider settings), all EPG source URLs, and global AppSettings (theme, UI scale, dev mode, EPG auto-refresh, cellular buffer multipliers).
+**Exported:** all provider configs (name, URL, username, type, config JSON, per-provider settings), all EPG source URLs, per-provider favorites (item ID, name, category, content type), and global AppSettings (theme, UI scale, dev mode, EPG auto-refresh, cellular buffer multipliers).
 
 **Not exported:** passwords (EncryptedSharedPreferences), cache, EPG programme data.
+
+**Selective import:** On import, a "Select What to Import" dialog presents checkboxes for each section — General Settings, Providers, EPG Sources, Favorites. Only checked sections are imported.
 
 **Import conflict resolution:** when an imported provider name matches an existing one, a dialog offers:
 - **Overwrite** — update URL, username, type, config, and per-provider settings in place
 - **Duplicate** — add as a new provider with `(imported)` suffix
 - **Skip** — leave the existing entry unchanged
 
-EPG sources are merged by URL; duplicates are skipped silently.
+EPG sources are merged by URL; duplicates are skipped silently. Favorites are merged with existing ones; duplicates (by item ID) are skipped.
 
 ---
 

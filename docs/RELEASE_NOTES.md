@@ -679,6 +679,17 @@ val metadata = PlayerMetadata(
 - EPG Browser: Programme titles and channel names now scroll with `basicMarquee` when they overflow their container.
 - Settings Export updated: exports cellular buffer multipliers as part of `AppSettings`.
 
+### #9 — Favorites Export & Selective Import
+
+- **Favorites in export:** Per-provider favorites (item ID, name, category, content type) are now included in the JSON export.
+- **Favorites import:** Imported favorites are merged with existing ones; duplicates by item ID are skipped.
+- **Selective import dialog:** A "Select What to Import" screen with checkboxes lets users pick which sections to import: General Settings, Providers, EPG Sources, Favorites. Only checked sections are applied.
+- **Bug fix:** Fixed race condition where the import options dialog's `onDismissRequest` could null `pendingParsedImport` before the conflict dialog rendered. Fix: `showConflictDialog` is set to `true` before dismissing the options dialog, and `onDismissRequest` checks `showConflictDialog` before nulling the pending data.
+
+**Files modified:** `core/network/.../SettingsExportManager.kt`, `tv/.../feature/settings/SettingsScreen.kt`, `mobile/.../feature/settings/SettingsScreen.kt`
+
+---
+
 ### #8 — Jellyfin PlaybackInfo Negotiation + DeviceProfile
 
 - **Before**: App requested `?static=true` on all Jellyfin streams — Jellyfin sent the raw file with no codec negotiation.
