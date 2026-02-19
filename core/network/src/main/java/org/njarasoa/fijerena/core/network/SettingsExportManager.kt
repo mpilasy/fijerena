@@ -20,6 +20,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
  * - Global AppSettings (theme, UI scale, dev mode, EPG auto-refresh, etc.)
  * - Provider configurations (name, URL, username, type, config, per-provider settings)
  * - EPG sources (URL, label, timezone offset, enabled state)
+ * - Favorites per provider (item ID, name, category, content type)
  *
  * NOT exported (for security/size reasons):
  * - Passwords (stored in EncryptedSharedPreferences)
@@ -31,7 +32,8 @@ class SettingsExportManager(private val context: Context) {
 
     companion object {
         private const val TAG = "SettingsExportManager"
-        private const val EXPORT_VERSION = 1
+        private const val EXPORT_VERSION = 2
+        private const val KEY_FAVORITES = "favorites_v2"
     }
 
     private val json = Json {
@@ -46,7 +48,8 @@ class SettingsExportManager(private val context: Context) {
         val exportedAt: Long = System.currentTimeMillis(),
         val global: GlobalSettings = GlobalSettings(),
         val providers: List<ExportedProvider> = emptyList(),
-        val epgSources: List<ExportedEpgSource> = emptyList()
+        val epgSources: List<ExportedEpgSource> = emptyList(),
+        val providerFavorites: List<ProviderFavorites> = emptyList()
     )
 
     @Serializable
@@ -78,6 +81,31 @@ class SettingsExportManager(private val context: Context) {
         val enabled: Boolean = true
     )
 
+    @Serializable
+    data class ProviderFavorites(
+        val providerName: String,
+        val providerUrl: String,
+        val favorites: List<ExportedFavorite> = emptyList()
+    )
+
+    @Serializable
+    data class ExportedFavorite(
+        val itemId: String,
+        val itemName: String,
+        val categoryId: String,
+        val contentType: String
+    )
+
+    /**
+     * Controls which sections of the export file to import.
+     */
+    data class ImportOptions(
+        val importProviders: Boolean = true,
+        val importEpgSources: Boolean = true,
+        val importGlobalSettings: Boolean = true,
+        val importFavorites: Boolean = true
+    )
+
     enum class ConflictResolution {
         OVERWRITE, DUPLICATE, SKIP
     }
@@ -91,6 +119,9 @@ class SettingsExportManager(private val context: Context) {
         val conflictingProviders: List<String>
     ) {
         val hasConflicts: Boolean get() = conflictingProviders.isNotEmpty()
+        val hasProviders: Boolean get() = settings.providers.isNotEmpty()
+        val hasEpgSources: Boolean get() = settings.epgSources.isNotEmpty()
+        val hasFavorites: Boolean get() = settings.providerFavorites.isNotEmpty()
     }
 
     /**
@@ -131,10 +162,39 @@ class SettingsExportManager(private val context: Context) {
             )
         }
 
+        // Export favorites per provider
+        val allProviders = providerRepo.getAllProvidersList()
+        val providerFavorites = allProviders.mapNotNull { entity ->
+            val cachePrefs = context.getSharedPreferences(
+                "media_cache_${entity.id}",
+                Context.MODE_PRIVATE
+            )
+            val favJson = cachePrefs.getString(KEY_FAVORITES, null) ?: return@mapNotNull null
+            val favorites = try {
+                json.decodeFromString<List<FavoriteItem>>(favJson)
+            } catch (e: Exception) {
+                return@mapNotNull null
+            }
+            if (favorites.isEmpty()) return@mapNotNull null
+            ProviderFavorites(
+                providerName = entity.name,
+                providerUrl = entity.url,
+                favorites = favorites.map { fav ->
+                    ExportedFavorite(
+                        itemId = fav.itemId,
+                        itemName = fav.itemName,
+                        categoryId = fav.categoryId,
+                        contentType = fav.contentType
+                    )
+                }
+            )
+        }
+
         val exported = ExportedSettings(
             global = global,
             providers = providers,
-            epgSources = epgSources
+            epgSources = epgSources,
+            providerFavorites = providerFavorites
         )
 
         json.encodeToString(exported)
@@ -190,14 +250,15 @@ class SettingsExportManager(private val context: Context) {
      */
     suspend fun importFromUri(
         uri: Uri,
-        conflictResolution: ConflictResolution = ConflictResolution.SKIP
+        conflictResolution: ConflictResolution = ConflictResolution.SKIP,
+        options: ImportOptions = ImportOptions()
     ): ImportResult = withContext(Dispatchers.IO) {
         try {
             val jsonString = context.contentResolver.openInputStream(uri)?.use { input ->
                 input.bufferedReader().readText()
             } ?: return@withContext ImportResult(error = "Could not read file")
 
-            importFromJson(jsonString, conflictResolution)
+            importFromJson(jsonString, conflictResolution, options)
         } catch (e: Exception) {
             Log.e(TAG, "Import failed", e)
             ImportResult(error = e.message ?: "Import failed")
@@ -209,9 +270,10 @@ class SettingsExportManager(private val context: Context) {
      */
     suspend fun importFromParsed(
         parsed: ParsedImport,
-        conflictResolution: ConflictResolution = ConflictResolution.SKIP
+        conflictResolution: ConflictResolution = ConflictResolution.SKIP,
+        options: ImportOptions = ImportOptions()
     ): ImportResult {
-        return importFromJson(parsed.jsonString, conflictResolution)
+        return importFromJson(parsed.jsonString, conflictResolution, options)
     }
 
     /**
@@ -219,19 +281,22 @@ class SettingsExportManager(private val context: Context) {
      */
     suspend fun importFromJson(
         jsonString: String,
-        conflictResolution: ConflictResolution = ConflictResolution.SKIP
+        conflictResolution: ConflictResolution = ConflictResolution.SKIP,
+        options: ImportOptions = ImportOptions()
     ): ImportResult = withContext(Dispatchers.IO) {
         try {
             val exported = json.decodeFromString<ExportedSettings>(jsonString)
 
             // Apply global settings
-            val appSettings = AppSettings(context)
-            appSettings.themeId = exported.global.themeId
-            appSettings.uiScale = exported.global.uiScale
-            appSettings.isDevMode = exported.global.isDevMode
-            appSettings.epgAutoRefreshEnabled = exported.global.epgAutoRefreshEnabled
-            appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
-            appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
+            if (options.importGlobalSettings) {
+                val appSettings = AppSettings(context)
+                appSettings.themeId = exported.global.themeId
+                appSettings.uiScale = exported.global.uiScale
+                appSettings.isDevMode = exported.global.isDevMode
+                appSettings.epgAutoRefreshEnabled = exported.global.epgAutoRefreshEnabled
+                appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
+                appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
+            }
 
             // Import providers
             val providerRepo = ProviderRepository(context)
@@ -240,93 +305,142 @@ class SettingsExportManager(private val context: Context) {
             var providersUpdated = 0
             var providersSkipped = 0
 
-            for (ep in exported.providers) {
-                val existing = existingProviders.find { it.name == ep.name }
-                if (existing != null) {
-                    when (conflictResolution) {
-                        ConflictResolution.SKIP -> {
-                            providersSkipped++
-                        }
-                        ConflictResolution.OVERWRITE -> {
-                            // Update existing provider's URL, username, type, config, settings
-                            providerRepo.updateProvider(
-                                id = existing.id,
-                                name = ep.name,
-                                url = ep.url,
-                                username = ep.username,
-                                password = "", // Passwords not exported
-                                type = ep.type,
-                                config = ep.config
-                            )
-                            if (ep.providerSettings != "{}") {
-                                try {
-                                    val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
-                                    providerRepo.updateProviderSettings(existing.id, settings)
-                                } catch (_: Exception) { }
+            if (options.importProviders) {
+                for (ep in exported.providers) {
+                    val existing = existingProviders.find { it.name == ep.name }
+                    if (existing != null) {
+                        when (conflictResolution) {
+                            ConflictResolution.SKIP -> {
+                                providersSkipped++
                             }
-                            providersUpdated++
+                            ConflictResolution.OVERWRITE -> {
+                                // Update existing provider's URL, username, type, config, settings
+                                providerRepo.updateProvider(
+                                    id = existing.id,
+                                    name = ep.name,
+                                    url = ep.url,
+                                    username = ep.username,
+                                    password = "", // Passwords not exported
+                                    type = ep.type,
+                                    config = ep.config
+                                )
+                                if (ep.providerSettings != "{}") {
+                                    try {
+                                        val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
+                                        providerRepo.updateProviderSettings(existing.id, settings)
+                                    } catch (_: Exception) { }
+                                }
+                                providersUpdated++
+                            }
+                            ConflictResolution.DUPLICATE -> {
+                                // Add as new provider with "(imported)" suffix
+                                addNewProvider(providerRepo, ep.copy(name = "${ep.name} (imported)"))
+                                providersAdded++
+                            }
                         }
-                        ConflictResolution.DUPLICATE -> {
-                            // Add as new provider with "(imported)" suffix
-                            addNewProvider(providerRepo, ep.copy(name = "${ep.name} (imported)"))
-                            providersAdded++
-                        }
+                        continue
                     }
-                    continue
+                    addNewProvider(providerRepo, ep)
+                    providersAdded++
                 }
-                addNewProvider(providerRepo, ep)
-                providersAdded++
-            }
 
-            // If we had an active provider in the export and none is currently active, activate the matching one
-            val activeExport = exported.providers.find { it.isActive }
-            if (activeExport != null) {
-                val currentActive = providerRepo.getActiveProvider()
-                if (currentActive == null) {
-                    val allProviders = providerRepo.getAllProvidersList()
-                    val matching = allProviders.find { it.name == activeExport.name && it.url == activeExport.url }
-                        ?: allProviders.find { it.name == "${activeExport.name} (imported)" }
-                    if (matching != null) {
-                        providerRepo.setActiveProvider(matching.id)
+                // If we had an active provider in the export and none is currently active, activate the matching one
+                val activeExport = exported.providers.find { it.isActive }
+                if (activeExport != null) {
+                    val currentActive = providerRepo.getActiveProvider()
+                    if (currentActive == null) {
+                        val allProviders = providerRepo.getAllProvidersList()
+                        val matching = allProviders.find { it.name == activeExport.name && it.url == activeExport.url }
+                            ?: allProviders.find { it.name == "${activeExport.name} (imported)" }
+                        if (matching != null) {
+                            providerRepo.setActiveProvider(matching.id)
+                        }
                     }
                 }
             }
 
             // Import EPG sources (merge: add new, skip existing by URL)
-            val epgDb = EpgIndexDatabase.getInstance(context)
-            val sourceDao = epgDb.epgSourceDao()
-            val existingSources = sourceDao.getAllSourcesOnce()
             var sourcesAdded = 0
             var sourcesSkipped = 0
 
-            Log.d(TAG, "EPG import: ${exported.epgSources.size} sources in file, ${existingSources.size} existing in DB")
-            for (es in exported.epgSources) {
-                val exists = existingSources.any { it.url == es.url }
-                if (exists) {
-                    Log.d(TAG, "EPG source already exists, skipping: ${es.url}")
-                    sourcesSkipped++
-                    continue
-                }
-                Log.d(TAG, "EPG source inserting: ${es.url} (label=${es.label})")
-                sourceDao.insertSource(
-                    EpgSourceEntity(
-                        url = es.url,
-                        label = es.label,
-                        timezoneOffsetHours = es.timezoneOffsetHours,
-                        enabled = es.enabled
+            if (options.importEpgSources) {
+                val epgDb = EpgIndexDatabase.getInstance(context)
+                val sourceDao = epgDb.epgSourceDao()
+                val existingSources = sourceDao.getAllSourcesOnce()
+
+                Log.d(TAG, "EPG import: ${exported.epgSources.size} sources in file, ${existingSources.size} existing in DB")
+                for (es in exported.epgSources) {
+                    val exists = existingSources.any { it.url == es.url }
+                    if (exists) {
+                        Log.d(TAG, "EPG source already exists, skipping: ${es.url}")
+                        sourcesSkipped++
+                        continue
+                    }
+                    Log.d(TAG, "EPG source inserting: ${es.url} (label=${es.label})")
+                    sourceDao.insertSource(
+                        EpgSourceEntity(
+                            url = es.url,
+                            label = es.label,
+                            timezoneOffsetHours = es.timezoneOffsetHours,
+                            enabled = es.enabled
+                        )
                     )
-                )
-                sourcesAdded++
+                    sourcesAdded++
+                }
             }
 
-            Log.d(TAG, "Import complete: $providersAdded added, $providersUpdated updated, $providersSkipped skipped, $sourcesAdded EPG sources added")
+            // Import favorites per provider (match by name + URL)
+            var favoritesRestored = 0
+
+            if (options.importFavorites && exported.providerFavorites.isNotEmpty()) {
+                val allProviders = providerRepo.getAllProvidersList()
+                for (pf in exported.providerFavorites) {
+                    val matchingProvider = allProviders.find { it.name == pf.providerName && it.url == pf.providerUrl }
+                        ?: allProviders.find { it.name == pf.providerName }
+                        ?: continue
+                    val cachePrefs = context.getSharedPreferences(
+                        "media_cache_${matchingProvider.id}",
+                        Context.MODE_PRIVATE
+                    )
+                    // Merge with existing favorites (don't overwrite)
+                    val existingJson = cachePrefs.getString(KEY_FAVORITES, null)
+                    val existingFavorites = if (existingJson != null) {
+                        try {
+                            json.decodeFromString<List<FavoriteItem>>(existingJson)
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    } else {
+                        emptyList()
+                    }
+                    val existingKeys = existingFavorites.map { "${it.itemId}::${it.contentType}" }.toSet()
+                    val newFavorites = pf.favorites
+                        .filter { "${it.itemId}::${it.contentType}" !in existingKeys }
+                        .map { fav ->
+                            FavoriteItem(
+                                itemId = fav.itemId,
+                                itemName = fav.itemName,
+                                categoryId = fav.categoryId,
+                                contentType = fav.contentType
+                            )
+                        }
+                    if (newFavorites.isNotEmpty()) {
+                        val merged = existingFavorites + newFavorites
+                        cachePrefs.edit().putString(KEY_FAVORITES, json.encodeToString(merged)).apply()
+                        favoritesRestored += newFavorites.size
+                    }
+                }
+            }
+
+            Log.d(TAG, "Import complete: $providersAdded added, $providersUpdated updated, $providersSkipped skipped, $sourcesAdded EPG sources added, $favoritesRestored favorites restored")
 
             ImportResult(
                 providersAdded = providersAdded,
                 providersUpdated = providersUpdated,
                 providersSkipped = providersSkipped,
                 epgSourcesAdded = sourcesAdded,
-                epgSourcesSkipped = sourcesSkipped
+                epgSourcesSkipped = sourcesSkipped,
+                favoritesRestored = favoritesRestored
             )
         } catch (e: kotlinx.serialization.SerializationException) {
             Log.e(TAG, "Invalid settings file format", e)
@@ -364,6 +478,7 @@ class SettingsExportManager(private val context: Context) {
         val providersSkipped: Int = 0,
         val epgSourcesAdded: Int = 0,
         val epgSourcesSkipped: Int = 0,
+        val favoritesRestored: Int = 0,
         val error: String? = null
     ) {
         val isSuccess: Boolean get() = error == null
@@ -376,6 +491,7 @@ class SettingsExportManager(private val context: Context) {
             if (providersSkipped > 0) parts.add("$providersSkipped provider(s) skipped")
             if (epgSourcesAdded > 0) parts.add("$epgSourcesAdded EPG source(s) added")
             if (epgSourcesSkipped > 0) parts.add("$epgSourcesSkipped EPG source(s) already existed")
+            if (favoritesRestored > 0) parts.add("$favoritesRestored favorite(s) restored")
             if (parts.isEmpty()) parts.add("Settings updated")
             if (providersAdded > 0) parts.add("Passwords must be re-entered in provider settings")
             return parts.joinToString(". ") + "."
