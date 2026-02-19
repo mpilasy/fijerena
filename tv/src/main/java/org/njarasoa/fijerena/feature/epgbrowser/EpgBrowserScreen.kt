@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.epgbrowser
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,7 +60,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
@@ -421,6 +425,10 @@ private fun ProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, 
 
 @Composable
 private fun AiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
+    val nowEpoch = remember { System.currentTimeMillis() / 1000L }
+    val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
+    val isSoon = !isOnAir && airing.startEpoch > nowEpoch && (airing.startEpoch - nowEpoch) <= 7200L
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -446,10 +454,22 @@ private fun AiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sour
                 )
             }
         }
+        if (isOnAir || isSoon) {
+            val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
+            val badgeLabel = if (isOnAir) "ON AIR" else "SOON"
+            Text(
+                text = badgeLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = CinemaBackground,
+                modifier = Modifier
+                    .background(badgeColor, RoundedCornerShape(CornerRadius.small))
+                    .padding(horizontal = Spacing.xs, vertical = Spacing.xxs)
+            )
+        }
         Text(
             text = formatAiringTime(airing.startEpoch, airing.endEpoch),
             style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextSecondary
+            color = if (isOnAir) CinemaSuccess else if (isSoon) CinemaWarning else CinemaTextSecondary
         )
     }
 }
