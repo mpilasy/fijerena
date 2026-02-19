@@ -84,6 +84,12 @@ fun MobileSettingsScreen(
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingParsedImport by remember { mutableStateOf<SettingsExportManager.ParsedImport?>(null) }
     var showConflictDialog by remember { mutableStateOf(false) }
+    var showImportOptionsDialog by remember { mutableStateOf(false) }
+
+    // Import options
+    var importProviders by remember { mutableStateOf(true) }
+    var importEpg by remember { mutableStateOf(true) }
+    var importGlobal by remember { mutableStateOf(true) }
 
     // SAF launcher for export (create file)
     val exportLauncher = rememberLauncherForActivityResult(
@@ -108,29 +114,76 @@ fun MobileSettingsScreen(
         val uri = pendingImportUri ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportUri(uri)
         parseResult.onSuccess { parsed ->
+            pendingParsedImport = parsed
             if (parsed.hasConflicts) {
-                pendingParsedImport = parsed
                 showConflictDialog = true
             } else {
-                // No conflicts — import directly
-                val result = exportManager.importFromParsed(parsed)
-                exportImportMessage = result.toSummary()
-                if (result.isSuccess) {
-                    selectedThemeId = appSettings.themeId
-                    onThemeChanged(appSettings.themeId)
-                    isDevMode = appSettings.isDevMode
-                    val activeProvider = providerRepo.getActiveProvider()
-                    providerName = activeProvider?.name ?: "No provider"
-                    currentUrl = activeProvider?.url ?: ""
-                    currentUsername = activeProvider?.username ?: ""
-                    activeProviderId = activeProvider?.id
-                    epgRefreshTrigger++
-                }
+                showImportOptionsDialog = true
             }
         }.onFailure { e ->
             exportImportMessage = "Import failed: ${e.message}"
         }
         pendingImportUri = null
+    }
+
+    // Import options dialog (when no conflicts)
+    if (showImportOptionsDialog && pendingParsedImport != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showImportOptionsDialog = false
+                pendingParsedImport = null
+            },
+            title = { Text("Import Options") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                    Text("Select what you want to import:")
+                    ImportCheckboxRow("Providers & Favorites", importProviders) { importProviders = it }
+                    ImportCheckboxRow("EPG Sources", importEpg) { importEpg = it }
+                    ImportCheckboxRow("General Settings", importGlobal) { importGlobal = it }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showImportOptionsDialog = false
+                        val parsed = pendingParsedImport!!
+                        pendingParsedImport = null
+                        coroutineScope.launch {
+                            val result = exportManager.importFromParsed(
+                                parsed = parsed,
+                                conflictResolution = SettingsExportManager.ConflictResolution.SKIP,
+                                importGlobal = importGlobal,
+                                importProviders = importProviders,
+                                importEpg = importEpg
+                            )
+                            exportImportMessage = result.toSummary()
+                            if (result.isSuccess) {
+                                selectedThemeId = appSettings.themeId
+                                onThemeChanged(appSettings.themeId)
+                                isDevMode = appSettings.isDevMode
+                                val activeProvider = providerRepo.getActiveProvider()
+                                providerName = activeProvider?.name ?: "No provider"
+                                currentUrl = activeProvider?.url ?: ""
+                                currentUsername = activeProvider?.username ?: ""
+                                activeProviderId = activeProvider?.id
+                                epgRefreshTrigger++
+                            }
+                        }
+                    },
+                    enabled = importProviders || importEpg || importGlobal
+                ) {
+                    Text("Import")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = {
+                    showImportOptionsDialog = false
+                    pendingParsedImport = null
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Conflict resolution dialog
@@ -143,77 +196,119 @@ fun MobileSettingsScreen(
             },
             title = { Text("Provider Conflict") },
             text = {
-                Text(
-                    "The following provider(s) already exist:\n\n" +
-                        conflicts.joinToString("\n") { "• $it" } +
-                        "\n\nWhat would you like to do?"
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                    Text(
+                        "The following provider(s) already exist:\n" +
+                            conflicts.joinToString(", ") +
+                            "\n\nWhat would you like to do with conflicting providers?"
+                    )
+                    HorizontalDivider()
+                    Text("Also import:", style = MaterialTheme.typography.labelLarge)
+                    ImportCheckboxRow("EPG Sources", importEpg) { importEpg = it }
+                    ImportCheckboxRow("General Settings", importGlobal) { importGlobal = it }
+                }
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                    Button(onClick = {
-                        showConflictDialog = false
-                        val parsed = pendingParsedImport!!
-                        pendingParsedImport = null
-                        coroutineScope.launch {
-                            val result = exportManager.importFromParsed(parsed, SettingsExportManager.ConflictResolution.OVERWRITE)
-                            exportImportMessage = result.toSummary()
-                            if (result.isSuccess) {
-                                selectedThemeId = appSettings.themeId
-                                onThemeChanged(appSettings.themeId)
-                                isDevMode = appSettings.isDevMode
-                                val activeProvider = providerRepo.getActiveProvider()
-                                providerName = activeProvider?.name ?: "No provider"
-                                currentUrl = activeProvider?.url ?: ""
-                                currentUsername = activeProvider?.username ?: ""
-                                activeProviderId = activeProvider?.id
-                                epgRefreshTrigger++
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                ) {
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            showConflictDialog = false
+                            val parsed = pendingParsedImport!!
+                            pendingParsedImport = null
+                            coroutineScope.launch {
+                                val result = exportManager.importFromParsed(
+                                    parsed = parsed,
+                                    conflictResolution = SettingsExportManager.ConflictResolution.OVERWRITE,
+                                    importGlobal = importGlobal,
+                                    importProviders = true,
+                                    importEpg = importEpg
+                                )
+                                exportImportMessage = result.toSummary()
+                                if (result.isSuccess) {
+                                    selectedThemeId = appSettings.themeId
+                                    onThemeChanged(appSettings.themeId)
+                                    isDevMode = appSettings.isDevMode
+                                    val activeProvider = providerRepo.getActiveProvider()
+                                    providerName = activeProvider?.name ?: "No provider"
+                                    currentUrl = activeProvider?.url ?: ""
+                                    currentUsername = activeProvider?.username ?: ""
+                                    activeProviderId = activeProvider?.id
+                                    epgRefreshTrigger++
+                                }
                             }
                         }
-                    }) { Text("Overwrite") }
-                    Button(onClick = {
-                        showConflictDialog = false
-                        val parsed = pendingParsedImport!!
-                        pendingParsedImport = null
-                        coroutineScope.launch {
-                            val result = exportManager.importFromParsed(parsed, SettingsExportManager.ConflictResolution.DUPLICATE)
-                            exportImportMessage = result.toSummary()
-                            if (result.isSuccess) {
-                                selectedThemeId = appSettings.themeId
-                                onThemeChanged(appSettings.themeId)
-                                isDevMode = appSettings.isDevMode
-                                val activeProvider = providerRepo.getActiveProvider()
-                                providerName = activeProvider?.name ?: "No provider"
-                                currentUrl = activeProvider?.url ?: ""
-                                currentUsername = activeProvider?.username ?: ""
-                                activeProviderId = activeProvider?.id
-                                epgRefreshTrigger++
+                    ) { Text("Overwrite Existing") }
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            showConflictDialog = false
+                            val parsed = pendingParsedImport!!
+                            pendingParsedImport = null
+                            coroutineScope.launch {
+                                val result = exportManager.importFromParsed(
+                                    parsed = parsed,
+                                    conflictResolution = SettingsExportManager.ConflictResolution.DUPLICATE,
+                                    importGlobal = importGlobal,
+                                    importProviders = true,
+                                    importEpg = importEpg
+                                )
+                                exportImportMessage = result.toSummary()
+                                if (result.isSuccess) {
+                                    selectedThemeId = appSettings.themeId
+                                    onThemeChanged(appSettings.themeId)
+                                    isDevMode = appSettings.isDevMode
+                                    val activeProvider = providerRepo.getActiveProvider()
+                                    providerName = activeProvider?.name ?: "No provider"
+                                    currentUrl = activeProvider?.url ?: ""
+                                    currentUsername = activeProvider?.username ?: ""
+                                    activeProviderId = activeProvider?.id
+                                    epgRefreshTrigger++
+                                }
                             }
                         }
-                    }) { Text("Duplicate") }
+                    ) { Text("Keep Both (Duplicate)") }
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            showConflictDialog = false
+                            val parsed = pendingParsedImport!!
+                            pendingParsedImport = null
+                            coroutineScope.launch {
+                                val result = exportManager.importFromParsed(
+                                    parsed = parsed,
+                                    conflictResolution = SettingsExportManager.ConflictResolution.SKIP,
+                                    importGlobal = importGlobal,
+                                    importProviders = true,
+                                    importEpg = importEpg
+                                )
+                                exportImportMessage = result.toSummary()
+                                if (result.isSuccess) {
+                                    selectedThemeId = appSettings.themeId
+                                    onThemeChanged(appSettings.themeId)
+                                    isDevMode = appSettings.isDevMode
+                                    val activeProvider = providerRepo.getActiveProvider()
+                                    providerName = activeProvider?.name ?: "No provider"
+                                    currentUrl = activeProvider?.url ?: ""
+                                    currentUsername = activeProvider?.username ?: ""
+                                    activeProviderId = activeProvider?.id
+                                    epgRefreshTrigger++
+                                }
+                            }
+                        }
+                    ) { Text("Skip Existing") }
                 }
             },
             dismissButton = {
-                Button(onClick = {
+                OutlinedButton(onClick = {
                     showConflictDialog = false
-                    val parsed = pendingParsedImport!!
                     pendingParsedImport = null
-                    coroutineScope.launch {
-                        val result = exportManager.importFromParsed(parsed, SettingsExportManager.ConflictResolution.SKIP)
-                        exportImportMessage = result.toSummary()
-                        if (result.isSuccess) {
-                            selectedThemeId = appSettings.themeId
-                            onThemeChanged(appSettings.themeId)
-                            isDevMode = appSettings.isDevMode
-                            val activeProvider = providerRepo.getActiveProvider()
-                            providerName = activeProvider?.name ?: "No provider"
-                            currentUrl = activeProvider?.url ?: ""
-                            currentUsername = activeProvider?.username ?: ""
-                            activeProviderId = activeProvider?.id
-                            epgRefreshTrigger++
-                        }
-                    }
-                }) { Text("Skip") }
+                }) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -519,6 +614,22 @@ fun MobileSettingsScreen(
         }
     }
 
+}
+
+@Composable
+private fun ImportCheckboxRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+    }
 }
 
 @Composable

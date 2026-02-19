@@ -67,7 +67,8 @@ class SettingsExportManager(private val context: Context) {
         val type: String,
         val config: String = "",
         val providerSettings: String = "{}",
-        val isActive: Boolean = false
+        val isActive: Boolean = false,
+        val favorites: String = "[]"
     )
 
     @Serializable
@@ -111,6 +112,9 @@ class SettingsExportManager(private val context: Context) {
         )
 
         val providers = providerRepo.getAllProvidersList().map { entity ->
+            val favs = context.getSharedPreferences("media_cache_${entity.id}", Context.MODE_PRIVATE)
+                .getString("favorites_v2", "[]") ?: "[]"
+
             ExportedProvider(
                 name = entity.name,
                 url = entity.url,
@@ -118,7 +122,8 @@ class SettingsExportManager(private val context: Context) {
                 type = entity.type,
                 config = entity.config,
                 providerSettings = entity.providerSettings,
-                isActive = entity.isActive
+                isActive = entity.isActive,
+                favorites = favs
             )
         }
 
@@ -209,9 +214,12 @@ class SettingsExportManager(private val context: Context) {
      */
     suspend fun importFromParsed(
         parsed: ParsedImport,
-        conflictResolution: ConflictResolution = ConflictResolution.SKIP
+        conflictResolution: ConflictResolution = ConflictResolution.SKIP,
+        importGlobal: Boolean = true,
+        importProviders: Boolean = true,
+        importEpg: Boolean = true
     ): ImportResult {
-        return importFromJson(parsed.jsonString, conflictResolution)
+        return importFromJson(parsed.jsonString, conflictResolution, importGlobal, importProviders, importEpg)
     }
 
     /**
@@ -219,104 +227,122 @@ class SettingsExportManager(private val context: Context) {
      */
     suspend fun importFromJson(
         jsonString: String,
-        conflictResolution: ConflictResolution = ConflictResolution.SKIP
+        conflictResolution: ConflictResolution = ConflictResolution.SKIP,
+        importGlobal: Boolean = true,
+        importProviders: Boolean = true,
+        importEpg: Boolean = true
     ): ImportResult = withContext(Dispatchers.IO) {
         try {
             val exported = json.decodeFromString<ExportedSettings>(jsonString)
 
             // Apply global settings
-            val appSettings = AppSettings(context)
-            appSettings.themeId = exported.global.themeId
-            appSettings.uiScale = exported.global.uiScale
-            appSettings.isDevMode = exported.global.isDevMode
-            appSettings.epgAutoRefreshEnabled = exported.global.epgAutoRefreshEnabled
-            appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
-            appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
+            if (importGlobal) {
+                val appSettings = AppSettings(context)
+                appSettings.themeId = exported.global.themeId
+                appSettings.uiScale = exported.global.uiScale
+                appSettings.isDevMode = exported.global.isDevMode
+                appSettings.epgAutoRefreshEnabled = exported.global.epgAutoRefreshEnabled
+                appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
+                appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
+            }
 
             // Import providers
-            val providerRepo = ProviderRepository(context)
-            val existingProviders = providerRepo.getAllProvidersList()
             var providersAdded = 0
             var providersUpdated = 0
             var providersSkipped = 0
 
-            for (ep in exported.providers) {
-                val existing = existingProviders.find { it.name == ep.name }
-                if (existing != null) {
-                    when (conflictResolution) {
-                        ConflictResolution.SKIP -> {
-                            providersSkipped++
-                        }
-                        ConflictResolution.OVERWRITE -> {
-                            // Update existing provider's URL, username, type, config, settings
-                            providerRepo.updateProvider(
-                                id = existing.id,
-                                name = ep.name,
-                                url = ep.url,
-                                username = ep.username,
-                                password = "", // Passwords not exported
-                                type = ep.type,
-                                config = ep.config
-                            )
-                            if (ep.providerSettings != "{}") {
-                                try {
-                                    val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
-                                    providerRepo.updateProviderSettings(existing.id, settings)
-                                } catch (_: Exception) { }
-                            }
-                            providersUpdated++
-                        }
-                        ConflictResolution.DUPLICATE -> {
-                            // Add as new provider with "(imported)" suffix
-                            addNewProvider(providerRepo, ep.copy(name = "${ep.name} (imported)"))
-                            providersAdded++
-                        }
-                    }
-                    continue
-                }
-                addNewProvider(providerRepo, ep)
-                providersAdded++
-            }
+            val providerRepo = ProviderRepository(context)
+            if (importProviders) {
+                val existingProviders = providerRepo.getAllProvidersList()
 
-            // If we had an active provider in the export and none is currently active, activate the matching one
-            val activeExport = exported.providers.find { it.isActive }
-            if (activeExport != null) {
-                val currentActive = providerRepo.getActiveProvider()
-                if (currentActive == null) {
-                    val allProviders = providerRepo.getAllProvidersList()
-                    val matching = allProviders.find { it.name == activeExport.name && it.url == activeExport.url }
-                        ?: allProviders.find { it.name == "${activeExport.name} (imported)" }
-                    if (matching != null) {
-                        providerRepo.setActiveProvider(matching.id)
+                for (ep in exported.providers) {
+                    val existing = existingProviders.find { it.name == ep.name }
+                    if (existing != null) {
+                        when (conflictResolution) {
+                            ConflictResolution.SKIP -> {
+                                providersSkipped++
+                            }
+                            ConflictResolution.OVERWRITE -> {
+                                // Update existing provider's URL, username, type, config, settings
+                                providerRepo.updateProvider(
+                                    id = existing.id,
+                                    name = ep.name,
+                                    url = ep.url,
+                                    username = ep.username,
+                                    password = "", // Passwords not exported
+                                    type = ep.type,
+                                    config = ep.config
+                                )
+                                if (ep.providerSettings != "{}") {
+                                    try {
+                                        val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
+                                        providerRepo.updateProviderSettings(existing.id, settings)
+                                    } catch (_: Exception) { }
+                                }
+                                // Update favorites
+                                if (ep.favorites != "[]") {
+                                    context.getSharedPreferences("media_cache_${existing.id}", Context.MODE_PRIVATE)
+                                        .edit()
+                                        .putString("favorites_v2", ep.favorites)
+                                        .apply()
+                                }
+                                providersUpdated++
+                            }
+                            ConflictResolution.DUPLICATE -> {
+                                // Add as new provider with "(imported)" suffix
+                                addNewProvider(providerRepo, ep.copy(name = "${ep.name} (imported)"))
+                                providersAdded++
+                            }
+                        }
+                        continue
+                    }
+                    addNewProvider(providerRepo, ep)
+                    providersAdded++
+                }
+
+                // If we had an active provider in the export and none is currently active, activate the matching one
+                val activeExport = exported.providers.find { it.isActive }
+                if (activeExport != null) {
+                    val currentActive = providerRepo.getActiveProvider()
+                    if (currentActive == null) {
+                        val allProviders = providerRepo.getAllProvidersList()
+                        val matching = allProviders.find { it.name == activeExport.name && it.url == activeExport.url }
+                            ?: allProviders.find { it.name == "${activeExport.name} (imported)" }
+                        if (matching != null) {
+                            providerRepo.setActiveProvider(matching.id)
+                        }
                     }
                 }
             }
 
             // Import EPG sources (merge: add new, skip existing by URL)
-            val epgDb = EpgIndexDatabase.getInstance(context)
-            val sourceDao = epgDb.epgSourceDao()
-            val existingSources = sourceDao.getAllSourcesOnce()
             var sourcesAdded = 0
             var sourcesSkipped = 0
 
-            Log.d(TAG, "EPG import: ${exported.epgSources.size} sources in file, ${existingSources.size} existing in DB")
-            for (es in exported.epgSources) {
-                val exists = existingSources.any { it.url == es.url }
-                if (exists) {
-                    Log.d(TAG, "EPG source already exists, skipping: ${es.url}")
-                    sourcesSkipped++
-                    continue
-                }
-                Log.d(TAG, "EPG source inserting: ${es.url} (label=${es.label})")
-                sourceDao.insertSource(
-                    EpgSourceEntity(
-                        url = es.url,
-                        label = es.label,
-                        timezoneOffsetHours = es.timezoneOffsetHours,
-                        enabled = es.enabled
+            if (importEpg) {
+                val epgDb = EpgIndexDatabase.getInstance(context)
+                val sourceDao = epgDb.epgSourceDao()
+                val existingSources = sourceDao.getAllSourcesOnce()
+
+                Log.d(TAG, "EPG import: ${exported.epgSources.size} sources in file, ${existingSources.size} existing in DB")
+                for (es in exported.epgSources) {
+                    val exists = existingSources.any { it.url == es.url }
+                    if (exists) {
+                        Log.d(TAG, "EPG source already exists, skipping: ${es.url}")
+                        sourcesSkipped++
+                        continue
+                    }
+                    Log.d(TAG, "EPG source inserting: ${es.url} (label=${es.label})")
+                    sourceDao.insertSource(
+                        EpgSourceEntity(
+                            url = es.url,
+                            label = es.label,
+                            timezoneOffsetHours = es.timezoneOffsetHours,
+                            enabled = es.enabled
+                        )
                     )
-                )
-                sourcesAdded++
+                    sourcesAdded++
+                }
             }
 
             Log.d(TAG, "Import complete: $providersAdded added, $providersUpdated updated, $providersSkipped skipped, $sourcesAdded EPG sources added")
@@ -338,7 +364,7 @@ class SettingsExportManager(private val context: Context) {
     }
 
     private suspend fun addNewProvider(providerRepo: ProviderRepository, ep: ExportedProvider) {
-        providerRepo.addProvider(
+        val newId = providerRepo.addProvider(
             name = ep.name,
             url = ep.url,
             username = ep.username,
@@ -347,14 +373,16 @@ class SettingsExportManager(private val context: Context) {
             config = ep.config
         )
         if (ep.providerSettings != "{}") {
-            val allProviders = providerRepo.getAllProvidersList()
-            val newProvider = allProviders.find { it.name == ep.name && it.url == ep.url }
-            if (newProvider != null) {
-                try {
-                    val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
-                    providerRepo.updateProviderSettings(newProvider.id, settings)
-                } catch (_: Exception) { }
-            }
+            try {
+                val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
+                providerRepo.updateProviderSettings(newId, settings)
+            } catch (_: Exception) { }
+        }
+        if (ep.favorites != "[]") {
+            context.getSharedPreferences("media_cache_$newId", Context.MODE_PRIVATE)
+                .edit()
+                .putString("favorites_v2", ep.favorites)
+                .apply()
         }
     }
 
