@@ -126,6 +126,8 @@ fun SettingsScreen(
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingParsedImport by remember { mutableStateOf<SettingsExportManager.ParsedImport?>(null) }
     var showConflictDialog by remember { mutableStateOf(false) }
+    var showImportOptionsDialog by remember { mutableStateOf(false) }
+    var pendingImportOptions by remember { mutableStateOf(SettingsExportManager.ImportOptions()) }
 
     // SAF launcher for export (create file)
     val exportLauncher = rememberLauncherForActivityResult(
@@ -145,40 +147,127 @@ fun SettingsScreen(
         pendingExportUri = null
     }
 
-    // Parse import file and check for conflicts
+    // Parse import file and show options dialog
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportUri(uri)
         parseResult.onSuccess { parsed ->
-            if (parsed.hasConflicts) {
-                pendingParsedImport = parsed
-                showConflictDialog = true
-            } else {
-                val result = exportManager.importFromParsed(parsed)
-                exportImportMessage = result.toSummary()
-                if (result.isSuccess) {
-                    selectedThemeId = appSettings.themeId
-                    onThemeChanged(appSettings.themeId)
-                    uiScale = appSettings.uiScale
-                    isDevMode = appSettings.isDevMode
-                    val activeProvider = providerRepo.getActiveProvider()
-                    providerName = activeProvider?.name ?: "No provider"
-                    currentUrl = activeProvider?.url ?: ""
-                    currentUsername = activeProvider?.username ?: ""
-                    activeProviderId = activeProvider?.id
-                    epgRefreshTrigger++
-                }
-            }
+            pendingParsedImport = parsed
+            pendingImportOptions = SettingsExportManager.ImportOptions()
+            showImportOptionsDialog = true
         }.onFailure { e ->
             exportImportMessage = "Import failed: ${e.message}"
         }
         pendingImportUri = null
     }
 
+    // Helper to perform import and refresh UI state
+    fun doImport(parsed: SettingsExportManager.ParsedImport, resolution: SettingsExportManager.ConflictResolution, options: SettingsExportManager.ImportOptions) {
+        coroutineScope.launch {
+            val result = exportManager.importFromParsed(parsed, resolution, options)
+            exportImportMessage = result.toSummary()
+            if (result.isSuccess) {
+                if (options.importGlobalSettings) {
+                    selectedThemeId = appSettings.themeId
+                    onThemeChanged(appSettings.themeId)
+                    uiScale = appSettings.uiScale
+                    isDevMode = appSettings.isDevMode
+                }
+                val activeProvider = providerRepo.getActiveProvider()
+                providerName = activeProvider?.name ?: "No provider"
+                currentUrl = activeProvider?.url ?: ""
+                currentUsername = activeProvider?.username ?: ""
+                activeProviderId = activeProvider?.id
+                epgRefreshTrigger++
+            }
+        }
+    }
+
+    // Import options dialog (selective import)
+    if (showImportOptionsDialog && pendingParsedImport != null) {
+        val parsed = pendingParsedImport!!
+        var optProviders by remember { mutableStateOf(pendingImportOptions.importProviders) }
+        var optEpg by remember { mutableStateOf(pendingImportOptions.importEpgSources) }
+        var optGlobal by remember { mutableStateOf(pendingImportOptions.importGlobalSettings) }
+        var optFavorites by remember { mutableStateOf(pendingImportOptions.importFavorites) }
+        AlertDialog(
+            onDismissRequest = {
+                showImportOptionsDialog = false
+                // Only clean up if not transitioning to conflict dialog
+                if (!showConflictDialog) {
+                    pendingParsedImport = null
+                }
+            },
+            title = { Text("Select What to Import") },
+            text = {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = optGlobal, onCheckedChange = { optGlobal = it })
+                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                        Text("General Settings", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    if (parsed.hasProviders) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = optProviders, onCheckedChange = { optProviders = it })
+                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                            Text("Providers (${parsed.settings.providers.size})", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    if (parsed.hasEpgSources) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = optEpg, onCheckedChange = { optEpg = it })
+                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                            Text("EPG Sources (${parsed.settings.epgSources.size})", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    if (parsed.hasFavorites) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = optFavorites, onCheckedChange = { optFavorites = it })
+                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                            Text("Favorites", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                CinemaPrimaryButton(
+                    onClick = {
+                        val options = SettingsExportManager.ImportOptions(
+                            importProviders = optProviders,
+                            importEpgSources = optEpg,
+                            importGlobalSettings = optGlobal,
+                            importFavorites = optFavorites
+                        )
+                        pendingImportOptions = options
+                        val p = pendingParsedImport!!
+                        if (optProviders && parsed.hasConflicts) {
+                            showConflictDialog = true
+                            showImportOptionsDialog = false
+                        } else {
+                            pendingParsedImport = null
+                            showImportOptionsDialog = false
+                            doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
+                        }
+                    },
+                    text = "Import"
+                )
+            },
+            dismissButton = {
+                CinemaSecondaryButton(
+                    onClick = {
+                        showImportOptionsDialog = false
+                        pendingParsedImport = null
+                    },
+                    text = "Cancel"
+                )
+            }
+        )
+    }
+
     // Conflict resolution dialog
     if (showConflictDialog && pendingParsedImport != null) {
         val conflicts = pendingParsedImport!!.conflictingProviders
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = {
                 showConflictDialog = false
                 pendingParsedImport = null
@@ -197,23 +286,9 @@ fun SettingsScreen(
                         onClick = {
                             showConflictDialog = false
                             val parsed = pendingParsedImport!!
+                            val options = pendingImportOptions
                             pendingParsedImport = null
-                            coroutineScope.launch {
-                                val result = exportManager.importFromParsed(parsed, SettingsExportManager.ConflictResolution.OVERWRITE)
-                                exportImportMessage = result.toSummary()
-                                if (result.isSuccess) {
-                                    selectedThemeId = appSettings.themeId
-                                    onThemeChanged(appSettings.themeId)
-                                    uiScale = appSettings.uiScale
-                                    isDevMode = appSettings.isDevMode
-                                    val activeProvider = providerRepo.getActiveProvider()
-                                    providerName = activeProvider?.name ?: "No provider"
-                                    currentUrl = activeProvider?.url ?: ""
-                                    currentUsername = activeProvider?.username ?: ""
-                                    activeProviderId = activeProvider?.id
-                                    epgRefreshTrigger++
-                                }
-                            }
+                            doImport(parsed, SettingsExportManager.ConflictResolution.OVERWRITE, options)
                         },
                         text = "Overwrite"
                     )
@@ -221,23 +296,9 @@ fun SettingsScreen(
                         onClick = {
                             showConflictDialog = false
                             val parsed = pendingParsedImport!!
+                            val options = pendingImportOptions
                             pendingParsedImport = null
-                            coroutineScope.launch {
-                                val result = exportManager.importFromParsed(parsed, SettingsExportManager.ConflictResolution.DUPLICATE)
-                                exportImportMessage = result.toSummary()
-                                if (result.isSuccess) {
-                                    selectedThemeId = appSettings.themeId
-                                    onThemeChanged(appSettings.themeId)
-                                    uiScale = appSettings.uiScale
-                                    isDevMode = appSettings.isDevMode
-                                    val activeProvider = providerRepo.getActiveProvider()
-                                    providerName = activeProvider?.name ?: "No provider"
-                                    currentUrl = activeProvider?.url ?: ""
-                                    currentUsername = activeProvider?.username ?: ""
-                                    activeProviderId = activeProvider?.id
-                                    epgRefreshTrigger++
-                                }
-                            }
+                            doImport(parsed, SettingsExportManager.ConflictResolution.DUPLICATE, options)
                         },
                         text = "Duplicate"
                     )
@@ -248,23 +309,9 @@ fun SettingsScreen(
                     onClick = {
                         showConflictDialog = false
                         val parsed = pendingParsedImport!!
+                        val options = pendingImportOptions
                         pendingParsedImport = null
-                        coroutineScope.launch {
-                            val result = exportManager.importFromParsed(parsed, SettingsExportManager.ConflictResolution.SKIP)
-                            exportImportMessage = result.toSummary()
-                            if (result.isSuccess) {
-                                selectedThemeId = appSettings.themeId
-                                onThemeChanged(appSettings.themeId)
-                                uiScale = appSettings.uiScale
-                                isDevMode = appSettings.isDevMode
-                                val activeProvider = providerRepo.getActiveProvider()
-                                providerName = activeProvider?.name ?: "No provider"
-                                currentUrl = activeProvider?.url ?: ""
-                                currentUsername = activeProvider?.username ?: ""
-                                activeProviderId = activeProvider?.id
-                                epgRefreshTrigger++
-                            }
-                        }
+                        doImport(parsed, SettingsExportManager.ConflictResolution.SKIP, options)
                     },
                     text = "Skip"
                 )
