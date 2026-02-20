@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -26,9 +28,16 @@ fun ChannelListOverlay(
     streams: List<MediaItem>,
     currentStreamTitle: String,
     onStreamSelected: (MediaItem) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    alignment: Alignment = Alignment.CenterEnd
 ) {
     val context = LocalContext.current
+    val focusRequester = remember { FocusRequester() }
+
+    // Request focus when overlay appears
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 
     // Handle back button
     DisposableEffect(Unit) {
@@ -50,7 +59,7 @@ fun ChannelListOverlay(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = CinemaAlpha.overlayHeavy))
             .focusable(), // Capture focus to prevent underlying player controls from receiving events
-        contentAlignment = Alignment.CenterEnd
+        contentAlignment = alignment
     ) {
         Box(
             modifier = Modifier
@@ -87,7 +96,9 @@ fun ChannelListOverlay(
 
                             Button(
                                 onClick = { onStreamSelected(stream) },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
                                 colors = androidx.tv.material3.ButtonDefaults.colors(
                                     containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
                                     else CinemaSurfaceVariant,

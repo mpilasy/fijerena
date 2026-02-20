@@ -512,7 +512,8 @@ fun PlayerScreen(
                     onPlayStream(it)
                     showCategoryOverlay = false
                 },
-                onDismiss = { showCategoryOverlay = false }
+                onDismiss = { showCategoryOverlay = false },
+                alignment = Alignment.CenterStart
             )
         }
 
@@ -526,7 +527,8 @@ fun PlayerScreen(
                     onPlayStream(it)
                     showLastWatchedOverlay = false
                 },
-                onDismiss = { showLastWatchedOverlay = false }
+                onDismiss = { showLastWatchedOverlay = false },
+                alignment = Alignment.CenterEnd
             )
         }
 
@@ -2094,8 +2096,8 @@ private fun ControlButtonsRow(
     isPaused: Boolean,
     onPause: (() -> Unit)?,
     onResume: (() -> Unit)?,
-    onFastForward: (() -> Unit)?,
-    onRewind: (() -> Unit)?,
+    onFastForward: (() -> Unit)? = null,
+    onRewind: (() -> Unit)? = null,
     hasMultipleAudioTracks: Boolean,
     onAudioTrack: (() -> Unit)?,
     hasSubtitles: Boolean,
