@@ -9,12 +9,14 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -74,6 +76,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.Button
@@ -585,6 +588,7 @@ fun PlayerScreen(
                 title = "Last Watched",
                 streams = lastWatchedStreams,
                 panelAlignment = Alignment.CenterEnd,
+                emptyMessage = "No recently watched channels yet",
                 onSelect = { item ->
                     showLastWatchedOverlay = false
                     onStreamSelected?.invoke(item)
@@ -710,7 +714,8 @@ private fun ChannelListOverlay(
     streams: List<MediaItem>,
     onSelect: (MediaItem) -> Unit,
     onDismiss: () -> Unit,
-    panelAlignment: Alignment = Alignment.CenterStart
+    panelAlignment: Alignment = Alignment.CenterStart,
+    emptyMessage: String = "No channels"
 ) {
     val focusRequester = remember { FocusRequester() }
 
@@ -724,12 +729,14 @@ private fun ChannelListOverlay(
         GlassPanel(
             modifier = Modifier
                 .align(panelAlignment)
-                .width(TvDimensions.dialogWidthLarge)
+                .width(TvDimensions.channelOverlayWidth)
+                .fillMaxHeight()
                 .padding(Spacing.xxl),
             backgroundAlpha = 0.5f
         ) {
             Column(
                 modifier = Modifier
+                    .fillMaxSize()
                     .padding(Spacing.lg)
                     .focusRequester(focusRequester)
                     .focusable()
@@ -749,25 +756,29 @@ private fun ChannelListOverlay(
                 )
                 if (streams.isEmpty()) {
                     Text(
-                        text = "Loading channels…",
+                        text = emptyMessage,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
                     )
                 } else {
-                    TvLazyRow(
-                        modifier = Modifier.fillMaxWidth()
+                    TvLazyColumn(
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         items(streams) { stream ->
-                            Button(
-                                onClick = { onSelect(stream) },
-                                modifier = Modifier.padding(horizontal = Spacing.xs)
-                            ) {
-                                Text(
-                                    text = stream.name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1
-                                )
-                            }
+                            Text(
+                                text = stream.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelect(stream) }
+                                    .padding(
+                                        horizontal = Spacing.sm,
+                                        vertical = Spacing.xs
+                                    )
+                            )
                         }
                     }
                 }

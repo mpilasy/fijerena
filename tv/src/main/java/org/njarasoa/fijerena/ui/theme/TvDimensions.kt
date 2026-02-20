@@ -17,6 +17,7 @@ object TvDimensions {
     val dialogWidth: Dp = 600.dp
     val dialogWidthLarge: Dp = 700.dp
     val selectionListWidth: Dp = 200.dp
+    val channelOverlayWidth: Dp = 320.dp
     val audioTrackSelectorWidth: Dp = 140.dp
     val settingsInputWidth: Dp = 200.dp
 
