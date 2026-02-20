@@ -5,16 +5,18 @@ package org.njarasoa.fijerena.core.player.source
 import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
-import okhttp3.CacheControl
-import org.njarasoa.fijerena.core.player.network.OkHttpProvider
+import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
+import org.njarasoa.fijerena.core.player.config.NetworkType
+import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
 object StreamingMediaSourceFactory {
 
     /**
-     * Creates a network-aware MediaSource using a shared OkHttp client for connection pooling.
+     * Creates a network-aware MediaSource using DefaultHttpDataSource.
+     * Reverts to standard Java connection handling for better compatibility and speed on some networks.
      */
     fun createMediaSource(
         context: Context,
@@ -23,21 +25,32 @@ object StreamingMediaSourceFactory {
         isLive: Boolean = false,
         onRetry: (() -> Unit)? = null
     ): MediaSource {
+        val isCellular = NetworkMonitor.currentNetworkType == NetworkType.CELLULAR
         val mediaItem = MediaItem.Builder()
             .setUri(streamUrl)
             .build()
 
-        // Create OkHttpDataSource.Factory using the shared OkHttpClient
-        // This enables connection pooling (Keep-Alive) across segments and streams
-        // Set a default User-Agent to ensure compatibility with providers that block generic/unknown UAs
+        // Network-aware HTTP timeouts
+        val connectTimeout = if (isCellular)
+            NetworkBufferProfile.CELLULAR_CONNECT_TIMEOUT_MS
+        else
+            NetworkBufferProfile.WIFI_CONNECT_TIMEOUT_MS
+        val readTimeout = if (isCellular)
+            NetworkBufferProfile.CELLULAR_READ_TIMEOUT_MS
+        else
+            NetworkBufferProfile.WIFI_READ_TIMEOUT_MS
+
         val userAgent = "FijerenaPlayer/1.0 (Android)"
-        val okHttpDataSourceFactory = OkHttpDataSource.Factory(OkHttpProvider.instance)
+
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setConnectTimeoutMs(connectTimeout)
+            .setReadTimeoutMs(readTimeout)
+            .setAllowCrossProtocolRedirects(true)
             .setUserAgent(userAgent)
             .setDefaultRequestProperties(headers)
 
         // Wrap in DefaultDataSource.Factory to support file://, asset://, etc if needed
-        // (though this factory is specifically for 'Streaming', so mostly HTTP)
-        val dataSourceFactory = DefaultDataSource.Factory(context, okHttpDataSourceFactory)
+        val dataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
 
         val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
 
