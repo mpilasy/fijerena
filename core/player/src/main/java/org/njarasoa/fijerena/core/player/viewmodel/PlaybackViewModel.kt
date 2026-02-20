@@ -48,26 +48,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            // Set error flag to prevent state from being overwritten
             isInErrorState = true
-            // Error handling is done in the service, but we also update state here
-            // to ensure the error is displayed even if service flow isn't collected yet
-            val errorMessage = when (error.errorCode) {
-                PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
-                PlaybackException.ERROR_CODE_DECODING_FAILED,
-                PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
-                PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED -> {
-                    "Video format not supported on this device"
-                }
-                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> {
-                    "Network connection failed"
-                }
-                else -> {
-                    "Playback error occurred"
-                }
+            // Service handles the specific error message and propagates it via flow
+            // (observeServiceState collects service.playbackState).
+            // Only set a fallback here if the service isn't reachable.
+            if (StreamingPlaybackService.getInstance() == null) {
+                _playbackState.value = PlaybackState.Error("Playback error occurred", error)
             }
-            _playbackState.value = PlaybackState.Error(errorMessage, error)
         }
 
         private fun updatePlaybackState() {
