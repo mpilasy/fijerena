@@ -7,6 +7,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Database(
     entities = [
@@ -55,14 +58,23 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                 .fallbackToDestructiveMigration(true)
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
-                        val cursor = db.query("PRAGMA auto_vacuum")
-                        val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
-                        cursor.close()
-                        if (currentMode == 2) return
-                        Log.d(TAG, "Enabling incremental auto_vacuum (current mode=$currentMode)")
-                        db.execSQL("PRAGMA auto_vacuum = INCREMENTAL")
-                        db.execSQL("VACUUM")
-                        Log.d(TAG, "One-time VACUUM complete, auto_vacuum now INCREMENTAL")
+                        // Run heavy maintenance on a background thread to avoid ANRs during startup
+                        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
+                        scope.launch {
+                            try {
+                                val cursor = db.query("PRAGMA auto_vacuum")
+                                val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
+                                cursor.close()
+                                if (currentMode != 2) { // 2 = INCREMENTAL
+                                    Log.d(TAG, "Enabling incremental auto_vacuum (current mode=$currentMode)")
+                                    db.execSQL("PRAGMA auto_vacuum = INCREMENTAL")
+                                    db.execSQL("VACUUM")
+                                    Log.d(TAG, "One-time VACUUM complete, auto_vacuum now INCREMENTAL")
+                                }
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Failed to run DB maintenance", e)
+                            }
+                        }
                     }
                 })
                 .build()
