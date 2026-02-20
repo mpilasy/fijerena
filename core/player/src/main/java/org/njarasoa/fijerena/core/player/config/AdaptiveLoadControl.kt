@@ -87,9 +87,10 @@ class AdaptiveLoadControl(
             .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
             .setBackBuffer(backBuffer, retainKeyframe)
 
-        if (!isWifi) {
-            builder.setPrioritizeTimeOverSizeThresholds(true)
-        }
+        // Remove prioritizeTimeOverSizeThresholds override.
+        // Let DefaultLoadControl use its default logic (target buffer bytes ~130MB for video)
+        // to prevent buffer bloat while respecting the time durations we set above.
+        // This ensures we don't try to buffer infinitely on slow networks if the size gets too large.
 
         return builder.build()
     }
