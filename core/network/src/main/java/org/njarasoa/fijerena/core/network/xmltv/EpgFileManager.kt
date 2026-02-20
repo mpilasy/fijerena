@@ -8,6 +8,8 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.utils.io.jvm.javaio.toInputStream
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -144,6 +146,13 @@ class EpgFileManager private constructor(private val context: Context) {
             }
         }
     }
+
+    private val okHttpClient = OkHttpClient.Builder()
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .connectTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.MINUTES)
+        .build()
 
     private fun isFixedDevice(): Boolean {
         val type = DeviceDetector.detect().deviceType
@@ -442,16 +451,17 @@ class EpgFileManager private constructor(private val context: Context) {
             try {
                 Log.d(TAG, "Streaming EPG from: ${source.url} (attempt $attempt/$MAX_RETRIES)")
 
-                httpClient.prepareGet(source.url).execute { response ->
-                    val statusCode = response.status.value
-                    if (statusCode !in 200..299) {
+                val request = Request.Builder().url(source.url).build()
+                okHttpClient.newCall(request).execute().use { response ->
+                    val statusCode = response.code
+                    if (!response.isSuccessful) {
                         lastError = "server returned HTTP $statusCode"
                         Log.w(TAG, "EPG streaming: $lastError (attempt $attempt)")
-                        if (statusCode in 400..499) return@execute
-                        return@execute
+                        return@use
                     }
 
-                    val rawStream = response.bodyAsChannel().toInputStream()
+                    val body = response.body ?: throw java.io.IOException("Empty response body")
+                    val rawStream = body.byteStream()
                     val buffered = BufferedInputStream(rawStream, STREAM_BUFFER_SIZE)
                     val stream = if (isGzip) GZIPInputStream(buffered, STREAM_BUFFER_SIZE) else buffered
 
@@ -539,7 +549,7 @@ class EpgFileManager private constructor(private val context: Context) {
 
     /**
      * Mobile path: download to cache file, then ingest from file.
-     * Ktor HttpClient → File → BufferedInputStream → GZIPInputStream (if .gz) → XmlPullParser → DB.
+     * OkHttp → File → BufferedInputStream → GZIPInputStream (if .gz) → XmlPullParser → DB.
      * Temp file deleted after ingestion.
      */
     private suspend fun processSourceDownload(
@@ -570,18 +580,21 @@ class EpgFileManager private constructor(private val context: Context) {
                 try {
                     Log.d(TAG, "Downloading EPG to cache: ${source.url} (attempt $attempt/$MAX_RETRIES)")
 
-                    httpClient.prepareGet(source.url).execute { response ->
-                        val statusCode = response.status.value
-                        if (statusCode !in 200..299) {
+                    val request = Request.Builder().url(source.url).build()
+                    okHttpClient.newCall(request).execute().use { response ->
+                        val statusCode = response.code
+                        if (!response.isSuccessful) {
                             lastError = "server returned HTTP $statusCode"
                             Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
-                            return@execute
+                            return@use
                         }
 
-                        val channel = response.bodyAsChannel()
+                        val body = response.body ?: throw java.io.IOException("Empty response body")
+                        val downloadTotalBytes = body.contentLength()
+                        
                         tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
                             val buffer = ByteArray(STREAM_BUFFER_SIZE)
-                            val input = channel.toInputStream()
+                            val input = body.byteStream()
                             var bytesRead: Int
                             var totalBytes = 0L
                             while (input.read(buffer).also { bytesRead = it } != -1) {
@@ -594,6 +607,7 @@ class EpgFileManager private constructor(private val context: Context) {
                                         totalSources = total,
                                         phase = "Downloading",
                                         downloadedBytes = totalBytes,
+                                        downloadTotalBytes = downloadTotalBytes,
                                         completedSourceStats = completedStats
                                     )
                                 }

@@ -180,7 +180,7 @@ class ProviderRepository(private val context: Context) {
 
     // --- Cache management ---
 
-    fun getCacheStatsForProvider(providerId: Long): XtreamRepository.CacheStats {
+    suspend fun getCacheStatsForProvider(providerId: Long): XtreamRepository.CacheStats {
         // We need an instance of XtreamRepository to get accurate DB stats.
         // Since we don't have dependency injection here, we create a temporary instance.
         // This is safe because XtreamRepository uses singletons (Database) internally.

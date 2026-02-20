@@ -647,7 +647,7 @@ class XtreamRepository(
         val otherSize: Long
     )
 
-    fun getCacheStats(): CacheStats {
+    suspend fun getCacheStats(): CacheStats = withContext(Dispatchers.IO) {
         val liveCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_LIVE)
         val vodCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_VOD)
         val seriesCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_SERIES)
@@ -656,7 +656,7 @@ class XtreamRepository(
         val vodStreamsCount = streamDao.getStreamIds(providerId, XtreamStreamEntity.TYPE_VOD).size
         val seriesCount = seriesDao.getSeriesIds(providerId).size
 
-        return CacheStats(
+        CacheStats(
             totalSize = 0L,
             liveTv = ContentTypeCacheStats(0L, liveCategories.isNotEmpty(), liveStreamsCount),
             movies = ContentTypeCacheStats(0L, vodCategories.isNotEmpty(), vodStreamsCount),
