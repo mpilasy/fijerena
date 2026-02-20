@@ -122,6 +122,7 @@ fun MobilePlayerScreen(
     var currentStreamName by remember { mutableStateOf(streamName) }
     var streamList by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var lastWatchedVersion by remember { mutableIntStateOf(0) }
     var currentStreamIndex by remember { mutableStateOf(0) }
     var showChannelToast by remember { mutableStateOf(false) }
     var showCategoryOverlay by remember { mutableStateOf(false) }
@@ -174,8 +175,8 @@ fun MobilePlayerScreen(
         }
     }
 
-    // Load last watched streams for overlay (Live TV only)
-    LaunchedEffect(Unit) {
+    // Load last watched streams for overlay (Live TV only), refresh after save
+    LaunchedEffect(lastWatchedVersion) {
         if (contentType == "LIVE_TV") {
             lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend(contentType)
         }
@@ -335,6 +336,7 @@ fun MobilePlayerScreen(
             val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
             val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
             mediaRepository.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
+            lastWatchedVersion++
 
             // Determine resume position
             val resumePosition = savedPosition?.let { saved ->
