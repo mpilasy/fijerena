@@ -66,17 +66,12 @@ object PlayerConfigFactory {
                 setMaxVideoSize(maxWidth, maxHeight)
 
                 // Set bitrate constraints
-                val maxBitrate = if (isCellular) {
-                    // Aggressive cap for cellular to prevent buffering/stuttering
-                    1_500_000 // 1.5 Mbps
-                } else {
-                    when (capabilities.deviceType) {
-                        DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                        DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                        DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                        DeviceType.GENERIC_TV -> 10_000_000
-                        DeviceType.GENERIC_MOBILE -> 5_000_000 // 5 Mbps on WiFi
-                    }
+                val maxBitrate = when (capabilities.deviceType) {
+                    DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                    DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                    DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                    DeviceType.GENERIC_TV -> 10_000_000
+                    DeviceType.GENERIC_MOBILE -> 5_000_000
                 }
                 setMaxVideoBitrate(maxBitrate)
 
