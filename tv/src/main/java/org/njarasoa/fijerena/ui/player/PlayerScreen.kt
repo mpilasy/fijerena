@@ -75,10 +75,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.foundation.lazy.list.items
-import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -257,32 +255,31 @@ fun PlayerScreen(
                         }
                         Key.DirectionUp -> {
                             println("PlayerScreen: UP key pressed - showControls=$showControls, isLive=${currentMetadata.isLive}")
-                            // Only change channel if controls are not visible AND content is Live TV
-                            // Stats overlay does NOT prevent channel switching
-                            if (!showControls && currentMetadata.isLive) {
+                            // Let D-pad navigate inside overlays when they are open
+                            if (showCategoryOverlay || showLastWatchedOverlay) {
+                                false
+                            } else if (!showControls && currentMetadata.isLive) {
                                 println("PlayerScreen: Switching to previous channel")
                                 onPreviousChannel()
-                                // Show stream info overlay (not full controls)
                                 showStreamInfo = true
                                 true
                             } else {
                                 println("PlayerScreen: Not switching channel (controls visible or not live)")
-                                // When controls are visible, let D-pad navigate between buttons
                                 false
                             }
                         }
                         Key.DirectionDown -> {
                             println("PlayerScreen: DOWN key pressed - showControls=$showControls, isLive=${currentMetadata.isLive}")
-                            if (!showControls) {
+                            // Let D-pad navigate inside overlays when they are open
+                            if (showCategoryOverlay || showLastWatchedOverlay) {
+                                false
+                            } else if (!showControls) {
                                 if (currentMetadata.isLive) {
-                                    // Live TV: Change channel
                                     println("PlayerScreen: Switching to next channel")
                                     onNextChannel()
-                                    // Show stream info overlay (not full controls)
                                     showStreamInfo = true
                                     true
                                 } else {
-                                    // VOD: Show controls and stream info without pausing
                                     println("PlayerScreen: VOD - Showing controls without pausing")
                                     showControls = true
                                     showStreamInfo = true
@@ -290,7 +287,6 @@ fun PlayerScreen(
                                 }
                             } else {
                                 println("PlayerScreen: Controls visible, letting D-pad navigate")
-                                // When controls are visible, let D-pad navigate between buttons
                                 false
                             }
                         }
@@ -717,18 +713,16 @@ private fun ChannelListOverlay(
     panelAlignment: Alignment = Alignment.CenterStart,
     emptyMessage: String = "No channels"
 ) {
-    val listFocusRequester = remember { FocusRequester() }
+    val focusRequesters = remember(streams) { List(streams.size) { FocusRequester() } }
 
-    // Request focus on the list (or empty message) as soon as the overlay appears
-    LaunchedEffect(Unit) {
-        listFocusRequester.requestFocus()
+    LaunchedEffect(streams) {
+        if (focusRequesters.isNotEmpty()) focusRequesters[0].requestFocus()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = CinemaAlpha.tint))
-            // Back key bubbles up from focused list items to here
             .onKeyEvent { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Back) {
                     onDismiss()
@@ -760,23 +754,21 @@ private fun ChannelListOverlay(
                     Text(
                         text = emptyMessage,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                        modifier = Modifier
-                            .focusRequester(listFocusRequester)
-                            .focusable()
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
                     )
                 } else {
-                    TvLazyColumn(modifier = Modifier.weight(1f)) {
-                        itemsIndexed(streams) { index, stream ->
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+                    ) {
+                        streams.forEachIndexed { index, stream ->
                             Button(
                                 onClick = { onSelect(stream) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = Spacing.xs)
-                                    .then(
-                                        if (index == 0) Modifier.focusRequester(listFocusRequester)
-                                        else Modifier
-                                    )
+                                    .focusRequester(focusRequesters[index])
                             ) {
                                 Text(
                                     text = stream.name,

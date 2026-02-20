@@ -177,8 +177,8 @@ fun TvPlayerScreen(
         )
     }
 
-    // Load last watched streams for overlay (Live TV only)
-    LaunchedEffect(Unit) {
+    // Load last watched streams for overlay (Live TV only), refresh on channel switch
+    LaunchedEffect(currentStreamId) {
         if (contentType == "LIVE_TV") {
             lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend(contentType)
         }
@@ -366,9 +366,10 @@ fun TvPlayerScreen(
                     val index = streamList.indexOfFirst { it.id == item.id }
                     if (index >= 0) {
                         currentStreamIndex = index
-                        currentStreamId = item.id
-                        currentStreamName = item.name
                     }
+                    // Always switch — last-watched items may not be in the current category
+                    currentStreamId = item.id
+                    currentStreamName = item.name
                 },
                 onToggleFavorite = {
                     coroutineScope.launch {
