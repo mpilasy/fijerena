@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -1317,7 +1318,7 @@ class XtreamRepository(
         editor.apply()
     }
 
-    suspend fun syncCategories(type: String) {
+    suspend fun syncCategories(type: String): Deferred<Unit> {
         val task = object : RefreshTask {
             override val id = "xtream_categories_${providerId}_$type"
             override val priority = if (type == XtreamCategoryEntity.TYPE_LIVE) RefreshPriority.MEDIUM else RefreshPriority.LOW
@@ -1375,10 +1376,10 @@ class XtreamRepository(
                  }
             }
         }
-        RefreshQueue.submit(task)
+        return RefreshQueue.submit(task)
     }
 
-    suspend fun syncStreams(type: String) {
+    suspend fun syncStreams(type: String): Deferred<Unit> {
         val task = object : RefreshTask {
             override val id = "xtream_streams_${providerId}_$type"
             override val priority = if (type == XtreamStreamEntity.TYPE_LIVE) RefreshPriority.HIGH else RefreshPriority.LOW
@@ -1436,10 +1437,10 @@ class XtreamRepository(
                  }
             }
         }
-        RefreshQueue.submit(task)
+        return RefreshQueue.submit(task)
     }
 
-    suspend fun syncSeries() {
+    suspend fun syncSeries(): Deferred<Unit> {
         val task = object : RefreshTask {
             override val id = "xtream_series_${providerId}"
             override val priority = RefreshPriority.LOW
@@ -1496,6 +1497,6 @@ class XtreamRepository(
                  }
             }
         }
-        RefreshQueue.submit(task)
+        return RefreshQueue.submit(task)
     }
 }
