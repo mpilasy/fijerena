@@ -65,6 +65,7 @@ fun MobileEpgManagementScreen(
     val processingState by viewModel.processingState.collectAsState()
     val indexState by viewModel.indexState.collectAsState()
     val dbStats by viewModel.dbStats.collectAsState()
+    val queuedTaskIds by viewModel.queuedTaskIds.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
@@ -200,7 +201,10 @@ fun MobileEpgManagementScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val isQueued = queuedTaskIds.contains("epg_refresh_source_${source.id}") || queuedTaskIds.contains("epg_refresh_all")
+
                         val dotColor = when {
+                            isQueued -> androidx.compose.ui.graphics.Color.Yellow
                             !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                             source.lastError != null -> CinemaError
                             source.lastIngestedAtMs > 0 && (System.currentTimeMillis() - source.lastIngestedAtMs) < 24 * 3600 * 1000 -> MaterialTheme.colorScheme.primary
