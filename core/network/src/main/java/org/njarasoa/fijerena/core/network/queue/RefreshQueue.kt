@@ -25,6 +25,9 @@ object RefreshQueue {
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing = _isProcessing.asStateFlow()
 
+    private val _queuedTaskIds = MutableStateFlow<Set<String>>(emptySet())
+    val queuedTaskIds = _queuedTaskIds.asStateFlow()
+
     init {
         startWorker()
     }
@@ -50,6 +53,7 @@ object RefreshQueue {
                 queue.remove(existing)
             }
             queue.add(task)
+            _queuedTaskIds.value = queue.map { it.id }.toSet()
         }
         processChannel.trySend(Unit)
     }
@@ -57,7 +61,11 @@ object RefreshQueue {
     private suspend fun processNext() {
         while (true) {
             val task = queueMutex.withLock {
-                queue.poll()
+                val t = queue.poll()
+                if (t != null) {
+                    _queuedTaskIds.value = queue.map { it.id }.toSet()
+                }
+                t
             } ?: break
 
             _isProcessing.value = true
@@ -78,6 +86,7 @@ object RefreshQueue {
     suspend fun clear() {
         queueMutex.withLock {
             queue.clear()
+            _queuedTaskIds.value = emptySet()
         }
     }
 }
