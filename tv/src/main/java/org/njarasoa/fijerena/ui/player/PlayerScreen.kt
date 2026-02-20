@@ -485,6 +485,8 @@ fun PlayerScreen(
                     isPaused = isPaused,
                     onPause = if (!isPaused && !isLive) ({ viewModel.pause() }) else null,
                     onResume = if (isPaused && !isLive) ({ viewModel.resume() }) else null,
+                    onFastForward = if (!isLive) ({ viewModel.seekRelative(60_000L) }) else null,
+                    onRewind = if (!isLive) ({ viewModel.seekRelative(-30_000L) }) else null,
                     hasMultipleAudioTracks = audioTrackCount > 1,
                     onAudioTrack = { showAudioTrackSelector = true },
                     hasSubtitles = subtitleTrackCount > 0,

@@ -196,6 +196,22 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun seekRelative(offsetMs: Long) {
+        val state = _playbackState.value
+        val currentPos = when (state) {
+            is org.njarasoa.fijerena.core.player.model.PlaybackState.Playing -> state.position
+            is org.njarasoa.fijerena.core.player.model.PlaybackState.Paused -> state.position
+            else -> return
+        }
+        val duration = when (state) {
+            is org.njarasoa.fijerena.core.player.model.PlaybackState.Playing -> state.duration
+            is org.njarasoa.fijerena.core.player.model.PlaybackState.Paused -> state.duration
+            else -> return
+        }
+        val newPos = (currentPos + offsetMs).coerceIn(0L, duration)
+        seekTo(newPos)
+    }
+
     /**
      * Get available audio tracks from the player.
      * Returns a list of audio track info (language, label, track group index, track index).
