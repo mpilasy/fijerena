@@ -51,8 +51,8 @@ object NetworkBufferProfile {
     const val RETRY_MAX_DELAY_MS = 5_000L
 
     // ── HTTP timeouts ───────────────────────────────────────────────
-    const val WIFI_CONNECT_TIMEOUT_MS = 30_000
-    const val WIFI_READ_TIMEOUT_MS = 60_000
+    const val WIFI_CONNECT_TIMEOUT_MS = 10_000
+    const val WIFI_READ_TIMEOUT_MS = 20_000
     const val CELLULAR_CONNECT_TIMEOUT_MS = 45_000
     const val CELLULAR_READ_TIMEOUT_MS = 60_000
 
