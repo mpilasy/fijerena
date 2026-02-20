@@ -12,9 +12,6 @@ object TvDimensions {
     val safeMarginHorizontal: Dp = 56.dp
     val safeMarginVertical: Dp = 32.dp
 
-    // Overlays
-    val channelOverlayWidth: Dp = 400.dp
-
     // Form / Dialog widths
     val formFieldWidth: Dp = 600.dp
     val dialogWidth: Dp = 600.dp

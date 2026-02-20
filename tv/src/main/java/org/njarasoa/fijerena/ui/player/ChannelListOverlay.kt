@@ -1,5 +1,3 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
-
 package org.njarasoa.fijerena.ui.player
 
 import androidx.compose.foundation.background
@@ -13,16 +11,16 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
-import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
 fun ChannelListOverlay(
@@ -65,9 +63,9 @@ fun ChannelListOverlay(
     ) {
         Box(
             modifier = Modifier
-                .width(TvDimensions.channelOverlayWidth)
+                .width(400.dp)
                 .fillMaxHeight()
-                .background(Color.Black.copy(alpha = CinemaAlpha.overlayMedium))
+                .background(Color.Black.copy(alpha = 0.8f))
                 .padding(Spacing.lg)
         ) {
             Column(
@@ -85,7 +83,7 @@ fun ChannelListOverlay(
                     Text(
                         text = "No streams available",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
+                        color = Color.White.copy(alpha = CinemaAlpha.textMedium)
                     )
                 } else {
                     TvLazyColumn(
@@ -104,7 +102,7 @@ fun ChannelListOverlay(
                                 colors = androidx.tv.material3.ButtonDefaults.colors(
                                     containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
                                     else CinemaSurfaceVariant,
-                                    contentColor = CinemaTextPrimary
+                                    contentColor = Color.White
                                 )
                             ) {
                                 Text(
@@ -112,7 +110,7 @@ fun ChannelListOverlay(
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 1,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    modifier = Modifier.padding(Spacing.sm)
+                                    modifier = Modifier.padding(8.dp)
                                 )
                             }
                         }
