@@ -32,4 +32,7 @@ interface XtreamStreamDao {
 
     @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND name LIKE '%' || :query || '%'")
     fun searchStreams(providerId: Long, type: String, query: String): List<XtreamStreamEntity>
+
+    @Query("DELETE FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId")
+    fun deleteByCategoryId(providerId: Long, type: String, categoryId: String)
 }
