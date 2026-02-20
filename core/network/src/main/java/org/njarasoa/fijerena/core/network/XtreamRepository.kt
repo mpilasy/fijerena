@@ -92,20 +92,15 @@ class XtreamRepository(
      */
     private val liveStreamRefreshThresholdMs: Long = 5 * 60 * 1000L // 5 minutes
 
-    // Payload size tracking for dev mode
-    private val payloadSizes = ConcurrentHashMap<String, Long>()
+    // Payload size tracking for dev mode (now tracks DB operation sizes/counts if needed, or removed)
     // Fetch time tracking (in milliseconds)
     private val fetchTimes = ConcurrentHashMap<String, Long>()
 
     companion object {
         // Cache expiry is now configurable via AppSettings (default: 24 hours)
-        private const val KEY_CATEGORIES = "categories"
         private const val KEY_CATEGORIES_TIMESTAMP = "categories_timestamp"
-        private const val KEY_VOD_CATEGORIES = "vod_categories"
         private const val KEY_VOD_CATEGORIES_TIMESTAMP = "vod_categories_timestamp"
-        private const val KEY_SERIES_CATEGORIES = "series_categories"
         private const val KEY_SERIES_CATEGORIES_TIMESTAMP = "series_categories_timestamp"
-        private const val KEY_STREAMS_PREFIX = "streams_"
         private const val KEY_STREAMS_TIMESTAMP_PREFIX = "streams_timestamp_"
 
         // Legacy keys (kept for backwards compatibility but not used)
@@ -131,126 +126,6 @@ class XtreamRepository(
         private const val KEY_EPG_PREFIX = "epg_"
         private const val KEY_EPG_TIMESTAMP_PREFIX = "epg_timestamp_"
         private const val EPG_CACHE_EXPIRY_MS = 10 * 60 * 1000L // 10 minutes
-
-        private fun computeCacheSize(cache: SharedPreferences): Long {
-            var totalSize = 0L
-            cache.all.forEach { (_, value) ->
-                when (value) {
-                    is String -> totalSize += value.toByteArray(Charsets.UTF_8).size
-                    is Long -> totalSize += 8
-                    is Int -> totalSize += 4
-                    is Boolean -> totalSize += 1
-                }
-            }
-            return totalSize
-        }
-
-        fun computeCacheStats(cache: SharedPreferences): CacheStats {
-            var liveTvSize = 0L
-            var moviesSize = 0L
-            var tvShowsSize = 0L
-            var otherSize = 0L
-
-            var liveTvCategoryCached = false
-            var moviesCategoryCached = false
-            var tvShowsCategoryCached = false
-
-            var liveTvStreamsCount = 0
-            var moviesStreamsCount = 0
-            var tvShowsStreamsCount = 0
-            var epgCount = 0
-
-            cache.all.forEach { (key, value) ->
-                val valueSize = when (value) {
-                    is String -> value.toByteArray(Charsets.UTF_8).size.toLong()
-                    is Long -> 8L
-                    is Int -> 4L
-                    is Boolean -> 1L
-                    else -> 0L
-                }
-
-                when {
-                    key == KEY_CATEGORIES || key == KEY_CATEGORIES_TIMESTAMP -> {
-                        liveTvSize += valueSize
-                        if (key == KEY_CATEGORIES) liveTvCategoryCached = true
-                    }
-                    key == KEY_VOD_CATEGORIES || key == KEY_VOD_CATEGORIES_TIMESTAMP -> {
-                        moviesSize += valueSize
-                        if (key == KEY_VOD_CATEGORIES) moviesCategoryCached = true
-                    }
-                    key == KEY_SERIES_CATEGORIES || key == KEY_SERIES_CATEGORIES_TIMESTAMP -> {
-                        tvShowsSize += valueSize
-                        if (key == KEY_SERIES_CATEGORIES) tvShowsCategoryCached = true
-                    }
-                    key.startsWith(KEY_STREAMS_PREFIX) && !key.contains("vod_") && !key.contains("series_") && !key.contains("search_") -> {
-                        liveTvSize += valueSize
-                        if (!key.contains("_timestamp_")) liveTvStreamsCount++
-                    }
-                    key.startsWith(KEY_STREAMS_PREFIX) && key.contains("vod_") && !key.contains("search_") -> {
-                        moviesSize += valueSize
-                        if (!key.contains("_timestamp_")) moviesStreamsCount++
-                    }
-                    key.startsWith(KEY_STREAMS_PREFIX) && key.contains("series_") && !key.contains("search_") -> {
-                        tvShowsSize += valueSize
-                        if (!key.contains("_timestamp_")) tvShowsStreamsCount++
-                    }
-                    key.startsWith(KEY_EPG_PREFIX) -> {
-                        // EPG counted in other
-                        otherSize += valueSize
-                        if (!key.contains("_timestamp_")) epgCount++
-                    }
-                    else -> {
-                        otherSize += valueSize
-                    }
-                }
-            }
-
-            return CacheStats(
-                totalSize = computeCacheSize(cache),
-                liveTv = ContentTypeCacheStats(liveTvSize, liveTvCategoryCached, liveTvStreamsCount),
-                movies = ContentTypeCacheStats(moviesSize, moviesCategoryCached, moviesStreamsCount),
-                tvShows = ContentTypeCacheStats(tvShowsSize, tvShowsCategoryCached, tvShowsStreamsCount),
-                epgCount = epgCount,
-                otherSize = otherSize
-            )
-        }
-
-        fun clearCacheForContentTypeStatic(cache: SharedPreferences, contentType: String) {
-            val editor = cache.edit()
-
-            when (contentType) {
-                "LIVE_TV" -> {
-                    editor.remove(KEY_CATEGORIES)
-                    editor.remove(KEY_CATEGORIES_TIMESTAMP)
-                    cache.all.keys.filter { key ->
-                        key.startsWith(KEY_STREAMS_PREFIX) &&
-                        !key.contains("vod_") &&
-                        !key.contains("series_") &&
-                        !key.contains("search_")
-                    }.forEach { key -> editor.remove(key) }
-                }
-                "MOVIES" -> {
-                    editor.remove(KEY_VOD_CATEGORIES)
-                    editor.remove(KEY_VOD_CATEGORIES_TIMESTAMP)
-                    cache.all.keys.filter { key ->
-                        key.startsWith(KEY_STREAMS_PREFIX) &&
-                        key.contains("vod_") &&
-                        !key.contains("search_")
-                    }.forEach { key -> editor.remove(key) }
-                }
-                "TV_SHOWS" -> {
-                    editor.remove(KEY_SERIES_CATEGORIES)
-                    editor.remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
-                    cache.all.keys.filter { key ->
-                        key.startsWith(KEY_STREAMS_PREFIX) &&
-                        key.contains("series_") &&
-                        !key.contains("search_")
-                    }.forEach { key -> editor.remove(key) }
-                }
-            }
-
-            editor.apply()
-        }
     }
 
     suspend fun login(
@@ -449,73 +324,7 @@ class XtreamRepository(
         return System.currentTimeMillis() - timestamp < thresholdMs
     }
 
-    private fun getCachedCategories(): List<XtreamCategory>? {
-        if (!cachingEnabled) return null
-        val timestamp = cache.getLong(KEY_CATEGORIES_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
-            return null // Cache expired
-        }
 
-        val cached = cache.getString(KEY_CATEGORIES, null) ?: return null
-        return try {
-            val categories = json.decodeFromString<List<XtreamCategory>>(cached)
-            // Track payload size when loading from cache (for dev mode)
-            trackPayloadSize("live_categories", categories)
-            categories
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun cacheCategories(categories: List<XtreamCategory>) {
-        trackPayloadSize("live_categories", categories)
-        if (!cachingEnabled) return
-        cache.edit()
-            .putString(KEY_CATEGORIES, json.encodeToString(categories))
-            .putLong(KEY_CATEGORIES_TIMESTAMP, System.currentTimeMillis())
-            .apply()
-    }
-
-    private fun getCachedVodCategories(): List<XtreamCategory>? {
-        if (!cachingEnabled) return null
-        val timestamp = cache.getLong(KEY_VOD_CATEGORIES_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
-            return null
-        }
-        val cached = cache.getString(KEY_VOD_CATEGORIES, null) ?: return null
-        return try {
-            val categories = json.decodeFromString<List<XtreamCategory>>(cached)
-            trackPayloadSize("vod_categories", categories)
-            categories
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun cacheVodCategories(categories: List<XtreamCategory>) {
-        trackPayloadSize("vod_categories", categories)
-        if (!cachingEnabled) return
-        cache.edit()
-            .putString(KEY_VOD_CATEGORIES, json.encodeToString(categories))
-            .putLong(KEY_VOD_CATEGORIES_TIMESTAMP, System.currentTimeMillis())
-            .apply()
-    }
-
-    private fun getCachedSeriesCategories(): List<XtreamCategory>? {
-        if (!cachingEnabled) return null
-        val timestamp = cache.getLong(KEY_SERIES_CATEGORIES_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
-            return null
-        }
-        val cached = cache.getString(KEY_SERIES_CATEGORIES, null) ?: return null
-        return try {
-            val categories = json.decodeFromString<List<XtreamCategory>>(cached)
-            trackPayloadSize("series_categories", categories)
-            categories
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     suspend fun getStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {
@@ -695,7 +504,7 @@ class XtreamRepository(
         )
     }
 
-    /** Returns cached streams for a category or null if not cached. */
+    /** Returns streams for a category from the database. */
     fun getStreamsCached(categoryId: String): List<XtreamStream>? {
         return try {
             streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
@@ -703,7 +512,7 @@ class XtreamRepository(
         } catch (e: Exception) { null }
     }
 
-    /** Returns cached VOD streams for a category or null if not cached. */
+    /** Returns VOD streams for a category from the database. */
     fun getVodStreamsCached(categoryId: String): List<XtreamStream>? {
         return try {
             streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
@@ -711,7 +520,7 @@ class XtreamRepository(
         } catch (e: Exception) { null }
     }
 
-    /** Returns cached series for a category or null if not cached. */
+    /** Returns series for a category from the database. */
     fun getSeriesCached(categoryId: String): List<XtreamStream>? {
         return try {
             seriesDao.getSeriesByCategory(providerId, categoryId)
@@ -800,10 +609,11 @@ class XtreamRepository(
     }
 
     fun clearCache() {
+        // Clear SharedPreferences timestamps and legacy keys
         cache.edit().clear().apply()
-        payloadSizes.clear()
         fetchTimes.clear()
 
+        // Clear DB
         categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
         categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
         categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_SERIES)
@@ -813,15 +623,17 @@ class XtreamRepository(
     }
 
     /**
-     * Get total cache size in bytes
+     * Get total cache size (estimated from DB record count)
+     * Returning 0 for now as exact byte size calculation from DB is expensive
+     * and SharedPreferences size is negligible.
      */
-    fun getCacheSize(): Long = computeCacheSize(cache)
+    fun getCacheSize(): Long = 0L
 
     /**
-     * Get cache statistics per content type
+     * Get cache statistics per content type (based on DB counts)
      */
     data class ContentTypeCacheStats(
-        val size: Long,
+        val size: Long, // kept for compatibility, always 0
         val categoryCached: Boolean,
         val streamListsCount: Int
     )
@@ -835,34 +647,51 @@ class XtreamRepository(
         val otherSize: Long
     )
 
-    fun getCacheStats(): CacheStats = computeCacheStats(cache)
+    fun getCacheStats(): CacheStats {
+        val liveCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_LIVE)
+        val vodCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_VOD)
+        val seriesCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_SERIES)
+
+        val liveStreamsCount = streamDao.getStreamIds(providerId, XtreamStreamEntity.TYPE_LIVE).size
+        val vodStreamsCount = streamDao.getStreamIds(providerId, XtreamStreamEntity.TYPE_VOD).size
+        val seriesCount = seriesDao.getSeriesIds(providerId).size
+
+        return CacheStats(
+            totalSize = 0L,
+            liveTv = ContentTypeCacheStats(0L, liveCategories.isNotEmpty(), liveStreamsCount),
+            movies = ContentTypeCacheStats(0L, vodCategories.isNotEmpty(), vodStreamsCount),
+            tvShows = ContentTypeCacheStats(0L, seriesCategories.isNotEmpty(), seriesCount),
+            epgCount = 0, // EPG handled by EpgIndexDatabase
+            otherSize = 0L
+        )
+    }
 
     /**
-     * Clear cache for specific content type
+     * Clear cache for specific content type (clears DB tables)
      */
     fun clearCacheForContentType(contentType: String) {
-        clearCacheForContentTypeStatic(cache, contentType)
-        // Clean up instance-specific tracking maps
+        val editor = cache.edit()
         when (contentType) {
             "LIVE_TV" -> {
-                payloadSizes.remove("live_categories")
+                editor.remove(KEY_CATEGORIES_TIMESTAMP)
                 fetchTimes.remove("live_categories")
                 categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
                 streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_LIVE)
             }
             "MOVIES" -> {
-                payloadSizes.remove("vod_categories")
+                editor.remove(KEY_VOD_CATEGORIES_TIMESTAMP)
                 fetchTimes.remove("vod_categories")
                 categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
                 streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_VOD)
             }
             "TV_SHOWS" -> {
-                payloadSizes.remove("series_categories")
+                editor.remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
                 fetchTimes.remove("series_categories")
                 categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_SERIES)
                 seriesDao.deleteAll(providerId)
             }
         }
+        editor.apply()
     }
 
     fun getCurrentUrl(): String? {
@@ -1050,28 +879,17 @@ class XtreamRepository(
     }
 
     /**
-     * Track payload size for dev mode
+     * Track payload size for dev mode (No-op after DB migration)
      */
     private inline fun <reified T> trackPayloadSize(key: String, data: T) {
-        if (appSettings.isDevMode) {
-            try {
-                val jsonString = json.encodeToString(data)
-                val sizeInBytes = jsonString.toByteArray(Charsets.UTF_8).size.toLong()
-                payloadSizes[key] = sizeInBytes
-                println("XtreamRepository: Tracked payload size for $key: ${formatBytes(sizeInBytes)}")
-            } catch (e: Exception) {
-                println("XtreamRepository: Failed to track payload size for $key: ${e.message}")
-            }
-        }
+        // No-op
     }
 
     /**
      * Get payload size for a specific key in human-readable format
      */
     fun getPayloadSize(key: String): String? {
-        if (!appSettings.isDevMode) return null
-        val sizeInBytes = payloadSizes[key] ?: return null
-        return formatBytes(sizeInBytes)
+        return null
     }
 
     /**
