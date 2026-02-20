@@ -68,6 +68,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -76,6 +77,7 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
@@ -106,6 +108,9 @@ import java.util.Locale
 @Composable
 fun PlayerScreen(
     viewModel: PlaybackViewModel = viewModel(),
+    categoryStreams: List<MediaItem> = emptyList(),
+    lastWatchedStreams: List<MediaItem> = emptyList(),
+    onPlayStream: (MediaItem) -> Unit = {},
     onBack: () -> Unit = {},
     onNextChannel: () -> Unit = {},
     onPreviousChannel: () -> Unit = {},
@@ -126,6 +131,8 @@ fun PlayerScreen(
     var showSubtitleSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
     var showStreamInfo by remember { mutableStateOf(false) }
+    var showCategoryOverlay by remember { mutableStateOf(false) }
+    var showLastWatchedOverlay by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
     // Live position polling for smooth VOD timer updates
@@ -231,114 +238,129 @@ fun PlayerScreen(
                             // When controls are visible, let ENTER pass through to buttons
                             if (showControls) {
                                 false
-                            } else if (!showStats) {
-                                // Show controls overlay
+                            } else if (!showStats && !showCategoryOverlay && !showLastWatchedOverlay) {
+                                // Show controls overlay without pausing
                                 showControls = true
                                 showStreamInfo = true
-
-                                // Only toggle pause/resume for VOD, never for live streams
-                                if (!currentMetadata.isLive) {
-                                    when (playbackState) {
-                                        is PlaybackState.Playing -> viewModel.pause()
-                                        is PlaybackState.Paused -> viewModel.resume()
-                                        else -> {}
-                                    }
-                                }
                                 true
                             } else {
                                 false
                             }
                         }
-                        Key.DirectionUp -> {
-                            println("PlayerScreen: UP key pressed - showControls=$showControls, isLive=${currentMetadata.isLive}")
-                            // Only change channel if controls are not visible AND content is Live TV
-                            // Stats overlay does NOT prevent channel switching
-                            if (!showControls && currentMetadata.isLive) {
-                                println("PlayerScreen: Switching to previous channel")
-                                onPreviousChannel()
-                                // Show stream info overlay (not full controls)
-                                showStreamInfo = true
+                        Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
+                            if (!currentMetadata.isLive) {
+                                if (playbackState is PlaybackState.Playing) viewModel.pause()
+                                else viewModel.resume()
                                 true
-                            } else {
-                                println("PlayerScreen: Not switching channel (controls visible or not live)")
-                                // When controls are visible, let D-pad navigate between buttons
-                                false
-                            }
+                            } else false
                         }
-                        Key.DirectionDown -> {
-                            println("PlayerScreen: DOWN key pressed - showControls=$showControls, isLive=${currentMetadata.isLive}")
-                            if (!showControls) {
-                                if (currentMetadata.isLive) {
-                                    // Live TV: Change channel
-                                    println("PlayerScreen: Switching to next channel")
-                                    onNextChannel()
-                                    // Show stream info overlay (not full controls)
-                                    showStreamInfo = true
-                                    true
-                                } else {
-                                    // VOD: Show controls and stream info without pausing
-                                    println("PlayerScreen: VOD - Showing controls without pausing")
-                                    showControls = true
-                                    showStreamInfo = true
-                                    true
-                                }
-                            } else {
-                                println("PlayerScreen: Controls visible, letting D-pad navigate")
-                                // When controls are visible, let D-pad navigate between buttons
-                                false
-                            }
-                        }
-                        Key.DirectionLeft -> {
-                            // When controls are NOT visible and it's VOD content, seek backward
-                            if (!showControls && !currentMetadata.isLive) {
+                        Key.MediaFastForward -> {
+                            if (!currentMetadata.isLive) {
                                 val position = when (val ps = playbackState) {
                                     is PlaybackState.Playing -> ps.position
                                     is PlaybackState.Paused -> ps.position
-                                    else -> null
-                                }
-                                if (position != null) {
-                                    val newPosition = (position - 10_000L).coerceAtLeast(0L)
-                                    viewModel.seekTo(newPosition)
-                                    // Show stream info briefly to indicate seeking
-                                    showStreamInfo = true
-                                }
-                                true
-                            } else {
-                                // When controls are visible, let D-pad navigate between buttons
-                                false
-                            }
-                        }
-                        Key.DirectionRight -> {
-                            // When controls are NOT visible and it's VOD content, seek forward
-                            if (!showControls && !currentMetadata.isLive) {
-                                val position = when (val ps = playbackState) {
-                                    is PlaybackState.Playing -> ps.position
-                                    is PlaybackState.Paused -> ps.position
-                                    else -> null
+                                    else -> 0L
                                 }
                                 val duration = when (val ps = playbackState) {
                                     is PlaybackState.Playing -> ps.duration
                                     is PlaybackState.Paused -> ps.duration
-                                    else -> null
+                                    else -> 0L
                                 }
-                                if (position != null && duration != null) {
-                                    val newPosition = (position + 10_000L).coerceAtMost(duration)
+                                if (duration > 0) {
+                                    val newPosition = (position + 60_000L).coerceAtMost(duration)
                                     viewModel.seekTo(newPosition)
-                                    // Show stream info briefly to indicate seeking
                                     showStreamInfo = true
                                 }
                                 true
-                            } else {
-                                // When controls are visible, let D-pad navigate between buttons
-                                false
-                            }
+                            } else false
+                        }
+                        Key.MediaRewind -> {
+                            if (!currentMetadata.isLive) {
+                                val position = when (val ps = playbackState) {
+                                    is PlaybackState.Playing -> ps.position
+                                    is PlaybackState.Paused -> ps.position
+                                    else -> 0L
+                                }
+                                val newPosition = (position - 30_000L).coerceAtLeast(0L)
+                                viewModel.seekTo(newPosition)
+                                showStreamInfo = true
+                                true
+                            } else false
+                        }
+                        Key.DirectionUp -> {
+                            // Channel switching handled by controls or overlay
+                            if (!showControls && !showCategoryOverlay && !showLastWatchedOverlay && currentMetadata.isLive) {
+                                onPreviousChannel()
+                                showStreamInfo = true
+                                true
+                            } else false
+                        }
+                        Key.DirectionDown -> {
+                            if (!showControls && !showCategoryOverlay && !showLastWatchedOverlay && currentMetadata.isLive) {
+                                onNextChannel()
+                                showStreamInfo = true
+                                true
+                            } else if (!showControls && !currentMetadata.isLive) {
+                                showControls = true
+                                showStreamInfo = true
+                                true
+                            } else false
+                        }
+                        Key.DirectionLeft -> {
+                            if (!showControls && !showCategoryOverlay && !showLastWatchedOverlay) {
+                                if (currentMetadata.isLive) {
+                                    showCategoryOverlay = true
+                                    true
+                                } else {
+                                    // VOD Rewind (seek back 10s default)
+                                    val position = when (val ps = playbackState) {
+                                        is PlaybackState.Playing -> ps.position
+                                        is PlaybackState.Paused -> ps.position
+                                        else -> null
+                                    }
+                                    if (position != null) {
+                                        val newPosition = (position - 10_000L).coerceAtLeast(0L)
+                                        viewModel.seekTo(newPosition)
+                                        showStreamInfo = true
+                                    }
+                                    true
+                                }
+                            } else false
+                        }
+                        Key.DirectionRight -> {
+                            if (!showControls && !showCategoryOverlay && !showLastWatchedOverlay) {
+                                if (currentMetadata.isLive) {
+                                    showLastWatchedOverlay = true
+                                    true
+                                } else {
+                                    // VOD Fast Forward (seek forward 10s)
+                                    val position = when (val ps = playbackState) {
+                                        is PlaybackState.Playing -> ps.position
+                                        is PlaybackState.Paused -> ps.position
+                                        else -> null
+                                    }
+                                    val duration = when (val ps = playbackState) {
+                                        is PlaybackState.Playing -> ps.duration
+                                        is PlaybackState.Paused -> ps.duration
+                                        else -> null
+                                    }
+                                    if (position != null && duration != null) {
+                                        val newPosition = (position + 10_000L).coerceAtMost(duration)
+                                        viewModel.seekTo(newPosition)
+                                        showStreamInfo = true
+                                    }
+                                    true
+                                }
+                            } else false
                         }
                         Key.Back -> {
                             // Close any visible overlays first, then exit
-                            if (showStats || showControls || showStreamInfo) {
+                            if (showStats || showControls || showStreamInfo || showCategoryOverlay || showLastWatchedOverlay) {
                                 showStats = false
                                 showControls = false
                                 showStreamInfo = false
+                                showCategoryOverlay = false
+                                showLastWatchedOverlay = false
                                 true
                             } else {
                                 viewModel.stop()
@@ -478,6 +500,34 @@ fun PlayerScreen(
                     }
                 )
             }
+        }
+
+        // Category Overlay
+        if (showCategoryOverlay) {
+            ChannelListOverlay(
+                title = "Category Streams",
+                streams = categoryStreams,
+                currentStreamTitle = currentMetadata.title,
+                onStreamSelected = {
+                    onPlayStream(it)
+                    showCategoryOverlay = false
+                },
+                onDismiss = { showCategoryOverlay = false }
+            )
+        }
+
+        // Last Watched Overlay
+        if (showLastWatchedOverlay) {
+            ChannelListOverlay(
+                title = "Last Watched",
+                streams = lastWatchedStreams,
+                currentStreamTitle = currentMetadata.title,
+                onStreamSelected = {
+                    onPlayStream(it)
+                    showLastWatchedOverlay = false
+                },
+                onDismiss = { showLastWatchedOverlay = false }
+            )
         }
 
         // Audio track selector dialog
@@ -2044,6 +2094,8 @@ private fun ControlButtonsRow(
     isPaused: Boolean,
     onPause: (() -> Unit)?,
     onResume: (() -> Unit)?,
+    onFastForward: (() -> Unit)?,
+    onRewind: (() -> Unit)?,
     hasMultipleAudioTracks: Boolean,
     onAudioTrack: (() -> Unit)?,
     hasSubtitles: Boolean,
@@ -2067,8 +2119,12 @@ private fun ControlButtonsRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Pause/Resume for VOD only — live streams are never pausable
+            // VOD Controls
             if (!isLive) {
+                Button(onClick = { onRewind?.invoke() }) {
+                    Text("-30s")
+                }
+
                 if (isPaused) {
                     Button(onClick = { onResume?.invoke() }) {
                         Row(
@@ -2089,6 +2145,10 @@ private fun ControlButtonsRow(
                             Text("Pause")
                         }
                     }
+                }
+
+                Button(onClick = { onFastForward?.invoke() }) {
+                    Text("+1m")
                 }
             }
 

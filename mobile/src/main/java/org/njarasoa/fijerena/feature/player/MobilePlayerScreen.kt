@@ -7,10 +7,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +20,8 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
@@ -116,6 +120,11 @@ fun MobilePlayerScreen(
     var currentStreamIndex by remember { mutableStateOf(0) }
     var showChannelToast by remember { mutableStateOf(false) }
 
+    // Last watched streams for "Last Watched" overlay
+    var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var showCategoryOverlay by remember { mutableStateOf(false) }
+    var showLastWatchedOverlay by remember { mutableStateOf(false) }
+
     // EPG state for current and next programme
     var currentEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
     var nextEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
@@ -160,6 +169,8 @@ fun MobilePlayerScreen(
                 },
                 onFailure = { /* Keep empty list, disable channel switching */ }
             )
+            // Fetch last watched
+            lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend("LIVE_TV")
         }
     }
 
@@ -181,6 +192,17 @@ fun MobilePlayerScreen(
         currentStreamIndex = prevIndex
         currentStreamId = prevStream.id
         currentStreamName = prevStream.name
+        showChannelToast = true
+    }
+
+    fun onPlayStream(item: MediaItem) {
+        currentStreamId = item.id
+        currentStreamName = item.name
+        // Update index if in current list
+        val index = streamList.indexOfFirst { it.id == item.id }
+        if (index != -1) {
+            currentStreamIndex = index
+        }
         showChannelToast = true
     }
 
@@ -352,29 +374,53 @@ fun MobilePlayerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)
-                    .clickable {
-                        if (!showStats) {
-                            showControls = !showControls
-                        }
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onDoubleTap = {
+                                if (contentType != "LIVE_TV") {
+                                    if (playbackState is PlaybackState.Playing) viewModel.pause()
+                                    else viewModel.resume()
+                                }
+                            },
+                            onTap = {
+                                if (!showStats && !showCategoryOverlay && !showLastWatchedOverlay) {
+                                    showControls = !showControls
+                                }
+                            }
+                        )
                     }
                     .then(
-                        if (contentType == "LIVE_TV" && streamList.size > 1) {
+                        if (contentType == "LIVE_TV") {
                             Modifier.pointerInput(streamList) {
-                                var totalDrag = 0f
-                                detectVerticalDragGestures(
-                                    onDragStart = { totalDrag = 0f },
-                                    onVerticalDrag = { _, dragAmount ->
-                                        totalDrag += dragAmount
+                                var totalDragX = 0f
+                                var totalDragY = 0f
+                                detectDragGestures(
+                                    onDragStart = {
+                                        totalDragX = 0f
+                                        totalDragY = 0f
                                     },
                                     onDragEnd = {
                                         val threshold = 100f
-                                        if (totalDrag < -threshold) {
-                                            // Swipe up = next channel
-                                            switchToNextChannel()
-                                        } else if (totalDrag > threshold) {
-                                            // Swipe down = previous channel
-                                            switchToPreviousChannel()
+                                        if (kotlin.math.abs(totalDragX) > kotlin.math.abs(totalDragY)) {
+                                            // Horizontal
+                                            if (totalDragX > threshold) {
+                                                showCategoryOverlay = true
+                                            } else if (totalDragX < -threshold) {
+                                                showLastWatchedOverlay = true
+                                            }
+                                        } else {
+                                            // Vertical (Channel switching)
+                                            if (totalDragY < -threshold) {
+                                                switchToNextChannel()
+                                            } else if (totalDragY > threshold) {
+                                                switchToPreviousChannel()
+                                            }
                                         }
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        totalDragX += dragAmount.x
+                                        totalDragY += dragAmount.y
+                                        change.consume()
                                     }
                                 )
                             }
@@ -446,7 +492,7 @@ fun MobilePlayerScreen(
 
                 // Touch controls overlay
                 AnimatedVisibility(
-                    visible = showControls && !showStats && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused),
+                    visible = showControls && !showStats && !showCategoryOverlay && !showLastWatchedOverlay && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused),
                     enter = fadeIn(),
                     exit = fadeOut()
                 ) {
@@ -467,6 +513,15 @@ fun MobilePlayerScreen(
                             } else {
                                 viewModel.pause()
                             }
+                        },
+                        onFastForward = {
+                            val pos = livePosition
+                            val dur = liveDuration
+                            if (dur > 0) viewModel.seekTo((pos + 60_000L).coerceAtMost(dur))
+                        },
+                        onRewind = {
+                            val pos = livePosition
+                            viewModel.seekTo((pos - 30_000L).coerceAtLeast(0L))
                         },
                         onBack = {
                             // Save position before stopping (stop sets state to Idle)
@@ -509,6 +564,44 @@ fun MobilePlayerScreen(
                                 }
                             }
                         }
+                    )
+                }
+
+                // Category Overlay
+                AnimatedVisibility(
+                    visible = showCategoryOverlay,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    MobileChannelListOverlay(
+                        title = "Category Streams",
+                        streams = streamList,
+                        currentStreamTitle = currentMetadata.title,
+                        onStreamSelected = {
+                            onPlayStream(it)
+                            showCategoryOverlay = false
+                        },
+                        onDismiss = { showCategoryOverlay = false }
+                    )
+                }
+
+                // Last Watched Overlay
+                AnimatedVisibility(
+                    visible = showLastWatchedOverlay,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    MobileChannelListOverlay(
+                        title = "Last Watched",
+                        streams = lastWatchedStreams,
+                        currentStreamTitle = currentMetadata.title,
+                        onStreamSelected = {
+                            onPlayStream(it)
+                            showLastWatchedOverlay = false
+                        },
+                        onDismiss = { showLastWatchedOverlay = false }
                     )
                 }
 
@@ -667,6 +760,8 @@ private fun ControlsOverlay(
     currentEpgProgram: EpgProgram? = null,
     nextEpgProgram: EpgProgram? = null,
     onPlayPause: () -> Unit,
+    onFastForward: (() -> Unit)? = null,
+    onRewind: (() -> Unit)? = null,
     onBack: () -> Unit,
     onStats: () -> Unit,
     onAudioTrack: () -> Unit,
@@ -706,23 +801,58 @@ private fun ControlsOverlay(
             )
         }
 
-        // Center play/pause button
-        IconButton(
-            onClick = onPlayPause,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(MobileDimensions.iconPlayContainer)
+        // Center controls (Rewind, Play/Pause, FastForward)
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = if (playbackState is PlaybackState.Paused) {
-                    Icons.Default.PlayArrow
-                } else {
-                    Icons.Default.Pause
-                },
-                contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
-                tint = Color.White,
-                modifier = Modifier.size(MobileDimensions.iconPlayIcon)
-            )
+            // Rewind button (VOD only)
+            if (!isLive && onRewind != null) {
+                IconButton(
+                    onClick = onRewind,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FastRewind,
+                        contentDescription = "Rewind 30s",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+
+            // Play/Pause button
+            IconButton(
+                onClick = onPlayPause,
+                modifier = Modifier.size(MobileDimensions.iconPlayContainer)
+            ) {
+                Icon(
+                    imageVector = if (playbackState is PlaybackState.Paused) {
+                        Icons.Default.PlayArrow
+                    } else {
+                        Icons.Default.Pause
+                    },
+                    contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
+                    tint = Color.White,
+                    modifier = Modifier.size(MobileDimensions.iconPlayIcon)
+                )
+            }
+
+            // Fast Forward button (VOD only)
+            if (!isLive && onFastForward != null) {
+                IconButton(
+                    onClick = onFastForward,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FastForward,
+                        contentDescription = "Fast Forward 1m",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
         }
 
         // Bottom section: progress + controls (scrollable for landscape)

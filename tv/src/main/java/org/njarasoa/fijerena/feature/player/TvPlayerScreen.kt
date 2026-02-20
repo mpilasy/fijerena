@@ -198,6 +198,14 @@ fun TvPlayerScreen(
         }
     }
 
+    // Fetch last watched streams for "Last Watched" overlay
+    var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    LaunchedEffect(contentType) {
+        if (contentType == "LIVE_TV") {
+            lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend("LIVE_TV")
+        }
+    }
+
     // Channel switching functions
     fun switchToNextChannel() {
         println("TvPlayerScreen: switchToNextChannel called, streamList size=${streamList.size}")
@@ -229,6 +237,16 @@ fun TvPlayerScreen(
         currentStreamIndex = prevIndex
         currentStreamId = prevStream.id
         currentStreamName = prevStream.name
+    }
+
+    fun onPlayStream(item: MediaItem) {
+        currentStreamId = item.id
+        currentStreamName = item.name
+        // Update index if in current list
+        val index = streamList.indexOfFirst { it.id == item.id }
+        if (index != -1) {
+            currentStreamIndex = index
+        }
     }
 
     // Resolve playable stream URL on launch
@@ -321,6 +339,9 @@ fun TvPlayerScreen(
         else -> {
             PlayerScreen(
                 viewModel = viewModel,
+                categoryStreams = streamList,
+                lastWatchedStreams = lastWatchedStreams,
+                onPlayStream = { onPlayStream(it) },
                 onBack = {
                     // Save position before stopping (stop sets state to Idle)
                     if (contentType != "LIVE_TV") {
