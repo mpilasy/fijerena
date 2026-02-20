@@ -13,6 +13,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
@@ -75,6 +76,13 @@ sealed interface SaveState {
     data object Saving : SaveState
 }
 
+sealed interface SyncState {
+    data object Idle : SyncState
+    data object Syncing : SyncState
+    data object Success : SyncState
+    data class Error(val message: String) : SyncState
+}
+
 class ProviderViewModel(
     private val providerRepository: ProviderRepository,
     private val accountManager: AccountManager,
@@ -90,6 +98,9 @@ class ProviderViewModel(
 
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
     val saveState: StateFlow<SaveState> = _saveState.asStateFlow()
+
+    private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
+    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
     fun resetSaveState() {
         _saveState.value = SaveState.Idle
@@ -275,6 +286,35 @@ class ProviderViewModel(
             } catch (e: Exception) {
                 _saveState.value = SaveState.Idle
                 _uiState.value = ProviderUiState.Error(e.message ?: "Failed to save provider")
+            }
+        }
+    }
+
+    fun syncProvider(providerId: Long) {
+        viewModelScope.launch {
+            _syncState.value = SyncState.Syncing
+            withContext(Dispatchers.IO) {
+                try {
+                    val providerEntity = providerRepository.getProviderById(providerId)
+                    val password = providerRepository.getPassword(providerId)
+
+                    if (providerEntity != null && password != null) {
+                        val mediaProvider = MediaProviderFactory.create(providerEntity, context, password)
+                        if (mediaProvider is XtreamMediaProvider) {
+                            if (!mediaProvider.isConnected()) {
+                                mediaProvider.connect()
+                            }
+                            mediaProvider.syncAll()
+                            _syncState.value = SyncState.Success
+                        } else {
+                            _syncState.value = SyncState.Error("Sync only supported for Xtream providers")
+                        }
+                    } else {
+                        _syncState.value = SyncState.Error("Provider not found or credentials missing")
+                    }
+                } catch (e: Exception) {
+                    _syncState.value = SyncState.Error(e.message ?: "Sync failed")
+                }
             }
         }
     }
