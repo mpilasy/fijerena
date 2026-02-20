@@ -252,6 +252,33 @@ class ProviderViewModel(
         }
     }
 
+    /**
+     * Save a Jellyfin provider authenticated via Quick Connect.
+     * Stores the access token directly so no password-based re-auth is ever needed.
+     */
+    fun quickConnectSave(
+        name: String,
+        url: String,
+        username: String,
+        token: String,
+        userId: String,
+        onComplete: () -> Unit
+    ) {
+        viewModelScope.launch {
+            _saveState.value = SaveState.Saving
+            try {
+                val id = providerRepository.addProvider(name, url, username, "", "JELLYFIN", "")
+                providerRepository.saveJellyfinSession(id, token, userId)
+                loadProviders()
+                _saveState.value = SaveState.Idle
+                onComplete()
+            } catch (e: Exception) {
+                _saveState.value = SaveState.Idle
+                _uiState.value = ProviderUiState.Error(e.message ?: "Failed to save provider")
+            }
+        }
+    }
+
     private suspend fun performSave(
         id: Long?,
         name: String,

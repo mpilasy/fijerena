@@ -88,6 +88,7 @@ fun TvPlayerScreen(
     var isLoading by remember { mutableStateOf(true) }
 
     var streamList by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var currentStreamIndex by remember { mutableIntStateOf(0) }
     var currentStreamId by remember { mutableStateOf(streamId) }
     var currentStreamName by remember { mutableStateOf(streamName) }
@@ -174,6 +175,14 @@ fun TvPlayerScreen(
                 // Keep empty list, disable navigation
             }
         )
+    }
+
+    // Load last watched streams for overlay (Live TV only)
+    LaunchedEffect(Unit) {
+        if (contentType == "LIVE_TV") {
+            mediaRepository.getItems("last_watched", contentType)
+                .onSuccess { lastWatchedStreams = it }
+        }
     }
 
     // Fetch EPG data for current channel (Live TV only)
@@ -352,6 +361,16 @@ fun TvPlayerScreen(
                 isFavorite = isFavorite,
                 currentEpgProgram = currentEpgProgram,
                 nextEpgProgram = nextEpgProgram,
+                categoryStreams = streamList,
+                lastWatchedStreams = lastWatchedStreams,
+                onStreamSelected = { item ->
+                    val index = streamList.indexOfFirst { it.id == item.id }
+                    if (index >= 0) {
+                        currentStreamIndex = index
+                        currentStreamId = item.id
+                        currentStreamName = item.name
+                    }
+                },
                 onToggleFavorite = {
                     coroutineScope.launch {
                         if (isFavorite) {

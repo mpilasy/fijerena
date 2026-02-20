@@ -25,6 +25,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,8 +53,10 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
@@ -96,6 +99,12 @@ fun TvAddProviderScreen(
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsState()
     val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
+
+    // Quick Connect state (Jellyfin only)
+    var showQuickConnectDialog by remember { mutableStateOf(false) }
+    var qcCode by remember { mutableStateOf("") }
+    var qcSecret by remember { mutableStateOf("") }
+    var qcError by remember { mutableStateOf<String?>(null) }
 
     // Cache management state (edit mode only)
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
@@ -451,6 +460,31 @@ fun TvAddProviderScreen(
                                 unfocusedPlaceholderColor = CinemaTextSecondary
                             )
                         )
+
+                        if (!isEditMode) {
+                            Spacer(modifier = Modifier.height(Spacing.md))
+                            Text(
+                                text = "— or —",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CinemaTextSecondary,
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.sm))
+                            CinemaSecondaryButton(
+                                onClick = {
+                                    if (url.isBlank()) {
+                                        error = "Enter the Jellyfin server URL first"
+                                    } else {
+                                        qcCode = ""
+                                        qcSecret = ""
+                                        qcError = null
+                                        showQuickConnectDialog = true
+                                    }
+                                },
+                                text = "Use Quick Connect",
+                                enabled = !isBusy
+                            )
+                        }
                     }
 
                     ProviderType.SMB -> {
@@ -1470,6 +1504,124 @@ fun TvAddProviderScreen(
                             Button(
                                 onClick = { showCategoryFilterDialog = false },
                                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant, contentColor = CinemaTextPrimary)
+                            ) { Text("Cancel") }
+                        },
+                        containerColor = CinemaSurface
+                    )
+                }
+
+                // Quick Connect dialog (Jellyfin)
+                if (showQuickConnectDialog) {
+                    LaunchedEffect(Unit) {
+                        qcCode = ""
+                        qcSecret = ""
+                        qcError = null
+                        val deviceId = android.provider.Settings.Secure.getString(
+                            context.contentResolver,
+                            android.provider.Settings.Secure.ANDROID_ID
+                        ) ?: "fijerena"
+                        val api = JellyfinApiService(url.trimEnd('/'), deviceId)
+                        val initResult = api.initiateQuickConnect()
+                        if (initResult.isFailure) {
+                            qcError = initResult.exceptionOrNull()?.message ?: "Failed to start Quick Connect"
+                            return@LaunchedEffect
+                        }
+                        val init = initResult.getOrThrow()
+                        qcCode = init.code
+                        qcSecret = init.secret
+                        // Poll every 3 s for up to 2 minutes
+                        repeat(40) {
+                            delay(3_000)
+                            val poll = api.pollQuickConnect(qcSecret)
+                            if (poll.isFailure) {
+                                qcError = "Polling failed: ${poll.exceptionOrNull()?.message}"
+                                return@LaunchedEffect
+                            }
+                            if (poll.getOrThrow().authenticated) {
+                                val authResult = api.authenticateWithQuickConnect(qcSecret)
+                                if (authResult.isFailure) {
+                                    qcError = "Authentication failed: ${authResult.exceptionOrNull()?.message}"
+                                    return@LaunchedEffect
+                                }
+                                val auth = authResult.getOrThrow()
+                                showQuickConnectDialog = false
+                                viewModel.quickConnectSave(
+                                    name = name.ifBlank { auth.user.name },
+                                    url = url.trimEnd('/'),
+                                    username = username.ifBlank { auth.user.name },
+                                    token = auth.accessToken,
+                                    userId = auth.user.id,
+                                    onComplete = onSuccess
+                                )
+                                return@LaunchedEffect
+                            }
+                        }
+                        qcError = "Timed out waiting for approval. Please try again."
+                    }
+
+                    AlertDialog(
+                        onDismissRequest = { showQuickConnectDialog = false },
+                        title = { Text("Quick Connect", color = CinemaTextPrimary) },
+                        text = {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                when {
+                                    qcError != null -> {
+                                        Text(
+                                            text = qcError!!,
+                                            color = CinemaError,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                    qcCode.isEmpty() -> {
+                                        CircularProgressIndicator(color = CinemaAccent)
+                                        Spacer(modifier = Modifier.height(Spacing.sm))
+                                        Text(
+                                            text = "Connecting to server...",
+                                            color = CinemaTextSecondary,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                    else -> {
+                                        Text(
+                                            text = "Enter this code in Jellyfin:",
+                                            color = CinemaTextSecondary,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Spacer(modifier = Modifier.height(Spacing.sm))
+                                        Text(
+                                            text = qcCode,
+                                            color = CinemaAccent,
+                                            style = MaterialTheme.typography.displayMedium
+                                        )
+                                        Spacer(modifier = Modifier.height(Spacing.md))
+                                        Text(
+                                            text = "Open Jellyfin → Dashboard → Quick Connect, then enter the code above.",
+                                            color = CinemaTextSecondary,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Spacer(modifier = Modifier.height(Spacing.md))
+                                        CircularProgressIndicator(color = CinemaAccent)
+                                        Spacer(modifier = Modifier.height(Spacing.sm))
+                                        Text(
+                                            text = "Waiting for approval...",
+                                            color = CinemaTextSecondary,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {},
+                        dismissButton = {
+                            Button(
+                                onClick = { showQuickConnectDialog = false },
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = CinemaSurfaceVariant,
+                                    contentColor = CinemaTextPrimary
+                                )
                             ) { Text("Cancel") }
                         },
                         containerColor = CinemaSurface

@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.network
 
 import android.content.Context
 import android.provider.Settings
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -102,13 +104,51 @@ object MediaProviderFactory {
             Settings.Secure.ANDROID_ID
         ) ?: "fijerena-${entity.id}"
 
+        val prefs = getJellyfinSessionPrefs(context, entity.id)
+        val savedToken = prefs?.getString("jellyfin_token", null)
+        val savedUserId = prefs?.getString("jellyfin_user_id", null)
+
         return JellyfinMediaProvider(
             providerId = entity.id,
             serverUrl = entity.url.trimEnd('/'),
             username = entity.username,
             password = password,
-            deviceId = deviceId
+            deviceId = deviceId,
+            savedToken = savedToken,
+            savedUserId = savedUserId,
+            onSessionSaved = { token, userId ->
+                prefs?.edit()
+                    ?.putString("jellyfin_token", token)
+                    ?.putString("jellyfin_user_id", userId)
+                    ?.apply()
+            },
+            onSessionCleared = {
+                prefs?.edit()
+                    ?.remove("jellyfin_token")
+                    ?.remove("jellyfin_user_id")
+                    ?.apply()
+            }
         )
+    }
+
+    private fun getJellyfinSessionPrefs(
+        context: Context,
+        providerId: Long
+    ): android.content.SharedPreferences? {
+        return try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                "provider_creds_$providerId",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun createSmb(entity: ProviderEntity, password: String): MediaProvider {

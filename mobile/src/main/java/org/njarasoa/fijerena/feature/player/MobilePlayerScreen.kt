@@ -5,11 +5,17 @@ import android.content.pm.ActivityInfo
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +26,8 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
@@ -113,8 +121,11 @@ fun MobilePlayerScreen(
     var currentStreamId by remember { mutableStateOf(streamId) }
     var currentStreamName by remember { mutableStateOf(streamName) }
     var streamList by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var currentStreamIndex by remember { mutableStateOf(0) }
     var showChannelToast by remember { mutableStateOf(false) }
+    var showCategoryOverlay by remember { mutableStateOf(false) }
+    var showLastWatchedOverlay by remember { mutableStateOf(false) }
 
     // EPG state for current and next programme
     var currentEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
@@ -160,6 +171,14 @@ fun MobilePlayerScreen(
                 },
                 onFailure = { /* Keep empty list, disable channel switching */ }
             )
+        }
+    }
+
+    // Load last watched streams for overlay (Live TV only)
+    LaunchedEffect(Unit) {
+        if (contentType == "LIVE_TV") {
+            mediaRepository.getItems("last_watched", contentType)
+                .onSuccess { lastWatchedStreams = it }
         }
     }
 
@@ -348,32 +367,60 @@ fun MobilePlayerScreen(
             ErrorScreen(message = error ?: "Unknown error", onBack = onBack)
         }
         else -> {
+            val isLiveContent = contentType == "LIVE_TV"
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)
-                    .clickable {
-                        if (!showStats) {
-                            showControls = !showControls
-                        }
+                    .pointerInput(showStats, isLiveContent, playbackState) {
+                        detectTapGestures(
+                            onTap = {
+                                if (!showStats) showControls = !showControls
+                            },
+                            onDoubleTap = {
+                                if (!isLiveContent) {
+                                    when (playbackState) {
+                                        is PlaybackState.Playing -> viewModel.pause()
+                                        is PlaybackState.Paused -> viewModel.resume()
+                                        else -> {}
+                                    }
+                                }
+                            }
+                        )
                     }
                     .then(
-                        if (contentType == "LIVE_TV" && streamList.size > 1) {
-                            Modifier.pointerInput(streamList) {
-                                var totalDrag = 0f
-                                detectVerticalDragGestures(
-                                    onDragStart = { totalDrag = 0f },
-                                    onVerticalDrag = { _, dragAmount ->
-                                        totalDrag += dragAmount
+                        if (isLiveContent) {
+                            Modifier.pointerInput(streamList, showCategoryOverlay, showLastWatchedOverlay) {
+                                var verticalAccumulator = 0f
+                                var horizontalAccumulator = 0f
+                                detectDragGestures(
+                                    onDragStart = {
+                                        verticalAccumulator = 0f
+                                        horizontalAccumulator = 0f
                                     },
-                                    onDragEnd = {
-                                        val threshold = 100f
-                                        if (totalDrag < -threshold) {
-                                            // Swipe up = next channel
-                                            switchToNextChannel()
-                                        } else if (totalDrag > threshold) {
-                                            // Swipe down = previous channel
-                                            switchToPreviousChannel()
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        verticalAccumulator += dragAmount.y
+                                        horizontalAccumulator += dragAmount.x
+                                        // Vertical: channel switching
+                                        if (kotlin.math.abs(verticalAccumulator) > 100f) {
+                                            if (verticalAccumulator < 0) switchToNextChannel()
+                                            else switchToPreviousChannel()
+                                            verticalAccumulator = 0f
+                                        }
+                                        // Horizontal: overlay panels
+                                        if (kotlin.math.abs(horizontalAccumulator) > 80f) {
+                                            when {
+                                                horizontalAccumulator > 0 && !showLastWatchedOverlay ->
+                                                    showCategoryOverlay = true
+                                                horizontalAccumulator < 0 && !showCategoryOverlay ->
+                                                    showLastWatchedOverlay = true
+                                                horizontalAccumulator > 0 && showLastWatchedOverlay ->
+                                                    showLastWatchedOverlay = false
+                                                horizontalAccumulator < 0 && showCategoryOverlay ->
+                                                    showCategoryOverlay = false
+                                            }
+                                            horizontalAccumulator = 0f
                                         }
                                     }
                                 )
@@ -468,6 +515,8 @@ fun MobilePlayerScreen(
                                 viewModel.pause()
                             }
                         },
+                        onFastForward = if (contentType != "LIVE_TV") ({ viewModel.seekRelative(60_000L) }) else null,
+                        onRewind = if (contentType != "LIVE_TV") ({ viewModel.seekRelative(-30_000L) }) else null,
                         onBack = {
                             // Save position before stopping (stop sets state to Idle)
                             if (contentType != "LIVE_TV") {
@@ -537,6 +586,59 @@ fun MobilePlayerScreen(
                         currentEpgProgram = currentEpgProgram
                     )
                 }
+            }
+
+            // Category streams panel — slides in from the left
+            AnimatedVisibility(
+                visible = showCategoryOverlay,
+                enter = slideInHorizontally { -it },
+                exit = slideOutHorizontally { -it }
+            ) {
+                MobileChannelListSheet(
+                    title = "Category Channels",
+                    streams = streamList,
+                    panelAlignment = Alignment.CenterStart,
+                    onSelect = { item ->
+                        showCategoryOverlay = false
+                        val index = streamList.indexOfFirst { it.id == item.id }
+                        if (index >= 0) {
+                            currentStreamIndex = index
+                            currentStreamId = item.id
+                            currentStreamName = item.name
+                            showChannelToast = true
+                        }
+                    },
+                    onDismiss = { showCategoryOverlay = false }
+                )
+            }
+
+            // Last watched panel — slides in from the right
+            AnimatedVisibility(
+                visible = showLastWatchedOverlay,
+                enter = slideInHorizontally { it },
+                exit = slideOutHorizontally { it }
+            ) {
+                MobileChannelListSheet(
+                    title = "Last Watched",
+                    streams = lastWatchedStreams,
+                    panelAlignment = Alignment.CenterEnd,
+                    onSelect = { item ->
+                        showLastWatchedOverlay = false
+                        val index = streamList.indexOfFirst { it.id == item.id }
+                        if (index >= 0) {
+                            currentStreamIndex = index
+                            currentStreamId = item.id
+                            currentStreamName = item.name
+                            showChannelToast = true
+                        } else {
+                            // Stream not in category list, switch directly
+                            currentStreamId = item.id
+                            currentStreamName = item.name
+                            showChannelToast = true
+                        }
+                    },
+                    onDismiss = { showLastWatchedOverlay = false }
+                )
             }
 
             // Selector dialogs (outside the clickable Box)
@@ -672,7 +774,9 @@ private fun ControlsOverlay(
     onAudioTrack: () -> Unit,
     onSubtitle: () -> Unit,
     onQuality: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onFastForward: (() -> Unit)? = null,
+    onRewind: (() -> Unit)? = null
 ) {
     val audioTrackCount = remember { viewModel.getAudioTracks().size }
     val subtitleTrackCount = remember { viewModel.getSubtitleTracks().size }
@@ -706,23 +810,59 @@ private fun ControlsOverlay(
             )
         }
 
-        // Center play/pause button
-        IconButton(
-            onClick = onPlayPause,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(MobileDimensions.iconPlayContainer)
+        // Center row: Rewind | Play/Pause | FastForward (VOD only shows seek buttons)
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xl),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = if (playbackState is PlaybackState.Paused) {
-                    Icons.Default.PlayArrow
-                } else {
-                    Icons.Default.Pause
-                },
-                contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
-                tint = Color.White,
-                modifier = Modifier.size(MobileDimensions.iconPlayIcon)
-            )
+            if (onRewind != null) {
+                IconButton(
+                    onClick = onRewind,
+                    modifier = Modifier.size(MobileDimensions.iconPlayContainer)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.FastRewind,
+                            contentDescription = "Rewind 30s",
+                            tint = Color.White,
+                            modifier = Modifier.size(MobileDimensions.iconLarge)
+                        )
+                        Text("-30s", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                    }
+                }
+            }
+            IconButton(
+                onClick = onPlayPause,
+                modifier = Modifier.size(MobileDimensions.iconPlayContainer)
+            ) {
+                Icon(
+                    imageVector = if (playbackState is PlaybackState.Paused) {
+                        Icons.Default.PlayArrow
+                    } else {
+                        Icons.Default.Pause
+                    },
+                    contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
+                    tint = Color.White,
+                    modifier = Modifier.size(MobileDimensions.iconPlayIcon)
+                )
+            }
+            if (onFastForward != null) {
+                IconButton(
+                    onClick = onFastForward,
+                    modifier = Modifier.size(MobileDimensions.iconPlayContainer)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.FastForward,
+                            contentDescription = "Fast Forward 1min",
+                            tint = Color.White,
+                            modifier = Modifier.size(MobileDimensions.iconLarge)
+                        )
+                        Text("+1m", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                    }
+                }
+            }
         }
 
         // Bottom section: progress + controls (scrollable for landscape)
@@ -906,6 +1046,94 @@ private fun ControlsOverlay(
                 }
             }
         }
+        }
+    }
+}
+
+// --- Channel List Bottom Sheet ---
+
+@Composable
+private fun MobileChannelListSheet(
+    title: String,
+    streams: List<MediaItem>,
+    onSelect: (MediaItem) -> Unit,
+    onDismiss: () -> Unit,
+    panelAlignment: Alignment = Alignment.CenterStart
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = CinemaAlpha.tint))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() }
+    ) {
+        GlassPanel(
+            modifier = Modifier
+                .align(panelAlignment)
+                .fillMaxWidth(0.72f)
+                .fillMaxHeight()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { /* consume clicks */ },
+            backgroundAlpha = 0.5f
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(CinemaSpacing.md)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                    }
+                }
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                if (streams.isEmpty()) {
+                    Text(
+                        text = "No channels available",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = CinemaAlpha.textMedium)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                    ) {
+                        items(streams) { stream ->
+                            Surface(
+                                onClick = { onSelect(stream) },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CinemaAlpha.glass),
+                                shape = MaterialTheme.shapes.small
+                            ) {
+                                Text(
+                                    text = stream.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(
+                                        horizontal = CinemaSpacing.md,
+                                        vertical = CinemaSpacing.sm
+                                    ),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
