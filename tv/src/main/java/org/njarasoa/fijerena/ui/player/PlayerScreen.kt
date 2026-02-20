@@ -9,7 +9,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -717,14 +716,24 @@ private fun ChannelListOverlay(
     panelAlignment: Alignment = Alignment.CenterStart,
     emptyMessage: String = "No channels"
 ) {
-    val focusRequester = remember { FocusRequester() }
+    val listFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    // Request focus on the list (or empty message) as soon as the overlay appears
+    LaunchedEffect(Unit) {
+        listFocusRequester.requestFocus()
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = CinemaAlpha.tint))
+            // Back key bubbles up from focused list items to here
+            .onKeyEvent { keyEvent ->
+                if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Back) {
+                    onDismiss()
+                    true
+                } else false
+            }
     ) {
         GlassPanel(
             modifier = Modifier
@@ -738,14 +747,6 @@ private fun ChannelListOverlay(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(Spacing.lg)
-                    .focusRequester(focusRequester)
-                    .focusable()
-                    .onKeyEvent { keyEvent ->
-                        if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Back) {
-                            onDismiss()
-                            true
-                        } else false
-                    }
             ) {
                 Text(
                     text = title,
@@ -758,27 +759,32 @@ private fun ChannelListOverlay(
                     Text(
                         text = emptyMessage,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                        modifier = Modifier
+                            .focusRequester(listFocusRequester)
+                            .focusable()
                     )
                 } else {
                     TvLazyColumn(
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(listFocusRequester)
                     ) {
                         items(streams) { stream ->
-                            Text(
-                                text = stream.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            Button(
+                                onClick = { onSelect(stream) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { onSelect(stream) }
-                                    .padding(
-                                        horizontal = Spacing.sm,
-                                        vertical = Spacing.xs
-                                    )
-                            )
+                                    .padding(bottom = Spacing.xs)
+                            ) {
+                                Text(
+                                    text = stream.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                     }
                 }
