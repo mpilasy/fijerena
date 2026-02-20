@@ -702,6 +702,85 @@ val metadata = PlayerMetadata(
 
 ---
 
+---
+
+## Phase 7: Player Overlays, Jellyfin Quick Connect, and Credential Cache Fix
+
+**Release Date:** 2026-02-19
+
+### Player Controls Overhaul
+
+**OK key never pauses (TV)**
+- OK / center key now only toggles the controls overlay; it no longer pauses or resumes playback.
+- Pause is intentional: via the pause button in the controls bar, remote media keys, or double-tap (mobile).
+
+**Live TV channel overlays (TV)**
+- D-pad Left → slides in a category-channel panel from the left edge.
+- D-pad Right → slides in a last-watched panel from the right edge.
+- If the opposite panel is already open, the key closes it instead of opening a second panel.
+- Overlays use animated `slideInHorizontally` / `slideOutHorizontally` transitions.
+- Semi-transparent `GlassPanel` (`backgroundAlpha = 0.5f`), scrim at 30% opacity.
+
+**Live TV channel overlays (Mobile)**
+- Swipe right → category-channel side panel (slides in from left).
+- Swipe left → last-watched side panel (slides in from right).
+- Merged horizontal drag into the existing vertical channel-switch `detectDragGestures` block; horizontal threshold is 80 dp.
+- Overlays are full-height side panels (not bottom sheets).
+
+**Mobile tap gestures**
+- Replaced `.clickable` with `detectTapGestures(onTap, onDoubleTap)`.
+- Single tap → toggle controls overlay (unchanged behavior).
+- Double-tap → pause/resume VOD only; no effect during Live TV.
+
+**VOD seek controls**
+- Rewind button: −30 seconds.
+- Fast-forward button: +1 minute.
+- Shown in `ControlsOverlay`/`ControlButtonsRow` only when `!isLive && duration > 0`.
+- TV remote media keys wired: `KEYCODE_MEDIA_PLAY_PAUSE`, `KEYCODE_MEDIA_REWIND`, `KEYCODE_MEDIA_FAST_FORWARD`.
+- `PlaybackViewModel.seekRelative(offsetMs)` added for relative position seeking.
+
+### Jellyfin Quick Connect
+
+New passwordless auth flow for Jellyfin providers:
+1. Tap **Use Quick Connect** in Add Provider (TV and mobile).
+2. App calls `POST /QuickConnect/Initiate` and shows a 6-digit code.
+3. User approves the code in the Jellyfin web UI or another client.
+4. App polls `GET /QuickConnect/Connect?secret=…` every 3 seconds (up to 2 minutes).
+5. On approval, calls `POST /Users/AuthenticateWithQuickConnect` and stores the `AccessToken` in EncryptedSharedPreferences.
+
+**New APIs:** `JellyfinApiService.initiateQuickConnect()`, `pollQuickConnect()`, `authenticateWithQuickConnect()`
+**New models:** `JellyfinQuickConnectResult`, `JellyfinQuickConnectAuthBody`
+**New repo method:** `ProviderRepository.saveJellyfinSession(providerId, token, userId)`
+**New ViewModel method:** `ProviderViewModel.quickConnectSave()`
+
+### Bug Fix: Credential Cache Not Cleared on Update
+
+When a user edited a Jellyfin provider's username or password, the app continued authenticating with the old session token stored in `provider_creds_{id}` EncryptedSharedPreferences.
+
+**Fix:** `ProviderRepository.updateProvider()` now removes `jellyfin_token` and `jellyfin_user_id` from the provider's EncryptedSharedPreferences whenever a JELLYFIN provider is updated, forcing a fresh authentication on next use.
+
+### GlassPanel `backgroundAlpha` Parameter
+
+`GlassPanel` composable now accepts a `backgroundAlpha: Float = 1f` parameter that scales its background opacity. Used by channel overlays (`0.5f`) while keeping all other GlassPanel uses unchanged.
+
+### Files Modified
+
+- `core/player/.../viewmodel/PlaybackViewModel.kt` — `seekRelative(offsetMs)`
+- `core/network/.../jellyfin/JellyfinModels.kt` — Quick Connect data classes
+- `core/network/.../jellyfin/JellyfinApiService.kt` — Quick Connect API methods
+- `core/network/.../provider/ProviderRepository.kt` — `saveJellyfinSession()`, credential cache clear on update
+- `core/ui/.../viewmodels/ProviderViewModel.kt` — `quickConnectSave()`
+- `core/ui/.../components/GlassPanel.kt` — `backgroundAlpha` parameter
+- `tv/.../ui/player/PlayerScreen.kt` — OK key, D-pad overlays, media keys, seek wiring, animated overlays
+- `tv/.../ui/player/ChannelListOverlay.kt` — `panelAlignment` parameter
+- `tv/.../feature/player/TvPlayerScreen.kt` — `lastWatchedStreams` load + pass-through
+- `tv/.../feature/provider/TvAddProviderScreen.kt` — Quick Connect UI
+- `mobile/.../feature/player/MobilePlayerScreen.kt` — tap/double-tap, swipe overlays, side panels
+- `mobile/.../feature/player/MobilePlayerScreen.kt` — `MobileChannelListSheet` redesign
+- `mobile/.../feature/provider/MobileAddProviderScreen.kt` — Quick Connect UI
+
+---
+
 ## 🔮 Future Enhancements
 
 - **Playback Speed Control** — Variable speed for VOD content (0.5×, 1.25×, 1.5×, 2×)

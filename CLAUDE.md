@@ -39,15 +39,18 @@ Singleton via `ConnectivityManager.NetworkCallback`. `StateFlow<NetworkType>` fo
 ### Player UI Features
 - **Audio/Subtitle/Quality selection:** In-playback track switching dialogs (D-pad navigable)
 - **Channel switching:** D-pad up/down for Live TV only (disabled for VOD to prevent accidents). Toast notification at top-center, auto-dismiss 3s.
+- **Channel overlays (Live TV):** Category-channel panel (left edge) and last-watched panel (right edge). TV: D-pad Left/Right. Mobile: swipe right/left. Animated `slideInHorizontally`/`slideOutHorizontally`. Semi-transparent `GlassPanel` (`backgroundAlpha=0.5f`), 30% scrim. `ChannelListOverlay` has `panelAlignment` param.
+- **VOD seek:** Rewind −30s and FF +1min buttons in controls bar (shown only when `!isLive && duration > 0`). TV remote: `KEYCODE_MEDIA_REWIND`/`KEYCODE_MEDIA_FAST_FORWARD`. `PlaybackViewModel.seekRelative(offsetMs)` handles both.
+- **VOD pause via remote/gesture:** TV: `KEYCODE_MEDIA_PLAY_PAUSE` key. Mobile: double-tap screen (Live TV ignores double-tap).
 - **VOD time display:** Progress bar, remaining time, "Ends at" with timezone-aware calculation
 - **EPG in player (Live TV):** Shows current programme title + time range, programme progress bar, and "Up Next" in stream info overlay (TV `StreamInfoDisplay`) and mobile `ControlsOverlay`/`ChannelToast`. Fetched via `getEpgBulkForItems()` on stream start and channel switch. Graceful degradation if no EPG data.
 - **Stats overlay:** Double-tap OK. Video/audio codec info, network stats (measured bandwidth, rebuffer count/duration, ABR quality switches), dropped frames (color-coded), stream retries, uptime, repositionable (4 corners). Mobile: dismissible only via X button.
 - **Control hints:** First-playback overlay listing all controls, auto-dismiss 7s, "Don't show again" option
 - **Wake lock:** Acquired on play, released on pause/stop. `PARTIAL_WAKE_LOCK` + `WAKE_MODE_NETWORK`.
 - **Auto-resume:** Saved position every 5s, resume if 2-95% progress
-- **Mobile:** Touch to show/hide controls, orientation unlocks to sensor during playback
+- **Mobile:** `detectTapGestures` on player surface — single tap = toggle controls, double-tap = pause/resume VOD. `detectDragGestures` merges vertical (channel switch, threshold 100f) and horizontal (overlay panels, threshold 80f) swipe.
 
-**Controls:** OK=show controls, Double-OK=stats, Back=exit, D-pad Up/Down=channel (Live TV), Audio/Subtitle/Quality/Favorite buttons.
+**Controls:** OK=show controls (never pauses), Double-OK=stats, Back=exit, D-pad Up/Down=channel (Live TV), D-pad Left/Right=overlays (Live TV) or seek (VOD), Media keys=VOD pause/seek, Audio/Subtitle/Quality/Favorite buttons. Mobile: tap=controls, double-tap=pause/resume (VOD), swipe up/down=channel, swipe left/right=overlays (Live TV).
 
 ## Theme & Design System
 
@@ -196,7 +199,11 @@ Dedicated screen (`Screen.EpgManagement`) for managing multiple XMLTV EPG source
 
 **Key Files:** `MediaRepository.kt` (unified repository), `MediaProviderFactory.kt`, `XtreamMediaProvider.kt`/`XtreamMapper.kt`, `jellyfin/JellyfinMediaProvider.kt`/`JellyfinApiService.kt`, `smb/SmbMediaProvider.kt`/`SmbClient.kt`, `local/LocalMediaProvider.kt`/`LocalFileScanner.kt`/`M3uParser.kt`
 
-**Storage:** Room `ProviderEntity` (name, URL, username, type, config JSON, active flag), per-provider EncryptedSharedPreferences for passwords, per-provider cache SharedPreferences (`xtream_cache_{id}`).
+**Storage:** Room `ProviderEntity` (name, URL, username, type, config JSON, active flag), per-provider EncryptedSharedPreferences for passwords (`provider_creds_{id}`), per-provider cache SharedPreferences (`xtream_cache_{id}`).
+
+**Jellyfin session tokens** stored in `provider_creds_{id}` prefs under keys `jellyfin_token` and `jellyfin_user_id`. `ProviderRepository.saveJellyfinSession(id, token, userId)` writes them. `updateProvider()` clears them for JELLYFIN providers to force re-auth on credential change.
+
+**Jellyfin Quick Connect:** `POST /QuickConnect/Initiate` → display 6-digit code → poll `GET /QuickConnect/Connect?secret=…` every 3s (up to 2min) → `POST /Users/AuthenticateWithQuickConnect` → `saveJellyfinSession()`. UI in `TvAddProviderScreen` and `MobileAddProviderScreen` (add mode only).
 
 **Navigation IDs:** All `String` (not `Int`) for Jellyfin/SMB/Local compatibility.
 **Migration:** First launch auto-migrates single-provider `AccountManager` credentials to Room.

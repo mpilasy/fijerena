@@ -27,7 +27,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 
 ### 🎬 Multi-Provider Support
 - **Xtream Codes API** - Full IPTV support with Live TV, Movies, TV Shows, and EPG
-- **Jellyfin** - Self-hosted media server integration with playback progress sync
+- **Jellyfin** - Self-hosted media server integration with playback progress sync and Quick Connect auth
 - **SMB/CIFS** - Direct access to network shares (SMB2/3)
 - **Local Storage** - Local media files and M3U playlist support
 - Seamlessly switch between multiple providers
@@ -70,6 +70,9 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Playback Resume** - Automatic position restore for VOD content (2-95% range)
 - **Stats for Nerds** - Real-time playback metrics overlay
 - **Channel Switching** - D-pad up/down for live TV channel navigation
+- **Channel Overlays** - Category and last-watched side panels (D-pad Left/Right on TV, swipe on mobile)
+- **VOD Seek Controls** - Rewind −30s and Fast-forward +1min via buttons or remote media keys
+- **Pause via Double-Tap** - Mobile double-tap pauses/resumes VOD content
 - **VOD Time Display** - Current position, remaining time, estimated end time
 - **Developer Mode** - Payload size tracking and debug information
 - **Cache Management** - Per-content-type cache with statistics
