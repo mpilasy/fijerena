@@ -559,7 +559,7 @@ fun PlayerScreen(
 
         // Category streams overlay — slides in from the left
         AnimatedVisibility(
-            visible = showCategoryOverlay && categoryStreams.isNotEmpty(),
+            visible = showCategoryOverlay,
             enter = slideInHorizontally { -it },
             exit = slideOutHorizontally { -it }
         ) {
@@ -577,7 +577,7 @@ fun PlayerScreen(
 
         // Last watched overlay — slides in from the right
         AnimatedVisibility(
-            visible = showLastWatchedOverlay && lastWatchedStreams.isNotEmpty(),
+            visible = showLastWatchedOverlay,
             enter = slideInHorizontally { it },
             exit = slideOutHorizontally { it }
         ) {
@@ -747,19 +747,27 @@ private fun ChannelListOverlay(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = Spacing.md)
                 )
-                TvLazyRow(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(streams) { stream ->
-                        Button(
-                            onClick = { onSelect(stream) },
-                            modifier = Modifier.padding(horizontal = Spacing.xs)
-                        ) {
-                            Text(
-                                text = stream.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1
-                            )
+                if (streams.isEmpty()) {
+                    Text(
+                        text = "Loading channels…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                    )
+                } else {
+                    TvLazyRow(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(streams) { stream ->
+                            Button(
+                                onClick = { onSelect(stream) },
+                                modifier = Modifier.padding(horizontal = Spacing.xs)
+                            ) {
+                                Text(
+                                    text = stream.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }
