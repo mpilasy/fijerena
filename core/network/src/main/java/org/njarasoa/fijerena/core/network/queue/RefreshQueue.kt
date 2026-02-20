@@ -1,7 +1,10 @@
 package org.njarasoa.fijerena.core.network.queue
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +21,7 @@ import java.util.PriorityQueue
  */
 object RefreshQueue {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val queue = PriorityQueue<RefreshTask>()
+    private val queue = PriorityQueue<QueuedTask>()
     private val queueMutex = Mutex()
     private val processChannel = Channel<Unit>(Channel.CONFLATED)
 
@@ -27,6 +30,15 @@ object RefreshQueue {
 
     private val _queuedTaskIds = MutableStateFlow<Set<String>>(emptySet())
     val queuedTaskIds = _queuedTaskIds.asStateFlow()
+
+    private class QueuedTask(
+        val task: RefreshTask,
+        val deferred: CompletableDeferred<Unit>
+    ) : Comparable<QueuedTask> {
+        override fun compareTo(other: QueuedTask): Int {
+            return task.compareTo(other.task)
+        }
+    }
 
     init {
         startWorker()
@@ -42,28 +54,38 @@ object RefreshQueue {
 
     /**
      * Submit a task to the queue.
-     * If a task with the same ID already exists, it is replaced.
+     * Returns a Deferred that completes when the task finishes.
+     * If a task with the same ID already exists, it is replaced and the new Deferred is returned.
      */
-    suspend fun submit(task: RefreshTask) {
+    suspend fun submit(task: RefreshTask): Deferred<Unit> {
+        val deferred = CompletableDeferred<Unit>()
+        val queuedTask = QueuedTask(task, deferred)
+
         queueMutex.withLock {
             // Remove existing task with same ID to ensure we don't queue multiple same tasks
-            // and to update priority if it changed (although replace is usually better)
-            val existing = queue.find { it.id == task.id }
+            val existing = queue.find { it.task.id == task.id }
             if (existing != null) {
                 queue.remove(existing)
+                // Cancel/complete the old deferred?
+                // Better to let it be replaced. The caller waiting on the old one
+                // might wait forever if we don't handle it, or we can chain it.
+                // For simplicity, we'll cancel the old one with a cancellation exception
+                // or just let it hang? No, canceling is safer.
+                existing.deferred.cancel()
             }
-            queue.add(task)
-            _queuedTaskIds.value = queue.map { it.id }.toSet()
+            queue.add(queuedTask)
+            _queuedTaskIds.value = queue.map { it.task.id }.toSet()
         }
         processChannel.trySend(Unit)
+        return deferred
     }
 
     private suspend fun processNext() {
         while (true) {
-            val task = queueMutex.withLock {
+            val queuedTask = queueMutex.withLock {
                 val t = queue.poll()
                 if (t != null) {
-                    _queuedTaskIds.value = queue.map { it.id }.toSet()
+                    _queuedTaskIds.value = queue.map { it.task.id }.toSet()
                 }
                 t
             } ?: break
@@ -71,9 +93,11 @@ object RefreshQueue {
             _isProcessing.value = true
             try {
                 // Execute the task
-                task.execute()
+                queuedTask.task.execute()
+                queuedTask.deferred.complete(Unit)
             } catch (e: Exception) {
                 e.printStackTrace()
+                queuedTask.deferred.completeExceptionally(e)
             } finally {
                 _isProcessing.value = false
             }
