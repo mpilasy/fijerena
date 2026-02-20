@@ -8,13 +8,16 @@ A native Android media player supporting Xtream IPTV, Jellyfin, SMB shares, Loca
 
 | Provider | Live TV | Movies | TV Shows | Search | Progress Sync | Auth |
 |----------|---------|--------|----------|--------|---------------|------|
-| **Xtream** | Yes | Yes | Yes | Client-side | No | Yes |
-| **Jellyfin** | No | Yes | Yes | Server-side | Yes | Yes |
+| **Xtream** | Yes | Yes | Yes | Client-side | No | Username/password |
+| **Jellyfin** | No | Yes | Yes | Server-side | Yes | Username/password or Quick Connect |
 | **SMB** | No | Yes | No | Filename | No | Optional |
 | **Local** | M3U only | Yes | No | Filename | No | No |
 | **Remote M3U** | Yes | No | No | No | No | No |
 
 Multiple providers can be configured simultaneously. Switch active provider from Settings → Manage Providers.
+
+### Jellyfin Quick Connect
+When adding a Jellyfin provider, tap **Use Quick Connect** instead of entering a password. The app displays a 6-digit code that you approve on the Jellyfin web UI or another client. On approval the app receives and stores the access token automatically — no password is ever stored or required.
 
 ---
 
@@ -146,8 +149,33 @@ In-playback dialogs for audio track, subtitle track, and video quality. D-pad na
 Position saved every 5 seconds. On re-open, resumes if progress is 2–95%. Resume prompt with "Continue" / "Start Over".
 
 ### Controls
-- **TV:** OK = show/hide controls, double-OK = stats, Back = exit, D-pad Up/Down = channel switch (Live TV)
-- **Mobile:** tap = controls, swipe up/down = channel switch (Live TV), slider seek bar (VOD)
+
+**TV (D-pad remote):**
+- **OK** = show/hide controls (never pauses playback)
+- **Double-OK** = toggle stats overlay
+- **Back** = exit player
+- **D-pad Up/Down** = switch channel (Live TV only)
+- **D-pad Left** = open category channel overlay (Live TV); if last-watched overlay is open, closes it instead
+- **D-pad Right** = open last-watched channel overlay (Live TV); if category overlay is open, closes it instead
+- **D-pad Left/Right** = seek −10s / +10s (VOD only, while controls visible)
+- **KEYCODE_MEDIA_PLAY_PAUSE** = pause/resume (VOD only)
+- **KEYCODE_MEDIA_REWIND** = seek −30s (VOD only)
+- **KEYCODE_MEDIA_FAST_FORWARD** = seek +1 min (VOD only)
+
+**Mobile:**
+- **Single tap** = show/hide controls
+- **Double-tap** = pause/resume (VOD only; no effect on Live TV)
+- **Swipe up/down** = switch channel (Live TV only)
+- **Swipe right** = open category channel overlay (Live TV)
+- **Swipe left** = open last-watched channel overlay (Live TV)
+- **FF / Rewind buttons** = +1 min / −30s seek (VOD only, shown in controls bar when `duration > 0`)
+
+### Channel Overlays (Live TV)
+Two side-panel overlays available during Live TV playback:
+- **Category channels** — slides in from left edge. TV: D-pad Left. Mobile: swipe right.
+- **Last watched** — slides in from right edge. TV: D-pad Right. Mobile: swipe left.
+
+Overlays use semi-transparent `GlassPanel` (50% opacity). Background scrim is 30% black. Select a stream to switch channels; dismiss with Back or by opening the opposite panel. Overlays close automatically when a stream is selected.
 
 ---
 

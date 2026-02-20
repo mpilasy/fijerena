@@ -49,6 +49,14 @@ Prefer real hardware for validation:
 
 ## Recently Completed
 
+- Player overlays: category (left) + last-watched (right) with slide animations, semi-transparent GlassPanel
+- OK/tap never pauses — pause is explicit (button, media key, double-tap)
+- Mobile: double-tap to pause/resume VOD; swipe left/right for Live TV overlays
+- VOD seek buttons: Rewind −30s, FF +1min; TV media remote keys wired
+- Jellyfin Quick Connect passwordless auth (6-digit code flow)
+- Bug fix: Jellyfin session token cleared when provider credentials updated
+- GlassPanel `backgroundAlpha` parameter
+- `PlaybackViewModel.seekRelative(offsetMs)`
 - Favorites export/import + selective import dialog (#9)
 - Jellyfin PlaybackInfo negotiation + DeviceProfile (#8)
 - Jellyfin auth fix (OkHttp engine + HttpSend interceptor) (#6, #7)

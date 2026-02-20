@@ -72,6 +72,13 @@ Apply TV-safe margins to all root containers to compensate for overscan:
 - **Buffer Strategy:** `AdaptiveLoadControl` dynamically swaps buffer profiles (Live TV vs VOD, WiFi vs Cellular) at runtime.
 - **Codec Priority:** Optimized per device (Shield: AV1 -> HEVC -> AVC; Sony: HEVC -> AVC).
 - **State Management:** `PlaybackViewModel` delegates to `StreamingPlaybackService` (a `MediaSessionService`).
+- **Seeking:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
+- **Controls — critical rules:**
+  - OK / center key **shows controls only** — it never pauses or resumes playback.
+  - Pause is explicit: pause button, `KEYCODE_MEDIA_PLAY_PAUSE`, or mobile double-tap (VOD only).
+  - D-pad Left/Right on Live TV open channel overlay panels (never seek on live).
+  - Channel overlays use `ChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` animations and `GlassPanel(backgroundAlpha=0.5f)`.
+  - Mobile uses `detectTapGestures` (not `.clickable`) and merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
 
 ---
 
