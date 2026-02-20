@@ -195,13 +195,14 @@ class XtreamMediaProvider(
      * Used by background worker.
      */
     suspend fun syncAll() {
-        repository.syncCategories(XtreamCategoryEntity.TYPE_LIVE)
-        repository.syncCategories(XtreamCategoryEntity.TYPE_VOD)
-        repository.syncCategories(XtreamCategoryEntity.TYPE_SERIES)
-
-        repository.syncStreams(XtreamStreamEntity.TYPE_LIVE)
-        repository.syncStreams(XtreamStreamEntity.TYPE_VOD)
-
-        repository.syncSeries()
+        val jobs = listOf(
+            repository.syncCategories(XtreamCategoryEntity.TYPE_LIVE),
+            repository.syncCategories(XtreamCategoryEntity.TYPE_VOD),
+            repository.syncCategories(XtreamCategoryEntity.TYPE_SERIES),
+            repository.syncStreams(XtreamStreamEntity.TYPE_LIVE),
+            repository.syncStreams(XtreamStreamEntity.TYPE_VOD),
+            repository.syncSeries()
+        )
+        jobs.forEach { it.await() }
     }
 }
