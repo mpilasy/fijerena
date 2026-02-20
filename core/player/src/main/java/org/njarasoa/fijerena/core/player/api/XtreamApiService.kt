@@ -119,48 +119,48 @@ class XtreamApiService(
     /**
      * Fetches all live streams for a specific category.
      *
-     * @param categoryId The category ID to fetch streams for
+     * @param categoryId The category ID to fetch streams for. If null, fetches all streams.
      * @return List of streams in the category
      * @throws Exception if the request fails
      */
-    suspend fun getStreams(categoryId: String): List<XtreamStream> {
+    suspend fun getStreams(categoryId: String? = null): List<XtreamStream> {
         return client.get("player_api.php") {
             parameter("username", username)
             parameter("password", password)
             parameter("action", "get_live_streams")
-            parameter("category_id", categoryId)
+            if (categoryId != null) parameter("category_id", categoryId)
         }.body()
     }
 
     /**
      * Fetches all VOD streams (movies) for a specific category.
      *
-     * @param categoryId The category ID to fetch VOD streams for
+     * @param categoryId The category ID to fetch VOD streams for. If null, fetches all streams.
      * @return List of VOD streams in the category
      * @throws Exception if the request fails
      */
-    suspend fun getVodStreams(categoryId: String): List<XtreamStream> {
+    suspend fun getVodStreams(categoryId: String? = null): List<XtreamStream> {
         return client.get("player_api.php") {
             parameter("username", username)
             parameter("password", password)
             parameter("action", "get_vod_streams")
-            parameter("category_id", categoryId)
+            if (categoryId != null) parameter("category_id", categoryId)
         }.body()
     }
 
     /**
      * Fetches all series (TV shows) for a specific category.
      *
-     * @param categoryId The category ID to fetch series for
+     * @param categoryId The category ID to fetch series for. If null, fetches all series.
      * @return List of series in the category
      * @throws Exception if the request fails
      */
-    suspend fun getSeries(categoryId: String): List<XtreamSeries> {
+    suspend fun getSeries(categoryId: String? = null): List<XtreamSeries> {
         return client.get("player_api.php") {
             parameter("username", username)
             parameter("password", password)
             parameter("action", "get_series")
-            parameter("category_id", categoryId)
+            if (categoryId != null) parameter("category_id", categoryId)
         }.body()
     }
 

@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.queue.RefreshPriority
+import org.njarasoa.fijerena.core.network.queue.RefreshQueue
+import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
@@ -238,8 +241,16 @@ class EpgFileManager private constructor(private val context: Context) {
 
             val db = EpgIndexDatabase.getInstance(context)
             val sources = db.epgSourceDao().getEnabledSources()
-            processAllSourcesInternal(sources)
-            onComplete?.invoke()
+
+            val task = object : RefreshTask {
+                override val id = "epg_refresh_all"
+                override val priority = RefreshPriority.MEDIUM
+                override suspend fun execute() {
+                    processAllSourcesInternal(sources)
+                    onComplete?.invoke()
+                }
+            }
+            RefreshQueue.submit(task)
         }
     }
 
@@ -271,8 +282,15 @@ class EpgFileManager private constructor(private val context: Context) {
                 return@launch
             }
 
-            processSingleSourceInternal(sourceId)
-            onComplete?.invoke()
+            val task = object : RefreshTask {
+                override val id = "epg_refresh_source_$sourceId"
+                override val priority = RefreshPriority.MEDIUM
+                override suspend fun execute() {
+                    processSingleSourceInternal(sourceId)
+                    onComplete?.invoke()
+                }
+            }
+            RefreshQueue.submit(task)
         }
     }
 
@@ -701,11 +719,14 @@ class EpgFileManager private constructor(private val context: Context) {
 
         if (staleSources.isNotEmpty()) {
             Log.d(TAG, "Auto-refresh: ${staleSources.size} of ${sources.size} sources stale, refreshing those")
-            processJob?.cancel()
-            processJob = scope.launch {
-                processAllSourcesInternal(staleSources)
+            val task = object : RefreshTask {
+                override val id = "epg_auto_refresh"
+                override val priority = RefreshPriority.MEDIUM
+                override suspend fun execute() {
+                    processAllSourcesInternal(staleSources)
+                }
             }
-            processJob?.join()
+            RefreshQueue.submit(task)
         } else {
             Log.d(TAG, "Auto-refresh: all sources fresh, skipping")
         }
