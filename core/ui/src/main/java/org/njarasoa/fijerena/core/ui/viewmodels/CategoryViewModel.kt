@@ -162,12 +162,12 @@ class CategoryViewModel(
             isVirtual = true
         ))
 
-        // Only show Recently Viewed if there's history
+        // Only show Recent Categories if there's history
         val recentCategories = repository.getRecentlyViewedCategories(contentType)
         if (recentCategories.isNotEmpty()) {
             virtualCategories.add(MediaCategory(
                 id = RECENTLY_VIEWED_CATEGORIES_ID,
-                name = "Recently Viewed",
+                name = "Recent Categories",
                 isVirtual = true
             ))
         }
@@ -414,7 +414,7 @@ class CategoryViewModel(
                     if (recentCategories.isNotEmpty()) {
                         virtualCats.add(MediaCategory(
                             id = RECENTLY_VIEWED_CATEGORIES_ID,
-                            name = "Recently Viewed",
+                            name = "Recent Categories",
                             isVirtual = true
                         ))
                     }

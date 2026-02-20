@@ -208,7 +208,7 @@ fun MobileCategoryListScreen(
                                 selectedCategoryId = state.selectedCategoryId,
                                 nowPlaying = nowPlaying,
                                 onItemSelected = { itemId, itemName, categoryId ->
-                                    // Check if this is a category reference from "Recently Viewed"
+                                    // Check if this is a category reference from "Recent Categories"
                                     val item = state.streams?.firstOrNull { it.id == itemId }
                                     if (item?.providerData?.get("isCategoryRef") == "true") {
                                         val targetCategoryId = item.providerData["categoryId"]

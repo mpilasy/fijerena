@@ -410,7 +410,7 @@ private fun TwoColumnLayout(
                 categoryViewModel = categoryViewModel,
                 isDevMode = appSettings.isDevMode,
                 onStreamSelected = { streamId, streamName, categoryId ->
-                    // Check if this is a category reference from "Recently Viewed"
+                    // Check if this is a category reference from "Recent Categories"
                     val item = streams?.firstOrNull { it.id == streamId }
                     if (item?.providerData?.get("isCategoryRef") == "true") {
                         val targetCategoryId = item.providerData["categoryId"]

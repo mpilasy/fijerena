@@ -66,7 +66,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ### 🔧 Advanced Features
 - **Virtual Categories**:
   - Favorites - User-curated collection (configurable size: 10-500 items)
-  - Last Watched - Recent viewing history (configurable size: 1-100 items)
+  - Last Watched - Recent viewing history (added after 5s of viewing, configurable size: 1-100 items)
 - **Playback Resume** - Automatic position restore for VOD content (2-95% range)
 - **Stats for Nerds** - Real-time playback metrics overlay
 - **Channel Switching** - D-pad up/down for live TV channel navigation

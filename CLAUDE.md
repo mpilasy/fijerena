@@ -137,8 +137,8 @@ Auto-resume (default: on), Last Watched queue size (1-100, default: 25), Favorit
 ### Virtual Categories
 - **Continue Watching:** In-progress VOD items (not for Live TV)
 - **Favorites:** User-curated, star button in player, per-content-type, configurable max size
-- **Last Watched:** Chronological history, auto-updated on play, per-content-type, configurable queue size
-- **Recently Viewed:** Shows recently browsed categories (max 20, per content type, deduplicated). Clicking navigates to that category. Only visible when history exists. Tracked automatically on non-virtual category loads. Data stored as JSON in per-provider SharedPreferences.
+- **Last Watched:** Chronological history, auto-updated after 5s of viewing, per-content-type, configurable queue size
+- **Recent Categories:** Shows recently browsed categories (max 20, per content type, deduplicated). Clicking navigates to that category. Only visible when history exists. Tracked automatically on non-virtual category loads. Data stored as JSON in per-provider SharedPreferences.
 
 ### Episode Details (Inline)
 Inline detail panel before playback (no separate route). Thumbnail, metadata, Play/Resume buttons, plot/cast/director with series fallback. Collapsible season accordion (one expanded at a time, auto-expands next unwatched). Resume if 2-95% progress.
