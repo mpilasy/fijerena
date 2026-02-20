@@ -68,6 +68,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
+import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.ui.theme.*
 
@@ -93,7 +94,8 @@ fun MobileAddProviderScreen(
     var shareName by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsState()
-    val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
+    val syncState by viewModel.syncState.collectAsState()
+    val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving || syncState is SyncState.Syncing
 
     // Quick Connect state (Jellyfin only)
     var showQuickConnectDialog by remember { mutableStateOf(false) }
@@ -738,6 +740,33 @@ fun MobileAddProviderScreen(
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                 cacheStats?.let { stats ->
+                    // Sync Data Button (Xtream only)
+                    if (selectedType == ProviderType.XTREAM) {
+                        Button(
+                            onClick = { viewModel.syncProvider(editId) },
+                            enabled = !isBusy,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (syncState is SyncState.Syncing) "Syncing..." else "Sync Data Now")
+                        }
+
+                        if (syncState is SyncState.Error) {
+                            Text(
+                                text = (syncState as SyncState.Error).message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CinemaError
+                            )
+                        }
+                        if (syncState is SyncState.Success) {
+                            Text(
+                                text = "Sync completed successfully",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                    }
+
                     // Total cache size
                     Row(
                         modifier = Modifier.fillMaxWidth(),
