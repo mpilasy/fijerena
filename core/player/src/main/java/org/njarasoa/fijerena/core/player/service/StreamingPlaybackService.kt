@@ -94,8 +94,38 @@ class StreamingPlaybackService : MediaSessionService() {
         scope.launch {
             NetworkMonitor.networkType.collect { networkType ->
                 adaptiveLoadControl?.updateForNetwork(networkType)
+                updateTrackSelectionForNetwork(networkType)
             }
         }
+    }
+
+    private fun updateTrackSelectionForNetwork(networkType: org.njarasoa.fijerena.core.player.config.NetworkType) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
+        val isCellular = networkType == org.njarasoa.fijerena.core.player.config.NetworkType.CELLULAR
+
+        val maxBitrate = if (isCellular) {
+            // Aggressive cap for cellular to prevent buffering/stuttering (1.5 Mbps)
+            1_500_000
+        } else {
+            // Restore device-specific limits on WiFi
+            val capabilities = org.njarasoa.fijerena.core.player.device.DeviceDetector.detect()
+            when (capabilities.deviceType) {
+                org.njarasoa.fijerena.core.player.device.DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                org.njarasoa.fijerena.core.player.device.DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                org.njarasoa.fijerena.core.player.device.DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_TV -> 10_000_000
+                org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE -> 5_000_000
+            }
+        }
+
+        val parameters = trackSelector.parameters
+            .buildUpon()
+            .setMaxVideoBitrate(maxBitrate)
+            .build()
+
+        trackSelector.parameters = parameters
+        Log.i(TAG, "Updated track selector for network $networkType. Max bitrate: $maxBitrate")
     }
 
     private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {

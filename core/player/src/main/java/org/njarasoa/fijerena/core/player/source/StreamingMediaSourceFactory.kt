@@ -4,15 +4,18 @@ package org.njarasoa.fijerena.core.player.source
 
 import android.content.Context
 import androidx.media3.common.MediaItem
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
-import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
-import org.njarasoa.fijerena.core.player.config.NetworkType
-import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+import okhttp3.CacheControl
+import org.njarasoa.fijerena.core.player.network.OkHttpProvider
 
 object StreamingMediaSourceFactory {
 
+    /**
+     * Creates a network-aware MediaSource using a shared OkHttp client for connection pooling.
+     */
     fun createMediaSource(
         context: Context,
         streamUrl: String,
@@ -20,34 +23,24 @@ object StreamingMediaSourceFactory {
         isLive: Boolean = false,
         onRetry: (() -> Unit)? = null
     ): MediaSource {
-        val isCellular = NetworkMonitor.currentNetworkType == NetworkType.CELLULAR
-
         val mediaItem = MediaItem.Builder()
             .setUri(streamUrl)
             .build()
 
-        // Network-aware HTTP timeouts
-        val connectTimeout = if (isCellular)
-            NetworkBufferProfile.CELLULAR_CONNECT_TIMEOUT_MS
-        else
-            NetworkBufferProfile.WIFI_CONNECT_TIMEOUT_MS
-        val readTimeout = if (isCellular)
-            NetworkBufferProfile.CELLULAR_READ_TIMEOUT_MS
-        else
-            NetworkBufferProfile.WIFI_READ_TIMEOUT_MS
-
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
-            .setConnectTimeoutMs(connectTimeout)
-            .setReadTimeoutMs(readTimeout)
-            .setAllowCrossProtocolRedirects(true)
+        // Create OkHttpDataSource.Factory using the shared OkHttpClient
+        // This enables connection pooling (Keep-Alive) across segments and streams
+        val okHttpDataSourceFactory = OkHttpDataSource.Factory(OkHttpProvider.instance)
             .setDefaultRequestProperties(headers)
+
+        // Wrap in DefaultDataSource.Factory to support file://, asset://, etc if needed
+        // (though this factory is specifically for 'Streaming', so mostly HTTP)
+        val dataSourceFactory = DefaultDataSource.Factory(context, okHttpDataSourceFactory)
 
         val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
 
         // Use DefaultMediaSourceFactory to automatically detect content type (HLS, DASH, Progressive/TS)
-        // This is more robust than checking file extensions, as many IPTV streams use non-standard URLs.
         return DefaultMediaSourceFactory(context)
-            .setDataSourceFactory(httpDataSourceFactory)
+            .setDataSourceFactory(dataSourceFactory)
             .setLoadErrorHandlingPolicy(errorPolicy)
             .createMediaSource(mediaItem)
     }

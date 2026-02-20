@@ -89,7 +89,6 @@ fun TvPlayerScreen(
 
     var streamList by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-    var lastWatchedVersion by remember { mutableIntStateOf(0) }
     var currentStreamIndex by remember { mutableIntStateOf(0) }
     var currentStreamId by remember { mutableStateOf(streamId) }
     var currentStreamName by remember { mutableStateOf(streamName) }
@@ -178,8 +177,8 @@ fun TvPlayerScreen(
         )
     }
 
-    // Load last watched streams for overlay (Live TV only), refresh after save
-    LaunchedEffect(lastWatchedVersion) {
+    // Load last watched streams for overlay (Live TV only), refresh on channel switch
+    LaunchedEffect(currentStreamId) {
         if (contentType == "LIVE_TV") {
             lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend(contentType)
         }
@@ -286,7 +285,6 @@ fun TvPlayerScreen(
             val watchHistoryItemId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
             val watchHistoryItemName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
             mediaRepository.saveLastPlayedItem(categoryId, watchHistoryItemId, watchHistoryItemName, contentType)
-            lastWatchedVersion++
 
             println("TvPlayerScreen: Playing stream (streamId=$currentStreamId, name=$currentStreamName)")
             println("TvPlayerScreen: Stream URL: $url")
