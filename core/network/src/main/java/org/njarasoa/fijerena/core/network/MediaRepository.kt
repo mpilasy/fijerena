@@ -275,7 +275,7 @@ class MediaRepository(
 
     fun getLastContentType(): String? = cache.getString(KEY_LAST_CONTENT_TYPE, null)
 
-    // --- Recently Viewed Categories ---
+    // --- Recent Categories ---
 
     fun addToCategoryHistory(categoryId: String, categoryName: String, contentType: String) {
         val key = KEY_RECENT_CATEGORIES + "_" + contentType

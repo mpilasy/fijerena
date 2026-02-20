@@ -329,15 +329,19 @@ fun MobilePlayerScreen(
         positionLoaded = true
     }
 
+    // Save to last watched history after 5 seconds of viewing
+    LaunchedEffect(currentStreamId, contentType) {
+        delay(5000)
+        val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
+        val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
+        mediaRepository.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
+        lastWatchedVersion++
+    }
+
     // Start playback when URL is ready or channel changes
     LaunchedEffect(streamUrl, currentStreamId, currentStreamName, positionLoaded) {
         if (!positionLoaded) return@LaunchedEffect
         streamUrl?.let { url ->
-            val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
-            val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
-            mediaRepository.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
-            lastWatchedVersion++
-
             // Determine resume position
             val resumePosition = savedPosition?.let { saved ->
                 val progressPercent = if (saved.duration > 0) {

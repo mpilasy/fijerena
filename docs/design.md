@@ -459,7 +459,7 @@ Virtual categories appear alongside provider categories in the category list:
 | Continue Watching | Movies, TV Shows | In-progress VOD items (2-95% watched) |
 | Favorites | All | User-curated via star button in player |
 | Last Watched | All | Chronological history, auto-updated on play |
-| Recently Viewed | All | Recently browsed categories (max 20, per content type) |
+| Recent Categories | All | Recently browsed categories (max 20, per content type) |
 
 Data stored in per-provider SharedPreferences. Favorites and Last Watched have configurable max sizes per provider settings.
 

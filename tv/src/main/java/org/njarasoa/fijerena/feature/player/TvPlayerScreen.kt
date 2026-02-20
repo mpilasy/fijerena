@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -277,16 +278,21 @@ fun TvPlayerScreen(
         positionLoaded = true
     }
 
+    // Save to last watched history after 5 seconds of viewing
+    LaunchedEffect(currentStreamId, contentType) {
+        delay(5000)
+        val watchHistoryItemId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
+        val watchHistoryItemName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
+        mediaRepository.saveLastPlayedItem(categoryId, watchHistoryItemId, watchHistoryItemName, contentType)
+        lastWatchedVersion++
+    }
+
     // Start playback when URL is ready or stream info changes
     LaunchedEffect(streamUrl, currentStreamId, currentStreamName, positionLoaded) {
         if (!positionLoaded) return@LaunchedEffect
         streamUrl?.let { url ->
             // Save last played item
             // For TV shows, save the series info (not episode) so "Last Watched" works correctly
-            val watchHistoryItemId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
-            val watchHistoryItemName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
-            mediaRepository.saveLastPlayedItem(categoryId, watchHistoryItemId, watchHistoryItemName, contentType)
-            lastWatchedVersion++
 
             println("TvPlayerScreen: Playing stream (streamId=$currentStreamId, name=$currentStreamName)")
             println("TvPlayerScreen: Stream URL: $url")
