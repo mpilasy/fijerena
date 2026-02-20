@@ -117,3 +117,21 @@ Apply TV-safe margins to all root containers to compensate for overscan:
 1. **Start** every session by reading project documentation and this file.
 2. **Verify** every UI change: "Is this D-pad friendly?"
 3. **Never** hardcode dimensions or colors.
+
+# Agent Instructions
+
+## Developer Persona
+- Environment: Ubuntu Linux
+- Expertise: Senior Developer (C#, Java, C++, Angular)
+- Goal: High performance, zero boilerplate, single return statements.
+
+## Hand-off & Delegation Rules
+- **Threshold:** If a requested refactor involves more than 10 files or requires more than 500 lines of new code, do NOT execute locally via Gemini CLI.
+- **Action:** Instead, propose a Jules plan. Use the command: `gemini /jules "Task description"`.
+
+## Coding Standards (Strict Enforcement)
+- **Structure:** Always strive for a single return statement in all methods.
+- **Flow Control:** Avoid `break`, `continue`, and early returns at all costs.
+- **Indentation:** [Insert your unique indentation style here, e.g., 3 spaces].
+- **C++:** Use modern C++20 standards; prioritize smart pointers over raw pointers.
+- **C#:** Use file-scoped namespaces and primary constructors where applicable.
