@@ -915,27 +915,24 @@ class XtreamRepository(
         when (contentType) {
             "LIVE_TV" -> {
                 cache.edit()
-                    .remove(KEY_CATEGORIES)
                     .remove(KEY_CATEGORIES_TIMESTAMP)
                     .apply()
-                payloadSizes.remove("live_categories")
                 fetchTimes.remove("live_categories")
+                categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
             }
             "MOVIES" -> {
                 cache.edit()
-                    .remove(KEY_VOD_CATEGORIES)
                     .remove(KEY_VOD_CATEGORIES_TIMESTAMP)
                     .apply()
-                payloadSizes.remove("vod_categories")
                 fetchTimes.remove("vod_categories")
+                categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
             }
             "TV_SHOWS" -> {
                 cache.edit()
-                    .remove(KEY_SERIES_CATEGORIES)
                     .remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
                     .apply()
-                payloadSizes.remove("series_categories")
                 fetchTimes.remove("series_categories")
+                categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_SERIES)
             }
         }
     }
@@ -945,15 +942,18 @@ class XtreamRepository(
      */
     fun clearStreamsCache(categoryId: String) {
         cache.edit()
-            .remove(KEY_STREAMS_PREFIX + categoryId)
             .remove(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId)
             .apply()
-        payloadSizes.remove("category_$categoryId")
-        payloadSizes.remove("category_vod_$categoryId")
-        payloadSizes.remove("category_series_$categoryId")
+
         fetchTimes.remove("category_$categoryId")
         fetchTimes.remove("category_vod_$categoryId")
         fetchTimes.remove("category_series_$categoryId")
+
+        // Since we don't know the type easily here without querying, and this method is legacy,
+        // we'll try to delete from all stream types for this category
+        streamDao.deleteByCategoryId(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
+        streamDao.deleteByCategoryId(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
+        seriesDao.deleteByCategoryId(providerId, categoryId)
     }
 
     /**

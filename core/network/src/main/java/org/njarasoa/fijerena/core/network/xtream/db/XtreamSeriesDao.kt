@@ -32,4 +32,7 @@ interface XtreamSeriesDao {
 
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND name LIKE '%' || :query || '%'")
     fun searchSeries(providerId: Long, query: String): List<XtreamSeriesEntity>
+
+    @Query("DELETE FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId")
+    fun deleteByCategoryId(providerId: Long, categoryId: String)
 }
