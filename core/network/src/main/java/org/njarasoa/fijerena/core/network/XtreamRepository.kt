@@ -19,6 +19,13 @@ import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesEntity
+import org.njarasoa.fijerena.core.network.queue.RefreshQueue
+import org.njarasoa.fijerena.core.network.queue.RefreshTask
+import org.njarasoa.fijerena.core.network.queue.RefreshPriority
 
 /**
  * Represents a watched stream in the history
@@ -64,6 +71,11 @@ class XtreamRepository(
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
+
+    private val database = XtreamDatabase.getInstance(context)
+    private val categoryDao = database.categoryDao()
+    private val streamDao = database.streamDao()
+    private val seriesDao = database.seriesDao()
 
     /** Whether caching is enabled for this provider */
     private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
@@ -356,103 +368,76 @@ class XtreamRepository(
 
     suspend fun getCategories(): Result<List<XtreamCategory>> = withContext(Dispatchers.IO) {
         suspendResultOf {
-            val service = apiService
-                ?: throw Exception("Not authenticated. Please login first.")
+            val dbEntities = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_LIVE)
 
-            // Try to load from cache first
-            val cachedCategories = getCachedCategories()
-            if (cachedCategories != null) {
-                // Only refresh in background if cache is not recently written
+            if (dbEntities.isNotEmpty()) {
                 if (!isCacheFresh(KEY_CATEGORIES_TIMESTAMP)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            val startTime = System.currentTimeMillis()
-                            val fresh = service.getCategories()
-                            val fetchTime = System.currentTimeMillis() - startTime
-                            fetchTimes["live_categories"] = fetchTime
-                            cacheCategories(fresh)
-                        } catch (e: Exception) {
-                            // Ignore network errors when refreshing
-                        }
-                    }
+                    syncCategories(XtreamCategoryEntity.TYPE_LIVE)
                 }
-                return@suspendResultOf cachedCategories
+                return@suspendResultOf dbEntities.map {
+                    XtreamCategory(it.categoryId, it.categoryName, it.parentId)
+                }
             }
 
-            // No cache available, fetch from network
-            val startTime = System.currentTimeMillis()
+            val service = apiService ?: throw Exception("Not authenticated. Please login first.")
             val categories = service.getCategories()
-            val fetchTime = System.currentTimeMillis() - startTime
-            fetchTimes["live_categories"] = fetchTime
-            cacheCategories(categories)
+
+            // Insert into DB
+            categoryDao.insertAll(categories.map {
+                XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_LIVE)
+            })
+            cache.edit().putLong(KEY_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
+
             categories
         }
     }
 
     suspend fun getVodCategories(): Result<List<XtreamCategory>> = withContext(Dispatchers.IO) {
         suspendResultOf {
-            val service = apiService
-                ?: throw Exception("Not authenticated. Please login first.")
+            val dbEntities = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_VOD)
 
-            // Try to load from cache first
-            val cachedCategories = getCachedVodCategories()
-            if (cachedCategories != null) {
+            if (dbEntities.isNotEmpty()) {
                 if (!isCacheFresh(KEY_VOD_CATEGORIES_TIMESTAMP)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            val startTime = System.currentTimeMillis()
-                            val fresh = service.getVodCategories()
-                            val fetchTime = System.currentTimeMillis() - startTime
-                            fetchTimes["vod_categories"] = fetchTime
-                            cacheVodCategories(fresh)
-                        } catch (e: Exception) {
-                            // Ignore network errors when refreshing
-                        }
-                    }
+                    syncCategories(XtreamCategoryEntity.TYPE_VOD)
                 }
-                return@suspendResultOf cachedCategories
+                return@suspendResultOf dbEntities.map {
+                    XtreamCategory(it.categoryId, it.categoryName, it.parentId)
+                }
             }
 
-            // No cache available, fetch from network
-            val startTime = System.currentTimeMillis()
+            val service = apiService ?: throw Exception("Not authenticated. Please login first.")
             val categories = service.getVodCategories()
-            val fetchTime = System.currentTimeMillis() - startTime
-            fetchTimes["vod_categories"] = fetchTime
-            cacheVodCategories(categories)
+
+            categoryDao.insertAll(categories.map {
+                XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_VOD)
+            })
+            cache.edit().putLong(KEY_VOD_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
+
             categories
         }
     }
 
     suspend fun getSeriesCategories(): Result<List<XtreamCategory>> = withContext(Dispatchers.IO) {
         suspendResultOf {
-            val service = apiService
-                ?: throw Exception("Not authenticated. Please login first.")
+            val dbEntities = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_SERIES)
 
-            // Try to load from cache first
-            val cachedCategories = getCachedSeriesCategories()
-            if (cachedCategories != null) {
+            if (dbEntities.isNotEmpty()) {
                 if (!isCacheFresh(KEY_SERIES_CATEGORIES_TIMESTAMP)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            val startTime = System.currentTimeMillis()
-                            val fresh = service.getSeriesCategories()
-                            val fetchTime = System.currentTimeMillis() - startTime
-                            fetchTimes["series_categories"] = fetchTime
-                            cacheSeriesCategories(fresh)
-                        } catch (e: Exception) {
-                            // Ignore network errors when refreshing
-                        }
-                    }
+                    syncCategories(XtreamCategoryEntity.TYPE_SERIES)
                 }
-                return@suspendResultOf cachedCategories
+                return@suspendResultOf dbEntities.map {
+                    XtreamCategory(it.categoryId, it.categoryName, it.parentId)
+                }
             }
 
-            // No cache available, fetch from network
-            val startTime = System.currentTimeMillis()
+            val service = apiService ?: throw Exception("Not authenticated. Please login first.")
             val categories = service.getSeriesCategories()
-            val fetchTime = System.currentTimeMillis() - startTime
-            fetchTimes["series_categories"] = fetchTime
-            cacheSeriesCategories(categories)
+
+            categoryDao.insertAll(categories.map {
+                XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_SERIES)
+            })
+            cache.edit().putLong(KEY_SERIES_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
+
             categories
         }
     }
@@ -531,191 +516,206 @@ class XtreamRepository(
         }
     }
 
-    private fun cacheSeriesCategories(categories: List<XtreamCategory>) {
-        trackPayloadSize("series_categories", categories)
-        if (!cachingEnabled) return
-        cache.edit()
-            .putString(KEY_SERIES_CATEGORIES, json.encodeToString(categories))
-            .putLong(KEY_SERIES_CATEGORIES_TIMESTAMP, System.currentTimeMillis())
-            .apply()
-    }
-
     suspend fun getStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {
-            val service = apiService
-                ?: throw Exception("Not authenticated. Please login first.")
-
-            val cacheKey = if (forSearch) "search_$categoryId" else categoryId
-
-            // Try to load from cache first
-            val cachedStreams = getCachedStreams(cacheKey)
-            if (cachedStreams != null) {
-                // Live TV streams use a shorter refresh threshold
-                if (!isCacheFresh(KEY_STREAMS_TIMESTAMP_PREFIX + cacheKey, liveStreamRefreshThresholdMs)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            val startTime = System.currentTimeMillis()
-                            val fresh = service.getStreams(categoryId)
-                            val fetchTime = System.currentTimeMillis() - startTime
-                            fetchTimes["category_$cacheKey"] = fetchTime
-                            cacheStreams(cacheKey, fresh)
-                        } catch (e: Exception) {
-                            // Ignore network errors when refreshing
-                        }
-                    }
-                }
-                return@suspendResultOf cachedStreams
+            if (forSearch) {
+                return@suspendResultOf streamDao.searchStreams(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId).map { mapStreamEntityToModel(it) }
             }
 
-            // No cache available, fetch from network
-            val startTime = System.currentTimeMillis()
+            val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
+
+            if (dbEntities.isNotEmpty()) {
+                val key = KEY_STREAMS_TIMESTAMP_PREFIX + "LIVE_ALL"
+                if (!isCacheFresh(key, liveStreamRefreshThresholdMs)) {
+                    syncStreams(XtreamStreamEntity.TYPE_LIVE)
+                }
+                return@suspendResultOf dbEntities.map { mapStreamEntityToModel(it) }
+            }
+
+            val service = apiService ?: throw Exception("Not authenticated. Please login first.")
             val streams = service.getStreams(categoryId)
-            val fetchTime = System.currentTimeMillis() - startTime
-            fetchTimes["category_$cacheKey"] = fetchTime
-            cacheStreams(cacheKey, streams)
+
+            streamDao.insertAll(streams.map {
+                 XtreamStreamEntity(
+                     streamId = it.streamId,
+                     providerId = providerId,
+                     type = XtreamStreamEntity.TYPE_LIVE,
+                     num = it.num,
+                     name = it.name,
+                     streamType = it.streamType,
+                     streamIcon = it.streamIcon,
+                     epgChannelId = it.epgChannelId,
+                     added = it.added,
+                     categoryId = it.categoryId,
+                     customSid = it.customSid,
+                     tvArchive = it.tvArchive,
+                     directSource = it.directSource,
+                     tvArchiveDuration = it.tvArchiveDuration
+                 )
+            })
+
             streams
         }
     }
 
     suspend fun getVodStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {
-            val service = apiService
-                ?: throw Exception("Not authenticated. Please login first.")
-
-            val cacheKey = if (forSearch) "search_vod_$categoryId" else "vod_$categoryId"
-
-            // Try to load from cache first
-            val cachedStreams = getCachedStreams(cacheKey)
-            if (cachedStreams != null) {
-                if (!isCacheFresh(KEY_STREAMS_TIMESTAMP_PREFIX + cacheKey)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            val startTime = System.currentTimeMillis()
-                            val fresh = service.getVodStreams(categoryId)
-                            val fetchTime = System.currentTimeMillis() - startTime
-                            fetchTimes["category_$cacheKey"] = fetchTime
-                            cacheStreams(cacheKey, fresh)
-                        } catch (e: Exception) {
-                            // Ignore network errors when refreshing
-                        }
-                    }
-                }
-                return@suspendResultOf cachedStreams
+            if (forSearch) {
+                return@suspendResultOf streamDao.searchStreams(providerId, XtreamStreamEntity.TYPE_VOD, categoryId).map { mapStreamEntityToModel(it) }
             }
 
-            // No cache available, fetch from network
-            val startTime = System.currentTimeMillis()
+            val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
+
+            if (dbEntities.isNotEmpty()) {
+                val key = KEY_STREAMS_TIMESTAMP_PREFIX + "VOD_ALL"
+                if (!isCacheFresh(key)) {
+                    syncStreams(XtreamStreamEntity.TYPE_VOD)
+                }
+                return@suspendResultOf dbEntities.map { mapStreamEntityToModel(it) }
+            }
+
+            val service = apiService ?: throw Exception("Not authenticated. Please login first.")
             val streams = service.getVodStreams(categoryId)
-            val fetchTime = System.currentTimeMillis() - startTime
-            fetchTimes["category_$cacheKey"] = fetchTime
-            cacheStreams(cacheKey, streams)
+
+            streamDao.insertAll(streams.map {
+                 XtreamStreamEntity(
+                     streamId = it.streamId,
+                     providerId = providerId,
+                     type = XtreamStreamEntity.TYPE_VOD,
+                     num = it.num,
+                     name = it.name,
+                     streamType = it.streamType,
+                     streamIcon = it.streamIcon,
+                     epgChannelId = it.epgChannelId,
+                     added = it.added,
+                     categoryId = it.categoryId,
+                     customSid = it.customSid,
+                     tvArchive = it.tvArchive,
+                     directSource = it.directSource,
+                     tvArchiveDuration = it.tvArchiveDuration
+                 )
+            })
+
             streams
         }
     }
 
     suspend fun getSeries(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {
-            val service = apiService
-                ?: throw Exception("Not authenticated. Please login first.")
+            if (forSearch) {
+                return@suspendResultOf seriesDao.searchSeries(providerId, categoryId).map { mapSeriesEntityToStream(it) }
+            }
 
-            val cacheKey = if (forSearch) "search_series_$categoryId" else "series_$categoryId"
+            val dbEntities = seriesDao.getSeriesByCategory(providerId, categoryId)
 
-            // Try to load from cache first
-            val cachedStreams = getCachedStreams(cacheKey)
-            if (cachedStreams != null) {
-                if (!isCacheFresh(KEY_STREAMS_TIMESTAMP_PREFIX + cacheKey)) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            val startTime = System.currentTimeMillis()
-                            val seriesList = service.getSeries(categoryId)
-                            val streams = convertSeriesToStreams(seriesList)
-                            val fetchTime = System.currentTimeMillis() - startTime
-                            fetchTimes["category_$cacheKey"] = fetchTime
-                            cacheStreams(cacheKey, streams)
-                        } catch (e: Exception) {
-                            // Ignore network errors when refreshing
-                        }
-                    }
+            if (dbEntities.isNotEmpty()) {
+                val key = KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES_ALL"
+                if (!isCacheFresh(key)) {
+                    syncSeries()
                 }
-                return@suspendResultOf cachedStreams
+                return@suspendResultOf dbEntities.map { mapSeriesEntityToStream(it) }
             }
 
-            // No cache available, fetch from network
-            val startTime = System.currentTimeMillis()
+            val service = apiService ?: throw Exception("Not authenticated. Please login first.")
             val seriesList = service.getSeries(categoryId)
-            val streams = convertSeriesToStreams(seriesList)
-            val fetchTime = System.currentTimeMillis() - startTime
-            fetchTimes["category_$cacheKey"] = fetchTime
-            cacheStreams(cacheKey, streams)
-            streams
-        }
-    }
 
-    private fun convertSeriesToStreams(seriesList: List<XtreamSeries>): List<XtreamStream> {
-        return seriesList.map { series ->
-            XtreamStream(
-                num = series.num ?: 0,
-                name = series.name,
-                streamType = "series",
-                streamId = series.seriesId,
-                streamIcon = series.cover,
-                epgChannelId = null,
-                added = series.lastModified,
-                categoryId = series.categoryId,
-                customSid = null,
-                tvArchive = 0,
-                directSource = null,
-                tvArchiveDuration = 0
-            )
-        }
-    }
+            seriesDao.insertAll(seriesList.map {
+                 XtreamSeriesEntity(
+                     seriesId = it.seriesId,
+                     providerId = providerId,
+                     num = it.num,
+                     name = it.name,
+                     cover = it.cover,
+                     plot = it.plot,
+                     cast = it.cast,
+                     director = it.director,
+                     genre = it.genre,
+                     releaseDate = it.releaseDate,
+                     lastModified = it.lastModified,
+                     rating = it.rating,
+                     rating5based = it.rating5based,
+                     youtubeTrailer = it.youtubeTrailer,
+                     episodeRunTime = it.episodeRunTime,
+                     categoryId = it.categoryId,
+                     backdropPath = it.backdropPath?.joinToString(",")
+                 )
+            })
 
-    /** Returns cached streams for a category or null if not cached. Never hits the network. */
-    fun getStreamsCached(categoryId: String): List<XtreamStream>? = getCachedStreams(categoryId)
-
-    /** Returns cached VOD streams for a category or null if not cached. Never hits the network. */
-    fun getVodStreamsCached(categoryId: String): List<XtreamStream>? = getCachedStreams("vod_$categoryId")
-
-    /** Returns cached series for a category or null if not cached. Never hits the network. */
-    fun getSeriesCached(categoryId: String): List<XtreamStream>? = getCachedStreams("series_$categoryId")
-
-    private fun getCachedStreams(categoryId: String): List<XtreamStream>? {
-        if (!cachingEnabled) return null
-        val timestamp = cache.getLong(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId, 0L)
-        if (System.currentTimeMillis() - timestamp > cacheExpiryMs) {
-            return null // Cache expired
-        }
-
-        val cached = cache.getString(KEY_STREAMS_PREFIX + categoryId, null) ?: return null
-        return try {
-            val streams = json.decodeFromString<List<XtreamStream>>(cached)
-            trackPayloadSize("category_$categoryId", streams)
-            streams
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun cacheStreams(categoryId: String, streams: List<XtreamStream>) {
-        trackPayloadSize("category_$categoryId", streams)
-        if (!cachingEnabled) return
-        try {
-            // Only cache if stream list is reasonable size (< 500 items to avoid OOM)
-            if (streams.size > 500) {
-                println("XtreamRepository: Skipping cache for $categoryId - too many streams (${streams.size})")
-                return
+            seriesList.map { series ->
+                XtreamStream(
+                    num = series.num ?: 0,
+                    name = series.name,
+                    streamType = "series",
+                    streamId = series.seriesId,
+                    streamIcon = series.cover,
+                    epgChannelId = null,
+                    added = series.lastModified,
+                    categoryId = series.categoryId,
+                    customSid = null,
+                    tvArchive = 0,
+                    directSource = null,
+                    tvArchiveDuration = 0
+                )
             }
-            cache.edit()
-                .putString(KEY_STREAMS_PREFIX + categoryId, json.encodeToString(streams))
-                .putLong(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId, System.currentTimeMillis())
-                .apply()
-        } catch (e: OutOfMemoryError) {
-            println("XtreamRepository: Failed to cache streams for $categoryId - OutOfMemoryError")
-            // Clear the failed cache entry
-            cache.edit().remove(KEY_STREAMS_PREFIX + categoryId).apply()
-        } catch (e: Exception) {
-            println("XtreamRepository: Failed to cache streams for $categoryId - ${e.message}")
         }
+    }
+
+    private fun mapStreamEntityToModel(entity: XtreamStreamEntity): XtreamStream {
+        return XtreamStream(
+            num = entity.num,
+            name = entity.name,
+            streamType = entity.streamType,
+            streamId = entity.streamId,
+            streamIcon = entity.streamIcon,
+            epgChannelId = entity.epgChannelId,
+            added = entity.added,
+            categoryId = entity.categoryId,
+            customSid = entity.customSid,
+            tvArchive = entity.tvArchive,
+            directSource = entity.directSource,
+            tvArchiveDuration = entity.tvArchiveDuration
+        )
+    }
+
+    private fun mapSeriesEntityToStream(entity: XtreamSeriesEntity): XtreamStream {
+        return XtreamStream(
+            num = entity.num ?: 0,
+            name = entity.name,
+            streamType = "series",
+            streamId = entity.seriesId,
+            streamIcon = entity.cover,
+            epgChannelId = null,
+            added = entity.lastModified,
+            categoryId = entity.categoryId,
+            customSid = null,
+            tvArchive = 0,
+            directSource = null,
+            tvArchiveDuration = 0
+        )
+    }
+
+    /** Returns cached streams for a category or null if not cached. */
+    fun getStreamsCached(categoryId: String): List<XtreamStream>? {
+        return try {
+            streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
+                .map { mapStreamEntityToModel(it) }
+        } catch (e: Exception) { null }
+    }
+
+    /** Returns cached VOD streams for a category or null if not cached. */
+    fun getVodStreamsCached(categoryId: String): List<XtreamStream>? {
+        return try {
+            streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
+                .map { mapStreamEntityToModel(it) }
+        } catch (e: Exception) { null }
+    }
+
+    /** Returns cached series for a category or null if not cached. */
+    fun getSeriesCached(categoryId: String): List<XtreamStream>? {
+        return try {
+            seriesDao.getSeriesByCategory(providerId, categoryId)
+                .map { mapSeriesEntityToStream(it) }
+        } catch (e: Exception) { null }
     }
 
     fun buildStreamUrl(streamId: Int, contentType: String = "LIVE_TV", extension: String? = null): Result<String> = resultOf {
@@ -802,6 +802,13 @@ class XtreamRepository(
         cache.edit().clear().apply()
         payloadSizes.clear()
         fetchTimes.clear()
+
+        categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
+        categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
+        categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_SERIES)
+        streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_LIVE)
+        streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_VOD)
+        seriesDao.deleteAll(providerId)
     }
 
     /**
@@ -839,14 +846,20 @@ class XtreamRepository(
             "LIVE_TV" -> {
                 payloadSizes.remove("live_categories")
                 fetchTimes.remove("live_categories")
+                categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
+                streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_LIVE)
             }
             "MOVIES" -> {
                 payloadSizes.remove("vod_categories")
                 fetchTimes.remove("vod_categories")
+                categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
+                streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_VOD)
             }
             "TV_SHOWS" -> {
                 payloadSizes.remove("series_categories")
                 fetchTimes.remove("series_categories")
+                categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_SERIES)
+                seriesDao.deleteAll(providerId)
             }
         }
     }
@@ -1302,5 +1315,187 @@ class XtreamRepository(
         cache.all.keys.filter { it.startsWith(KEY_EPG_PREFIX) || it.startsWith(KEY_EPG_TIMESTAMP_PREFIX) }
             .forEach { editor.remove(it) }
         editor.apply()
+    }
+
+    suspend fun syncCategories(type: String) {
+        val task = object : RefreshTask {
+            override val id = "xtream_categories_${providerId}_$type"
+            override val priority = if (type == XtreamCategoryEntity.TYPE_LIVE) RefreshPriority.MEDIUM else RefreshPriority.LOW
+
+            override suspend fun execute() {
+                 val service = apiService ?: return
+                 try {
+                     val apiCategories = when (type) {
+                         XtreamCategoryEntity.TYPE_LIVE -> service.getCategories()
+                         XtreamCategoryEntity.TYPE_VOD -> service.getVodCategories()
+                         XtreamCategoryEntity.TYPE_SERIES -> service.getSeriesCategories()
+                         else -> emptyList()
+                     }
+
+                     val entities = apiCategories.map {
+                         val base = XtreamCategoryEntity(
+                             categoryId = it.categoryId,
+                             providerId = providerId,
+                             categoryName = it.categoryName,
+                             parentId = it.parentId,
+                             type = type,
+                             contentHash = 0
+                         )
+                         base.copy(contentHash = base.hashCode())
+                     }
+
+                     val currentHashes = categoryDao.getCategoryHashes(providerId, type)
+
+                     val toDeleteIds = currentHashes.keys - entities.map { it.categoryId }.toSet()
+
+                     val toInsert = entities.filter { newEntity ->
+                         val oldHash = currentHashes[newEntity.categoryId]
+                         oldHash == null || oldHash != newEntity.contentHash
+                     }
+
+                     if (toDeleteIds.isNotEmpty()) {
+                         categoryDao.deleteByIds(providerId, type, toDeleteIds.toList())
+                     }
+                     if (toInsert.isNotEmpty()) {
+                         categoryDao.insertAll(toInsert)
+                     }
+
+                     val key = when(type) {
+                         XtreamCategoryEntity.TYPE_LIVE -> KEY_CATEGORIES_TIMESTAMP
+                         XtreamCategoryEntity.TYPE_VOD -> KEY_VOD_CATEGORIES_TIMESTAMP
+                         XtreamCategoryEntity.TYPE_SERIES -> KEY_SERIES_CATEGORIES_TIMESTAMP
+                         else -> ""
+                     }
+                     if (key.isNotEmpty()) {
+                         cache.edit().putLong(key, System.currentTimeMillis()).apply()
+                     }
+
+                 } catch (e: Exception) {
+                     e.printStackTrace()
+                 }
+            }
+        }
+        RefreshQueue.submit(task)
+    }
+
+    suspend fun syncStreams(type: String) {
+        val task = object : RefreshTask {
+            override val id = "xtream_streams_${providerId}_$type"
+            override val priority = if (type == XtreamStreamEntity.TYPE_LIVE) RefreshPriority.HIGH else RefreshPriority.LOW
+            override suspend fun execute() {
+                val service = apiService ?: return
+                 try {
+                     val apiStreams = when (type) {
+                         XtreamStreamEntity.TYPE_LIVE -> service.getStreams(null)
+                         XtreamStreamEntity.TYPE_VOD -> service.getVodStreams(null)
+                         else -> emptyList()
+                     }
+
+                     val entities = apiStreams.map {
+                         val base = XtreamStreamEntity(
+                             streamId = it.streamId,
+                             providerId = providerId,
+                             type = type,
+                             num = it.num,
+                             name = it.name,
+                             streamType = it.streamType,
+                             streamIcon = it.streamIcon,
+                             epgChannelId = it.epgChannelId,
+                             added = it.added,
+                             categoryId = it.categoryId,
+                             customSid = it.customSid,
+                             tvArchive = it.tvArchive,
+                             directSource = it.directSource,
+                             tvArchiveDuration = it.tvArchiveDuration,
+                             contentHash = 0
+                         )
+                         base.copy(contentHash = base.hashCode())
+                     }
+
+                     val currentHashes = streamDao.getStreamHashes(providerId, type)
+
+                     val toDeleteIds = currentHashes.keys - entities.map { it.streamId }.toSet()
+
+                     val toInsert = entities.filter { newEntity ->
+                         val oldHash = currentHashes[newEntity.streamId]
+                         oldHash == null || oldHash != newEntity.contentHash
+                     }
+
+                     if (toDeleteIds.isNotEmpty()) {
+                         streamDao.deleteByIds(providerId, type, toDeleteIds.toList())
+                     }
+                     if (toInsert.isNotEmpty()) {
+                         streamDao.insertAll(toInsert)
+                     }
+
+                     val key = KEY_STREAMS_TIMESTAMP_PREFIX + (if (type==XtreamStreamEntity.TYPE_LIVE) "LIVE_ALL" else "VOD_ALL")
+                     cache.edit().putLong(key, System.currentTimeMillis()).apply()
+
+                 } catch (e: Exception) {
+                     e.printStackTrace()
+                 }
+            }
+        }
+        RefreshQueue.submit(task)
+    }
+
+    suspend fun syncSeries() {
+        val task = object : RefreshTask {
+            override val id = "xtream_series_${providerId}"
+            override val priority = RefreshPriority.LOW
+            override suspend fun execute() {
+                val service = apiService ?: return
+                 try {
+                     val apiSeries = service.getSeries(null)
+
+                     val entities = apiSeries.map {
+                         val base = XtreamSeriesEntity(
+                             seriesId = it.seriesId,
+                             providerId = providerId,
+                             num = it.num,
+                             name = it.name,
+                             cover = it.cover,
+                             plot = it.plot,
+                             cast = it.cast,
+                             director = it.director,
+                             genre = it.genre,
+                             releaseDate = it.releaseDate,
+                             lastModified = it.lastModified,
+                             rating = it.rating,
+                             rating5based = it.rating5based,
+                             youtubeTrailer = it.youtubeTrailer,
+                             episodeRunTime = it.episodeRunTime,
+                             categoryId = it.categoryId,
+                             backdropPath = it.backdropPath?.joinToString(","),
+                             contentHash = 0
+                         )
+                         base.copy(contentHash = base.hashCode())
+                     }
+
+                     val currentHashes = seriesDao.getSeriesHashes(providerId)
+
+                     val toDeleteIds = currentHashes.keys - entities.map { it.seriesId }.toSet()
+
+                     val toInsert = entities.filter { newEntity ->
+                         val oldHash = currentHashes[newEntity.seriesId]
+                         oldHash == null || oldHash != newEntity.contentHash
+                     }
+
+                     if (toDeleteIds.isNotEmpty()) {
+                         seriesDao.deleteByIds(providerId, toDeleteIds.toList())
+                     }
+                     if (toInsert.isNotEmpty()) {
+                         seriesDao.insertAll(toInsert)
+                     }
+
+                     val key = KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES_ALL"
+                     cache.edit().putLong(key, System.currentTimeMillis()).apply()
+
+                 } catch (e: Exception) {
+                     e.printStackTrace()
+                 }
+            }
+        }
+        RefreshQueue.submit(task)
     }
 }

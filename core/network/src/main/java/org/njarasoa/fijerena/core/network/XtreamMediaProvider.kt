@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.core.network
 
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
@@ -186,5 +188,20 @@ class XtreamMediaProvider(
 
     override suspend fun clearEpgCache() {
         repository.clearAllEpgCache()
+    }
+
+    /**
+     * Triggers a full sync of categories and streams/series.
+     * Used by background worker.
+     */
+    suspend fun syncAll() {
+        repository.syncCategories(XtreamCategoryEntity.TYPE_LIVE)
+        repository.syncCategories(XtreamCategoryEntity.TYPE_VOD)
+        repository.syncCategories(XtreamCategoryEntity.TYPE_SERIES)
+
+        repository.syncStreams(XtreamStreamEntity.TYPE_LIVE)
+        repository.syncStreams(XtreamStreamEntity.TYPE_VOD)
+
+        repository.syncSeries()
     }
 }
