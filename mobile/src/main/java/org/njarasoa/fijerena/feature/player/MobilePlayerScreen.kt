@@ -177,8 +177,7 @@ fun MobilePlayerScreen(
     // Load last watched streams for overlay (Live TV only)
     LaunchedEffect(Unit) {
         if (contentType == "LIVE_TV") {
-            mediaRepository.getItems("last_watched", contentType)
-                .onSuccess { lastWatchedStreams = it }
+            lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend(contentType)
         }
     }
 
