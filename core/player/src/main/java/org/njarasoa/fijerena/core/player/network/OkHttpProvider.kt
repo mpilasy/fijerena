@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.player.network
 
 import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import java.util.concurrent.TimeUnit
 
 /**
@@ -14,8 +15,8 @@ import java.util.concurrent.TimeUnit
  */
 object OkHttpProvider {
 
-    private const val CONNECT_TIMEOUT_SEC = 15L
-    private const val READ_TIMEOUT_SEC = 30L
+    private const val CONNECT_TIMEOUT_SEC = 30L // Increased for cellular stability
+    private const val READ_TIMEOUT_SEC = 60L // Increased to prevent stalling on bursty cellular
     private const val KEEP_ALIVE_DURATION_MIN = 5L
     private const val MAX_IDLE_CONNECTIONS = 10
 
@@ -34,6 +35,8 @@ object OkHttpProvider {
                     TimeUnit.MINUTES
                 )
             )
+            // Force HTTP/1.1 for stability with older IPTV/Xtream servers that don't handle HTTP/2 well
+            .protocols(listOf(Protocol.HTTP_1_1))
             .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)

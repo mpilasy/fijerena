@@ -29,7 +29,10 @@ object StreamingMediaSourceFactory {
 
         // Create OkHttpDataSource.Factory using the shared OkHttpClient
         // This enables connection pooling (Keep-Alive) across segments and streams
+        // Set a default User-Agent to ensure compatibility with providers that block generic/unknown UAs
+        val userAgent = "FijerenaPlayer/1.0 (Android)"
         val okHttpDataSourceFactory = OkHttpDataSource.Factory(OkHttpProvider.instance)
+            .setUserAgent(userAgent)
             .setDefaultRequestProperties(headers)
 
         // Wrap in DefaultDataSource.Factory to support file://, asset://, etc if needed
