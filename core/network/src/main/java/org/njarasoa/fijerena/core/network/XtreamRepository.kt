@@ -57,7 +57,7 @@ data class FavoriteStream(
 class XtreamRepository(
     private val accountManager: AccountManager,
     context: Context,
-    providerId: Long = 0L,
+    private val providerId: Long = 0L,
     private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT
 ) {
     private var apiService: XtreamApiService? = null
