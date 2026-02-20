@@ -727,13 +727,13 @@ fun MobileAddProviderScreen(
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                 Text(
-                    text = "Cache Management",
+                    text = "Data Management",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                 Text(
-                    text = "Clear cached data to free up storage space",
+                    text = "Manage local database and cached data",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
@@ -767,7 +767,7 @@ fun MobileAddProviderScreen(
                         Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     }
 
-                    // Total cache size
+                    // Total Items
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -775,11 +775,12 @@ fun MobileAddProviderScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Total Cache Size",
+                                text = "Total Database Items",
                                 style = MaterialTheme.typography.bodyLarge
                             )
+                            val totalItems = stats.liveTv.streamListsCount + stats.movies.streamListsCount + stats.tvShows.streamListsCount
                             Text(
-                                text = formatBytes(stats.totalSize),
+                                text = "$totalItems Items",
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -807,19 +808,19 @@ fun MobileAddProviderScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = "Live TV", style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = formatBytes(stats.liveTv.size),
+                                text = "${stats.liveTv.streamListsCount} channels",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "${if (stats.liveTv.categoryCached) "1 category" else "No categories"}, ${stats.liveTv.streamListsCount} stream lists",
+                                text = if (stats.liveTv.categoryCached) "Categories cached" else "No categories",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                             )
                         }
                         OutlinedButton(
                             onClick = { showClearLiveTvCacheDialog = true },
-                            enabled = stats.liveTv.size > 0
+                            enabled = stats.liveTv.streamListsCount > 0
                         ) { Text("Clear") }
                     }
 
@@ -834,19 +835,19 @@ fun MobileAddProviderScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = "Movies", style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = formatBytes(stats.movies.size),
+                                text = "${stats.movies.streamListsCount} movies",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "${if (stats.movies.categoryCached) "1 category" else "No categories"}, ${stats.movies.streamListsCount} stream lists",
+                                text = if (stats.movies.categoryCached) "Categories cached" else "No categories",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                             )
                         }
                         OutlinedButton(
                             onClick = { showClearMoviesCacheDialog = true },
-                            enabled = stats.movies.size > 0
+                            enabled = stats.movies.streamListsCount > 0
                         ) { Text("Clear") }
                     }
 
@@ -861,35 +862,21 @@ fun MobileAddProviderScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = "TV Shows", style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = formatBytes(stats.tvShows.size),
+                                text = "${stats.tvShows.streamListsCount} series",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "${if (stats.tvShows.categoryCached) "1 category" else "No categories"}, ${stats.tvShows.streamListsCount} stream lists",
+                                text = if (stats.tvShows.categoryCached) "Categories cached" else "No categories",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                             )
                         }
                         OutlinedButton(
                             onClick = { showClearTvShowsCacheDialog = true },
-                            enabled = stats.tvShows.size > 0
+                            enabled = stats.tvShows.streamListsCount > 0
                         ) { Text("Clear") }
                     }
-
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    // EPG & Other
-                    Text(
-                        text = "EPG Data: ${stats.epgCount} channels",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                    )
-                    Text(
-                        text = "Other: ${formatBytes(stats.otherSize)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                    )
                 }
                 } // Column
                 } // GlassPanel

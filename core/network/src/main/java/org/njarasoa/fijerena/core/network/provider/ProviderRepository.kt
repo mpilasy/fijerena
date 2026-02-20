@@ -181,17 +181,24 @@ class ProviderRepository(private val context: Context) {
     // --- Cache management ---
 
     fun getCacheStatsForProvider(providerId: Long): XtreamRepository.CacheStats {
-        val cache = context.getSharedPreferences("xtream_cache_$providerId", Context.MODE_PRIVATE)
-        return XtreamRepository.computeCacheStats(cache)
+        // We need an instance of XtreamRepository to get accurate DB stats.
+        // Since we don't have dependency injection here, we create a temporary instance.
+        // This is safe because XtreamRepository uses singletons (Database) internally.
+        val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context)
+        val repo = XtreamRepository(accountManager, context, providerId)
+        return repo.getCacheStats()
     }
 
     fun clearAllCacheForProvider(providerId: Long) {
-        clearProviderCache(providerId)
+        val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context)
+        val repo = XtreamRepository(accountManager, context, providerId)
+        repo.clearCache()
     }
 
     fun clearCacheForProviderContentType(providerId: Long, contentType: String) {
-        val cache = context.getSharedPreferences("xtream_cache_$providerId", Context.MODE_PRIVATE)
-        XtreamRepository.clearCacheForContentTypeStatic(cache, contentType)
+        val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context)
+        val repo = XtreamRepository(accountManager, context, providerId)
+        repo.clearCacheForContentType(contentType)
     }
 
     // --- Private helpers ---
