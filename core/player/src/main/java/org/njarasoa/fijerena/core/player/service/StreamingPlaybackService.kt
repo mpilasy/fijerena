@@ -547,7 +547,17 @@ class StreamingPlaybackService : MediaSessionService() {
                     "Network connection failed. Check your internet connection."
                 }
                 PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
-                    "Stream unavailable (HTTP error). The content may have been removed."
+                    val code = extractHttpStatusCode(error)
+                    when (code) {
+                        401 -> "HTTP 401 — Authentication failed. Check your credentials."
+                        403 -> "HTTP 403 — Access denied. Your subscription may have expired."
+                        404 -> "HTTP 404 — Stream not found. The channel may be offline."
+                        458 -> "HTTP 458 — Connection limit reached. Close other active streams on this account."
+                        502, 503, 504 -> "HTTP $code — Server unavailable. Try again shortly."
+                        in 500..599 -> "HTTP $code — Server error. Try again later."
+                        in 400..499 -> "HTTP $code — Stream access denied."
+                        else -> if (code != null) "HTTP $code — Stream unavailable." else "Stream unavailable."
+                    }
                 }
                 PlaybackException.ERROR_CODE_TIMEOUT -> {
                     "Playback timeout. The stream may be too slow or unavailable."
@@ -564,6 +574,16 @@ class StreamingPlaybackService : MediaSessionService() {
                     "Playback error: ${error.errorCodeName}"
                 }
             }
+        }
+
+        private fun extractHttpStatusCode(error: PlaybackException): Int? {
+            var cause: Throwable? = error.cause
+            while (cause != null) {
+                val match = Regex("Response code: (\\d{3})").find(cause.message ?: "")
+                if (match != null) return match.groupValues[1].toIntOrNull()
+                cause = cause.cause
+            }
+            return null
         }
 
         private fun extractCodecInfo(message: String): String {

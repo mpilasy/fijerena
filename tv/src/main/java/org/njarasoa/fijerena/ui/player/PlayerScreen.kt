@@ -78,6 +78,7 @@ import androidx.media3.ui.PlayerView
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.foundation.lazy.list.items
+import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -765,17 +766,17 @@ private fun ChannelListOverlay(
                             .focusable()
                     )
                 } else {
-                    TvLazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(listFocusRequester)
-                    ) {
-                        items(streams) { stream ->
+                    TvLazyColumn(modifier = Modifier.weight(1f)) {
+                        itemsIndexed(streams) { index, stream ->
                             Button(
                                 onClick = { onSelect(stream) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = Spacing.xs)
+                                    .then(
+                                        if (index == 0) Modifier.focusRequester(listFocusRequester)
+                                        else Modifier
+                                    )
                             ) {
                                 Text(
                                     text = stream.name,
