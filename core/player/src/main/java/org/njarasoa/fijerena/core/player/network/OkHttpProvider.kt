@@ -35,6 +35,8 @@ object OkHttpProvider {
                     TimeUnit.MINUTES
                 )
             )
+            // Force HTTP/1.1 for stability with older IPTV/Xtream servers that don't handle HTTP/2 well
+            .protocols(listOf(Protocol.HTTP_1_1))
             .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)
