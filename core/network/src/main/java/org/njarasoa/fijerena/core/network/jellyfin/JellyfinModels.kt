@@ -136,6 +136,20 @@ data class JellyfinAuthBody(
     @SerialName("Pw") val password: String
 )
 
+// ---- Quick Connect ----
+
+@Serializable
+data class JellyfinQuickConnectResult(
+    @SerialName("Secret") val secret: String,
+    @SerialName("Code") val code: String,
+    @SerialName("Authenticated") val authenticated: Boolean = false
+)
+
+@Serializable
+data class JellyfinQuickConnectAuthBody(
+    @SerialName("Secret") val secret: String
+)
+
 // ---- Capabilities ----
 
 @Serializable

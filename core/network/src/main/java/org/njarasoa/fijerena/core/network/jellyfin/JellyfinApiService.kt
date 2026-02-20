@@ -76,6 +76,12 @@ class JellyfinApiService(
     fun getAccessToken(): String? = accessToken
     fun getUserId(): String? = userId
 
+    /** Restore a previously persisted session without re-authenticating. */
+    fun restoreSession(token: String, userId: String) {
+        accessToken = token
+        this.userId = userId
+    }
+
     // ---- Auth ----
 
     suspend fun authenticate(username: String, password: String): Result<JellyfinAuthResponse> {
@@ -102,7 +108,13 @@ class JellyfinApiService(
             Result.failure(Exception(message, e))
         } catch (e: io.ktor.client.plugins.ServerResponseException) {
             Log.e(TAG, "Auth server error: ${e.response.status}", e)
-            val message = if (e.response.status.value == 500 && password.isBlank()) {
+            if (e.response.status.value == 500 && password.isNotBlank()) {
+                // AuthenticateByName endpoint is broken on this server — try the password
+                // as a direct API key (user can generate one from Jellyfin Dashboard → API Keys)
+                Log.d(TAG, "Falling back to API key auth")
+                return authenticateWithApiKey(password)
+            }
+            val message = if (password.isBlank()) {
                 "Authentication failed: no password configured. Edit the provider to enter your password."
             } else {
                 "Server error (${e.response.status.value}). Check that the server URL is correct."
@@ -111,6 +123,24 @@ class JellyfinApiService(
         } catch (e: Exception) {
             Log.e(TAG, "Auth failed", e)
             Result.failure(e)
+        }
+    }
+
+    private suspend fun authenticateWithApiKey(apiKey: String): Result<JellyfinAuthResponse> {
+        return try {
+            // Temporarily set the API key as the token so the interceptor includes it
+            accessToken = apiKey
+            val user = client.get("$serverUrl/Users/Me").body<JellyfinUser>()
+            userId = user.id
+            Log.d(TAG, "API key auth successful for user ${user.name}")
+            postCapabilities()
+            // Return a synthetic auth response so callers don't need to change
+            Result.success(JellyfinAuthResponse(user = user, accessToken = apiKey))
+        } catch (e: Exception) {
+            accessToken = null
+            userId = null
+            Log.e(TAG, "API key auth failed", e)
+            Result.failure(Exception("Authentication failed. Check credentials or provide a Dashboard API key as the password.", e))
         }
     }
 
@@ -401,6 +431,64 @@ class JellyfinApiService(
             }.body<JellyfinItemsResponse>()
             Result.success(response.items)
         } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // ---- Quick Connect ----
+
+    /**
+     * Initiate a Quick Connect session.
+     * The returned [JellyfinQuickConnectResult] contains a 6-digit [JellyfinQuickConnectResult.code]
+     * to show the user and a [JellyfinQuickConnectResult.secret] to poll with.
+     */
+    suspend fun initiateQuickConnect(): Result<JellyfinQuickConnectResult> {
+        return try {
+            val result = client.post("$serverUrl/QuickConnect/Initiate") {
+                contentType(ContentType.Application.Json)
+            }.body<JellyfinQuickConnectResult>()
+            Log.d(TAG, "Quick Connect initiated: code=${result.code}")
+            Result.success(result)
+        } catch (e: Exception) {
+            Log.e(TAG, "Quick Connect initiate failed", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Poll Quick Connect status. Returns [JellyfinQuickConnectResult.authenticated] = true
+     * once the user approves the code in their Jellyfin web UI.
+     */
+    suspend fun pollQuickConnect(secret: String): Result<JellyfinQuickConnectResult> {
+        return try {
+            val result = client.get("$serverUrl/QuickConnect/Connect") {
+                parameter("secret", secret)
+            }.body<JellyfinQuickConnectResult>()
+            Result.success(result)
+        } catch (e: Exception) {
+            Log.e(TAG, "Quick Connect poll failed", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Exchange an approved Quick Connect secret for a full session token.
+     * Call this after [pollQuickConnect] returns [JellyfinQuickConnectResult.authenticated] = true.
+     */
+    suspend fun authenticateWithQuickConnect(secret: String): Result<JellyfinAuthResponse> {
+        return try {
+            val response = client.post("$serverUrl/Users/AuthenticateWithQuickConnect") {
+                contentType(ContentType.Application.Json)
+                setBody(JellyfinQuickConnectAuthBody(secret = secret))
+            }.body<JellyfinAuthResponse>()
+            accessToken = response.accessToken
+            userId = response.user.id
+            serverId = response.serverId
+            Log.d(TAG, "Quick Connect auth successful for user ${response.user.name}")
+            postCapabilities()
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e(TAG, "Quick Connect auth failed", e)
             Result.failure(e)
         }
     }

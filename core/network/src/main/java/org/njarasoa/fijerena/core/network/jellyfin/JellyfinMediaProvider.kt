@@ -22,10 +22,18 @@ class JellyfinMediaProvider(
     private val serverUrl: String,
     private val username: String,
     private val password: String,
-    private val deviceId: String
+    private val deviceId: String,
+    savedToken: String? = null,
+    savedUserId: String? = null,
+    private val onSessionSaved: ((token: String, userId: String) -> Unit)? = null,
+    private val onSessionCleared: (() -> Unit)? = null
 ) : MediaProvider {
 
-    private val api = JellyfinApiService(serverUrl, deviceId)
+    private val api = JellyfinApiService(serverUrl, deviceId).also {
+        if (savedToken != null && savedUserId != null) {
+            it.restoreSession(savedToken, savedUserId)
+        }
+    }
 
     // PlaySessionId per item, used for transcoding session reporting
     private val playSessionIds = mutableMapOf<String, String>()
@@ -43,7 +51,13 @@ class JellyfinMediaProvider(
     override suspend fun connect(): Result<Unit> {
         // Don't re-authenticate if already connected
         if (isConnected()) return Result.success(Unit)
-        return api.authenticate(username, password).map { }
+        return api.authenticate(username, password).also { result ->
+            result.onSuccess {
+                val token = api.getAccessToken()
+                val uid = api.getUserId()
+                if (token != null && uid != null) onSessionSaved?.invoke(token, uid)
+            }
+        }.map { }
     }
 
     override suspend fun disconnect() {
@@ -338,6 +352,8 @@ class JellyfinMediaProvider(
         if (result.isFailure) {
             val cause = result.exceptionOrNull()
             if (cause is ClientRequestException && cause.response.status == HttpStatusCode.Unauthorized) {
+                // Token is invalid — clear persisted session and re-authenticate
+                onSessionCleared?.invoke()
                 api.disconnect()
                 val reconnect = connect()
                 if (reconnect.isSuccess) {

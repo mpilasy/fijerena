@@ -5,6 +5,8 @@ package org.njarasoa.fijerena.ui.player
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -26,11 +28,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VolumeUp
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -52,6 +57,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -69,6 +75,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.tv.foundation.lazy.list.TvLazyRow
+import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.Button
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -112,7 +119,10 @@ fun PlayerScreen(
     isFavorite: Boolean = false,
     onToggleFavorite: (() -> Unit)? = null,
     currentEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null,
-    nextEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null
+    nextEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null,
+    categoryStreams: List<MediaItem> = emptyList(),
+    lastWatchedStreams: List<MediaItem> = emptyList(),
+    onStreamSelected: ((MediaItem) -> Unit)? = null
 ) {
     val playbackState = viewModel.playbackState.collectAsState().value
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
@@ -126,6 +136,8 @@ fun PlayerScreen(
     var showSubtitleSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
     var showStreamInfo by remember { mutableStateOf(false) }
+    var showCategoryOverlay by remember { mutableStateOf(false) }
+    var showLastWatchedOverlay by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
     // Live position polling for smooth VOD timer updates
@@ -232,18 +244,9 @@ fun PlayerScreen(
                             if (showControls) {
                                 false
                             } else if (!showStats) {
-                                // Show controls overlay
+                                // Show controls overlay only — never pause on OK
                                 showControls = true
                                 showStreamInfo = true
-
-                                // Only toggle pause/resume for VOD, never for live streams
-                                if (!currentMetadata.isLive) {
-                                    when (playbackState) {
-                                        is PlaybackState.Playing -> viewModel.pause()
-                                        is PlaybackState.Paused -> viewModel.resume()
-                                        else -> {}
-                                    }
-                                }
                                 true
                             } else {
                                 false
@@ -289,8 +292,15 @@ fun PlayerScreen(
                             }
                         }
                         Key.DirectionLeft -> {
-                            // When controls are NOT visible and it's VOD content, seek backward
-                            if (!showControls && !currentMetadata.isLive) {
+                            if (!showControls && currentMetadata.isLive) {
+                                // Live TV: Left opens category overlay (or closes last-watched)
+                                when {
+                                    showLastWatchedOverlay -> showLastWatchedOverlay = false
+                                    else -> showCategoryOverlay = true
+                                }
+                                true
+                            } else if (!showControls && !currentMetadata.isLive) {
+                                // VOD: seek backward 10s
                                 val position = when (val ps = playbackState) {
                                     is PlaybackState.Playing -> ps.position
                                     is PlaybackState.Paused -> ps.position
@@ -299,7 +309,6 @@ fun PlayerScreen(
                                 if (position != null) {
                                     val newPosition = (position - 10_000L).coerceAtLeast(0L)
                                     viewModel.seekTo(newPosition)
-                                    // Show stream info briefly to indicate seeking
                                     showStreamInfo = true
                                 }
                                 true
@@ -309,8 +318,15 @@ fun PlayerScreen(
                             }
                         }
                         Key.DirectionRight -> {
-                            // When controls are NOT visible and it's VOD content, seek forward
-                            if (!showControls && !currentMetadata.isLive) {
+                            if (!showControls && currentMetadata.isLive) {
+                                // Live TV: Right opens last-watched overlay (or closes category)
+                                when {
+                                    showCategoryOverlay -> showCategoryOverlay = false
+                                    else -> showLastWatchedOverlay = true
+                                }
+                                true
+                            } else if (!showControls && !currentMetadata.isLive) {
+                                // VOD: seek forward 10s
                                 val position = when (val ps = playbackState) {
                                     is PlaybackState.Playing -> ps.position
                                     is PlaybackState.Paused -> ps.position
@@ -324,7 +340,6 @@ fun PlayerScreen(
                                 if (position != null && duration != null) {
                                     val newPosition = (position + 10_000L).coerceAtMost(duration)
                                     viewModel.seekTo(newPosition)
-                                    // Show stream info briefly to indicate seeking
                                     showStreamInfo = true
                                 }
                                 true
@@ -335,16 +350,39 @@ fun PlayerScreen(
                         }
                         Key.Back -> {
                             // Close any visible overlays first, then exit
-                            if (showStats || showControls || showStreamInfo) {
-                                showStats = false
-                                showControls = false
-                                showStreamInfo = false
-                                true
-                            } else {
-                                viewModel.stop()
-                                onBack()
-                                true
+                            when {
+                                showCategoryOverlay -> { showCategoryOverlay = false; true }
+                                showLastWatchedOverlay -> { showLastWatchedOverlay = false; true }
+                                showStats || showControls || showStreamInfo -> {
+                                    showStats = false
+                                    showControls = false
+                                    showStreamInfo = false
+                                    true
+                                }
+                                else -> {
+                                    viewModel.stop()
+                                    onBack()
+                                    true
+                                }
                             }
+                        }
+                        Key(AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) -> {
+                            if (!currentMetadata.isLive) {
+                                when (playbackState) {
+                                    is PlaybackState.Playing -> viewModel.pause()
+                                    is PlaybackState.Paused -> viewModel.resume()
+                                    else -> {}
+                                }
+                            }
+                            true
+                        }
+                        Key(AndroidKeyEvent.KEYCODE_MEDIA_FAST_FORWARD) -> {
+                            if (!currentMetadata.isLive) viewModel.seekRelative(60_000L)
+                            true
+                        }
+                        Key(AndroidKeyEvent.KEYCODE_MEDIA_REWIND) -> {
+                            if (!currentMetadata.isLive) viewModel.seekRelative(-30_000L)
+                            true
                         }
                         else -> false
                     }
@@ -463,6 +501,8 @@ fun PlayerScreen(
                     isPaused = isPaused,
                     onPause = if (!isPaused && !isLive) ({ viewModel.pause() }) else null,
                     onResume = if (isPaused && !isLive) ({ viewModel.resume() }) else null,
+                    onFastForward = if (!isLive) ({ viewModel.seekRelative(60_000L) }) else null,
+                    onRewind = if (!isLive) ({ viewModel.seekRelative(-30_000L) }) else null,
                     hasMultipleAudioTracks = audioTrackCount > 1,
                     onAudioTrack = { showAudioTrackSelector = true },
                     hasSubtitles = subtitleTrackCount > 0,
@@ -514,6 +554,42 @@ fun PlayerScreen(
                     prefs.edit().putBoolean("hints_dismissed", true).apply()
                     showControlHints = false
                 }
+            )
+        }
+
+        // Category streams overlay — slides in from the left
+        AnimatedVisibility(
+            visible = showCategoryOverlay && categoryStreams.isNotEmpty(),
+            enter = slideInHorizontally { -it },
+            exit = slideOutHorizontally { -it }
+        ) {
+            ChannelListOverlay(
+                title = "Category Channels",
+                streams = categoryStreams,
+                panelAlignment = Alignment.CenterStart,
+                onSelect = { item ->
+                    showCategoryOverlay = false
+                    onStreamSelected?.invoke(item)
+                },
+                onDismiss = { showCategoryOverlay = false }
+            )
+        }
+
+        // Last watched overlay — slides in from the right
+        AnimatedVisibility(
+            visible = showLastWatchedOverlay && lastWatchedStreams.isNotEmpty(),
+            enter = slideInHorizontally { it },
+            exit = slideOutHorizontally { it }
+        ) {
+            ChannelListOverlay(
+                title = "Last Watched",
+                streams = lastWatchedStreams,
+                panelAlignment = Alignment.CenterEnd,
+                onSelect = { item ->
+                    showLastWatchedOverlay = false
+                    onStreamSelected?.invoke(item)
+                },
+                onDismiss = { showLastWatchedOverlay = false }
             )
         }
     }
@@ -625,6 +701,70 @@ private fun ControlHint(control: String, description: String) {
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White
         )
+    }
+}
+
+@Composable
+private fun ChannelListOverlay(
+    title: String,
+    streams: List<MediaItem>,
+    onSelect: (MediaItem) -> Unit,
+    onDismiss: () -> Unit,
+    panelAlignment: Alignment = Alignment.CenterStart
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = CinemaAlpha.tint))
+    ) {
+        GlassPanel(
+            modifier = Modifier
+                .align(panelAlignment)
+                .width(TvDimensions.dialogWidthLarge)
+                .padding(Spacing.xxl),
+            backgroundAlpha = 0.5f
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(Spacing.lg)
+                    .focusRequester(focusRequester)
+                    .focusable()
+                    .onKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Back) {
+                            onDismiss()
+                            true
+                        } else false
+                    }
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = Spacing.md)
+                )
+                TvLazyRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(streams) { stream ->
+                        Button(
+                            onClick = { onSelect(stream) },
+                            modifier = Modifier.padding(horizontal = Spacing.xs)
+                        ) {
+                            Text(
+                                text = stream.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -2044,6 +2184,8 @@ private fun ControlButtonsRow(
     isPaused: Boolean,
     onPause: (() -> Unit)?,
     onResume: (() -> Unit)?,
+    onFastForward: (() -> Unit)? = null,
+    onRewind: (() -> Unit)? = null,
     hasMultipleAudioTracks: Boolean,
     onAudioTrack: (() -> Unit)?,
     hasSubtitles: Boolean,
@@ -2088,6 +2230,32 @@ private fun ControlButtonsRow(
                             Icon(Icons.Filled.Pause, contentDescription = null)
                             Text("Pause")
                         }
+                    }
+                }
+            }
+
+            // Rewind -30s (VOD only)
+            if (onRewind != null) {
+                Button(onClick = { onRewind.invoke() }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.FastRewind, contentDescription = null)
+                        Text("-30s")
+                    }
+                }
+            }
+
+            // Fast Forward +1min (VOD only)
+            if (onFastForward != null) {
+                Button(onClick = { onFastForward.invoke() }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Filled.FastForward, contentDescription = null)
+                        Text("+1m")
                     }
                 }
             }

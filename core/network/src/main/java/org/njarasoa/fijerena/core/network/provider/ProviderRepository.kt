@@ -78,6 +78,15 @@ class ProviderRepository(private val context: Context) {
             )
         )
         savePassword(id, password)
+        // If Jellyfin credentials changed, discard the cached session token so the
+        // provider re-authenticates with the new username/password on next use.
+        val effectiveType = type ?: existing.type
+        if (effectiveType == "JELLYFIN") {
+            getProviderPrefs(id)?.edit()
+                ?.remove("jellyfin_token")
+                ?.remove("jellyfin_user_id")
+                ?.apply()
+        }
         // Clear cached provider instance since credentials may have changed
         MediaProviderFactory.clearCache(id)
     }
@@ -109,6 +118,17 @@ class ProviderRepository(private val context: Context) {
      */
     fun getPassword(providerId: Long): String? {
         return getProviderPrefs(providerId)?.getString("password", null)
+    }
+
+    /**
+     * Persist a Jellyfin session token (from Quick Connect or normal auth) so the
+     * provider can restore it on next launch without re-authenticating.
+     */
+    fun saveJellyfinSession(providerId: Long, token: String, userId: String) {
+        getProviderPrefs(providerId)?.edit()
+            ?.putString("jellyfin_token", token)
+            ?.putString("jellyfin_user_id", userId)
+            ?.apply()
     }
 
     // --- Provider Settings ---

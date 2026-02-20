@@ -196,6 +196,21 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun seekRelative(offsetMs: Long) {
+        val state = _playbackState.value
+        val currentPos = when (state) {
+            is PlaybackState.Playing -> state.position
+            is PlaybackState.Paused -> state.position
+            else -> return
+        }
+        val duration = when (state) {
+            is PlaybackState.Playing -> state.duration
+            is PlaybackState.Paused -> state.duration
+            else -> return
+        }
+        seekTo((currentPos + offsetMs).coerceIn(0L, duration))
+    }
+
     /**
      * Get available audio tracks from the player.
      * Returns a list of audio track info (language, label, track group index, track index).
