@@ -30,17 +30,17 @@ object NetworkBufferProfile {
     const val WIFI_VOD_BACK_BUFFER_MS = 10_000
 
     // ── Cellular Live TV ────────────────────────────────────────────
-    const val CELLULAR_LIVE_MIN_BUFFER_MS = 5_000
-    const val CELLULAR_LIVE_MAX_BUFFER_MS = 15_000
+    const val CELLULAR_LIVE_MIN_BUFFER_MS = 10_000
+    const val CELLULAR_LIVE_MAX_BUFFER_MS = 40_000
     const val CELLULAR_LIVE_PLAYBACK_MS = 2_000
-    const val CELLULAR_LIVE_REBUFFER_MS = 2_500
+    const val CELLULAR_LIVE_REBUFFER_MS = 5_000
     const val CELLULAR_LIVE_BACK_BUFFER_MS = 0
 
     // ── Cellular VOD ────────────────────────────────────────────────
-    const val CELLULAR_VOD_MIN_BUFFER_MS = 15_000
-    const val CELLULAR_VOD_MAX_BUFFER_MS = 50_000
+    const val CELLULAR_VOD_MIN_BUFFER_MS = 30_000
+    const val CELLULAR_VOD_MAX_BUFFER_MS = 120_000
     const val CELLULAR_VOD_PLAYBACK_MS = 2_000
-    const val CELLULAR_VOD_REBUFFER_MS = 5_000
+    const val CELLULAR_VOD_REBUFFER_MS = 10_000
     const val CELLULAR_VOD_BACK_BUFFER_MS = 10_000
 
     // ── Retry policy ────────────────────────────────────────────────
