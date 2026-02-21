@@ -129,29 +129,16 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var processJob: Job? = null
     private var autoRefreshJob: Job? = null
 
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
     val state: StateFlow<MultiSourceState> = _state.asStateFlow()
 
-    private val httpClient = HttpClient(OkHttp) {
-        engine {
-            config {
-                followRedirects(true)
-                followSslRedirects(true)
-                connectTimeout(60, TimeUnit.SECONDS)
-                readTimeout(10, TimeUnit.MINUTES)
-            }
-        }
-    }
-
-    private val okHttpClient = OkHttpClient.Builder()
-        .followRedirects(true)
-        .followSslRedirects(true)
+    private val okHttpClient = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient.newBuilder()
         .connectTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.MINUTES)
+        .readTimeout(3, TimeUnit.MINUTES)
         .build()
 
     private fun isFixedDevice(): Boolean {
@@ -593,26 +580,13 @@ class EpgFileManager private constructor(private val context: Context) {
                         val downloadTotalBytes = body.contentLength()
                         
                         tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
-                            val buffer = ByteArray(STREAM_BUFFER_SIZE)
                             val input = body.byteStream()
-                            var bytesRead: Int
-                            var totalBytes = 0L
-                            while (input.read(buffer).also { bytesRead = it } != -1) {
-                                output.write(buffer, 0, bytesRead)
-                                totalBytes += bytesRead
-                                if (totalBytes % (256 * 1024) < STREAM_BUFFER_SIZE.toLong()) {
-                                    _state.value = MultiSourceState.Processing(
-                                        sourceLabel = label,
-                                        sourceIndex = index + 1,
-                                        totalSources = total,
-                                        phase = "Downloading",
-                                        downloadedBytes = totalBytes,
-                                        downloadTotalBytes = downloadTotalBytes,
-                                        completedSourceStats = completedStats
-                                    )
-                                }
-                            }
-                            downloadedBytes = totalBytes
+                            input.copyTo(output, STREAM_BUFFER_SIZE)
+                            output.flush()
+                        }
+                        // Verify file exists and has size
+                        if (tmpFile.exists()) {
+                            downloadedBytes = tmpFile.length()
                         }
                         lastError = null
                     }

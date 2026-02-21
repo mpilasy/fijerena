@@ -147,6 +147,9 @@ fun MobilePlayerScreen(
     val playbackState = viewModel.playbackState.collectAsState().value
 
     LaunchedEffect(playbackState) {
+        if (playbackState is PlaybackState.Error) {
+            android.util.Log.e("MobilePlayerScreen", "Playback Error: ${playbackState.message}")
+        }
         if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused) {
             while (true) {
                 StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
@@ -307,11 +310,13 @@ fun MobilePlayerScreen(
         )
         result.fold(
             onSuccess = { playable ->
+                android.util.Log.d("MobilePlayerScreen", "Resolved Stream URL: ${playable.uri}")
                 streamUrl = playable.uri
                 streamHeaders = playable.headers
                 isLoading = false
             },
             onFailure = { e ->
+                android.util.Log.e("MobilePlayerScreen", "Failed to resolve stream: ${e.message}", e)
                 error = e.message ?: "Failed to load stream"
                 isLoading = false
             }

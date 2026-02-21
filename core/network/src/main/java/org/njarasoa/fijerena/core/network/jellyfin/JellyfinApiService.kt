@@ -11,14 +11,18 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.prepareGet
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
@@ -31,6 +35,12 @@ class JellyfinApiService(
     private var accessToken: String? = null
     private var userId: String? = null
     private var serverId: String? = null
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        coerceInputValues = true
+    }
 
     private val authHeader: String
         get() = buildString {
@@ -45,18 +55,13 @@ class JellyfinApiService(
     private val client = HttpClient(OkHttp) {
         expectSuccess = true
         engine {
+            preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
             config {
-                connectTimeout(30, TimeUnit.SECONDS)
-                readTimeout(60, TimeUnit.SECONDS)
-                writeTimeout(30, TimeUnit.SECONDS)
+                // Additional configuration on top of shared client
             }
         }
         install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-                coerceInputValues = true
-            })
+            json(json)
         }
     }.also { httpClient ->
         // Inject both Authorization and X-Emby-Authorization on every request.
@@ -213,6 +218,7 @@ class JellyfinApiService(
         }
     }
 
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getItems(
         parentId: String,
         includeItemTypes: String? = null,
@@ -220,17 +226,50 @@ class JellyfinApiService(
         sortOrder: String = "Ascending"
     ): Result<List<JellyfinItem>> {
         return try {
-            val response = client.get("$serverUrl/Users/$userId/Items") {
+            client.prepareGet("$serverUrl/Users/$userId/Items") {
                 parameter("ParentId", parentId)
                 includeItemTypes?.let { parameter("IncludeItemTypes", it) }
                 parameter("SortBy", sortBy)
                 parameter("SortOrder", sortOrder)
                 parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData")
                 parameter("Recursive", true)
-            }.body<JellyfinItemsResponse>()
-            Result.success(response.items)
+            }.execute { response ->
+                response.bodyAsChannel().toInputStream().use { stream ->
+                    val result = json.decodeFromStream<JellyfinItemsResponse>(stream)
+                    Result.success(result.items)
+                }
+            }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Streaming version of getItems. Individual [JellyfinItem] objects are passed to [onItem].
+     * Jellyfin wraps items in an object {"Items": [...], "TotalRecordCount": X}.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    suspend fun getItemsStreaming(
+        parentId: String,
+        includeItemTypes: String? = null,
+        sortBy: String = "SortName",
+        sortOrder: String = "Ascending",
+        onItem: (JellyfinItem) -> Unit
+    ) {
+        client.prepareGet("$serverUrl/Users/$userId/Items") {
+            parameter("ParentId", parentId)
+            includeItemTypes?.let { parameter("IncludeItemTypes", it) }
+            parameter("SortBy", sortBy)
+            parameter("SortOrder", sortOrder)
+            parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData")
+            parameter("Recursive", true)
+        }.execute { response ->
+            response.bodyAsChannel().toInputStream().use { stream ->
+                // For Jellyfin, we'll decode the whole object but pass items individually
+                // to stay consistent with the repository pattern.
+                val result = json.decodeFromStream<JellyfinItemsResponse>(stream)
+                result.items.forEach { onItem(it) }
+            }
         }
     }
 
@@ -269,20 +308,25 @@ class JellyfinApiService(
         }
     }
 
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun searchItems(
         query: String,
         includeItemTypes: String? = null,
         limit: Int = 50
     ): Result<List<JellyfinItem>> {
         return try {
-            val response = client.get("$serverUrl/Users/$userId/Items") {
+            client.prepareGet("$serverUrl/Users/$userId/Items") {
                 parameter("SearchTerm", query)
                 includeItemTypes?.let { parameter("IncludeItemTypes", it) }
                 parameter("Limit", limit)
                 parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData")
                 parameter("Recursive", true)
-            }.body<JellyfinItemsResponse>()
-            Result.success(response.items)
+            }.execute { response ->
+                response.bodyAsChannel().toInputStream().use { stream ->
+                    val result = json.decodeFromStream<JellyfinItemsResponse>(stream)
+                    Result.success(result.items)
+                }
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
