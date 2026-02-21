@@ -280,6 +280,9 @@ class XtreamApiService(
      *
      * Format: http://url:port/live/username/password/streamId.m3u8
      *
+     * Uses HLS format for live streams. Each HLS segment starts at a keyframe
+     * boundary enabling fast startup and accurate bandwidth measurement.
+     *
      * @param streamId The stream ID to build the URL for
      * @return The formatted stream URL in HLS format
      */

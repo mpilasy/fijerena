@@ -32,15 +32,15 @@ android {
 }
 
 dependencies {
-    // Media3 (ExoPlayer) - Latest stable 1.9.1
+    // Media3 (ExoPlayer) - Latest stable 1.7.1
     api(libs.bundles.media)
+
+    // Play Services Cronet for QUIC/HTTP/3 streaming
+    implementation(libs.play.services.cronet)
 
     // FFmpeg extension for software decoding of AC3, EAC3, DTS, TrueHD, etc.
     // Pre-built Media3 FFmpeg decoder from Jellyfin (Maven Central)
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.6.1+1")
-
-    // Google Play Services Cronet (HTTP/2 + QUIC/HTTP3 transport)
-    implementation(libs.play.services.cronet)
 
     // Kotlinx Coroutines
     api(libs.kotlinx.coroutines.core)

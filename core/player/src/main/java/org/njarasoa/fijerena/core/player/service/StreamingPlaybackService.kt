@@ -29,7 +29,6 @@ import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
-import org.njarasoa.fijerena.core.player.network.CronetEngineProvider
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 
@@ -83,7 +82,7 @@ class StreamingPlaybackService : MediaSessionService() {
         super.onCreate()
         instance = this
         NetworkMonitor.init(this)
-        CronetEngineProvider.init(this)
+        StreamingMediaSourceFactory.initCronet(this)
         initializePlayer()
         acquireWakeLock()
         observeNetworkChanges()
@@ -461,7 +460,7 @@ class StreamingPlaybackService : MediaSessionService() {
         serviceScope = null
         adaptiveLoadControl = null
         NetworkMonitor.release()
-        CronetEngineProvider.release()
+        StreamingMediaSourceFactory.releaseCronet()
         instance = null
         super.onDestroy()
     }
