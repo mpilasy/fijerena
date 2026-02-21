@@ -61,19 +61,24 @@ object PlayerConfigFactory {
         val parameters = DefaultTrackSelector.Parameters.Builder()
             .setPreferredAudioLanguage("en")
             .apply {
-                // Set max resolution based on device
-                val (maxWidth, maxHeight) = capabilities.maxResolution
-                setMaxVideoSize(maxWidth, maxHeight)
+                // Set bitrate and resolution constraints based on network and device
+                if (isCellular) {
+                    // Be very conservative on cellular to prevent buffering
+                    setMaxVideoSize(854, 480)
+                    setMaxVideoBitrate(1_000_000) // 1 Mbps
+                } else {
+                    val (maxWidth, maxHeight) = capabilities.maxResolution
+                    setMaxVideoSize(maxWidth, maxHeight)
 
-                // Set bitrate constraints
-                val maxBitrate = when (capabilities.deviceType) {
-                    DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                    DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                    DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                    DeviceType.GENERIC_TV -> 10_000_000
-                    DeviceType.GENERIC_MOBILE -> 5_000_000
+                    val maxBitrate = when (capabilities.deviceType) {
+                        DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                        DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                        DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                        DeviceType.GENERIC_TV -> 10_000_000
+                        DeviceType.GENERIC_MOBILE -> 5_000_000
+                    }
+                    setMaxVideoBitrate(maxBitrate)
                 }
-                setMaxVideoBitrate(maxBitrate)
 
                 // Prioritize hardware-accelerated codecs based on device capabilities
                 if (capabilities.preferredCodecs.isNotEmpty()) {

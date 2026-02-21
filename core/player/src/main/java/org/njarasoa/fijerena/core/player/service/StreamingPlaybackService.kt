@@ -222,6 +222,17 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
 
+        // Dynamically update content type for AdaptiveLoadControl
+        val contentType = if (metadata.isLive) 
+            PlayerConfigFactory.ContentType.LIVE_TV 
+        else 
+            PlayerConfigFactory.ContentType.VOD
+        
+        // Only re-initialize if type changed significantly, or just update the flag
+        // For simplicity and since setContentType releases player, let's just use it
+        // but it might be heavy. Let's check if we can just update the flag in loadControl.
+        setContentType(contentType)
+
         val mediaSource = StreamingMediaSourceFactory.createMediaSource(
             context = this,
             streamUrl = metadata.streamUrl,

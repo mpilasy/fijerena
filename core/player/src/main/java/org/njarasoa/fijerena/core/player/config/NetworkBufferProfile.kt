@@ -30,17 +30,17 @@ object NetworkBufferProfile {
     const val WIFI_VOD_BACK_BUFFER_MS = 10_000
 
     // ── Cellular Live TV ────────────────────────────────────────────
-    const val CELLULAR_LIVE_MIN_BUFFER_MS = 15_000
-    const val CELLULAR_LIVE_MAX_BUFFER_MS = 50_000
-    const val CELLULAR_LIVE_PLAYBACK_MS = 2_000
-    const val CELLULAR_LIVE_REBUFFER_MS = 5_000
+    const val CELLULAR_LIVE_MIN_BUFFER_MS = 30_000
+    const val CELLULAR_LIVE_MAX_BUFFER_MS = 100_000
+    const val CELLULAR_LIVE_PLAYBACK_MS = 6_000
+    const val CELLULAR_LIVE_REBUFFER_MS = 10_000
     const val CELLULAR_LIVE_BACK_BUFFER_MS = 0
 
     // ── Cellular VOD ────────────────────────────────────────────────
-    const val CELLULAR_VOD_MIN_BUFFER_MS = 30_000
-    const val CELLULAR_VOD_MAX_BUFFER_MS = 120_000
-    const val CELLULAR_VOD_PLAYBACK_MS = 2_000
-    const val CELLULAR_VOD_REBUFFER_MS = 5_000
+    const val CELLULAR_VOD_MIN_BUFFER_MS = 60_000
+    const val CELLULAR_VOD_MAX_BUFFER_MS = 240_000
+    const val CELLULAR_VOD_PLAYBACK_MS = 10_000
+    const val CELLULAR_VOD_REBUFFER_MS = 15_000
     const val CELLULAR_VOD_BACK_BUFFER_MS = 10_000
 
     // ── Retry policy ────────────────────────────────────────────────
@@ -53,8 +53,8 @@ object NetworkBufferProfile {
     // ── HTTP timeouts ───────────────────────────────────────────────
     const val WIFI_CONNECT_TIMEOUT_MS = 10_000
     const val WIFI_READ_TIMEOUT_MS = 20_000
-    const val CELLULAR_CONNECT_TIMEOUT_MS = 45_000
-    const val CELLULAR_READ_TIMEOUT_MS = 60_000
+    const val CELLULAR_CONNECT_TIMEOUT_MS = 60_000
+    const val CELLULAR_READ_TIMEOUT_MS = 90_000
 
     // ── Cellular buffer multiplier functions ─────────────────────────
     // Apply multiplier to cellular buffers (WiFi always uses 1.0x)
