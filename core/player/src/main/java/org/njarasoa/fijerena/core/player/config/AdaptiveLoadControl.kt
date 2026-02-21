@@ -18,7 +18,7 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
  * to avoid memory churn.
  */
 class AdaptiveLoadControl(
-    private val contentType: PlayerConfigFactory.ContentType,
+    private var contentType: PlayerConfigFactory.ContentType,
     private val cellularLiveMultiplier: Float = 1.0f,
     private val cellularVodMultiplier: Float = 1.0f
 ) : LoadControl {
@@ -26,10 +26,19 @@ class AdaptiveLoadControl(
     private val sharedAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
 
     @Volatile
-    private var delegate: DefaultLoadControl = buildDelegate(NetworkMonitor.currentNetworkType)
+    private var currentNetworkType: NetworkType = NetworkMonitor.currentNetworkType
+
+    @Volatile
+    private var delegate: DefaultLoadControl = buildDelegate(currentNetworkType)
 
     fun updateForNetwork(networkType: NetworkType) {
+        currentNetworkType = networkType
         delegate = buildDelegate(networkType)
+    }
+
+    fun updateForContentType(contentType: PlayerConfigFactory.ContentType) {
+        this.contentType = contentType
+        delegate = buildDelegate(currentNetworkType)
     }
 
     private fun buildDelegate(networkType: NetworkType): DefaultLoadControl {
@@ -45,19 +54,12 @@ class AdaptiveLoadControl(
         val prioritizeTime = !isWifi
 
         if (isLive) {
-            if (isWifi) {
-                minBuffer = NetworkBufferProfile.WIFI_LIVE_MIN_BUFFER_MS
-                maxBuffer = NetworkBufferProfile.WIFI_LIVE_MAX_BUFFER_MS
-                playback = NetworkBufferProfile.WIFI_LIVE_PLAYBACK_MS
-                rebuffer = NetworkBufferProfile.WIFI_LIVE_REBUFFER_MS
-                backBuffer = NetworkBufferProfile.WIFI_LIVE_BACK_BUFFER_MS
-            } else {
-                minBuffer = NetworkBufferProfile.getCellularLiveMinBuffer(cellularLiveMultiplier)
-                maxBuffer = NetworkBufferProfile.getCellularLiveMaxBuffer(cellularLiveMultiplier)
-                playback = NetworkBufferProfile.getCellularLivePlayback(cellularLiveMultiplier)
-                rebuffer = NetworkBufferProfile.getCellularLiveRebuffer(cellularLiveMultiplier)
-                backBuffer = NetworkBufferProfile.CELLULAR_LIVE_BACK_BUFFER_MS
-            }
+            // Live TV: Prioritize fast startup but ensure enough buffer for stability
+            minBuffer = 15_000
+            maxBuffer = 30_000
+            playback = 1_000
+            rebuffer = 5_000
+            backBuffer = 0
             retainKeyframe = false
         } else {
             if (isWifi) {

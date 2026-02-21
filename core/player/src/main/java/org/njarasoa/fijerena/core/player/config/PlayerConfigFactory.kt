@@ -63,9 +63,9 @@ object PlayerConfigFactory {
             .apply {
                 // Set bitrate and resolution constraints based on network and device
                 if (isCellular) {
-                    // Be very conservative on cellular to prevent buffering
+                    // Capping at 1.5Mbps to match your reported ~1.2Mbps bandwidth
                     setMaxVideoSize(854, 480)
-                    setMaxVideoBitrate(1_000_000) // 1 Mbps
+                    setMaxVideoBitrate(1_500_000) // 1.5 Mbps
                 } else {
                     val (maxWidth, maxHeight) = capabilities.maxResolution
                     setMaxVideoSize(maxWidth, maxHeight)
