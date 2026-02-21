@@ -32,7 +32,11 @@ object TvDimensions {
     val iconSmall: Dp = 20.dp
     val iconMedium: Dp = 28.dp
     val iconLarge: Dp = 48.dp
-    val iconXLarge: Dp = 48.dp
+    val iconXLarge: Dp = 64.dp
+
+    // Icon button containers (for player controls)
+    val iconButtonSize: Dp = 72.dp
+    val iconButtonSizeLarge: Dp = 96.dp
 
     // Progress indicators
     val progressIndicator: Dp = 48.dp

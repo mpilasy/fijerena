@@ -61,7 +61,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
@@ -73,9 +73,12 @@ import org.njarasoa.fijerena.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
+import androidx.compose.runtime.CompositionLocalProvider
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Content type selection screen with icons, category counts, and gradient cards.
@@ -167,6 +170,11 @@ fun ContentTypeSelectionScreen(
         }
     }
 
+    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
+
+    CompositionLocalProvider(LocalUiScale provides uiScale) {
+    val scale = LocalUiScale.current
+
     // Subtle background gradient wash
     Box(
         modifier = Modifier
@@ -190,13 +198,15 @@ fun ContentTypeSelectionScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = Spacing.xxl),
+                    .padding(bottom = Spacing.xxl.scaled(scale)),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = providerName.ifEmpty { "Fijerena" },
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.displayMedium.copy(
+                        fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 // Provider name in glass pill badge + settings gear
@@ -268,7 +278,7 @@ fun ContentTypeSelectionScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xl),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -387,6 +397,7 @@ fun ContentTypeSelectionScreen(
         }
 
     }
+    } // CompositionLocalProvider
 }
 
 /**
@@ -403,9 +414,10 @@ private fun ContentTypeHeroCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val scale = LocalUiScale.current
     Card(
         onClick = onClick,
-        modifier = modifier.height(TvDimensions.contentTypeCardHeight),
+        modifier = modifier.height(TvDimensions.contentTypeCardHeight.scaled(scale)),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             contentColor = CinemaTextPrimary,
@@ -446,22 +458,26 @@ private fun ContentTypeHeroCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = CinemaTextPrimary,
-                    modifier = Modifier.size(TvDimensions.contentTypeIconSize)
+                    modifier = Modifier.size(TvDimensions.contentTypeIconSize.scaled(scale))
                 )
-                Spacer(modifier = Modifier.height(Spacing.sm))
+                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontSize = MaterialTheme.typography.headlineMedium.fontSize.scaled(scale)
+                    ),
                     color = CinemaTextPrimary,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                    ),
                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = Spacing.xxs)
+                    modifier = Modifier.padding(top = Spacing.xxs.scaled(scale))
                 )
                 if (categoryCounts != null) {
                     val (filtered, total) = categoryCounts

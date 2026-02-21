@@ -455,14 +455,18 @@ private fun CategoryList(
         categories.associate { it.id to FocusRequester() }
     }
 
-    // Auto-scroll and focus on selected category (only for regular categories)
+    // Auto-scroll and focus on selected category
     LaunchedEffect(regularCategories, selectedCategoryId) {
-        if (regularCategories.isNotEmpty() && selectedCategoryId != null && selectedCategoryId !in virtualCategoryIds) {
-            val selectedIndex = regularCategories.indexOfFirst { it.id == selectedCategoryId }
-            if (selectedIndex != -1) {
-                listState.animateScrollToItem(selectedIndex)
-                // Request focus on the selected category
+        if (selectedCategoryId != null) {
+            if (selectedCategoryId in virtualCategoryIds) {
+                // Focus virtual category in sidebar
                 focusRequesters[selectedCategoryId]?.requestFocus()
+            } else if (regularCategories.isNotEmpty()) {
+                val selectedIndex = regularCategories.indexOfFirst { it.id == selectedCategoryId }
+                if (selectedIndex != -1) {
+                    listState.animateScrollToItem(selectedIndex)
+                    focusRequesters[selectedCategoryId]?.requestFocus()
+                }
             }
         }
     }

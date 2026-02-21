@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -88,6 +89,8 @@ fun TvAddProviderScreen(
         factory = ProviderViewModelFactory(context)
     )
     val isEditMode = editId > 0L
+    val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
+    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
@@ -171,6 +174,8 @@ fun TvAddProviderScreen(
         }
     }
 
+    CompositionLocalProvider(LocalUiScale provides uiScale) {
+    val scale = LocalUiScale.current
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
@@ -181,21 +186,23 @@ fun TvAddProviderScreen(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            GlassPanel(modifier = Modifier.width(TvDimensions.formFieldWidth)) {
+            GlassPanel(modifier = Modifier.width(TvDimensions.formFieldWidth.scaled(scale))) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(Spacing.lg),
+                    .padding(Spacing.lg.scaled(scale)),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = if (isEditMode) "Edit Provider" else "Add Provider",
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.height(Spacing.xl))
+                Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
                 // Provider type dropdown (D-pad friendly)
                 var typeDropdownExpanded by remember { mutableStateOf(false) }
@@ -257,7 +264,7 @@ fun TvAddProviderScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(Spacing.xl))
+                Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
                 // Name field (all types)
                 OutlinedTextField(
@@ -287,7 +294,7 @@ fun TvAddProviderScreen(
                 // Type-specific fields
                 when (selectedType) {
                     ProviderType.XTREAM -> {
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // URL field
                         OutlinedTextField(
@@ -321,7 +328,7 @@ fun TvAddProviderScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Username field
                         OutlinedTextField(
@@ -346,7 +353,7 @@ fun TvAddProviderScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Password field
                         OutlinedTextField(
@@ -375,7 +382,7 @@ fun TvAddProviderScreen(
                     }
 
                     ProviderType.JELLYFIN -> {
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Server URL field
                         OutlinedTextField(
@@ -409,7 +416,7 @@ fun TvAddProviderScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Username field
                         OutlinedTextField(
@@ -434,7 +441,7 @@ fun TvAddProviderScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Password field
                         OutlinedTextField(
@@ -462,14 +469,14 @@ fun TvAddProviderScreen(
                         )
 
                         if (!isEditMode) {
-                            Spacer(modifier = Modifier.height(Spacing.md))
+                            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                             Text(
                                 text = "— or —",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                                 color = CinemaTextSecondary,
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
                             )
-                            Spacer(modifier = Modifier.height(Spacing.sm))
+                            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                             CinemaSecondaryButton(
                                 onClick = {
                                     if (url.isBlank()) {
@@ -488,7 +495,7 @@ fun TvAddProviderScreen(
                     }
 
                     ProviderType.SMB -> {
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Host/IP field
                         OutlinedTextField(
@@ -514,7 +521,7 @@ fun TvAddProviderScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Share Name field
                         OutlinedTextField(
@@ -540,7 +547,7 @@ fun TvAddProviderScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Username field (optional)
                         OutlinedTextField(
@@ -565,7 +572,7 @@ fun TvAddProviderScreen(
                             )
                         )
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Password field (optional)
                         OutlinedTextField(
@@ -598,7 +605,7 @@ fun TvAddProviderScreen(
                     }
 
                     ProviderType.REMOTE_M3U -> {
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         OutlinedTextField(
                             value = url,
@@ -628,16 +635,18 @@ fun TvAddProviderScreen(
 
                 // Provider Settings (edit mode only)
                 if (isEditMode) {
-                    Spacer(modifier = Modifier.height(Spacing.xl))
+                    Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
                     HorizontalDivider(color = CinemaTextSecondary.copy(alpha = CinemaAlpha.focusedTint))
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                     Text(
                         text = "Provider Settings",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
                         color = CinemaAccent
                     )
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                     // Auto-Resume
                     Row(
@@ -650,16 +659,16 @@ fun TvAddProviderScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Auto-Resume",
-                                style = MaterialTheme.typography.titleSmall,
+                                style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Resume VOD content from where you left off",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                             )
                         }
-                        Spacer(modifier = Modifier.width(Spacing.md))
+                        Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                         Switch(
                             checked = autoResumeEnabled,
                             onCheckedChange = { enabled ->
@@ -674,21 +683,21 @@ fun TvAddProviderScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                     // Watch History Size
                     Column {
                         Text(
                             text = "Last Watched Queue Size",
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Items to keep in Last Watched category (1-100)",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
-                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
                         if (!isEditingQueueSize) {
                             Row(
@@ -697,7 +706,7 @@ fun TvAddProviderScreen(
                             ) {
                                 Text(
                                     text = watchHistorySize,
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)),
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -724,9 +733,9 @@ fun TvAddProviderScreen(
                                     label = { Text("Queue Size") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
-                                    modifier = Modifier.width(TvDimensions.selectionListWidth)
+                                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale))
                                 )
-                                Spacer(modifier = Modifier.width(Spacing.md))
+                                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                                 CinemaSecondaryButton(
                                     onClick = {
                                         isEditingQueueSize = false
@@ -734,7 +743,7 @@ fun TvAddProviderScreen(
                                     },
                                     text = "Cancel"
                                 )
-                                Spacer(modifier = Modifier.width(Spacing.xs))
+                                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                                 CinemaPrimaryButton(
                                     onClick = {
                                         val size = newWatchHistorySize.toIntOrNull()
@@ -757,21 +766,21 @@ fun TvAddProviderScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                     // Favorites Max Size
                     Column {
                         Text(
                             text = "Favorites Max Size",
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Maximum number of favorites to store (10-500)",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
-                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
                         if (!isEditingFavoritesSize) {
                             Row(
@@ -780,7 +789,7 @@ fun TvAddProviderScreen(
                             ) {
                                 Text(
                                     text = favoritesMaxSize,
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)),
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -807,9 +816,9 @@ fun TvAddProviderScreen(
                                     label = { Text("Max Size") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
-                                    modifier = Modifier.width(TvDimensions.selectionListWidth)
+                                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale))
                                 )
-                                Spacer(modifier = Modifier.width(Spacing.md))
+                                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                                 CinemaSecondaryButton(
                                     onClick = {
                                         isEditingFavoritesSize = false
@@ -817,7 +826,7 @@ fun TvAddProviderScreen(
                                     },
                                     text = "Cancel"
                                 )
-                                Spacer(modifier = Modifier.width(Spacing.xs))
+                                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                                 CinemaPrimaryButton(
                                     onClick = {
                                         val size = newFavoritesMaxSize.toIntOrNull()
@@ -840,42 +849,42 @@ fun TvAddProviderScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                     // Clear Favorites
                     Column {
                         Text(
                             text = "Clear All Favorites",
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Remove all favorited streams from all content types",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
-                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         CinemaDangerButton(
                             onClick = { showClearFavoritesDialog = true },
                             text = "Clear All Favorites"
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                     // Clear Progress
                     Column {
                         Text(
                             text = "Clear Playback Progress",
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Remove all saved positions (Continue Watching will be empty)",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
-                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         CinemaDangerButton(
                             onClick = { showClearProgressDialog = true },
                             text = "Clear All Progress"
@@ -884,46 +893,46 @@ fun TvAddProviderScreen(
 
                     // Category Filters (Xtream only)
                     if (selectedType == ProviderType.XTREAM) {
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         Column {
                             Text(
                                 text = "Category Filters",
-                                style = MaterialTheme.typography.titleSmall,
+                                style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Hide or show categories based on name prefixes",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                             )
-                            Spacer(modifier = Modifier.height(Spacing.sm))
+                            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = "Mode: ${if (categoryFilters.mode == FilterMode.EXCLUDE) "Exclude" else "Include"}",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
                                     color = CinemaTextPrimary
                                 )
-                                Spacer(modifier = Modifier.width(Spacing.md))
+                                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                                 Text(
                                     text = "Prefixes: ${if (categoryFilters.prefixes.isEmpty()) "None" else categoryFilters.prefixes.joinToString(", ")}",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
                                     color = CinemaTextSecondary
                                 )
                             }
                             Text(
                                 text = "Scripts: ${if (categoryFilters.allowedScripts.isEmpty()) "All" else categoryFilters.allowedScripts.joinToString(", ") { it.displayName }}",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
                                 color = CinemaTextSecondary
                             )
-                            Spacer(modifier = Modifier.height(Spacing.sm))
+                            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                             CinemaPrimaryButton(
                                 onClick = { showCategoryFilterDialog = true },
                                 text = "Manage Filters"
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Enable Caching
                         Row(
@@ -936,16 +945,16 @@ fun TvAddProviderScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Enable Caching",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Cache categories and streams for faster loading",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(Spacing.md))
+                            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                             Switch(
                                 checked = cachingEnabled,
                                 onCheckedChange = { enabled ->
@@ -964,20 +973,22 @@ fun TvAddProviderScreen(
 
                 // Cache Management (edit mode only)
                 if (isEditMode) {
-                    Spacer(modifier = Modifier.height(Spacing.xl))
+                    Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
                     Text(
                         text = "Cache Management",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                        ),
                         color = CinemaAccent
                     )
-                    Spacer(modifier = Modifier.height(Spacing.xxs))
+                    Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
                     Text(
                         text = "Clear cached data to free up storage space",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                     cacheStats?.let { stats ->
                         // Total cache size
@@ -989,12 +1000,12 @@ fun TvAddProviderScreen(
                             Column {
                                 Text(
                                     text = "Total Cache Size",
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)),
                                     color = CinemaTextPrimary
                                 )
                                 Text(
                                     text = formatBytes(stats.totalSize),
-                                    style = MaterialTheme.typography.headlineSmall,
+                                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = MaterialTheme.typography.headlineSmall.fontSize.scaled(scale)),
                                     color = CinemaAccent
                                 )
                             }
@@ -1004,9 +1015,9 @@ fun TvAddProviderScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(Spacing.lg))
+                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
                         HorizontalDivider(color = CinemaTextSecondary.copy(alpha = CinemaAlpha.focusedTint))
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Live TV Cache
                         Row(
@@ -1017,17 +1028,17 @@ fun TvAddProviderScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Live TV",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                                     color = CinemaTextPrimary
                                 )
                                 Text(
                                     text = formatBytes(stats.liveTv.size),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
                                     color = CinemaAccent
                                 )
                                 Text(
                                     text = "${if (stats.liveTv.categoryCached) "1 category" else "No categories"}, ${stats.liveTv.streamListsCount} stream lists",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                                 )
                             }
@@ -1038,7 +1049,7 @@ fun TvAddProviderScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Movies Cache
                         Row(
@@ -1049,17 +1060,17 @@ fun TvAddProviderScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Movies",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                                     color = CinemaTextPrimary
                                 )
                                 Text(
                                     text = formatBytes(stats.movies.size),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
                                     color = CinemaAccent
                                 )
                                 Text(
                                     text = "${if (stats.movies.categoryCached) "1 category" else "No categories"}, ${stats.movies.streamListsCount} stream lists",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                                 )
                             }
@@ -1070,7 +1081,7 @@ fun TvAddProviderScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // TV Shows Cache
                         Row(
@@ -1081,17 +1092,17 @@ fun TvAddProviderScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "TV Shows",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
                                     color = CinemaTextPrimary
                                 )
                                 Text(
                                     text = formatBytes(stats.tvShows.size),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
                                     color = CinemaAccent
                                 )
                                 Text(
                                     text = "${if (stats.tvShows.categoryCached) "1 category" else "No categories"}, ${stats.tvShows.streamListsCount} stream lists",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                                 )
                             }
@@ -1102,17 +1113,17 @@ fun TvAddProviderScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // EPG & Other
                         Text(
                             text = "EPG Data: ${stats.epgCount} channels",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
                         Text(
                             text = "Other: ${formatBytes(stats.otherSize)}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
                     }
@@ -1120,20 +1131,20 @@ fun TvAddProviderScreen(
 
                 // Error message
                 error?.let { errorMsg ->
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                     Text(
                         text = errorMsg,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
                         color = CinemaError
                     )
                 }
 
-                Spacer(modifier = Modifier.height(Spacing.xl))
+                Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
                 // Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md, Alignment.CenterHorizontally)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale), Alignment.CenterHorizontally)
                 ) {
                     CinemaSecondaryButton(
                         onClick = onBack,
@@ -1418,11 +1429,11 @@ fun TvAddProviderScreen(
                         text = {
                             Column(
                                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                                verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                                verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
                             ) {
-                                Text("Filter Mode:", style = MaterialTheme.typography.titleSmall, color = CinemaTextPrimary)
+                                Text("Filter Mode:", style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)), color = CinemaTextPrimary)
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     androidx.tv.material3.Button(
@@ -1441,10 +1452,10 @@ fun TvAddProviderScreen(
                                 Text(
                                     if (filterMode == FilterMode.EXCLUDE) "Hide categories that start with these prefixes"
                                     else "Show only categories that start with these prefixes",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
                                     color = CinemaTextSecondary
                                 )
-                                Text("Prefixes (comma-separated):", style = MaterialTheme.typography.titleSmall, color = CinemaTextPrimary)
+                                Text("Prefixes (comma-separated):", style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)), color = CinemaTextPrimary)
                                 OutlinedTextField(
                                     value = prefixesText,
                                     onValueChange = { prefixesText = it },
@@ -1465,9 +1476,9 @@ fun TvAddProviderScreen(
                                         cursorColor = CinemaAccent
                                     )
                                 )
-                                Text("Language Script Filter:", style = MaterialTheme.typography.titleSmall, color = CinemaTextPrimary)
-                                Text("Show only categories in selected scripts (none = show all)", style = MaterialTheme.typography.bodySmall, color = CinemaTextSecondary)
-                                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                                Text("Language Script Filter:", style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)), color = CinemaTextPrimary)
+                                Text("Show only categories in selected scripts (none = show all)", style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)), color = CinemaTextSecondary)
+                                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
                                     ScriptType.entries.forEach { script ->
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Checkbox(
@@ -1476,8 +1487,8 @@ fun TvAddProviderScreen(
                                                     selectedScripts = if (checked) selectedScripts + script else selectedScripts - script
                                                 }
                                             )
-                                            Spacer(modifier = Modifier.width(Spacing.xs))
-                                            Text(text = script.displayName, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+                                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                                            Text(text = script.displayName, style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)), color = CinemaTextPrimary)
                                         }
                                     }
                                 }
@@ -1577,7 +1588,7 @@ fun TvAddProviderScreen(
                                     }
                                     qcCode.isEmpty() -> {
                                         CircularProgressIndicator(color = CinemaAccent)
-                                        Spacer(modifier = Modifier.height(Spacing.sm))
+                                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                                         Text(
                                             text = "Connecting to server...",
                                             color = CinemaTextSecondary,
@@ -1590,21 +1601,21 @@ fun TvAddProviderScreen(
                                             color = CinemaTextSecondary,
                                             style = MaterialTheme.typography.bodyMedium
                                         )
-                                        Spacer(modifier = Modifier.height(Spacing.sm))
+                                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                                         Text(
                                             text = qcCode,
                                             color = CinemaAccent,
-                                            style = MaterialTheme.typography.displayMedium
+                                            style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale))
                                         )
-                                        Spacer(modifier = Modifier.height(Spacing.md))
+                                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                                         Text(
                                             text = "Open Jellyfin → Dashboard → Quick Connect, then enter the code above.",
                                             color = CinemaTextSecondary,
                                             style = MaterialTheme.typography.bodySmall
                                         )
-                                        Spacer(modifier = Modifier.height(Spacing.md))
+                                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                                         CircularProgressIndicator(color = CinemaAccent)
-                                        Spacer(modifier = Modifier.height(Spacing.sm))
+                                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                                         Text(
                                             text = "Waiting for approval...",
                                             color = CinemaTextSecondary,
@@ -1631,6 +1642,7 @@ fun TvAddProviderScreen(
             } // GlassPanel
         }
     }
+    } // CompositionLocalProvider
 }
 
 private fun formatBytes(bytes: Long): String {

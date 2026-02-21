@@ -24,6 +24,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,8 +57,10 @@ import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Movie details screen for VOD content.
@@ -77,6 +80,8 @@ fun MovieDetailsScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
     val mediaRepository = remember {
         val appContext = context.applicationContext
         kotlinx.coroutines.runBlocking {
@@ -132,27 +137,30 @@ fun MovieDetailsScreen(
         }
     }
 
-    when {
-        isLoading -> {
-            LoadingScreen()
-        }
-        error != null -> {
-            ErrorScreen(
-                message = error ?: "Unknown error",
-                onBack = onBack
-            )
-        }
-        movieDetail != null -> {
-            MovieDetailsContent(
-                movieDetail = movieDetail!!,
-                movieId = movieId,
-                movieName = movieName,
-                resumePositionMs = resumePositionMs,
-                resumeDurationMs = resumeDurationMs,
-                onPlayMovie = onPlayMovie,
-                onRefresh = { refresh() },
-                onBack = onBack
-            )
+    // Provide UI scale for all child composables
+    CompositionLocalProvider(LocalUiScale provides uiScale) {
+        when {
+            isLoading -> {
+                LoadingScreen()
+            }
+            error != null -> {
+                ErrorScreen(
+                    message = error ?: "Unknown error",
+                    onBack = onBack
+                )
+            }
+            movieDetail != null -> {
+                MovieDetailsContent(
+                    movieDetail = movieDetail!!,
+                    movieId = movieId,
+                    movieName = movieName,
+                    resumePositionMs = resumePositionMs,
+                    resumeDurationMs = resumeDurationMs,
+                    onPlayMovie = onPlayMovie,
+                    onRefresh = { refresh() },
+                    onBack = onBack
+                )
+            }
         }
     }
 }
@@ -172,6 +180,7 @@ private fun MovieDetailsContent(
     val appSettings = remember { AppSettings(context.applicationContext) }
     val providerName by remember { mutableStateOf(appSettings.providerName) }
     val extension = movieDetail.extension ?: "mp4"
+    val scale = LocalUiScale.current
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
@@ -216,11 +225,13 @@ private fun MovieDetailsContent(
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
                 ) {
                     Text(
                         text = movieDetail.name.ifEmpty { movieName },
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.displaySmall.copy(
+                            fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
+                        ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     // Always show refresh button
@@ -231,33 +242,35 @@ private fun MovieDetailsContent(
                             isRefreshing = false
                         },
                         enabled = !isRefreshing,
-                        modifier = Modifier.size(TvDimensions.iconMedium)
+                        modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh movie info",
                             tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             modifier = Modifier
-                                .size(TvDimensions.iconSmall)
+                                .size(TvDimensions.iconSmall.scaled(scale))
                                 .rotate(rotation)
                         )
                     }
                 }
             }
-            Spacer(modifier = Modifier.width(Spacing.md))
+            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
             Text(
                 text = providerName,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
+                ),
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
         }
 
-        Spacer(modifier = Modifier.height(Spacing.xl))
+        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
         // Movie content: poster + metadata
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xl)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale))
         ) {
             // Cover image
             CinemaThumbnail(
@@ -265,37 +278,43 @@ private fun MovieDetailsContent(
                 fallbackLetter = movieDetail.name.firstOrNull(),
                 contentType = ThumbnailContentType.MOVIE,
                 modifier = Modifier
-                    .width(TvDimensions.posterWidth)
-                    .height(TvDimensions.posterHeightLarge)
+                    .width(TvDimensions.posterWidth.scaled(scale))
+                    .height(TvDimensions.posterHeightLarge.scaled(scale))
             )
 
             // Metadata in glass panel
             GlassPanel(modifier = Modifier.weight(1f)) {
-            Column(modifier = Modifier.padding(Spacing.lg)) {
+            Column(modifier = Modifier.padding(Spacing.lg.scaled(scale))) {
 
         // Metadata header row: rating | year | duration | ends at
         Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             movieDetail.metadata?.rating?.let { rating ->
                 Text(
                     text = "★ $rating",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                    ),
                     color = CinemaAccent
                 )
             }
             movieDetail.metadata?.year?.let { year ->
                 Text(
                     text = "$year",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                    ),
                     color = CinemaTextSecondary
                 )
             }
             movieDetail.metadata?.duration?.let { duration ->
                 Text(
                     text = formatDuration(duration),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                    ),
                     color = CinemaTextSecondary
                 )
             }
@@ -307,7 +326,9 @@ private fun MovieDetailsContent(
             if (endsAtText != null) {
                 Text(
                     text = "Ends at $endsAtText",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                    ),
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium)
                 )
             }
@@ -315,20 +336,22 @@ private fun MovieDetailsContent(
 
         // Genre tags
         movieDetail.metadata?.genre?.let { genre ->
-            Spacer(modifier = Modifier.height(Spacing.sm))
+            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Text(
                 text = genre,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                ),
                 color = CinemaAccent
             )
         }
 
-        Spacer(modifier = Modifier.height(Spacing.lg))
+        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
 
         // Play / Resume buttons
         val hasResume = resumePositionMs > 0L
         Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (hasResume) {
@@ -361,43 +384,49 @@ private fun MovieDetailsContent(
 
         // Plot/Description
         movieDetail.metadata?.plot?.let { plot ->
-            Spacer(modifier = Modifier.height(Spacing.lg))
+            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             Text(
                 text = plot,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                ),
                 color = CinemaTextPrimary,
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis
             )
         }
 
-        Spacer(modifier = Modifier.height(Spacing.md))
+        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
         // Cast, Director
         movieDetail.metadata?.cast?.let { cast ->
             Text(
                 text = "Cast: $cast",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                ),
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(Spacing.xs))
+            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
         }
         movieDetail.metadata?.director?.let { director ->
             Text(
                 text = "Director: $director",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                ),
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
-            Spacer(modifier = Modifier.height(Spacing.xs))
+            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
         }
 
         // Technical stream info (Jellyfin-style labeled rows)
         val hasVideoInfo = movieDetail.videoInfo != null &&
             (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
         if (hasVideoInfo || movieDetail.audioTracks.isNotEmpty() || movieDetail.subtitleTracks.isNotEmpty() || movieDetail.extension != null) {
-            Spacer(modifier = Modifier.height(Spacing.sm))
+            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             movieDetail.videoInfo?.let { video ->
                 val videoText = video.displayTitle ?: run {
                     val parts = mutableListOf<String>()
@@ -462,6 +491,7 @@ private fun MovieDetailsContent(
 
 @Composable
 private fun LoadingScreen() {
+    val scale = LocalUiScale.current
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -470,13 +500,15 @@ private fun LoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(TvDimensions.progressIndicator),
+                modifier = Modifier.size(TvDimensions.progressIndicator.scaled(scale)),
                 color = CinemaAccent
             )
-            Spacer(modifier = Modifier.height(Spacing.md))
+            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = "Loading movie details...",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                ),
                 color = CinemaTextSecondary
             )
         }
@@ -488,26 +520,31 @@ private fun ErrorScreen(
     message: String,
     onBack: () -> Unit
 ) {
+    val scale = LocalUiScale.current
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(Spacing.xl)
+            modifier = Modifier.padding(Spacing.xl.scaled(scale))
         ) {
             Text(
                 text = "Error Loading Movie",
-                style = MaterialTheme.typography.displayMedium,
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)
+                ),
                 color = CinemaError
             )
-            Spacer(modifier = Modifier.height(Spacing.md))
+            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                ),
                 color = CinemaTextSecondary
             )
-            Spacer(modifier = Modifier.height(Spacing.lg))
+            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onBack,
                 text = "Back to Movies"
@@ -518,18 +555,23 @@ private fun ErrorScreen(
 
 @Composable
 private fun TechInfoRow(label: String, value: String) {
+    val scale = LocalUiScale.current
     Row(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
         verticalAlignment = Alignment.Top
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+            ),
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+            ),
             color = CinemaTextPrimary
         )
     }

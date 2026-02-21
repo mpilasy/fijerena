@@ -369,7 +369,7 @@ fun TvPlayerScreen(
                 currentEpgProgram = currentEpgProgram,
                 nextEpgProgram = nextEpgProgram,
                 categoryStreams = streamList,
-                lastWatchedStreams = lastWatchedStreams,
+                lastWatchedStreams = lastWatchedStreams.filter { it.id != currentStreamId },
                 onStreamSelected = { item ->
                     val index = streamList.indexOfFirst { it.id == item.id }
                     if (index >= 0) {

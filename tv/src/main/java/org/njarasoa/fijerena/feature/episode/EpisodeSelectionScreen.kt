@@ -34,6 +34,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +73,8 @@ import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
+import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 
@@ -94,6 +97,8 @@ fun EpisodeSelectionScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val appSettings = remember { AppSettings(context.applicationContext) }
+    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
     val mediaRepository = remember {
         val appContext = context.applicationContext
         kotlinx.coroutines.runBlocking {
@@ -137,25 +142,28 @@ fun EpisodeSelectionScreen(
         )
     }
 
-    when {
-        isLoading -> {
-            LoadingScreen()
-        }
-        error != null -> {
-            ErrorScreen(
-                message = error ?: "Unknown error",
-                onBack = onBack
-            )
-        }
-        seriesDetail != null -> {
-            EpisodeListContent(
-                seriesDetail = seriesDetail!!,
-                seriesName = seriesName,
-                mediaRepository = mediaRepository,
-                onEpisodeSelected = onEpisodeSelected,
-                onRefresh = { refresh() },
-                onBack = onBack
-            )
+    // Provide UI scale for all child composables
+    CompositionLocalProvider(LocalUiScale provides uiScale) {
+        when {
+            isLoading -> {
+                LoadingScreen()
+            }
+            error != null -> {
+                ErrorScreen(
+                    message = error ?: "Unknown error",
+                    onBack = onBack
+                )
+            }
+            seriesDetail != null -> {
+                EpisodeListContent(
+                    seriesDetail = seriesDetail!!,
+                    seriesName = seriesName,
+                    mediaRepository = mediaRepository,
+                    onEpisodeSelected = onEpisodeSelected,
+                    onRefresh = { refresh() },
+                    onBack = onBack
+                )
+            }
         }
     }
 }
@@ -173,6 +181,7 @@ private fun EpisodeListContent(
     val appSettings = remember { AppSettings(context.applicationContext) }
     val providerName by remember { mutableStateOf(appSettings.providerName) }
     val listState = rememberLazyListState()
+    val scale = LocalUiScale.current
 
     // Selected episode for detail panel
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
@@ -269,11 +278,13 @@ private fun EpisodeListContent(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
                     ) {
                         Text(
                             text = seriesName,
-                            style = MaterialTheme.typography.displaySmall,
+                            style = MaterialTheme.typography.displaySmall.copy(
+                                fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
+                            ),
                             color = CinemaTextPrimary
                         )
                         // Always show refresh button
@@ -284,14 +295,14 @@ private fun EpisodeListContent(
                                 isRefreshing = false
                             },
                             enabled = !isRefreshing,
-                            modifier = Modifier.size(TvDimensions.iconMedium)
+                            modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale))
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Refresh series info",
                                 tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                                 modifier = Modifier
-                                    .size(TvDimensions.iconSmall)
+                                    .size(TvDimensions.iconSmall.scaled(scale))
                                     .rotate(rotation)
                             )
                         }
@@ -299,14 +310,18 @@ private fun EpisodeListContent(
                     // Show episode count
                     Text(
                         text = "$totalEpisodes episodes",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                        ),
                         color = CinemaTextSecondary
                     )
                     seriesDetail.metadata.plot?.let { plot ->
-                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                         Text(
                             text = plot,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                            ),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             maxLines = 3,
                             overflow = TextOverflow.Ellipsis
@@ -321,31 +336,35 @@ private fun EpisodeListContent(
                         )
                     }
                     if (metadataParts.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                         Text(
                             text = metadataParts.joinToString(" · "),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontSize = MaterialTheme.typography.labelMedium.fontSize.scaled(scale)
+                            ),
                             color = CinemaAccentLight,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-                Spacer(modifier = Modifier.width(Spacing.md))
+                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 Text(
                     text = providerName,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
+                    ),
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
             }
 
-            Spacer(modifier = Modifier.height(Spacing.xl))
+            Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
             // Season-grouped episodes list
             LazyColumn(
                 state = listState,
-                contentPadding = PaddingValues(vertical = Spacing.xs),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                 modifier = Modifier.fillMaxSize()
             ) {
                 sortedSeasons.forEach { season ->
@@ -400,6 +419,7 @@ private fun EpisodeDetailPanel(
     onBack: () -> Unit
 ) {
     val extension = episode.extension ?: "mp4"
+    val scale = LocalUiScale.current
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
@@ -438,7 +458,9 @@ private fun EpisodeDetailPanel(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = seriesName,
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
+                    ),
                     color = CinemaTextPrimary
                 )
                 // Season / episode label
@@ -450,24 +472,28 @@ private fun EpisodeDetailPanel(
                 ).joinToString(" · ")
                 Text(
                     text = subLabel,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                    ),
                     color = CinemaAccentLight
                 )
             }
-            Spacer(modifier = Modifier.width(Spacing.md))
+            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
             Text(
                 text = providerName,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
+                ),
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
         }
 
-        Spacer(modifier = Modifier.height(Spacing.xl))
+        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
         // Episode content: thumbnail + metadata
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xl)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale))
         ) {
             // Episode thumbnail
             CinemaThumbnail(
@@ -475,25 +501,27 @@ private fun EpisodeDetailPanel(
                 fallbackLetter = episode.title.firstOrNull(),
                 contentType = ThumbnailContentType.TV_SHOW,
                 modifier = Modifier
-                    .width(TvDimensions.posterWidth)
-                    .height(TvDimensions.posterHeightLarge)
+                    .width(TvDimensions.posterWidth.scaled(scale))
+                    .height(TvDimensions.posterHeightLarge.scaled(scale))
             )
 
             // Metadata in glass panel
             GlassPanel(modifier = Modifier.weight(1f)) {
-                Column(modifier = Modifier.padding(Spacing.lg)) {
+                Column(modifier = Modifier.padding(Spacing.lg.scaled(scale))) {
                     // Episode title
                     Text(
                         text = episode.title,
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = MaterialTheme.typography.headlineSmall.fontSize.scaled(scale)
+                        ),
                         color = CinemaTextPrimary
                     )
 
-                    Spacer(modifier = Modifier.height(Spacing.sm))
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
                     // Metadata row: rating | duration | ends at
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Prefer episode rating, fallback to series rating
@@ -501,14 +529,18 @@ private fun EpisodeDetailPanel(
                         rating?.let {
                             Text(
                                 text = "★ $it",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                                ),
                                 color = CinemaAccent
                             )
                         }
                         episode.metadata.duration?.let { duration ->
                             Text(
                                 text = formatDuration(duration),
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                                ),
                                 color = CinemaTextSecondary
                             )
                         }
@@ -520,7 +552,9 @@ private fun EpisodeDetailPanel(
                         if (endsAtText != null) {
                             Text(
                                 text = "Ends at $endsAtText",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                                ),
                                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium)
                             )
                         }
@@ -528,20 +562,22 @@ private fun EpisodeDetailPanel(
 
                     // Genre (from series)
                     seriesDetail.metadata.genre?.let { genre ->
-                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         Text(
                             text = genre,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                            ),
                             color = CinemaAccent
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(Spacing.lg))
+                    Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
 
                     // Play / Resume buttons
                     val hasResume = resumePositionMs > 0L
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (hasResume) {
@@ -572,29 +608,33 @@ private fun EpisodeDetailPanel(
 
                     // Plot/Description
                     episode.metadata.plot?.let { plot ->
-                        Spacer(modifier = Modifier.height(Spacing.lg))
+                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
                         Text(
                             text = plot,
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                            ),
                             color = CinemaTextPrimary,
                             maxLines = 6,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                     // Cast (episode-level, fallback to series)
                     val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
                     cast?.let {
                         Text(
                             text = "Cast: $it",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     }
 
                     // Director (episode-level, fallback to series)
@@ -602,7 +642,9 @@ private fun EpisodeDetailPanel(
                     director?.let {
                         Text(
                             text = "Director: $it",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                            ),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                         )
                     }
@@ -619,20 +661,21 @@ private fun SeasonHeader(
     isExpanded: Boolean,
     onToggle: () -> Unit
 ) {
+    val scale = LocalUiScale.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .tvFocusableNoScale()
             .clickable { onToggle() }
-            .padding(vertical = Spacing.sm),
+            .padding(vertical = Spacing.sm.scaled(scale)),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
     ) {
         Icon(
             imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
             contentDescription = if (isExpanded) "Collapse" else "Expand",
             tint = CinemaAccentLight,
-            modifier = Modifier.size(TvDimensions.iconSmall)
+            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale))
         )
         // Season cover thumbnail (if available)
         season.coverUrl?.let { url ->
@@ -641,19 +684,23 @@ private fun SeasonHeader(
                 fallbackLetter = null,
                 contentType = ThumbnailContentType.TV_SHOW,
                 modifier = Modifier.size(
-                    width = TvDimensions.posterHeight,
-                    height = TvDimensions.posterHeight
+                    width = TvDimensions.posterHeight.scaled(scale),
+                    height = TvDimensions.posterHeight.scaled(scale)
                 )
             )
         }
         Text(
             text = "Season ${season.seasonNumber}",
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = MaterialTheme.typography.headlineSmall.fontSize.scaled(scale)
+            ),
             color = CinemaAccentLight
         )
         Text(
             text = "$episodeCount episodes",
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = MaterialTheme.typography.labelMedium.fontSize.scaled(scale)
+            ),
             color = CinemaTextSecondary
         )
     }
@@ -664,11 +711,12 @@ private fun EpisodeCard(
     episode: DomainEpisodeItem,
     onClick: () -> Unit
 ) {
+    val scale = LocalUiScale.current
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(TvDimensions.cardHeight),
+            .height(TvDimensions.cardHeight.scaled(scale)),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
             focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint)
@@ -688,7 +736,7 @@ private fun EpisodeCard(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(Spacing.md),
+                .padding(Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Episode thumbnail
@@ -697,21 +745,23 @@ private fun EpisodeCard(
                 fallbackLetter = episode.title.firstOrNull(),
                 contentType = ThumbnailContentType.TV_SHOW,
                 modifier = Modifier.size(
-                    width = TvDimensions.posterWidth,
-                    height = TvDimensions.posterHeight
+                    width = TvDimensions.posterWidth.scaled(scale),
+                    height = TvDimensions.posterHeight.scaled(scale)
                 )
             )
-            Spacer(modifier = Modifier.width(Spacing.sm))
+            Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
 
             // Episode number
             Text(
                 text = "E${episode.episodeNumber}",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                ),
                 color = CinemaAccentLight,
-                modifier = Modifier.width(Spacing.xxl)
+                modifier = Modifier.width(Spacing.xxl.scaled(scale))
             )
 
-            Spacer(modifier = Modifier.width(Spacing.sm))
+            Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
 
             // Episode title and plot
             Column(
@@ -719,7 +769,9 @@ private fun EpisodeCard(
             ) {
                 Text(
                     text = episode.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                    ),
                     color = CinemaTextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -727,7 +779,9 @@ private fun EpisodeCard(
                 episode.metadata.plot?.let { plot ->
                     Text(
                         text = plot,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
                         color = CinemaTextSecondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -737,10 +791,12 @@ private fun EpisodeCard(
 
             // Duration
             episode.metadata.duration?.let { duration ->
-                Spacer(modifier = Modifier.width(Spacing.md))
+                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 Text(
                     text = duration,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontSize = MaterialTheme.typography.labelMedium.fontSize.scaled(scale)
+                    ),
                     color = CinemaTextSecondary
                 )
             }
@@ -750,6 +806,7 @@ private fun EpisodeCard(
 
 @Composable
 private fun LoadingScreen() {
+    val scale = LocalUiScale.current
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -758,13 +815,15 @@ private fun LoadingScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(TvDimensions.progressIndicator),
+                modifier = Modifier.size(TvDimensions.progressIndicator.scaled(scale)),
                 color = CinemaAccent
             )
-            Spacer(modifier = Modifier.height(Spacing.md))
+            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = "Loading episodes...",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                ),
                 color = CinemaTextSecondary
             )
         }
@@ -776,26 +835,31 @@ private fun ErrorScreen(
     message: String,
     onBack: () -> Unit
 ) {
+    val scale = LocalUiScale.current
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(Spacing.xl)
+            modifier = Modifier.padding(Spacing.xl.scaled(scale))
         ) {
             Text(
                 text = "Error Loading Episodes",
-                style = MaterialTheme.typography.displayMedium,
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)
+                ),
                 color = CinemaError
             )
-            Spacer(modifier = Modifier.height(Spacing.md))
+            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                ),
                 color = CinemaTextSecondary
             )
-            Spacer(modifier = Modifier.height(Spacing.lg))
+            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onBack,
                 text = "Back to Series List"

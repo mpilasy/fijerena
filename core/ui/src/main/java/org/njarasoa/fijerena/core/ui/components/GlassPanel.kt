@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
@@ -28,10 +29,11 @@ fun GlassPanel(
     modifier: Modifier = Modifier,
     blurRadius: Float = 20f,
     backgroundAlpha: Float = 1f,
+    panelShape: Shape = RoundedCornerShape(CinemaCornerRadius.large),
     content: @Composable () -> Unit
 ) {
     val palette = CinemaThemeHolder.current
-    val shape = RoundedCornerShape(CinemaCornerRadius.large)
+    val shape = panelShape
     val bg = if (backgroundAlpha < 1f) palette.glassBackground.copy(alpha = palette.glassBackground.alpha * backgroundAlpha)
              else palette.glassBackground
 
