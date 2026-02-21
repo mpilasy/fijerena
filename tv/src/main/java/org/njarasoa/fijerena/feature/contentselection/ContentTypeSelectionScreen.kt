@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -61,7 +62,6 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
@@ -85,6 +85,7 @@ fun ContentTypeSelectionScreen(
     onContentTypeSelected: (ContentType) -> Unit,
     onSettings: () -> Unit,
     onEpgBrowser: () -> Unit = {},
+    onLastWatched: () -> Unit = {},
     onProviderChanged: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -220,7 +221,7 @@ fun ContentTypeSelectionScreen(
                                 .border(
                                     width = TvFocusTokens.focusBorderWidth,
                                     color = if (providerPillFocused) CinemaAccentLight else androidx.compose.ui.graphics.Color.Transparent,
-                                    shape = RoundedCornerShape(CinemaCornerRadius.large)
+                                    shape = RoundedCornerShape(0.dp)
                                 )
                                 .onFocusChanged { providerPillFocused = it.isFocused }
                                 .clickable { showProviderPicker = true }
@@ -311,6 +312,18 @@ fun ContentTypeSelectionScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+
+                    // Last Watched Card
+                    ContentTypeHeroCard(
+                        title = "Last Watched",
+                        subtitle = "Resume playback",
+                        icon = Icons.Default.History,
+                        categoryCounts = null,
+                        showTotal = false,
+                        gradientColors = listOf(CinemaSurfaceVariant, CinemaSurface),
+                        onClick = onLastWatched,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -353,7 +366,7 @@ fun ContentTypeSelectionScreen(
                                     CinemaAccent.copy(alpha = CinemaAlpha.focusedTint)
                                 else
                                     CinemaSurfaceVariant,
-                                shape = RoundedCornerShape(CinemaCornerRadius.small)
+                                shape = RoundedCornerShape(0.dp)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -417,14 +430,14 @@ private fun ContentTypeHeroCard(
             focusedScale = TvFocusTokens.focusedScaleSubtle,
             pressedScale = TvFocusTokens.pressedScaleSubtle
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.xLarge)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(0.dp)),
         border = CardDefaults.border(
             focusedBorder = Border(
                 border = BorderStroke(
                     TvFocusTokens.focusBorderWidth,
                     CinemaTextPrimary
                 ),
-                shape = RoundedCornerShape(CinemaCornerRadius.xLarge)
+                shape = RoundedCornerShape(0.dp)
             )
         )
     ) {
@@ -433,7 +446,7 @@ private fun ContentTypeHeroCard(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(colors = gradientColors),
-                    shape = RoundedCornerShape(CinemaCornerRadius.xLarge)
+                    shape = RoundedCornerShape(0.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {

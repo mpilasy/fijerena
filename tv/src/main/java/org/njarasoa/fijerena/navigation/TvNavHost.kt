@@ -24,6 +24,9 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.AccountManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -33,6 +36,7 @@ import org.njarasoa.fijerena.feature.epg.EpgGuideScreen
 import org.njarasoa.fijerena.feature.epg.TvEpgManagementScreen
 import org.njarasoa.fijerena.feature.epgbrowser.EpgBrowserScreen
 import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
+import org.njarasoa.fijerena.feature.lastwatched.LastWatchedScreen
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
 import org.njarasoa.fijerena.feature.provider.TvAddProviderScreen
@@ -117,11 +121,27 @@ fun TvNavHost(
         }
     }
 
-    // Auto-navigate to last content type on startup
+    // Auto-navigate to Last Watched or last content type on startup
     LaunchedEffect(lastContentType, initializationComplete) {
-        if (initializationComplete && lastContentType != null) {
-            navController.navigate(Screen.CategoryList(lastContentType!!)) {
-                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+        if (initializationComplete) {
+            var hasHistory = false
+            withContext(Dispatchers.IO) {
+                val providerRepo = ProviderRepository(context.applicationContext)
+                val activeProvider = providerRepo.getActiveProvider()
+                if (activeProvider != null) {
+                    val mediaRepo = MediaRepository(context.applicationContext, activeProvider.id)
+                    hasHistory = mediaRepo.getWatchHistory().isNotEmpty()
+                }
+            }
+
+            if (hasHistory) {
+                navController.navigate(Screen.LastWatched) {
+                    popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                }
+            } else if (lastContentType != null) {
+                navController.navigate(Screen.CategoryList(lastContentType!!)) {
+                    popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                }
             }
         }
     }
@@ -169,6 +189,50 @@ fun TvNavHost(
                     },
                     onEpgBrowser = {
                         navController.navigate(Screen.EpgBrowser)
+                    },
+                    onLastWatched = {
+                        navController.navigate(Screen.LastWatched)
+                    }
+                )
+            }
+
+            // Last Watched Screen
+            composable<Screen.LastWatched> {
+                LastWatchedScreen(
+                    onStreamSelected = { streamId, streamName, categoryId, contentType ->
+                        when (contentType) {
+                            "TV_SHOWS" -> {
+                                navController.navigate(
+                                    Screen.EpisodeSelection(
+                                        seriesId = streamId,
+                                        seriesName = streamName,
+                                        categoryId = categoryId
+                                    )
+                                )
+                            }
+                            "MOVIES" -> {
+                                navController.navigate(
+                                    Screen.MovieDetails(
+                                        movieId = streamId,
+                                        movieName = streamName,
+                                        categoryId = categoryId
+                                    )
+                                )
+                            }
+                            else -> {
+                                navController.navigate(
+                                    Screen.Player(
+                                        streamId = streamId,
+                                        streamName = streamName,
+                                        categoryId = categoryId,
+                                        contentType = contentType
+                                    )
+                                )
+                            }
+                        }
+                    },
+                    onBack = {
+                        navController.navigateUp()
                     }
                 )
             }

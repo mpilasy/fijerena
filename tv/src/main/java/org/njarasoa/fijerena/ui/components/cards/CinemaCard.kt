@@ -27,7 +27,6 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GradientOverlay
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusable
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableContent
@@ -72,7 +71,7 @@ fun CinemaContentCard(
             focusedContainerColor = Color.Transparent,
             focusedContentColor = CinemaTextPrimary
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(0.dp)),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
             focusedScale = TvFocusTokens.focusedScaleContent,
@@ -194,7 +193,7 @@ fun CinemaSelectableCard(
             focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
             focusedContentColor = CinemaTextPrimary
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(0.dp)),
         scale = CardDefaults.scale(
             scale = TvFocusTokens.defaultScale,
             focusedScale = TvFocusTokens.focusedScaleContent,
@@ -228,7 +227,7 @@ fun CinemaInfoCard(
             containerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textLow),
             contentColor = CinemaTextPrimary
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium))
+        shape = CardDefaults.shape(shape = RoundedCornerShape(0.dp))
     ) {
         Box(modifier = Modifier.padding(Spacing.sm)) {
             content()
@@ -296,7 +295,7 @@ fun CinemaStandardCard(
             focusedScale = TvFocusTokens.focusedScaleContent,
             pressedScale = TvFocusTokens.pressedScaleSubtle
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(0.dp)),
         glow = CardDefaults.glow(
             focusedGlow = Glow(
                 elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),

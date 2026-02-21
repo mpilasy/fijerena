@@ -18,14 +18,14 @@ object NetworkBufferProfile {
     // ── WiFi Live TV ──────────────────────────────────────────────
     const val WIFI_LIVE_MIN_BUFFER_MS = 15_000
     const val WIFI_LIVE_MAX_BUFFER_MS = 30_000
-    const val WIFI_LIVE_PLAYBACK_MS = 500
+    const val WIFI_LIVE_PLAYBACK_MS = 250
     const val WIFI_LIVE_REBUFFER_MS = 1_000
     const val WIFI_LIVE_BACK_BUFFER_MS = 0
 
     // ── WiFi VOD (existing values) ──────────────────────────────────
     const val WIFI_VOD_MIN_BUFFER_MS = 15_000
     const val WIFI_VOD_MAX_BUFFER_MS = 50_000
-    const val WIFI_VOD_PLAYBACK_MS = 2_500
+    const val WIFI_VOD_PLAYBACK_MS = 1_000
     const val WIFI_VOD_REBUFFER_MS = 5_000
     const val WIFI_VOD_BACK_BUFFER_MS = 10_000
 

@@ -17,7 +17,6 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -73,7 +72,7 @@ fun CinemaPrimaryButton(
                 border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary)
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(0.dp)),
         contentPadding = PaddingValues(
             horizontal = Spacing.md.scaled(scale),
             vertical = Spacing.sm.scaled(scale)
@@ -128,7 +127,7 @@ fun CinemaSecondaryButton(
                 border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(0.dp)),
         contentPadding = PaddingValues(
             horizontal = Spacing.md.scaled(scale),
             vertical = Spacing.sm.scaled(scale)
@@ -189,7 +188,7 @@ fun CinemaTertiaryButton(
                 border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow))
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(0.dp)),
         contentPadding = PaddingValues(
             horizontal = Spacing.md.scaled(scale),
             vertical = Spacing.sm.scaled(scale)
@@ -245,7 +244,7 @@ fun CinemaIconButton(
                 border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(0.dp)),
         contentPadding = PaddingValues(Spacing.xs.scaled(scale))
     ) {
         icon()
@@ -294,7 +293,7 @@ fun CinemaDangerButton(
                 border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary)
             )
         ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(0.dp)),
         contentPadding = PaddingValues(
             horizontal = Spacing.md.scaled(scale),
             vertical = Spacing.sm.scaled(scale)

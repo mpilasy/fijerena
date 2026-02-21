@@ -179,10 +179,11 @@ fun TvPlayerScreen(
         )
     }
 
-    // Load last watched streams for overlay (Live TV only), refresh after save
-    LaunchedEffect(lastWatchedVersion) {
+    // Load last watched streams for overlay (Live TV only), refresh after save or channel switch
+    LaunchedEffect(lastWatchedVersion, currentStreamId) {
         if (contentType == "LIVE_TV") {
             lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend(contentType)
+                .filter { it.id != currentStreamId }
         }
     }
 

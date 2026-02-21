@@ -20,11 +20,15 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.navigation.Screen
+import org.njarasoa.fijerena.feature.lastwatched.MobileLastWatchedScreen
 import org.njarasoa.fijerena.feature.provider.MobileAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
 import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
@@ -113,9 +117,23 @@ fun MobileNavHost(
 
     android.util.Log.d("MobileNavHost", "Start destination: $startDestination, hasProvider=$hasProvider")
 
-    // Auto-navigate to last content type on startup
+    // Auto-navigate to Last Watched or last content type on startup
     LaunchedEffect(lastContentType) {
-        if (lastContentType != null) {
+        var hasHistory = false
+        withContext(Dispatchers.IO) {
+            val providerRepo = ProviderRepository(context.applicationContext)
+            val activeProvider = providerRepo.getActiveProvider()
+            if (activeProvider != null) {
+                val mediaRepo = MediaRepository(context.applicationContext, activeProvider.id)
+                hasHistory = mediaRepo.getWatchHistory().isNotEmpty()
+            }
+        }
+
+        if (hasHistory) {
+            navController.navigate(Screen.LastWatched) {
+                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+            }
+        } else if (lastContentType != null) {
             android.util.Log.d("MobileNavHost", "Auto-navigating to last content type: $lastContentType")
             navController.navigate(Screen.CategoryList(lastContentType)) {
                 popUpTo(Screen.ContentTypeSelection) { inclusive = false }
@@ -186,6 +204,43 @@ fun MobileNavHost(
                     },
                     onEpgBrowser = {
                         navController.navigate(Screen.EpgBrowser)
+                    },
+                    onLastWatched = {
+                        navController.navigate(Screen.LastWatched)
+                    }
+                )
+            }
+
+            // Last Watched Screen
+            composable<Screen.LastWatched> {
+                MobileLastWatchedScreen(
+                    onStreamSelected = { streamId, streamName, categoryId, contentType ->
+                        when (contentType) {
+                            "TV_SHOWS" -> {
+                                navController.navigate(
+                                    Screen.EpisodeSelection(
+                                        seriesId = streamId,
+                                        seriesName = streamName,
+                                        categoryId = categoryId
+                                    )
+                                )
+                            }
+                            "MOVIES" -> {
+                                navController.navigate(
+                                    Screen.MovieDetails(
+                                        movieId = streamId,
+                                        movieName = streamName,
+                                        categoryId = categoryId
+                                    )
+                                )
+                            }
+                            else -> {
+                                navController.navigate(Screen.Player(streamId, streamName, categoryId, contentType))
+                            }
+                        }
+                    },
+                    onBack = {
+                        navController.navigateUp()
                     }
                 )
             }

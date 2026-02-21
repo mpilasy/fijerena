@@ -47,6 +47,13 @@ sealed interface Screen {
     data object ContentTypeSelection : Screen
 
     /**
+     * Last Watched screen destination.
+     * Shows a list of recently watched items from all categories.
+     */
+    @Serializable
+    data object LastWatched : Screen
+
+    /**
      * Edit provider URL screen destination.
      * Allows users to change the provider URL without re-entering credentials.
      */

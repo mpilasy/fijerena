@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,6 +44,7 @@ fun MobileContentTypeSelectionScreen(
     onContentTypeSelected: (contentType: String) -> Unit,
     onSettings: () -> Unit = {},
     onEpgBrowser: () -> Unit = {},
+    onLastWatched: () -> Unit = {},
     onProviderChanged: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -200,6 +202,16 @@ fun MobileContentTypeSelectionScreen(
                     onClick = { onContentTypeSelected("TV_SHOWS") }
                 )
             }
+
+            // Last Watched Card
+            GradientContentCard(
+                title = "Last Watched",
+                description = "Resume recently watched items",
+                categoryCounts = null,
+                showTotal = false,
+                gradientColors = listOf(CinemaSurfaceVariant, CinemaSurface),
+                onClick = onLastWatched
+            )
         }
     }
 
