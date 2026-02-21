@@ -8,7 +8,7 @@ android {
     namespace = "org.njarasoa.fijerena.core.network"
     compileSdk = 36
     defaultConfig {
-        minSdk = 21
+        minSdk = 30
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
