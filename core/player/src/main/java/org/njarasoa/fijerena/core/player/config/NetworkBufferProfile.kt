@@ -30,10 +30,10 @@ object NetworkBufferProfile {
     const val WIFI_VOD_BACK_BUFFER_MS = 10_000
 
     // ── Cellular Live TV ────────────────────────────────────────────
-    const val CELLULAR_LIVE_MIN_BUFFER_MS = 12_000
-    const val CELLULAR_LIVE_MAX_BUFFER_MS = 30_000
-    const val CELLULAR_LIVE_PLAYBACK_MS = 3_000
-    const val CELLULAR_LIVE_REBUFFER_MS = 4_000
+    const val CELLULAR_LIVE_MIN_BUFFER_MS = 50_000
+    const val CELLULAR_LIVE_MAX_BUFFER_MS = 50_000
+    const val CELLULAR_LIVE_PLAYBACK_MS = 2_500
+    const val CELLULAR_LIVE_REBUFFER_MS = 5_000
     const val CELLULAR_LIVE_BACK_BUFFER_MS = 0
 
     // ── Cellular VOD ────────────────────────────────────────────────

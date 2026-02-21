@@ -23,18 +23,19 @@ Codec priority: NVIDIA Shield (AV1→HEVC→AVC), Sony Bravia (HEVC→AVC), Gene
 ### LoadControl — Network & Content-Type Aware
 `AdaptiveLoadControl` dynamically selects buffer parameters based on content type (Live TV vs VOD) and network type (WiFi vs Cellular). Buffer thresholds swap at runtime without restarting the player. Architecture: delegates to `@Volatile` inner `DefaultLoadControl` with shared `DefaultAllocator`. `NetworkMonitor` emits `StateFlow<NetworkType>`, collected by `StreamingPlaybackService`.
 
-Buffer constants defined in `core/player/.../config/NetworkBufferProfile.kt`. WiFi Live TV uses aggressive low-latency buffers (2s min/5s max); VOD uses large buffers (15s/50s). Cellular profiles are 5-8x larger with `prioritizeTimeOverSizeThresholds: true`.
+Buffer constants defined in `core/player/.../config/NetworkBufferProfile.kt`. WiFi Live TV uses aggressive low-latency buffers (2s min/5s max); VOD uses large buffers (15s/50s). Cellular Live TV uses 50s flat buffer (min=max=50s) for stability on variable networks. Cellular VOD profiles use larger buffers with `prioritizeTimeOverSizeThresholds: true`.
 
 ### StreamingMediaSourceFactory
 Always use `StreamingMediaSourceFactory.createMediaSource()` for playback:
 - Auto-detects HLS/DASH/MPEG-TS, network-aware HTTP timeouts, custom auth headers
 - `AdaptiveLoadErrorPolicy`: 3 retries WiFi / 6 cellular, exponential backoff (1s base, 10s cap)
 - Supports `smb://` (SmbDataSource) and `content://` URIs, cross-protocol redirects
+- Cronet engine (QUIC/HTTP/3) managed internally via `initCronet()`/`releaseCronet()` — called from `StreamingPlaybackService` lifecycle. Uses `CronetProviderInstaller` from Play Services. Falls back to `DefaultHttpDataSource` if unavailable.
 
 ### NetworkMonitor
 Singleton via `ConnectivityManager.NetworkCallback`. `StateFlow<NetworkType>` for coroutines, `@Volatile currentNetworkType` for synchronous reads. Ethernet/WiFi→`WIFI`, Cellular→`CELLULAR`, Unknown→`WIFI` fallback.
 
-**Key Player Files:** `config/NetworkBufferProfile.kt`, `config/AdaptiveLoadControl.kt`, `network/NetworkMonitor.kt`, `source/AdaptiveLoadErrorPolicy.kt` (all in `core/player/`)
+**Key Player Files:** `config/NetworkBufferProfile.kt`, `config/AdaptiveLoadControl.kt`, `network/NetworkMonitor.kt`, `source/AdaptiveLoadErrorPolicy.kt`, `source/StreamingMediaSourceFactory.kt` (all in `core/player/`)
 
 ### Player UI Features
 - **Audio/Subtitle/Quality selection:** In-playback track switching dialogs (D-pad navigable)
