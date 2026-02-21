@@ -73,7 +73,7 @@ object PlayerConfigFactory {
                     DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
                     DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
                     DeviceType.GENERIC_TV -> 10_000_000
-                    DeviceType.GENERIC_MOBILE -> 5_000_000
+                    DeviceType.GENERIC_MOBILE -> 50_000_000 // 50Mbps for high-end mobile
                 }
                 setMaxVideoBitrate(maxBitrate)
 

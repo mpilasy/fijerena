@@ -49,11 +49,19 @@ object StreamingMediaSourceFactory {
 
         val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
 
-        // Use DefaultMediaSourceFactory to automatically detect content type (HLS, DASH, Progressive/TS)
-        return DefaultMediaSourceFactory(context)
+        val factory = DefaultMediaSourceFactory(context)
             .setDataSourceFactory(dataSourceFactory)
             .setLoadErrorHandlingPolicy(errorPolicy)
-            .createMediaSource(mediaItem)
+
+        // For HLS streams, we create the source directly to ensure optimal settings
+        if (mimeType == androidx.media3.common.MimeTypes.APPLICATION_M3U8) {
+            return androidx.media3.exoplayer.hls.HlsMediaSource.Factory(dataSourceFactory)
+                .setAllowChunklessPreparation(true)
+                .setLoadErrorHandlingPolicy(errorPolicy)
+                .createMediaSource(mediaItem)
+        }
+
+        return factory.createMediaSource(mediaItem)
     }
 
 }

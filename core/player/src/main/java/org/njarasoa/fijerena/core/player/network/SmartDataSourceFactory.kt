@@ -17,7 +17,7 @@ class SmartDataSourceFactory(
 
     override fun createDataSource(): DataSource {
         // Use a standard, widely-accepted User-Agent if the provided one is custom
-        val effectiveUserAgent = if (userAgent.contains("Fijerena")) "VLC/3.0.11" else userAgent
+        val effectiveUserAgent = "AppleCoreMedia/1.0.0.16G77 (iPhone; iPhone OS 12_4; ABI 12_4) (null)"
 
         return DefaultHttpDataSource.Factory()
             .setUserAgent(effectiveUserAgent)
