@@ -198,6 +198,7 @@ fun MobileCategoryListScreen(
                         PullToRefreshBox(
                             isRefreshing = state.streamsLoading,
                             onRefresh = {
+                                android.util.Log.d("MobileCategoryListScreen", "onRefresh triggered")
                                 state.selectedCategoryId?.let { viewModel.refreshStreams(it) }
                             },
                             modifier = Modifier.fillMaxSize()
@@ -208,6 +209,7 @@ fun MobileCategoryListScreen(
                                 selectedCategoryId = state.selectedCategoryId,
                                 nowPlaying = nowPlaying,
                                 onItemSelected = { itemId, itemName, categoryId ->
+                                    android.util.Log.d("MobileCategoryListScreen", "onItemSelected: id=$itemId, name=$itemName, cat=$categoryId")
                                     // Check if this is a category reference from "Recent Categories"
                                     val item = state.streams?.firstOrNull { it.id == itemId }
                                     if (item?.providerData?.get("isCategoryRef") == "true") {

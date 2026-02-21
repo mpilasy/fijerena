@@ -111,9 +111,12 @@ fun MobileNavHost(
         Screen.Settings
     }
 
+    android.util.Log.d("MobileNavHost", "Start destination: $startDestination, hasProvider=$hasProvider")
+
     // Auto-navigate to last content type on startup
     LaunchedEffect(lastContentType) {
         if (lastContentType != null) {
+            android.util.Log.d("MobileNavHost", "Auto-navigating to last content type: $lastContentType")
             navController.navigate(Screen.CategoryList(lastContentType)) {
                 popUpTo(Screen.ContentTypeSelection) { inclusive = false }
             }
@@ -175,6 +178,7 @@ fun MobileNavHost(
             composable<Screen.ContentTypeSelection> {
                 MobileContentTypeSelectionScreen(
                     onContentTypeSelected = { contentType ->
+                        android.util.Log.d("MobileNavHost", "onContentTypeSelected: $contentType")
                         navController.navigate(Screen.CategoryList(contentType))
                     },
                     onSettings = {
@@ -421,6 +425,7 @@ fun MobileNavHost(
                     movieName = movieDetailsScreen.movieName,
                     categoryId = movieDetailsScreen.categoryId,
                     onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
+                        android.util.Log.d("MobileNavHost", "onPlayMovie: id=$movieId, name=$movieName, ext=$extension")
                         navController.navigate(
                             Screen.Player(
                                 streamId = movieId,

@@ -1,12 +1,5 @@
 package org.njarasoa.fijerena.core.player.api
 
-import org.njarasoa.fijerena.core.player.model.EpgResponse
-import org.njarasoa.fijerena.core.player.model.SeriesInfo
-import org.njarasoa.fijerena.core.player.model.VodInfo
-import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
-import org.njarasoa.fijerena.core.player.model.XtreamCategory
-import org.njarasoa.fijerena.core.player.model.XtreamSeries
-import org.njarasoa.fijerena.core.player.model.XtreamStream
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
@@ -14,9 +7,22 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.jvm.javaio.toInputStream
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
+import kotlinx.serialization.json.decodeToSequence
+import org.njarasoa.fijerena.core.player.model.EpgResponse
+import org.njarasoa.fijerena.core.player.model.SeriesInfo
+import org.njarasoa.fijerena.core.player.model.VodInfo
+import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
+import org.njarasoa.fijerena.core.player.model.XtreamCategory
+import org.njarasoa.fijerena.core.player.model.XtreamSeries
+import org.njarasoa.fijerena.core.player.model.XtreamStream
 import java.util.concurrent.TimeUnit
 
 /**
@@ -49,14 +55,11 @@ class XtreamApiService(
         }
 
         engine {
+            preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
             config {
-                // OkHttp-specific configuration for Android TV
+                // Additional configuration on top of shared client
                 followRedirects(true)
                 followSslRedirects(true)
-                // Increase timeouts for large VOD/Series category responses
-                connectTimeout(30, TimeUnit.SECONDS)
-                readTimeout(60, TimeUnit.SECONDS)
-                writeTimeout(30, TimeUnit.SECONDS)
             }
         }
     }
@@ -118,50 +121,116 @@ class XtreamApiService(
 
     /**
      * Fetches all live streams for a specific category.
-     *
-     * @param categoryId The category ID to fetch streams for. If null, fetches all streams.
-     * @return List of streams in the category
-     * @throws Exception if the request fails
+     * Uses streaming response to handle potentially massive lists (50,000+ items).
      */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getStreams(categoryId: String? = null): List<XtreamStream> {
-        return client.get("player_api.php") {
+        return client.prepareGet("player_api.php") {
             parameter("username", username)
             parameter("password", password)
             parameter("action", "get_live_streams")
             if (categoryId != null) parameter("category_id", categoryId)
-        }.body()
+        }.execute { response ->
+            response.bodyAsChannel().toInputStream().use { stream ->
+                json.decodeFromStream<List<XtreamStream>>(stream)
+            }
+        }
+    }
+
+    /**
+     * Streaming fetch for live streams. Items are passed to [onItem] as they are parsed.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    suspend fun getStreamsStreaming(categoryId: String? = null, onItem: suspend (XtreamStream) -> Unit) = coroutineScope {
+        client.prepareGet("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_live_streams")
+            if (categoryId != null) parameter("category_id", categoryId)
+        }.execute { response ->
+            response.bodyAsChannel().toInputStream().use { stream ->
+                // TRUE streaming parse using decodeToSequence
+                json.decodeToSequence<XtreamStream>(stream).forEach { 
+                    onItem(it) 
+                }
+            }
+        }
     }
 
     /**
      * Fetches all VOD streams (movies) for a specific category.
-     *
-     * @param categoryId The category ID to fetch VOD streams for. If null, fetches all streams.
-     * @return List of VOD streams in the category
-     * @throws Exception if the request fails
+     * Uses streaming response to handle potentially massive lists.
      */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getVodStreams(categoryId: String? = null): List<XtreamStream> {
-        return client.get("player_api.php") {
+        return client.prepareGet("player_api.php") {
             parameter("username", username)
             parameter("password", password)
             parameter("action", "get_vod_streams")
             if (categoryId != null) parameter("category_id", categoryId)
-        }.body()
+        }.execute { response ->
+            response.bodyAsChannel().toInputStream().use { stream ->
+                json.decodeFromStream<List<XtreamStream>>(stream)
+            }
+        }
+    }
+
+    /**
+     * Streaming fetch for VOD streams.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    suspend fun getVodStreamsStreaming(categoryId: String? = null, onItem: suspend (XtreamStream) -> Unit) = coroutineScope {
+        client.prepareGet("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_vod_streams")
+            if (categoryId != null) parameter("category_id", categoryId)
+        }.execute { response ->
+            response.bodyAsChannel().toInputStream().use { stream ->
+                // TRUE streaming parse
+                json.decodeToSequence<XtreamStream>(stream).forEach { 
+                    onItem(it) 
+                }
+            }
+        }
     }
 
     /**
      * Fetches all series (TV shows) for a specific category.
-     *
-     * @param categoryId The category ID to fetch series for. If null, fetches all series.
-     * @return List of series in the category
-     * @throws Exception if the request fails
+     * Uses streaming response to handle potentially massive lists.
      */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getSeries(categoryId: String? = null): List<XtreamSeries> {
-        return client.get("player_api.php") {
+        return client.prepareGet("player_api.php") {
             parameter("username", username)
             parameter("password", password)
             parameter("action", "get_series")
             if (categoryId != null) parameter("category_id", categoryId)
-        }.body()
+        }.execute { response ->
+            response.bodyAsChannel().toInputStream().use { stream ->
+                json.decodeFromStream<List<XtreamSeries>>(stream)
+            }
+        }
+    }
+
+    /**
+     * Streaming fetch for series.
+     */
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    suspend fun getSeriesStreaming(categoryId: String? = null, onItem: suspend (XtreamSeries) -> Unit) = coroutineScope {
+        client.prepareGet("player_api.php") {
+            parameter("username", username)
+            parameter("password", password)
+            parameter("action", "get_series")
+            if (categoryId != null) parameter("category_id", categoryId)
+        }.execute { response ->
+            response.bodyAsChannel().toInputStream().use { stream ->
+                // TRUE streaming parse
+                json.decodeToSequence<XtreamSeries>(stream).forEach { 
+                    onItem(it) 
+                }
+            }
+        }
     }
 
     /**

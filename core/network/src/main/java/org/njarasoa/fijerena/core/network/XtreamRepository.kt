@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -287,7 +289,7 @@ class XtreamRepository(
             categoryDao.insertAll(categories.map {
                 XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_VOD)
             })
-            cache.edit().putLong(KEY_VOD_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
+            cache.edit().putLong(KEY_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
 
             categories
         }
@@ -1070,17 +1072,21 @@ class XtreamRepository(
     }
 
     /**
-     * Fetches EPG data for multiple streams in parallel
+     * Fetches EPG data for multiple streams in parallel with batching to prevent OOM.
      */
     suspend fun getEpgForStreams(streamIds: List<Int>): Result<Map<Int, EpgResponse>> =
         withContext(Dispatchers.IO) {
             suspendResultOf {
                 val results = mutableMapOf<Int, EpgResponse>()
-                streamIds.forEach { streamId ->
-                    when (val result = getEpgForStream(streamId)) {
-                        is Result.Success -> results[streamId] = result.data
-                        is Result.Error -> {
-                            // Continue on failure - EPG may not be available for all channels
+                // Batch requests to prevent OOM from too many concurrent network tasks/buffers
+                val batchSize = 5
+                streamIds.chunked(batchSize).forEach { batch ->
+                    batch.forEach { streamId ->
+                        when (val result = getEpgForStream(streamId)) {
+                            is Result.Success -> results[streamId] = result.data
+                            is Result.Error -> {
+                                // Continue on failure - EPG may not be available for all channels
+                            }
                         }
                     }
                 }
@@ -1204,51 +1210,68 @@ class XtreamRepository(
             override suspend fun execute() {
                 val service = apiService ?: return
                  try {
-                     val apiStreams = when (type) {
-                         XtreamStreamEntity.TYPE_LIVE -> service.getStreams(null)
-                         XtreamStreamEntity.TYPE_VOD -> service.getVodStreams(null)
-                         else -> emptyList()
+                     coroutineScope {
+                         val batch = mutableListOf<XtreamStreamEntity>()
+                         val BATCH_SIZE = 500
+                         
+                         val currentHashes = streamDao.getStreamHashes(providerId, type)
+                         val seenIds = mutableSetOf<Int>()
+
+                         val onStreamItem: suspend (XtreamStream) -> Unit = { it ->
+                             val base = XtreamStreamEntity(
+                                 streamId = it.streamId,
+                                 providerId = providerId,
+                                 type = type,
+                                 num = it.num,
+                                 name = it.name,
+                                 streamType = it.streamType,
+                                 streamIcon = it.streamIcon,
+                                 epgChannelId = it.epgChannelId,
+                                 added = it.added,
+                                 categoryId = it.categoryId,
+                                 customSid = it.customSid,
+                                 tvArchive = it.tvArchive,
+                                 directSource = it.directSource,
+                                 tvArchiveDuration = it.tvArchiveDuration,
+                                 contentHash = 0
+                             )
+                             val entity = base.copy(contentHash = base.hashCode())
+                             seenIds.add(entity.streamId)
+                             
+                             val oldHash = currentHashes[entity.streamId]
+                             if (oldHash == null || oldHash != entity.contentHash) {
+                                 batch.add(entity)
+                             }
+                             
+                             if (batch.size >= BATCH_SIZE) {
+                                 val toInsert = batch.toList()
+                                 batch.clear()
+                                 database.runInTransaction {
+                                     streamDao.insertAll(toInsert)
+                                 }
+                                 delay(50) // Give GC time to breathe between massive batches
+                             }
+                         }
+
+                         when (type) {
+                             XtreamStreamEntity.TYPE_LIVE -> service.getStreamsStreaming(null, onStreamItem)
+                             XtreamStreamEntity.TYPE_VOD -> service.getVodStreamsStreaming(null, onStreamItem)
+                         }
+
+                         // Flush remaining
+                         if (batch.isNotEmpty()) {
+                             streamDao.insertAll(batch)
+                         }
+
+                         // Delete removed streams
+                         val toDeleteIds = currentHashes.keys - seenIds
+                         if (toDeleteIds.isNotEmpty()) {
+                             streamDao.deleteByIds(providerId, type, toDeleteIds.toList())
+                         }
+
+                         val key = KEY_STREAMS_TIMESTAMP_PREFIX + (if (type==XtreamStreamEntity.TYPE_LIVE) "LIVE_ALL" else "VOD_ALL")
+                         cache.edit().putLong(key, System.currentTimeMillis()).apply()
                      }
-
-                     val entities = apiStreams.map {
-                         val base = XtreamStreamEntity(
-                             streamId = it.streamId,
-                             providerId = providerId,
-                             type = type,
-                             num = it.num,
-                             name = it.name,
-                             streamType = it.streamType,
-                             streamIcon = it.streamIcon,
-                             epgChannelId = it.epgChannelId,
-                             added = it.added,
-                             categoryId = it.categoryId,
-                             customSid = it.customSid,
-                             tvArchive = it.tvArchive,
-                             directSource = it.directSource,
-                             tvArchiveDuration = it.tvArchiveDuration,
-                             contentHash = 0
-                         )
-                         base.copy(contentHash = base.hashCode())
-                     }
-
-                     val currentHashes = streamDao.getStreamHashes(providerId, type)
-
-                     val toDeleteIds = currentHashes.keys - entities.map { it.streamId }.toSet()
-
-                     val toInsert = entities.filter { newEntity ->
-                         val oldHash = currentHashes[newEntity.streamId]
-                         oldHash == null || oldHash != newEntity.contentHash
-                     }
-
-                     if (toDeleteIds.isNotEmpty()) {
-                         streamDao.deleteByIds(providerId, type, toDeleteIds.toList())
-                     }
-                     if (toInsert.isNotEmpty()) {
-                         streamDao.insertAll(toInsert)
-                     }
-
-                     val key = KEY_STREAMS_TIMESTAMP_PREFIX + (if (type==XtreamStreamEntity.TYPE_LIVE) "LIVE_ALL" else "VOD_ALL")
-                     cache.edit().putLong(key, System.currentTimeMillis()).apply()
 
                  } catch (e: Exception) {
                      e.printStackTrace()
@@ -1265,50 +1288,68 @@ class XtreamRepository(
             override suspend fun execute() {
                 val service = apiService ?: return
                  try {
-                     val apiSeries = service.getSeries(null)
+                     coroutineScope {
+                         val batch = mutableListOf<XtreamSeriesEntity>()
+                         val BATCH_SIZE = 500
+                         
+                         val currentHashes = seriesDao.getSeriesHashes(providerId)
+                         val seenIds = mutableSetOf<Int>()
 
-                     val entities = apiSeries.map {
-                         val base = XtreamSeriesEntity(
-                             seriesId = it.seriesId,
-                             providerId = providerId,
-                             num = it.num,
-                             name = it.name,
-                             cover = it.cover,
-                             plot = it.plot,
-                             cast = it.cast,
-                             director = it.director,
-                             genre = it.genre,
-                             releaseDate = it.releaseDate,
-                             lastModified = it.lastModified,
-                             rating = it.rating,
-                             rating5based = it.rating5based,
-                             youtubeTrailer = it.youtubeTrailer,
-                             episodeRunTime = it.episodeRunTime,
-                             categoryId = it.categoryId,
-                             backdropPath = it.backdropPath?.joinToString(","),
-                             contentHash = 0
-                         )
-                         base.copy(contentHash = base.hashCode())
+                         val onSeriesItem: suspend (XtreamSeries) -> Unit = { it ->
+                             val base = XtreamSeriesEntity(
+                                 seriesId = it.seriesId,
+                                 providerId = providerId,
+                                 num = it.num,
+                                 name = it.name,
+                                 cover = it.cover,
+                                 plot = it.plot,
+                                 cast = it.cast,
+                                 director = it.director,
+                                 genre = it.genre,
+                                 releaseDate = it.releaseDate,
+                                 lastModified = it.lastModified,
+                                 rating = it.rating,
+                                 rating5based = it.rating5based,
+                                 youtubeTrailer = it.youtubeTrailer,
+                                 episodeRunTime = it.episodeRunTime,
+                                 categoryId = it.categoryId,
+                                 backdropPath = it.backdropPath?.joinToString(","),
+                                 contentHash = 0
+                             )
+                             val entity = base.copy(contentHash = base.hashCode())
+                             seenIds.add(entity.seriesId)
+                             
+                             val oldHash = currentHashes[entity.seriesId]
+                             if (oldHash == null || oldHash != entity.contentHash) {
+                                 batch.add(entity)
+                             }
+                             
+                             if (batch.size >= BATCH_SIZE) {
+                                 val toInsert = batch.toList()
+                                 batch.clear()
+                                 database.runInTransaction {
+                                     seriesDao.insertAll(toInsert)
+                                 }
+                                 delay(50) // Give GC time to breathe
+                             }
+                         }
+
+                         service.getSeriesStreaming(null, onSeriesItem)
+
+                         // Flush remaining
+                         if (batch.isNotEmpty()) {
+                             seriesDao.insertAll(batch)
+                         }
+
+                         // Delete removed series
+                         val toDeleteIds = currentHashes.keys - seenIds
+                         if (toDeleteIds.isNotEmpty()) {
+                             seriesDao.deleteByIds(providerId, toDeleteIds.toList())
+                         }
+
+                         val key = KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES_ALL"
+                         cache.edit().putLong(key, System.currentTimeMillis()).apply()
                      }
-
-                     val currentHashes = seriesDao.getSeriesHashes(providerId)
-
-                     val toDeleteIds = currentHashes.keys - entities.map { it.seriesId }.toSet()
-
-                     val toInsert = entities.filter { newEntity ->
-                         val oldHash = currentHashes[newEntity.seriesId]
-                         oldHash == null || oldHash != newEntity.contentHash
-                     }
-
-                     if (toDeleteIds.isNotEmpty()) {
-                         seriesDao.deleteByIds(providerId, toDeleteIds.toList())
-                     }
-                     if (toInsert.isNotEmpty()) {
-                         seriesDao.insertAll(toInsert)
-                     }
-
-                     val key = KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES_ALL"
-                     cache.edit().putLong(key, System.currentTimeMillis()).apply()
 
                  } catch (e: Exception) {
                      e.printStackTrace()
