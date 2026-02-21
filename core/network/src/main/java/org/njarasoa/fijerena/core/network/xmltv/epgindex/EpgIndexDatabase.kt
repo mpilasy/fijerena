@@ -54,22 +54,26 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                 EpgIndexDatabase::class.java,
                 DB_NAME
             )
+                .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                 .addMigrations(MIGRATION_7_8)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
-                        // Run heavy maintenance on a background thread to avoid ANRs during startup
                         val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
                         scope.launch {
                             try {
+                                // Optimize for performance
+                                db.execSQL("PRAGMA synchronous = NORMAL")
+                                db.execSQL("PRAGMA cache_size = -8000") // 8MB cache
+                                
                                 val cursor = db.query("PRAGMA auto_vacuum")
                                 val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
                                 cursor.close()
                                 if (currentMode != 2) { // 2 = INCREMENTAL
                                     Log.d(TAG, "Enabling incremental auto_vacuum (current mode=$currentMode)")
                                     db.execSQL("PRAGMA auto_vacuum = INCREMENTAL")
-                                    db.execSQL("VACUUM")
-                                    Log.d(TAG, "One-time VACUUM complete, auto_vacuum now INCREMENTAL")
+                                    // Do NOT run VACUUM here as it blocks I/O for minutes on large DBs.
+                                    // auto_vacuum=INCREMENTAL only takes effect for new pages anyway.
                                 }
                             } catch (e: Exception) {
                                 Log.w(TAG, "Failed to run DB maintenance", e)

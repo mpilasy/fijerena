@@ -55,6 +55,8 @@ fun MobileMovieDetailsScreen(
     var resumePositionMs by remember { mutableStateOf(0L) }
     var resumeDurationMs by remember { mutableStateOf(0L) }
 
+    android.util.Log.d("MovieDetailsScreen", "State: isLoading=$isLoading, error=$error, movieDetail=${movieDetail != null}")
+
     // Load movie info on launch
     LaunchedEffect(movieId) {
         isLoading = true
@@ -217,6 +219,7 @@ private fun MovieDetailsContent(
             val resumeTimeText = formatMillis(resumePositionMs)
             Button(
                 onClick = {
+                    android.util.Log.d("MovieDetailsScreen", "Resume button clicked: id=$movieId")
                     onPlayMovie(movieId, movieDetail.name, extension, false)
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -226,6 +229,7 @@ private fun MovieDetailsContent(
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             OutlinedButton(
                 onClick = {
+                    android.util.Log.d("MovieDetailsScreen", "Start from Beginning button clicked: id=$movieId")
                     onPlayMovie(movieId, movieDetail.name, extension, true)
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -235,6 +239,7 @@ private fun MovieDetailsContent(
         } else {
             Button(
                 onClick = {
+                    android.util.Log.d("MovieDetailsScreen", "Play Movie button clicked: id=$movieId")
                     onPlayMovie(movieId, movieDetail.name, extension, false)
                 },
                 modifier = Modifier.fillMaxWidth()

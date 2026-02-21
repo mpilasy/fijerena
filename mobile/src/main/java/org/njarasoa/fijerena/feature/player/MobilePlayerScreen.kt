@@ -126,6 +126,7 @@ fun MobilePlayerScreen(
     var showChannelToast by remember { mutableStateOf(false) }
     var showCategoryOverlay by remember { mutableStateOf(false) }
     var showLastWatchedOverlay by remember { mutableStateOf(false) }
+    var lastWatchedVersion by remember { mutableIntStateOf(0) }
 
     // EPG state for current and next programme
     var currentEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
@@ -146,6 +147,9 @@ fun MobilePlayerScreen(
     val playbackState = viewModel.playbackState.collectAsState().value
 
     LaunchedEffect(playbackState) {
+        if (playbackState is PlaybackState.Error) {
+            android.util.Log.e("MobilePlayerScreen", "Playback Error: ${playbackState.message}")
+        }
         if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused) {
             while (true) {
                 StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
@@ -175,7 +179,7 @@ fun MobilePlayerScreen(
     }
 
     // Load last watched streams for overlay (Live TV only)
-    LaunchedEffect(Unit) {
+    LaunchedEffect(lastWatchedVersion) {
         if (contentType == "LIVE_TV") {
             lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend(contentType)
         }
@@ -306,11 +310,13 @@ fun MobilePlayerScreen(
         )
         result.fold(
             onSuccess = { playable ->
+                android.util.Log.d("MobilePlayerScreen", "Resolved Stream URL: ${playable.uri}")
                 streamUrl = playable.uri
                 streamHeaders = playable.headers
                 isLoading = false
             },
             onFailure = { e ->
+                android.util.Log.e("MobilePlayerScreen", "Failed to resolve stream: ${e.message}", e)
                 error = e.message ?: "Failed to load stream"
                 isLoading = false
             }
@@ -328,14 +334,19 @@ fun MobilePlayerScreen(
         positionLoaded = true
     }
 
+    // Save to last watched history after 5 seconds of viewing
+    LaunchedEffect(currentStreamId, contentType) {
+        delay(5000)
+        val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
+        val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
+        mediaRepository.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
+        lastWatchedVersion++
+    }
+
     // Start playback when URL is ready or channel changes
     LaunchedEffect(streamUrl, currentStreamId, currentStreamName, positionLoaded) {
         if (!positionLoaded) return@LaunchedEffect
         streamUrl?.let { url ->
-            val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
-            val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
-            mediaRepository.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
-
             // Determine resume position
             val resumePosition = savedPosition?.let { saved ->
                 val progressPercent = if (saved.duration > 0) {

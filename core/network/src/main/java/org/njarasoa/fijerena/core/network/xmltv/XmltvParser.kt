@@ -348,6 +348,18 @@ object XmltvParser {
         )
     }
 
+    /**
+     * Cache for SimpleDateFormat and TimeZone objects to reduce GC pressure.
+     * Large XMLTV files can have 200,000+ programmes, each with 2 timestamps.
+     */
+    private val dateFormatThreadLocal = object : ThreadLocal<SimpleDateFormat>() {
+        override fun initialValue(): SimpleDateFormat {
+            return SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
+        }
+    }
+
+    private val timeZoneCache = mutableMapOf<String, TimeZone>()
+
     fun parseTimestamp(ts: String): Long {
         return try {
             // XMLTV format: "20260206180000 +0000" or "20260206180000"
@@ -356,31 +368,36 @@ object XmltvParser {
             // Split into datetime part and optional timezone
             val spaceIndex = trimmed.indexOf(' ')
             val datePart: String
+            val tzPart: String?
             if (spaceIndex > 0) {
                 datePart = trimmed.substring(0, spaceIndex)
+                tzPart = trimmed.substring(spaceIndex + 1).trim()
             } else {
                 datePart = trimmed
+                tzPart = null
             }
 
-            val format = SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
+            val format = dateFormatThreadLocal.get()!!
 
             // If user has configured a timezone override, use it instead of
             // the XMLTV-provided offset. This fixes sources that encode local
             // times (e.g. UTC+8) but mislabel them as UTC (+0000).
             val overrideHours = timezoneOverrideHours
-            if (overrideHours != 0) {
-                val sign = if (overrideHours >= 0) "+" else "-"
-                val absHours = kotlin.math.abs(overrideHours)
-                format.timeZone = TimeZone.getTimeZone("GMT${sign}${"%02d".format(absHours)}00")
-            } else {
-                val tzPart = if (spaceIndex > 0) trimmed.substring(spaceIndex + 1).trim() else null
-                if (tzPart != null) {
+            val tzKey = if (overrideHours != 0) "OVERRIDE_$overrideHours" else tzPart ?: "UTC"
+
+            val timeZone = timeZoneCache.getOrPut(tzKey) {
+                if (overrideHours != 0) {
+                    val sign = if (overrideHours >= 0) "+" else "-"
+                    val absHours = kotlin.math.abs(overrideHours)
+                    TimeZone.getTimeZone("GMT${sign}${"%02d".format(absHours)}00")
+                } else if (tzPart != null) {
                     val normalizedTz = tzPart.replace(":", "")
-                    format.timeZone = TimeZone.getTimeZone("GMT$normalizedTz")
+                    TimeZone.getTimeZone("GMT$normalizedTz")
                 } else {
-                    format.timeZone = TimeZone.getTimeZone("UTC")
+                    TimeZone.getTimeZone("UTC")
                 }
             }
+            format.timeZone = timeZone
 
             val date = format.parse(datePart)
             (date?.time ?: 0L) / 1000L

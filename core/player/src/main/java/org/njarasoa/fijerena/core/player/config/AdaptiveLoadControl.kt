@@ -16,9 +16,6 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
  * A delegating [LoadControl] that swaps the inner [DefaultLoadControl] atomically
  * when the network type changes, sharing a single [DefaultAllocator] across swaps
  * to avoid memory churn.
- *
- * Thread safety: [delegate] is @Volatile — written from the main thread (StateFlow
- * collection), read from ExoPlayer's loading thread. Single-writer/multi-reader.
  */
 class AdaptiveLoadControl(
     private val contentType: PlayerConfigFactory.ContentType,
@@ -31,10 +28,6 @@ class AdaptiveLoadControl(
     @Volatile
     private var delegate: DefaultLoadControl = buildDelegate(NetworkMonitor.currentNetworkType)
 
-    /**
-     * Swap the inner delegate to match the given network type.
-     * Called from the main-thread StateFlow collector in StreamingPlaybackService.
-     */
     fun updateForNetwork(networkType: NetworkType) {
         delegate = buildDelegate(networkType)
     }
@@ -82,44 +75,47 @@ class AdaptiveLoadControl(
             retainKeyframe = true
         }
 
-        val builder = DefaultLoadControl.Builder()
+        return DefaultLoadControl.Builder()
             .setAllocator(sharedAllocator)
             .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
             .setBackBuffer(backBuffer, retainKeyframe)
-
-        // Remove prioritizeTimeOverSizeThresholds override.
-        // Let DefaultLoadControl use its default logic (target buffer bytes ~130MB for video)
-        // to prevent buffer bloat while respecting the time durations we set above.
-        // This ensures we don't try to buffer infinitely on slow networks if the size gets too large.
-
-        return builder.build()
+            .build()
     }
 
-    // ── LoadControl delegation (Media3 1.9 API) ────────────────────
+    // ── LoadControl implementation (FULL DELEGATION TO SATISFY 1.5.1 / 1.7.1 RUNTIME) ──
 
-    override fun onPrepared(playerId: PlayerId) = delegate.onPrepared(playerId)
+    // Basic lifecycle methods (required by 1.5.1 interface)
+    override fun onPrepared() { delegate.onPrepared() }
+    override fun onStopped() { delegate.onStopped() }
+    override fun onReleased() { delegate.onReleased() }
 
-    override fun onStopped(playerId: PlayerId) = delegate.onStopped(playerId)
+    // Analytics-aware lifecycle methods (often used by 1.7.1+ internal logic)
+    override fun onPrepared(playerId: PlayerId) { delegate.onPrepared(playerId) }
+    override fun onStopped(playerId: PlayerId) { delegate.onStopped(playerId) }
+    override fun onReleased(playerId: PlayerId) { delegate.onReleased(playerId) }
 
-    override fun onReleased(playerId: PlayerId) = delegate.onReleased(playerId)
+    // Allocator (signature varies, implemented both via override where possible)
+    override fun getAllocator(): Allocator = delegate.allocator
 
-    override fun getAllocator(playerId: PlayerId): Allocator = sharedAllocator
+    override fun getBackBufferDurationUs(): Long = delegate.backBufferDurationUs
+    override fun getBackBufferDurationUs(playerId: PlayerId): Long = delegate.getBackBufferDurationUs(playerId)
 
-    override fun getBackBufferDurationUs(playerId: PlayerId): Long =
-        delegate.getBackBufferDurationUs(playerId)
+    override fun retainBackBufferFromKeyframe(): Boolean = delegate.retainBackBufferFromKeyframe()
+    override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean = delegate.retainBackBufferFromKeyframe(playerId)
 
-    override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean =
-        delegate.retainBackBufferFromKeyframe(playerId)
+    override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
+        return delegate.shouldContinueLoading(parameters)
+    }
 
-    override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean =
-        delegate.shouldContinueLoading(parameters)
-
-    override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean =
-        delegate.shouldStartPlayback(parameters)
+    override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
+        return delegate.shouldStartPlayback(parameters)
+    }
 
     override fun onTracksSelected(
         parameters: LoadControl.Parameters,
         trackGroups: TrackGroupArray,
         trackSelections: Array<out ExoTrackSelection?>
-    ) = delegate.onTracksSelected(parameters, trackGroups, trackSelections)
+    ) {
+        delegate.onTracksSelected(parameters, trackGroups, trackSelections)
+    }
 }

@@ -188,7 +188,7 @@ Appear alongside provider categories in the category list:
 | **Continue Watching** | Movies, TV Shows | Items with 2–95% progress, most recent first |
 | **Favorites** | All | Starred items, configurable max size (10–500) |
 | **Last Watched** | All | Chronological history, configurable size (1–100) |
-| **Recently Viewed** | All | Recently browsed categories (max 20, deduplicated) |
+| **Recent Categories** | All | Recently browsed categories (max 20, deduplicated) |
 
 Favorites and Last Watched are per-provider. Continue Watching is derived from saved progress.
 
