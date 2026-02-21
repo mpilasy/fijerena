@@ -461,8 +461,22 @@ fun TvEpgManagementScreen(
             containerColor = CinemaSurface,
             titleContentColor = CinemaTextPrimary,
             textContentColor = CinemaTextSecondary,
-            title = { Text("Clear All EPG Data") },
-            text = { Text("This will delete all indexed programmes and channels. Sources will be kept.") },
+            title = {
+                Text(
+                    text = "Clear All EPG Data",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                    )
+                )
+            },
+            text = {
+                Text(
+                    text = "This will delete all indexed programmes and channels. Sources will be kept.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                    )
+                )
+            },
             confirmButton = {
                 CinemaDangerButton(
                     onClick = {
@@ -488,8 +502,22 @@ fun TvEpgManagementScreen(
             containerColor = CinemaSurface,
             titleContentColor = CinemaTextPrimary,
             textContentColor = CinemaTextSecondary,
-            title = { Text("Delete Source") },
-            text = { Text("Remove this EPG source?") },
+            title = {
+                Text(
+                    text = "Delete Source",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                    )
+                )
+            },
+            text = {
+                Text(
+                    text = "Remove this EPG source?",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                    )
+                )
+            },
             confirmButton = {
                 CinemaDangerButton(
                     onClick = {
