@@ -3,13 +3,16 @@
 package org.njarasoa.fijerena.core.player.config
 
 import android.content.Context
+import android.util.Log
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.trackselection.MappingTrackSelector
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
 object PlayerConfigFactory {
+    private const val TAG = "PlayerConfigFactory"
     enum class ContentType {
         LIVE_TV,
         VOD
@@ -61,24 +64,18 @@ object PlayerConfigFactory {
         val parameters = DefaultTrackSelector.Parameters.Builder()
             .setPreferredAudioLanguage("en")
             .apply {
-                // Set bitrate and resolution constraints based on network and device
-                if (isCellular) {
-                    // Capping at 1.5Mbps to match your reported ~1.2Mbps bandwidth
-                    setMaxVideoSize(854, 480)
-                    setMaxVideoBitrate(1_500_000) // 1.5 Mbps
-                } else {
-                    val (maxWidth, maxHeight) = capabilities.maxResolution
-                    setMaxVideoSize(maxWidth, maxHeight)
+                // Set bitrate and resolution constraints based on device capabilities
+                val (maxWidth, maxHeight) = capabilities.maxResolution
+                setMaxVideoSize(maxWidth, maxHeight)
 
-                    val maxBitrate = when (capabilities.deviceType) {
-                        DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                        DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                        DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                        DeviceType.GENERIC_TV -> 10_000_000
-                        DeviceType.GENERIC_MOBILE -> 5_000_000
-                    }
-                    setMaxVideoBitrate(maxBitrate)
+                val maxBitrate = when (capabilities.deviceType) {
+                    DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                    DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                    DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                    DeviceType.GENERIC_TV -> 10_000_000
+                    DeviceType.GENERIC_MOBILE -> 5_000_000
                 }
+                setMaxVideoBitrate(maxBitrate)
 
                 // Prioritize hardware-accelerated codecs based on device capabilities
                 if (capabilities.preferredCodecs.isNotEmpty()) {
