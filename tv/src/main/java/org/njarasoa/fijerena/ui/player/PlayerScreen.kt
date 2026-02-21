@@ -87,22 +87,20 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
-import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.ui.components.TvGlassPanel as GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
-import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -455,67 +453,324 @@ fun PlayerScreen(
             )
         }
 
-        // Stream info overlay - top left
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(48.dp)
+        // Modern unified controls overlay (mobile-style)
+        AnimatedVisibility(
+            visible = (showControls || showStreamInfo) && !showStats,
+            enter = fadeIn(),
+            exit = fadeOut()
         ) {
-            AnimatedVisibility(
-                visible = showStreamInfo,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                StreamInfoDisplay(
-                    livePosition = livePosition,
-                    liveDuration = liveDuration,
-                    metadata = displayedMetadata,
-                    currentEpgProgram = currentEpgProgram,
-                    nextEpgProgram = nextEpgProgram
-                )
+            val isPaused = playbackState is PlaybackState.Paused
+            val isLive = currentMetadata.isLive
+            val audioTrackCount = viewModel.getAudioTracks().size
+            val subtitleTrackCount = viewModel.getSubtitleTracks().size
+            val qualityCount = viewModel.getVideoQualities().size
+
+            // Focus requester for the center play/pause button
+            val controlsFocusRequester = remember { FocusRequester() }
+
+            LaunchedEffect(showControls) {
+                if (showControls) {
+                    try { controlsFocusRequester.requestFocus() } catch (_: Exception) {}
+                }
             }
-        }
 
-        // Control buttons overlay - bottom center
-        Box(
-            modifier = Modifier
-                .align(BottomCenter)
-                .fillMaxWidth()
-        ) {
-            AnimatedVisibility(
-                visible = showControls && !showStats,
-                enter = fadeIn(),
-                exit = fadeOut()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = CinemaAlpha.tint))
             ) {
-                val isPaused = playbackState is PlaybackState.Paused
-                val isLive = currentMetadata.isLive
+                // Top bar with channel name and title
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
+                ) {
+                    Text(
+                        text = displayedMetadata.channelName,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = displayedMetadata.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
 
-                // Get track counts to determine which buttons to show
-                val audioTrackCount = viewModel.getAudioTracks().size
-                val subtitleTrackCount = viewModel.getSubtitleTracks().size
-                val qualityCount = viewModel.getVideoQualities().size
+                // Center row: Rewind | Play/Pause | FastForward (VOD only)
+                if (showControls) {
+                    Row(
+                        modifier = Modifier.align(Center),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xxl),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!isLive) {
+                            // Rewind -30s
+                            Button(
+                                onClick = { viewModel.seekRelative(-30_000L) },
+                                colors = androidx.tv.material3.ButtonDefaults.colors(
+                                    containerColor = Color.Transparent
+                                ),
+                                modifier = Modifier.size(TvDimensions.iconButtonSize)
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Filled.FastRewind,
+                                        contentDescription = "Rewind 30s",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(TvDimensions.iconLarge)
+                                    )
+                                    Text("-30s", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                                }
+                            }
+                        }
 
-                ControlButtonsRow(
-                    isLive = isLive,
-                    isPaused = isPaused,
-                    onPause = if (!isPaused && !isLive) ({ viewModel.pause() }) else null,
-                    onResume = if (isPaused && !isLive) ({ viewModel.resume() }) else null,
-                    onFastForward = if (!isLive) ({ viewModel.seekRelative(60_000L) }) else null,
-                    onRewind = if (!isLive) ({ viewModel.seekRelative(-30_000L) }) else null,
-                    hasMultipleAudioTracks = audioTrackCount > 1,
-                    onAudioTrack = { showAudioTrackSelector = true },
-                    hasSubtitles = subtitleTrackCount > 0,
-                    onSubtitle = { showSubtitleSelector = true },
-                    hasMultipleQualities = qualityCount > 1,
-                    onQuality = { showQualitySelector = true },
-                    onStats = if (isDeveloperMode) ({ showStats = !showStats }) else null,
-                    isFavorite = isFavorite,
-                    onToggleFavorite = onToggleFavorite,
-                    onBack = {
-                        viewModel.stop()
-                        onBack()
+                        // Play/Pause
+                        Button(
+                            onClick = {
+                                if (!isLive) {
+                                    if (isPaused) viewModel.resume() else viewModel.pause()
+                                }
+                            },
+                            colors = androidx.tv.material3.ButtonDefaults.colors(
+                                containerColor = Color.Transparent
+                            ),
+                            modifier = Modifier
+                                .size(TvDimensions.iconButtonSizeLarge)
+                                .focusRequester(controlsFocusRequester)
+                        ) {
+                            Icon(
+                                imageVector = if (isPaused) Icons.Filled.PlayArrow else if (isLive) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                                contentDescription = if (isPaused) "Play" else "Pause",
+                                tint = Color.White,
+                                modifier = Modifier.size(TvDimensions.iconXLarge)
+                            )
+                        }
+
+                        if (!isLive) {
+                            // Fast Forward +1min
+                            Button(
+                                onClick = { viewModel.seekRelative(60_000L) },
+                                colors = androidx.tv.material3.ButtonDefaults.colors(
+                                    containerColor = Color.Transparent
+                                ),
+                                modifier = Modifier.size(TvDimensions.iconButtonSize)
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Filled.FastForward,
+                                        contentDescription = "Fast Forward 1min",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(TvDimensions.iconLarge)
+                                    )
+                                    Text("+1m", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                                }
+                            }
+                        }
                     }
-                )
+                }
+
+                // Bottom section: progress/EPG info + icon controls
+                GlassPanel(
+                    modifier = Modifier
+                        .align(BottomCenter)
+                        .fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.xl, vertical = Spacing.md)
+                    ) {
+                        // VOD progress bar and time info
+                        if (!isLive) {
+                            val position = livePosition
+                            val duration = liveDuration
+
+                            if (duration > 0) {
+                                LinearProgressIndicator(
+                                    progress = position.toFloat() / duration.toFloat(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(TvDimensions.progressBar),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                                )
+
+                                Spacer(modifier = Modifier.height(Spacing.xs))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = formatTime(position),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = formatTime(duration),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.White
+                                    )
+                                }
+
+                                // Remaining time and estimated end time
+                                val remainingTime = duration - position
+                                val estimatedEndTimeMillis = System.currentTimeMillis() + remainingTime
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Remaining: ${formatTime(remainingTime)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = CinemaAccent
+                                    )
+                                    Text(
+                                        text = "Ends at ${org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(java.util.Date(estimatedEndTimeMillis))}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = CinemaAccent
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(Spacing.sm))
+                            }
+                        } else {
+                            // Live indicator with EPG info
+                            Column(modifier = Modifier.padding(bottom = Spacing.sm)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(TvDimensions.statsDotSize)
+                                            .background(Color.Red, shape = RoundedCornerShape(TvDimensions.statsDotSize / 2))
+                                    )
+                                    Text(
+                                        text = "LIVE",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                if (currentEpgProgram != null) {
+                                    val nowStart = formatEpochTime(currentEpgProgram.startTime)
+                                    val nowEnd = formatEpochTime(currentEpgProgram.endTime)
+                                    Text(
+                                        text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.White.copy(alpha = CinemaAlpha.textMedium),
+                                        modifier = Modifier.padding(top = Spacing.xxs)
+                                    )
+                                    // Programme progress bar
+                                    val nowEpoch = System.currentTimeMillis() / 1000
+                                    val epgProgress = if (currentEpgProgram.duration > 0) {
+                                        ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(0f, 1f)
+                                    } else 0f
+                                    LinearProgressIndicator(
+                                        progress = epgProgress,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xxs)
+                                            .height(TvDimensions.progressBar),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                                    )
+                                    if (nextEpgProgram != null) {
+                                        Text(
+                                            text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(nextEpgProgram.startTime)})",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.White.copy(alpha = CinemaAlpha.tint),
+                                            modifier = Modifier.padding(top = Spacing.xxs)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Icon controls row (only when full controls are visible)
+                        if (showControls) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Audio track selector
+                                if (audioTrackCount > 1) {
+                                    Button(
+                                        onClick = { showAudioTrackSelector = true },
+                                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                                            containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                        )
+                                    ) {
+                                        Icon(Icons.Filled.VolumeUp, "Audio", tint = Color.White)
+                                    }
+                                }
+
+                                // Subtitle selector
+                                if (subtitleTrackCount > 0) {
+                                    Button(
+                                        onClick = { showSubtitleSelector = true },
+                                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                                            containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                        )
+                                    ) {
+                                        Icon(Icons.Filled.Subtitles, "Subtitles", tint = Color.White)
+                                    }
+                                }
+
+                                // Quality selector
+                                if (qualityCount > 1) {
+                                    Button(
+                                        onClick = { showQualitySelector = true },
+                                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                                            containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                        )
+                                    ) {
+                                        Icon(Icons.Filled.Tune, "Quality", tint = Color.White)
+                                    }
+                                }
+
+                                // Favorite toggle
+                                if (onToggleFavorite != null) {
+                                    Button(
+                                        onClick = { onToggleFavorite() },
+                                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                                            containerColor = if (isFavorite)
+                                                CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+                                            else
+                                                CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                            contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
+                                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.White
+                                        )
+                                    }
+                                }
+
+                                // Stats (dev mode only)
+                                if (isDeveloperMode) {
+                                    Button(
+                                        onClick = { showStats = !showStats },
+                                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                                            containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                        )
+                                    ) {
+                                        Icon(Icons.Filled.BarChart, "Stats", tint = Color.White)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -2050,369 +2305,6 @@ private fun MetadataOverlay(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = CinemaAlpha.textLow)
             )
-        }
-    }
-}
-
-@Composable
-private fun StreamInfoDisplay(
-    livePosition: Long,
-    liveDuration: Long,
-    metadata: PlayerMetadata,
-    currentEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null,
-    nextEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null
-) {
-    val position = livePosition
-    val duration = liveDuration
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Channel name and title
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = metadata.channelName,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = metadata.title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // EPG programme info (Live TV only)
-        if (metadata.isLive && currentEpgProgram != null) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Now playing programme with time range
-                val nowStart = formatEpochTime(currentEpgProgram.startTime)
-                val nowEnd = formatEpochTime(currentEpgProgram.endTime)
-                Text(
-                    text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White.copy(alpha = CinemaAlpha.overlayMedium),
-                    fontWeight = FontWeight.Medium
-                )
-
-                // Programme progress bar
-                val nowEpoch = System.currentTimeMillis() / 1000
-                val epgProgress = if (currentEpgProgram.duration > 0) {
-                    ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(0f, 1f)
-                } else 0f
-                LinearProgressIndicator(
-                    progress = epgProgress,
-                    modifier = Modifier
-                        .fillMaxWidth(0.5f)
-                        .height(TvDimensions.progressBar),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
-                )
-
-                // Up next programme
-                if (nextEpgProgram != null) {
-                    val nextStart = formatEpochTime(nextEpgProgram.startTime)
-                    Text(
-                        text = "Up Next: ${nextEpgProgram.title}  ($nextStart)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = CinemaAlpha.tint)
-                    )
-                }
-            }
-        }
-
-        // Progress bar (for non-live streams) or LIVE indicator
-        if (duration > 0 && !metadata.isLive) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LinearProgressIndicator(
-                    progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(TvDimensions.progressBar),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = formatTime(position),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = CinemaAlpha.overlayMedium)
-                    )
-                    Text(
-                        text = formatTime(duration),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = CinemaAlpha.overlayMedium)
-                    )
-                }
-
-                // Remaining time and estimated end time for VOD
-                val remainingTime = duration - position
-
-                // Calculate end time - add remaining milliseconds to current time
-                val currentTimeMillis = System.currentTimeMillis()
-                val estimatedEndTimeMillis = currentTimeMillis + remainingTime
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Remaining: ${formatTime(remainingTime)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaAccent
-                    )
-                    Text(
-                        text = "Ends at ${org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(java.util.Date(estimatedEndTimeMillis))}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaAccent
-                    )
-                }
-            }
-        } else if (metadata.isLive) {
-            // Live indicator
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(TvDimensions.statsDotSize)
-                        .background(Color.Red, shape = RoundedCornerShape(6.dp))
-                )
-                Text(
-                    text = "LIVE",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ControlButtonsRow(
-    isLive: Boolean,
-    isPaused: Boolean,
-    onPause: (() -> Unit)?,
-    onResume: (() -> Unit)?,
-    onFastForward: (() -> Unit)? = null,
-    onRewind: (() -> Unit)? = null,
-    hasMultipleAudioTracks: Boolean,
-    onAudioTrack: (() -> Unit)?,
-    hasSubtitles: Boolean,
-    onSubtitle: (() -> Unit)?,
-    hasMultipleQualities: Boolean,
-    onQuality: (() -> Unit)?,
-    onStats: (() -> Unit)?,
-    isFavorite: Boolean,
-    onToggleFavorite: (() -> Unit)?,
-    onBack: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
-    ) {
-        // Control buttons
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Pause/Resume for VOD only — live streams are never pausable
-            if (!isLive) {
-                if (isPaused) {
-                    Button(onClick = { onResume?.invoke() }) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                            Text("Resume")
-                        }
-                    }
-                } else {
-                    Button(onClick = { onPause?.invoke() }) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Filled.Pause, contentDescription = null)
-                            Text("Pause")
-                        }
-                    }
-                }
-            }
-
-            // Rewind -30s (VOD only)
-            if (onRewind != null) {
-                Button(onClick = { onRewind.invoke() }) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.FastRewind, contentDescription = null)
-                        Text("-30s")
-                    }
-                }
-            }
-
-            // Fast Forward +1min (VOD only)
-            if (onFastForward != null) {
-                Button(onClick = { onFastForward.invoke() }) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.FastForward, contentDescription = null)
-                        Text("+1m")
-                    }
-                }
-            }
-
-            // Only show audio button if multiple audio tracks available
-            if (hasMultipleAudioTracks) {
-                Button(onClick = { onAudioTrack?.invoke() }) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.VolumeUp, contentDescription = null)
-                        Text("Audio")
-                    }
-                }
-            }
-
-            // Only show subtitle button if subtitles are available
-            if (hasSubtitles) {
-                Button(onClick = { onSubtitle?.invoke() }) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.Subtitles, contentDescription = null)
-                        Text("Subtitle")
-                    }
-                }
-            }
-
-            // Only show quality button if multiple qualities available
-            if (hasMultipleQualities) {
-                Button(onClick = { onQuality?.invoke() }) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.Tune, contentDescription = null)
-                        Text("Quality")
-                    }
-                }
-            }
-
-            // Only show stats button if dev mode is enabled
-            if (onStats != null) {
-                Button(onClick = { onStats.invoke() }) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Filled.BarChart, contentDescription = null)
-                        Text("Stats")
-                    }
-                }
-            }
-
-            // Favorite toggle button
-            if (onToggleFavorite != null) {
-                Button(
-                    onClick = { onToggleFavorite() },
-                    colors = androidx.tv.material3.ButtonDefaults.colors(
-                        containerColor = if (isFavorite)
-                            CinemaAccent.copy(alpha = CinemaAlpha.scrim)
-                        else
-                            CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                    )
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                            contentDescription = null
-                        )
-                        Text(if (isFavorite) "Favorited" else "Favorite")
-                    }
-                }
-            }
-        }
-
-        // Hint text
-        Text(
-            text = "Press OK to hide controls • Press BACK to exit",
-            style = MaterialTheme.typography.bodySmall,
-            color = CinemaTextTertiary
-        )
-    }
-}
-
-@Composable
-private fun StreamInfoOverlay(
-    metadata: PlayerMetadata
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        GlassPanel {
-        Column(
-            modifier = Modifier
-                .padding(Spacing.lg),
-            horizontalAlignment = CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
-        ) {
-            Text(
-                text = "Now Playing",
-                style = MaterialTheme.typography.labelLarge,
-                color = CinemaAccent,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = metadata.title,
-                style = MaterialTheme.typography.headlineMedium,
-                color = CinemaTextPrimary,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            if (metadata.isLive) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(TvDimensions.liveDotSmall)
-                            .background(CinemaLive, shape = RoundedCornerShape(5.dp))
-                    )
-                    Text(
-                        text = "LIVE",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = CinemaTextPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
         }
     }
 }

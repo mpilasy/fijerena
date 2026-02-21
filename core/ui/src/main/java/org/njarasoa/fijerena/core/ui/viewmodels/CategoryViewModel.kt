@@ -187,21 +187,12 @@ class CategoryViewModel(
         )
 
         if (categories.isNotEmpty()) {
-            val lastCategoryId = repository.getLastCategoryId(contentType)
             val categoryToLoad = if (initialCategoryId != null &&
                 categories.any { it.id == initialCategoryId }) {
                 initialCategoryId
-            } else if (lastCategoryId != null &&
-                categories.any { it.id == lastCategoryId }) {
-                lastCategoryId
             } else {
-                val firstRegularCategory = categories.firstOrNull {
-                    it.id != FAVORITES_CATEGORY_ID &&
-                    it.id != LAST_WATCHED_CATEGORY_ID &&
-                    it.id != CONTINUE_WATCHING_CATEGORY_ID &&
-                    it.id != RECENTLY_VIEWED_CATEGORIES_ID
-                }
-                firstRegularCategory?.id ?: categories.first().id
+                // Default to "Last Watched" on startup so focus lands on the last played stream
+                LAST_WATCHED_CATEGORY_ID
             }
             loadStreams(categoryToLoad)
         }

@@ -578,7 +578,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                     ) {
-                        listOf(0.7f to "70%", 0.8f to "80%", 0.9f to "90%", 1.0f to "100%").chunked(2).forEach { rowItems ->
+                        listOf(0.4f to "40%", 0.6f to "60%", 0.8f to "80%", 1.0f to "100%").chunked(2).forEach { rowItems ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))

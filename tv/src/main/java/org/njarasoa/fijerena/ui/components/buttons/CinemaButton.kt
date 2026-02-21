@@ -17,7 +17,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CinemaBackground

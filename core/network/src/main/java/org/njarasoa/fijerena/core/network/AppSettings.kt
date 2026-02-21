@@ -97,12 +97,12 @@ class AppSettings(context: Context) {
 
     /**
      * Get or set UI scale for category/grid screens.
-     * Values: 0.7f (70%), 0.8f (80%), 0.9f (90%), 1.0f (100%)
+     * Values: 0.4f (40%), 0.6f (60%), 0.8f (80%), 1.0f (100%)
      */
     var uiScale: Float
         get() = prefs.getFloat(KEY_UI_SCALE, DEFAULT_UI_SCALE)
         set(value) {
-            val clampedValue = value.coerceIn(0.7f, 1.0f)
+            val clampedValue = value.coerceIn(0.4f, 1.0f)
             prefs.edit().putFloat(KEY_UI_SCALE, clampedValue).apply()
         }
 

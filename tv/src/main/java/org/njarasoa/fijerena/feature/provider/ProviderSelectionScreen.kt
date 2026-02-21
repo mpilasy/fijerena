@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -57,11 +58,16 @@ fun TvProviderSelectionScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
+    val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
+    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
     // Refresh provider list when screen is shown (e.g., after adding a provider)
     LaunchedEffect(Unit) {
         viewModel.loadProviders()
     }
+
+    CompositionLocalProvider(LocalUiScale provides uiScale) {
+    val scale = LocalUiScale.current
 
     Column(
         modifier = Modifier
@@ -79,7 +85,9 @@ fun TvProviderSelectionScreen(
         ) {
             Text(
                 text = "Providers",
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
+                ),
                 color = MaterialTheme.colorScheme.onSurface
             )
             CinemaIconButton(
@@ -90,7 +98,7 @@ fun TvProviderSelectionScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(Spacing.xl))
+        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
         when (val state = uiState) {
             is ProviderUiState.Loading -> {
@@ -177,6 +185,7 @@ fun TvProviderSelectionScreen(
             containerColor = CinemaSurface
         )
     }
+    } // CompositionLocalProvider
 }
 
 @Composable
@@ -186,9 +195,10 @@ private fun ProviderList(
     onEdit: (Long) -> Unit,
     onDelete: (ProviderEntity) -> Unit
 ) {
+    val scale = LocalUiScale.current
     TvLazyColumn(
-        contentPadding = PaddingValues(vertical = Spacing.xs),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         modifier = Modifier.fillMaxSize()
     ) {
         items(providers, key = { it.id }) { provider ->

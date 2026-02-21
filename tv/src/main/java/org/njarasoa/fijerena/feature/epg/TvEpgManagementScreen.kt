@@ -19,6 +19,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,7 +52,9 @@ import org.njarasoa.fijerena.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.scaled
 
 @Composable
 fun TvEpgManagementScreen(
@@ -73,6 +76,11 @@ fun TvEpgManagementScreen(
     var showClearConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
 
+    val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
+    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
+
+    CompositionLocalProvider(LocalUiScale provides uiScale) {
+    val scale = LocalUiScale.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -83,27 +91,31 @@ fun TvEpgManagementScreen(
     ) {
         Text(
             text = "EPG Management",
-            style = MaterialTheme.typography.displaySmall,
+            style = MaterialTheme.typography.displaySmall.copy(
+                fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
+            ),
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(Spacing.xl))
+        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
         TvLazyColumn(
-            contentPadding = PaddingValues(vertical = Spacing.xs),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
             modifier = Modifier.fillMaxSize()
         ) {
             // Status section
             item {
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(Spacing.md)) {
+                    Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Text(
                             text = "Status",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                            ),
                             color = CinemaAccent
                         )
-                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
                         val statusText = when (val state = indexState) {
                             is EpgIndexState.NotIndexed -> "No EPG data"
@@ -113,7 +125,9 @@ fun TvEpgManagementScreen(
                         }
                         Text(
                             text = statusText,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                            ),
                             color = when (indexState) {
                                 is EpgIndexState.Indexed -> CinemaAccent
                                 is EpgIndexState.Failed -> CinemaError
@@ -124,16 +138,20 @@ fun TvEpgManagementScreen(
                         // Processing state
                         val procState = processingState
                         if (procState is EpgFileManager.MultiSourceState.Processing) {
-                            Spacer(modifier = Modifier.height(Spacing.xs))
+                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                             Text(
                                 text = "Source ${procState.sourceIndex}/${procState.totalSources}: ${procState.phase} ${procState.sourceLabel}",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                ),
                                 color = CinemaTextSecondary
                             )
                             if (procState.phase == "Streaming" && (procState.sourceChannels > 0 || procState.sourceProgrammes > 0)) {
                                 Text(
                                     text = "${formatCount(procState.sourceChannels)}ch, ${formatCount(procState.sourceProgrammes)}prg",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                                    ),
                                     color = CinemaTextSecondary
                                 )
                             }
@@ -147,7 +165,9 @@ fun TvEpgManagementScreen(
                                     }
                                     Text(
                                         text = "Download: $progress",
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                                        ),
                                         color = CinemaTextSecondary
                                     )
                                 }
@@ -156,7 +176,9 @@ fun TvEpgManagementScreen(
                                         Text(
                                             text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
                                                 (stat.error?.let { " [$it]" } ?: ""),
-                                            style = MaterialTheme.typography.labelSmall,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                                            ),
                                             color = if (stat.error != null) CinemaError else CinemaTextSecondary
                                         )
                                     }
@@ -164,34 +186,42 @@ fun TvEpgManagementScreen(
                             }
                         }
                         if (procState is EpgFileManager.MultiSourceState.Completed) {
-                            Spacer(modifier = Modifier.height(Spacing.xs))
+                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                             Text(
                                 text = "Completed: ${procState.sourcesProcessed} sources" +
                                     if (procState.errors > 0) " (${procState.errors} errors)" else "",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                ),
                                 color = if (procState.errors > 0) CinemaError else CinemaAccent
                             )
                             if (viewModel.isDevMode) {
                                 Text(
                                     text = "Total: ${formatBytes(procState.totalDownloadBytes)}, ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                                    ),
                                     color = CinemaTextSecondary
                                 )
                                 procState.sourceStats.forEach { stat ->
                                     Text(
                                         text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
                                             (stat.error?.let { " [$it]" } ?: ""),
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                                        ),
                                         color = if (stat.error != null) CinemaError else CinemaTextSecondary
                                     )
                                 }
                             }
                         }
                         if (procState is EpgFileManager.MultiSourceState.Error) {
-                            Spacer(modifier = Modifier.height(Spacing.xs))
+                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                             Text(
                                 text = procState.reason,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                ),
                                 color = CinemaError
                             )
                         }
@@ -202,7 +232,7 @@ fun TvEpgManagementScreen(
             // Sources section
             item {
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(Spacing.md)) {
+                    Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -210,7 +240,9 @@ fun TvEpgManagementScreen(
                         ) {
                             Text(
                                 text = "Sources (${sources.size})",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                                ),
                                 color = CinemaAccent
                             )
                             CinemaPrimaryButton(
@@ -225,7 +257,7 @@ fun TvEpgManagementScreen(
             // Source rows
             items(sources, key = { it.id }) { source ->
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(Spacing.md)) {
+                    Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -239,22 +271,26 @@ fun TvEpgManagementScreen(
                                 else -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                             }
                             Surface(
-                                modifier = Modifier.size(Spacing.sm),
+                                modifier = Modifier.size(Spacing.sm.scaled(scale)),
                                 shape = CircleShape,
                                 color = dotColor
                             ) {}
 
-                            Spacer(modifier = Modifier.width(Spacing.sm))
+                            Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = source.label.ifBlank { EpgFileManager.extractLabel(source.url) },
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                                    ),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = source.url,
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                                    ),
                                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                                     maxLines = 1
                                 )
@@ -271,13 +307,17 @@ fun TvEpgManagementScreen(
                                 }
                                 Text(
                                     text = infoLine,
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                                    ),
                                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                 )
                                 source.lastError?.let { error ->
                                     Text(
                                         text = error,
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                                        ),
                                         color = CinemaError,
                                         maxLines = 1
                                     )
@@ -290,7 +330,9 @@ fun TvEpgManagementScreen(
                                     }
                                     Text(
                                         text = "${formatCount(source.lastChannels)}ch, ${formatCount(source.lastProgrammes)}prg$sizeStr",
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                                        ),
                                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                     )
                                     var latestTime by remember { mutableStateOf<Long?>(null) }
@@ -300,24 +342,26 @@ fun TvEpgManagementScreen(
                                     latestTime?.let { epoch ->
                                         Text(
                                             text = "Latest: ${formatEpochDate(epoch)}",
-                                            style = MaterialTheme.typography.labelSmall,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
+                                            ),
                                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                         )
                                     }
                                 }
                             }
 
-                            Spacer(modifier = Modifier.width(Spacing.sm))
+                            Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                             CinemaPrimaryButton(
                                 onClick = { viewModel.refreshSource(source.id) },
                                 text = "Refresh"
                             )
-                            Spacer(modifier = Modifier.width(Spacing.xs))
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaSecondaryButton(
                                 onClick = { editingSource = source },
                                 text = "Edit"
                             )
-                            Spacer(modifier = Modifier.width(Spacing.xs))
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaDangerButton(
                                 onClick = { showDeleteConfirm = source.id },
                                 text = "Delete"
@@ -330,13 +374,15 @@ fun TvEpgManagementScreen(
             // Actions section
             item {
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(Spacing.md)) {
+                    Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Text(
                             text = "Actions",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                            ),
                             color = CinemaAccent
                         )
-                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -344,7 +390,9 @@ fun TvEpgManagementScreen(
                         ) {
                             Text(
                                 text = "Auto-refresh (every 24h)",
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                                ),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             CinemaSecondaryButton(
@@ -355,10 +403,10 @@ fun TvEpgManagementScreen(
                                 text = if (autoRefreshEnabled) "ON" else "OFF"
                             )
                         }
-                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                         ) {
                             CinemaPrimaryButton(
                                 onClick = { viewModel.refreshAll() },
@@ -459,6 +507,8 @@ fun TvEpgManagementScreen(
             }
         )
     }
+
+    } // End CompositionLocalProvider
 }
 
 @Composable
@@ -470,15 +520,23 @@ private fun SourceDialog(
     var url by remember { mutableStateOf(source?.url ?: "") }
     var label by remember { mutableStateOf(source?.label ?: "") }
     var tzOffset by remember { mutableIntStateOf(source?.timezoneOffsetHours ?: 0) }
+    val scale = LocalUiScale.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = CinemaSurface,
         titleContentColor = CinemaTextPrimary,
         textContentColor = CinemaTextSecondary,
-        title = { Text(if (source != null) "Edit Source" else "Add Source") },
+        title = {
+            Text(
+                text = if (source != null) "Edit Source" else "Add Source",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                )
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
@@ -523,10 +581,12 @@ private fun SourceDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Timezone:",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+                        ),
                         color = CinemaTextSecondary
                     )
-                    Spacer(modifier = Modifier.width(Spacing.sm))
+                    Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                     val tzLabel = if (tzOffset == 0) "Auto (from data)" else {
                         val sign = if (tzOffset >= 0) "+" else ""
                         "UTC${sign}${tzOffset}"

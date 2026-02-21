@@ -630,7 +630,7 @@ fun MobilePlayerScreen(
             ) {
                 MobileChannelListSheet(
                     title = "Last Watched",
-                    streams = lastWatchedStreams,
+                    streams = lastWatchedStreams.filter { it.id != currentStreamId },
                     panelAlignment = Alignment.CenterEnd,
                     onSelect = { item ->
                         showLastWatchedOverlay = false
