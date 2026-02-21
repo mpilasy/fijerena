@@ -70,6 +70,7 @@ dependencies {
     // TV (uses androidx.tv.material instead of material3)
     implementation(libs.androidx.tv.foundation)
     implementation(libs.androidx.tv.material)
+    implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
     // Image Loading
