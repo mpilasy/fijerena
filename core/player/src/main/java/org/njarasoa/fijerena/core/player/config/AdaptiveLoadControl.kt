@@ -42,45 +42,16 @@ class AdaptiveLoadControl(
     }
 
     private fun buildDelegate(networkType: NetworkType): DefaultLoadControl {
-        val isWifi = networkType != NetworkType.CELLULAR
-        val isLive = contentType == PlayerConfigFactory.ContentType.LIVE_TV
-
-        val minBuffer: Int
-        val maxBuffer: Int
-        val playback: Int
-        val rebuffer: Int
-        val backBuffer: Int
-        val retainKeyframe: Boolean
-
-        if (isLive) {
-            // Live TV: Fast startup, reasonable buffer for stability
-            minBuffer = 30_000
-            maxBuffer = 60_000
-            playback = 1_000
-            rebuffer = 5_000
-            backBuffer = 0
-            retainKeyframe = false
-        } else {
-            if (isWifi) {
-                minBuffer = NetworkBufferProfile.WIFI_VOD_MIN_BUFFER_MS
-                maxBuffer = NetworkBufferProfile.WIFI_VOD_MAX_BUFFER_MS
-                playback = NetworkBufferProfile.WIFI_VOD_PLAYBACK_MS
-                rebuffer = NetworkBufferProfile.WIFI_VOD_REBUFFER_MS
-                backBuffer = NetworkBufferProfile.WIFI_VOD_BACK_BUFFER_MS
-            } else {
-                minBuffer = NetworkBufferProfile.getCellularVodMinBuffer(cellularVodMultiplier)
-                maxBuffer = NetworkBufferProfile.getCellularVodMaxBuffer(cellularVodMultiplier)
-                playback = NetworkBufferProfile.getCellularVodPlayback(cellularVodMultiplier)
-                rebuffer = NetworkBufferProfile.getCellularVodRebuffer(cellularVodMultiplier)
-                backBuffer = NetworkBufferProfile.CELLULAR_VOD_BACK_BUFFER_MS
-            }
-            retainKeyframe = true
-        }
-
+        // Standard, proven buffer settings used by most top-tier IPTV apps
         return DefaultLoadControl.Builder()
             .setAllocator(sharedAllocator)
-            .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
-            .setBackBuffer(backBuffer, retainKeyframe)
+            .setBufferDurationsMs(
+                15_000, // minBufferMs
+                50_000, // maxBufferMs
+                2_500,  // bufferForPlaybackMs
+                5_000   // bufferForPlaybackAfterRebufferMs
+            )
+            .setBackBuffer(10_000, true)
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
     }
