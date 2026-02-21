@@ -97,11 +97,21 @@ class AdaptiveLoadControl(
     // Allocator (signature varies, implemented both via override where possible)
     override fun getAllocator(): Allocator = delegate.allocator
 
-    override fun getBackBufferDurationUs(): Long = delegate.backBufferDurationUs
-    override fun getBackBufferDurationUs(playerId: PlayerId): Long = delegate.getBackBufferDurationUs(playerId)
+    // Properties / Methods for back buffer duration
+    override fun getBackBufferDurationUs(): Long {
+        return delegate.backBufferDurationUs
+    }
+    override fun getBackBufferDurationUs(playerId: PlayerId): Long {
+        return delegate.getBackBufferDurationUs(playerId)
+    }
 
-    override fun retainBackBufferFromKeyframe(): Boolean = delegate.retainBackBufferFromKeyframe()
-    override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean = delegate.retainBackBufferFromKeyframe(playerId)
+    // Properties / Methods for retaining back buffer from keyframe
+    override fun retainBackBufferFromKeyframe(): Boolean {
+        return delegate.retainBackBufferFromKeyframe()
+    }
+    override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean {
+        return delegate.retainBackBufferFromKeyframe(playerId)
+    }
 
     override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
         return delegate.shouldContinueLoading(parameters)
