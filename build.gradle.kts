@@ -21,6 +21,7 @@ allprojects {
             force("androidx.media3:media3-extractor:1.5.1")
             force("androidx.media3:media3-container:1.5.1")
             force("androidx.media3:media3-database:1.5.1")
+            force("androidx.media3:media3-datasource-cronet:1.5.1")
         }
     }
 }

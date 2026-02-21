@@ -8,7 +8,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        minSdk = 21
+        minSdk = 30
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -38,6 +38,9 @@ dependencies {
     // FFmpeg extension for software decoding of AC3, EAC3, DTS, TrueHD, etc.
     // Pre-built Media3 FFmpeg decoder from Jellyfin (Maven Central)
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.6.1+1")
+
+    // Google Play Services Cronet (HTTP/2 + QUIC/HTTP3 transport)
+    implementation(libs.play.services.cronet)
 
     // Kotlinx Coroutines
     api(libs.kotlinx.coroutines.core)
