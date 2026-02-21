@@ -65,17 +65,24 @@ object PlayerConfigFactory {
             .setPreferredAudioLanguage("en")
             .apply {
                 // Set bitrate and resolution constraints based on device capabilities
-                val (maxWidth, maxHeight) = capabilities.maxResolution
-                setMaxVideoSize(maxWidth, maxHeight)
+                if (isCellular) {
+                    // Capping at 1Mbps because actual throughput is restricted to ~1.5Mbps
+                    setMaxVideoSize(854, 480)
+                    setMaxVideoBitrate(1_000_000) // 1 Mbps
+                    setForceLowestBitrate(true)
+                } else {
+                    val (maxWidth, maxHeight) = capabilities.maxResolution
+                    setMaxVideoSize(maxWidth, maxHeight)
 
-                val maxBitrate = when (capabilities.deviceType) {
-                    DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                    DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                    DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                    DeviceType.GENERIC_TV -> 10_000_000
-                    DeviceType.GENERIC_MOBILE -> 50_000_000 // 50Mbps for high-end mobile
+                    val maxBitrate = when (capabilities.deviceType) {
+                        DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                        DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                        DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                        DeviceType.GENERIC_TV -> 10_000_000
+                        DeviceType.GENERIC_MOBILE -> 20_000_000 
+                    }
+                    setMaxVideoBitrate(maxBitrate)
                 }
-                setMaxVideoBitrate(maxBitrate)
 
                 // Prioritize hardware-accelerated codecs based on device capabilities
                 if (capabilities.preferredCodecs.isNotEmpty()) {
