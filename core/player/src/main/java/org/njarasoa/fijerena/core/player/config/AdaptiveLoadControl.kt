@@ -51,12 +51,11 @@ class AdaptiveLoadControl(
         val rebuffer: Int
         val backBuffer: Int
         val retainKeyframe: Boolean
-        val prioritizeTime = !isWifi
 
         if (isLive) {
-            // Live TV: Prioritize fast startup but ensure enough buffer for stability
-            minBuffer = 15_000
-            maxBuffer = 30_000
+            // Live TV: Fast startup, reasonable buffer for stability
+            minBuffer = 30_000
+            maxBuffer = 60_000
             playback = 1_000
             rebuffer = 5_000
             backBuffer = 0
@@ -82,7 +81,7 @@ class AdaptiveLoadControl(
             .setAllocator(sharedAllocator)
             .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
             .setBackBuffer(backBuffer, retainKeyframe)
-            .setPrioritizeTimeOverSizeThresholds(prioritizeTime)
+            .setPrioritizeTimeOverSizeThresholds(true)
             .build()
     }
 

@@ -76,7 +76,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private var pendingRetry: Runnable? = null
 
     private var adaptiveLoadControl: AdaptiveLoadControl? = null
+    private var bandwidthMeter: androidx.media3.exoplayer.upstream.DefaultBandwidthMeter? = null
     private var serviceScope: CoroutineScope? = null
+    private var currentContentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD
 
     override fun onCreate() {
         super.onCreate()
@@ -98,6 +100,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {
+        currentContentType = contentType
         val ffmpegAvailable = FfmpegLibrary.isAvailable()
         Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
 
@@ -127,7 +130,7 @@ class StreamingPlaybackService : MediaSessionService() {
                     out
                 )
             }
-        }.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        }.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
          .setEnableAudioFloatOutput(true)
 
         val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
@@ -141,8 +144,14 @@ class StreamingPlaybackService : MediaSessionService() {
         )
         adaptiveLoadControl = loadControl
 
+        val meter = androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.Builder(this)
+            .setInitialBitrateEstimate(50_000_000) // 50 Mbps initial estimate
+            .build()
+        bandwidthMeter = meter
+
         val player = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)
             .setLoadControl(loadControl)
+            .setBandwidthMeter(meter)
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -195,16 +204,6 @@ class StreamingPlaybackService : MediaSessionService() {
         player.addAnalyticsListener(analyticsListener!!)
     }
 
-    fun setContentType(contentType: PlayerConfigFactory.ContentType) {
-        mediaSession?.run {
-            player.removeListener(playerListener!!)
-            player.release()
-            release()
-        }
-        mediaSession = null
-        initializePlayer(contentType)
-    }
-
     fun setPositionSaveListener(listener: (position: Long, duration: Long) -> Unit) {
         onPositionSaveListener = listener
     }
@@ -222,22 +221,30 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
 
-        // Dynamically update content type for AdaptiveLoadControl
+        // Dynamically update content type for AdaptiveLoadControl without resetting the player
         val contentType = if (metadata.isLive) 
             PlayerConfigFactory.ContentType.LIVE_TV 
         else 
             PlayerConfigFactory.ContentType.VOD
         
-        // Only re-initialize if type changed significantly, or just update the flag
-        // For simplicity and since setContentType releases player, let's just use it
-        // but it might be heavy. Let's check if we can just update the flag in loadControl.
-        setContentType(contentType)
+        if (contentType != currentContentType) {
+            currentContentType = contentType
+            adaptiveLoadControl?.updateForContentType(contentType)
+        }
+
+        // Re-apply track selector parameters to ensure network-aware caps are enforced
+        (player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector)?.let { selector ->
+            val params = PlayerConfigFactory.createTrackSelector(this).parameters
+            Log.i(TAG, "Setting track selector parameters: maxVideoBitrate=${params.maxVideoBitrate}, forceLowestBitrate=${params.forceLowestBitrate}")
+            selector.parameters = params
+        }
 
         val mediaSource = StreamingMediaSourceFactory.createMediaSource(
             context = this,
             streamUrl = metadata.streamUrl,
             headers = metadata.headers,
             isLive = metadata.isLive,
+            transferListener = bandwidthMeter,
             onRetry = { _streamRetryCount.value++ }
         )
 
@@ -275,6 +282,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 streamUrl = metadata.streamUrl,
                 headers = metadata.headers,
                 isLive = metadata.isLive,
+                transferListener = bandwidthMeter,
                 onRetry = { _streamRetryCount.value++ }
             )
 
@@ -517,6 +525,19 @@ class StreamingPlaybackService : MediaSessionService() {
             updatePlaybackState()
         }
 
+        override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+            Log.i("StreamingPlaybackService", "onTracksChanged: ${tracks.groups.size} groups")
+            for (group in tracks.groups) {
+                if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
+                    Log.i("StreamingPlaybackService", "Video Group: selected=${group.isSelected}, length=${group.length}")
+                    for (i in 0 until group.length) {
+                        val format = group.getTrackFormat(i)
+                        Log.i("StreamingPlaybackService", "  Track $i: ${format.width}x${format.height}, bitrate=${format.bitrate}, isSelected=${group.isTrackSelected(i)}")
+                    }
+                }
+            }
+        }
+
         override fun onPlayerError(error: PlaybackException) {
             isInErrorState = true
             val errorMessage = parsePlaybackError(error)
@@ -679,6 +700,9 @@ class StreamingPlaybackService : MediaSessionService() {
             totalBytesLoaded: Long,
             bitrateEstimate: Long
         ) {
+            if (bitrateEstimate > 0) {
+                Log.d("StreamingPlaybackService", "Bandwidth Estimate: ${bitrateEstimate / 1000} Kbps")
+            }
             onBandwidthUpdate(bitrateEstimate)
         }
 

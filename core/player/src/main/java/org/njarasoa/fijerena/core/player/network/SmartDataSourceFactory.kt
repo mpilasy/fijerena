@@ -19,7 +19,8 @@ import java.util.concurrent.TimeUnit
  */
 class SmartDataSourceFactory(
     private val userAgent: String,
-    private val defaultRequestProperties: Map<String, String> = emptyMap()
+    private val defaultRequestProperties: Map<String, String> = emptyMap(),
+    private val transferListener: androidx.media3.datasource.TransferListener? = null
 ) : DataSource.Factory {
 
     private val dnsWithFallback = object : Dns {
@@ -42,9 +43,10 @@ class SmartDataSourceFactory(
 
     private val okHttpClient by lazy {
         OkHttpClient.Builder()
+            .dns(dnsWithFallback)
             .connectTimeout(NetworkBufferProfile.CELLULAR_CONNECT_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
             .readTimeout(NetworkBufferProfile.CELLULAR_READ_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
-            .connectionPool(ConnectionPool(10, 5, TimeUnit.MINUTES))
+            .connectionPool(ConnectionPool(20, 5, TimeUnit.MINUTES))
             .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)
@@ -56,6 +58,7 @@ class SmartDataSourceFactory(
         return OkHttpDataSource.Factory(okHttpClient)
             .setUserAgent(userAgent)
             .setDefaultRequestProperties(defaultRequestProperties)
+            .setTransferListener(transferListener)
             .createDataSource()
     }
 }

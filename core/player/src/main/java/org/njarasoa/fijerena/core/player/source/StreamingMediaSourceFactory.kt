@@ -20,16 +20,29 @@ object StreamingMediaSourceFactory {
         streamUrl: String,
         headers: Map<String, String> = emptyMap(),
         isLive: Boolean = false,
+        transferListener: androidx.media3.datasource.TransferListener? = null,
         onRetry: (() -> Unit)? = null
     ): MediaSource {
+        android.util.Log.i("StreamingMediaSourceFactory", "Creating MediaSource for: $streamUrl")
+        
+        val mimeType = when {
+            streamUrl.contains(".m3u8") -> androidx.media3.common.MimeTypes.APPLICATION_M3U8
+            streamUrl.contains(".mpd") -> androidx.media3.common.MimeTypes.APPLICATION_MPD
+            streamUrl.contains(".ism") -> androidx.media3.common.MimeTypes.APPLICATION_SS
+            else -> null // Let DefaultMediaSourceFactory detect for progressive/TS
+        }
+
         val mediaItem = MediaItem.Builder()
             .setUri(streamUrl)
+            .apply {
+                if (mimeType != null) setMimeType(mimeType)
+            }
             .build()
 
         val userAgent = "FijerenaPlayer/1.0 (Android)"
 
         // Use our SmartDataSourceFactory that delegates to OkHttp (Cellular) or DefaultHttp (WiFi)
-        val httpDataSourceFactory = SmartDataSourceFactory(userAgent, headers)
+        val httpDataSourceFactory = SmartDataSourceFactory(userAgent, headers, transferListener)
 
         // Wrap in DefaultDataSource.Factory to support file://, asset://, etc if needed
         val dataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
