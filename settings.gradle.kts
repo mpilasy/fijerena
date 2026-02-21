@@ -11,7 +11,6 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
-// foojay-resolver removed: toolchain auto-download disabled, local JDK detected automatically
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {

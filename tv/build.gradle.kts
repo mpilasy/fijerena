@@ -7,14 +7,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// Override Kotlin/AGP auto-configured JetBrains JDK requirement to accept any JDK 21
-kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-        vendor.set(JvmVendorSpec.matching(""))
-    }
-}
-
 android {
     namespace = "org.njarasoa.fijerena"
     compileSdk = 36
