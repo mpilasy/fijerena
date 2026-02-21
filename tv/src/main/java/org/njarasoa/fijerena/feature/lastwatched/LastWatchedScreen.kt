@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -195,7 +196,7 @@ private fun WatchedItemCard(
                     fallbackLetter = item.itemName.firstOrNull(),
                     contentType = when (item.contentType) {
                         "MOVIES" -> ThumbnailContentType.MOVIE
-                        "TV_SHOWS" -> ThumbnailContentType.SERIES
+                        "TV_SHOWS" -> ThumbnailContentType.TV_SHOW
                         else -> ThumbnailContentType.DEFAULT
                     },
                     modifier = Modifier.fillMaxSize()

@@ -104,9 +104,11 @@ import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.CornerRadius
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import org.njarasoa.fijerena.ui.theme.scaled
 import java.text.SimpleDateFormat
 import java.util.Locale
 

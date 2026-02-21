@@ -1,15 +1,20 @@
 package org.njarasoa.fijerena.feature.lastwatched
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.WatchedItem
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -71,9 +76,9 @@ fun MobileLastWatchedScreen(
                             // Placeholder icon or thumbnail could go here
                             Icon(
                                 imageVector = when (item.contentType) {
-                                    "MOVIES" -> androidx.compose.material.icons.Icons.Default.Movie
-                                    "TV_SHOWS" -> androidx.compose.material.icons.Icons.Default.Tv
-                                    else -> androidx.compose.material.icons.Icons.Default.LiveTv
+                                    "MOVIES" -> Icons.Default.Movie
+                                    "TV_SHOWS" -> Icons.Default.Tv
+                                    else -> Icons.Default.LiveTv
                                 },
                                 contentDescription = null
                             )
