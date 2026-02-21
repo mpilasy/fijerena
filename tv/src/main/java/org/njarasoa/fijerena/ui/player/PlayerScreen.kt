@@ -90,6 +90,7 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -859,7 +860,7 @@ private fun AudioTrackSelectorDialog(
                                     if (isSelected) Modifier.border(
                                         TvDimensions.borderFocused,
                                         MaterialTheme.colorScheme.primary,
-                                        RoundedCornerShape(0.dp)
+                                        RoundedCornerShape(CinemaCornerRadius.small)
                                     ) else Modifier
                                 ),
                             colors = androidx.tv.material3.ButtonDefaults.colors(
@@ -1005,7 +1006,7 @@ private fun SubtitleSelectorDialog(
                             if (isOffSelected) Modifier.border(
                                 TvDimensions.borderFocused,
                                 MaterialTheme.colorScheme.primary,
-                                RoundedCornerShape(0.dp)
+                                RoundedCornerShape(CinemaCornerRadius.small)
                             ) else Modifier
                         ),
                     colors = androidx.tv.material3.ButtonDefaults.colors(
@@ -1065,7 +1066,7 @@ private fun SubtitleSelectorDialog(
                                     if (isSelected) Modifier.border(
                                         TvDimensions.borderFocused,
                                         MaterialTheme.colorScheme.primary,
-                                        RoundedCornerShape(0.dp)
+                                        RoundedCornerShape(CinemaCornerRadius.small)
                                     ) else Modifier
                                 ),
                             colors = androidx.tv.material3.ButtonDefaults.colors(
@@ -1211,7 +1212,7 @@ private fun QualitySelectorDialog(
                             if (isAutoSelected) Modifier.border(
                                 TvDimensions.borderFocused,
                                 MaterialTheme.colorScheme.primary,
-                                RoundedCornerShape(0.dp)
+                                RoundedCornerShape(CinemaCornerRadius.small)
                             ) else Modifier
                         ),
                     colors = androidx.tv.material3.ButtonDefaults.colors(
@@ -1278,7 +1279,7 @@ private fun QualitySelectorDialog(
                                     if (isSelected) Modifier.border(
                                         TvDimensions.borderFocused,
                                         MaterialTheme.colorScheme.primary,
-                                        RoundedCornerShape(0.dp)
+                                        RoundedCornerShape(CinemaCornerRadius.small)
                                     ) else Modifier
                                 ),
                             colors = androidx.tv.material3.ButtonDefaults.colors(
