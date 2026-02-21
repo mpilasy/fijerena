@@ -133,13 +133,7 @@ fun TvPlayerScreen(
 
     // Configure player buffer profile based on content type
     LaunchedEffect(contentType) {
-        val playerContentType = when (contentType) {
-            "LIVE_TV" -> PlayerConfigFactory.ContentType.LIVE_TV
-            "MOVIES", "TV_SHOWS" -> PlayerConfigFactory.ContentType.VOD
-            else -> PlayerConfigFactory.ContentType.VOD
-        }
-        println("TvPlayerScreen: Configuring player for $playerContentType")
-        StreamingPlaybackService.getInstance()?.setContentType(playerContentType)
+        // Handled automatically in playStream
     }
 
     // Set up auto-save listener for playback position

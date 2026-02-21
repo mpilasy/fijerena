@@ -55,10 +55,31 @@ object StreamingMediaSourceFactory {
 
         // For HLS streams, we create the source directly to ensure optimal settings
         if (mimeType == androidx.media3.common.MimeTypes.APPLICATION_M3U8) {
+            val isCellular = org.njarasoa.fijerena.core.player.network.NetworkMonitor.currentNetworkType == org.njarasoa.fijerena.core.player.config.NetworkType.CELLULAR
+            
+            // Only use the aggressive/forgiving extractor on cellular where signal/throttling causes issues
+            val extractorFactory = if (isCellular) {
+                androidx.media3.exoplayer.hls.DefaultHlsExtractorFactory(
+                    /* masterPlaylistPacketPayloadType = */ androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES,
+                    /* exposeCaptionFormats = */ true
+                )
+            } else {
+                androidx.media3.exoplayer.hls.DefaultHlsExtractorFactory()
+            }
+
             return androidx.media3.exoplayer.hls.HlsMediaSource.Factory(dataSourceFactory)
+                .setExtractorFactory(extractorFactory)
                 .setAllowChunklessPreparation(true)
                 .setLoadErrorHandlingPolicy(errorPolicy)
-                .createMediaSource(mediaItem)
+                .createMediaSource(
+                    mediaItem.buildUpon()
+                        .setLiveConfiguration(
+                            androidx.media3.common.MediaItem.LiveConfiguration.Builder()
+                                .setTargetOffsetMs(10_000) // 10s from live edge
+                                .build()
+                        )
+                        .build()
+                )
         }
 
         return factory.createMediaSource(mediaItem)

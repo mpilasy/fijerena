@@ -10,7 +10,6 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
@@ -101,57 +100,16 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {
         currentContentType = contentType
-        val ffmpegAvailable = FfmpegLibrary.isAvailable()
-        Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
-
-        // Custom RenderersFactory to bypass VSyncSamplerV33 ClassNotFoundException on Android 9
-        val renderersFactory = object : DefaultRenderersFactory(this) {
-            override fun buildVideoRenderers(
-                context: Context,
-                extensionRendererMode: Int,
-                mediaCodecSelector: MediaCodecSelector,
-                enableDecoderFallback: Boolean,
-                eventHandler: Handler,
-                eventListener: VideoRendererEventListener,
-                allowedVideoJoiningTimeMs: Long,
-                out: ArrayList<Renderer>
-            ) {
-                // Let super build it, but we've verified the issue is specifically triggered
-                // by the VSyncSamplerV33 which we're sidestepping by staying on 1.9.1 
-                // but implementing all required interfaces.
-                super.buildVideoRenderers(
-                    context,
-                    extensionRendererMode,
-                    mediaCodecSelector,
-                    enableDecoderFallback,
-                    eventHandler,
-                    eventListener,
-                    allowedVideoJoiningTimeMs,
-                    out
-                )
-            }
-        }.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
-         .setEnableAudioFloatOutput(true)
-
-        val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
-        val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
-        val cellularVodMultiplier = prefs.getFloat("cellular_vod_multiplier", 1.0f)
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
 
         val loadControl = AdaptiveLoadControl(
-            contentType = contentType,
-            cellularLiveMultiplier = cellularLiveMultiplier,
-            cellularVodMultiplier = cellularVodMultiplier
+            contentType = contentType
         )
         adaptiveLoadControl = loadControl
 
-        val meter = androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.Builder(this)
-            .setInitialBitrateEstimate(50_000_000) // 50 Mbps initial estimate
-            .build()
-        bandwidthMeter = meter
-
         val player = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)
             .setLoadControl(loadControl)
-            .setBandwidthMeter(meter)
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -209,6 +167,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     fun playStream(metadata: PlayerMetadata) {
+        Log.i("!!!FIJERENA!!!", "PLAYING STREAM: ${metadata.streamUrl}")
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         cancelPendingRetry()
         playerListener?.resetErrorState()
@@ -221,7 +180,7 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
 
-        // Dynamically update content type for AdaptiveLoadControl without resetting the player
+        // Update content type without player reset
         val contentType = if (metadata.isLive) 
             PlayerConfigFactory.ContentType.LIVE_TV 
         else 
@@ -232,19 +191,11 @@ class StreamingPlaybackService : MediaSessionService() {
             adaptiveLoadControl?.updateForContentType(contentType)
         }
 
-        // Re-apply track selector parameters to ensure network-aware caps are enforced
-        (player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector)?.let { selector ->
-            val params = PlayerConfigFactory.createTrackSelector(this).parameters
-            Log.i(TAG, "Setting track selector parameters: maxVideoBitrate=${params.maxVideoBitrate}, forceLowestBitrate=${params.forceLowestBitrate}")
-            selector.parameters = params
-        }
-
         val mediaSource = StreamingMediaSourceFactory.createMediaSource(
             context = this,
             streamUrl = metadata.streamUrl,
             headers = metadata.headers,
             isLive = metadata.isLive,
-            transferListener = bandwidthMeter,
             onRetry = { _streamRetryCount.value++ }
         )
 
@@ -282,7 +233,6 @@ class StreamingPlaybackService : MediaSessionService() {
                 streamUrl = metadata.streamUrl,
                 headers = metadata.headers,
                 isLive = metadata.isLive,
-                transferListener = bandwidthMeter,
                 onRetry = { _streamRetryCount.value++ }
             )
 

@@ -23,7 +23,7 @@ class AdaptiveLoadControl(
     private val cellularVodMultiplier: Float = 1.0f
 ) : LoadControl {
 
-    private val sharedAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
+    private val sharedAllocator = DefaultAllocator(true, 1024 * 1024)
 
     @Volatile
     private var currentNetworkType: NetworkType = NetworkMonitor.currentNetworkType
@@ -43,31 +43,32 @@ class AdaptiveLoadControl(
 
     private fun buildDelegate(networkType: NetworkType): DefaultLoadControl {
         val isWifi = networkType != NetworkType.CELLULAR
-        val isLive = contentType == PlayerConfigFactory.ContentType.LIVE_TV
-
-        val minBuffer: Int
-        val maxBuffer: Int
-        val playback: Int
-        val rebuffer: Int
-
-        if (isLive) {
-            // Live TV: Fast startup, minimal buffer to prevent "hanging" on slow streams
-            minBuffer = 5_000
-            maxBuffer = 15_000
-            playback = 500
-            rebuffer = 1_000
+        
+        return if (isWifi) {
+            // Standard proven settings for WiFi/Stable connections
+            DefaultLoadControl.Builder()
+                .setAllocator(sharedAllocator)
+                .setBufferDurationsMs(
+                    15_000, // minBufferMs
+                    50_000, // maxBufferMs
+                    2_500,  // bufferForPlaybackMs
+                    5_000   // bufferForPlaybackAfterRebufferMs
+                )
+                .setBackBuffer(10_000, true)
+                .build()
         } else {
-            minBuffer = 15_000
-            maxBuffer = 50_000
-            playback = 2_500
-            rebuffer = 5_000
+            // Aggressive high-throughput settings for cellular
+            DefaultLoadControl.Builder()
+                .setAllocator(sharedAllocator)
+                .setBufferDurationsMs(
+                    30_000, // minBuffer
+                    60_000, // maxBuffer
+                    5_000,  // playback
+                    5_000   // rebuffer
+                )
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .build()
         }
-
-        return DefaultLoadControl.Builder()
-            .setAllocator(sharedAllocator)
-            .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
     }
 
     // ── LoadControl implementation (FULL DELEGATION TO SATISFY 1.5.1 / 1.7.1 RUNTIME) ──

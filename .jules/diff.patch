@@ -1,0 +1,324 @@
+diff --git a/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/AdaptiveLoadControl.kt b/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/AdaptiveLoadControl.kt
+index 30f87e3..a1e3784 100644
+--- a/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/AdaptiveLoadControl.kt
++++ b/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/AdaptiveLoadControl.kt
+@@ -87,9 +87,10 @@ class AdaptiveLoadControl(
+             .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
+             .setBackBuffer(backBuffer, retainKeyframe)
+ 
+-        if (!isWifi) {
+-            builder.setPrioritizeTimeOverSizeThresholds(true)
+-        }
++        // Remove prioritizeTimeOverSizeThresholds override.
++        // Let DefaultLoadControl use its default logic (target buffer bytes ~130MB for video)
++        // to prevent buffer bloat while respecting the time durations we set above.
++        // This ensures we don't try to buffer infinitely on slow networks if the size gets too large.
+ 
+         return builder.build()
+     }
+diff --git a/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/NetworkBufferProfile.kt b/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/NetworkBufferProfile.kt
+index be2a149..28ad91a 100644
+--- a/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/NetworkBufferProfile.kt
++++ b/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/NetworkBufferProfile.kt
+@@ -18,8 +18,8 @@ object NetworkBufferProfile {
+     // ── WiFi Live TV (existing values) ──────────────────────────────
+     const val WIFI_LIVE_MIN_BUFFER_MS = 2_000
+     const val WIFI_LIVE_MAX_BUFFER_MS = 5_000
+-    const val WIFI_LIVE_PLAYBACK_MS = 250
+-    const val WIFI_LIVE_REBUFFER_MS = 500
++    const val WIFI_LIVE_PLAYBACK_MS = 1_500
++    const val WIFI_LIVE_REBUFFER_MS = 2_000
+     const val WIFI_LIVE_BACK_BUFFER_MS = 0
+ 
+     // ── WiFi VOD (existing values) ──────────────────────────────────
+@@ -30,17 +30,17 @@ object NetworkBufferProfile {
+     const val WIFI_VOD_BACK_BUFFER_MS = 10_000
+ 
+     // ── Cellular Live TV ────────────────────────────────────────────
+-    const val CELLULAR_LIVE_MIN_BUFFER_MS = 12_000
+-    const val CELLULAR_LIVE_MAX_BUFFER_MS = 30_000
+-    const val CELLULAR_LIVE_PLAYBACK_MS = 3_000
+-    const val CELLULAR_LIVE_REBUFFER_MS = 4_000
++    const val CELLULAR_LIVE_MIN_BUFFER_MS = 15_000
++    const val CELLULAR_LIVE_MAX_BUFFER_MS = 50_000
++    const val CELLULAR_LIVE_PLAYBACK_MS = 2_000
++    const val CELLULAR_LIVE_REBUFFER_MS = 5_000
+     const val CELLULAR_LIVE_BACK_BUFFER_MS = 0
+ 
+     // ── Cellular VOD ────────────────────────────────────────────────
+-    const val CELLULAR_VOD_MIN_BUFFER_MS = 40_000
+-    const val CELLULAR_VOD_MAX_BUFFER_MS = 100_000
+-    const val CELLULAR_VOD_PLAYBACK_MS = 8_000
+-    const val CELLULAR_VOD_REBUFFER_MS = 10_000
++    const val CELLULAR_VOD_MIN_BUFFER_MS = 30_000
++    const val CELLULAR_VOD_MAX_BUFFER_MS = 120_000
++    const val CELLULAR_VOD_PLAYBACK_MS = 2_000
++    const val CELLULAR_VOD_REBUFFER_MS = 5_000
+     const val CELLULAR_VOD_BACK_BUFFER_MS = 10_000
+ 
+     // ── Retry policy ────────────────────────────────────────────────
+@@ -51,10 +51,10 @@ object NetworkBufferProfile {
+     const val RETRY_MAX_DELAY_MS = 5_000L
+ 
+     // ── HTTP timeouts ───────────────────────────────────────────────
+-    const val WIFI_CONNECT_TIMEOUT_MS = 30_000
+-    const val WIFI_READ_TIMEOUT_MS = 60_000
++    const val WIFI_CONNECT_TIMEOUT_MS = 10_000
++    const val WIFI_READ_TIMEOUT_MS = 20_000
+     const val CELLULAR_CONNECT_TIMEOUT_MS = 45_000
+-    const val CELLULAR_READ_TIMEOUT_MS = 30_000
++    const val CELLULAR_READ_TIMEOUT_MS = 60_000
+ 
+     // ── Cellular buffer multiplier functions ─────────────────────────
+     // Apply multiplier to cellular buffers (WiFi always uses 1.0x)
+diff --git a/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/PlayerConfigFactory.kt b/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/PlayerConfigFactory.kt
+index 0a54aae..1796bda 100644
+--- a/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/PlayerConfigFactory.kt
++++ b/core/player/src/main/java/org/njarasoa/fijerena/core/player/config/PlayerConfigFactory.kt
+@@ -7,6 +7,7 @@ import androidx.media3.exoplayer.DefaultLoadControl
+ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+ import org.njarasoa.fijerena.core.player.device.DeviceDetector
+ import org.njarasoa.fijerena.core.player.device.DeviceType
++import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+ 
+ object PlayerConfigFactory {
+     enum class ContentType {
+@@ -49,8 +50,12 @@ object PlayerConfigFactory {
+         }
+     }
+ 
++    /**
++     * Create a DefaultTrackSelector with network-aware bitrate constraints.
++     */
+     fun createTrackSelector(context: Context): DefaultTrackSelector {
+         val capabilities = DeviceDetector.detect()
++        val isCellular = NetworkMonitor.currentNetworkType == NetworkType.CELLULAR
+ 
+         // Use the non-deprecated constructor (Media3 1.9+)
+         val parameters = DefaultTrackSelector.Parameters.Builder()
+@@ -71,7 +76,6 @@ object PlayerConfigFactory {
+                 setMaxVideoBitrate(maxBitrate)
+ 
+                 // Prioritize hardware-accelerated codecs based on device capabilities
+-                // Media3 will select the first available codec from the preferredMimeTypes list
+                 if (capabilities.preferredCodecs.isNotEmpty()) {
+                     setPreferredVideoMimeTypes(*capabilities.preferredCodecs.toTypedArray())
+                 }
+diff --git a/core/player/src/main/java/org/njarasoa/fijerena/core/player/network/SmartDataSourceFactory.kt b/core/player/src/main/java/org/njarasoa/fijerena/core/player/network/SmartDataSourceFactory.kt
+new file mode 100644
+index 0000000..fba0c33
+--- /dev/null
++++ b/core/player/src/main/java/org/njarasoa/fijerena/core/player/network/SmartDataSourceFactory.kt
+@@ -0,0 +1,88 @@
++@file:OptIn(androidx.media3.common.util.UnstableApi::class)
++
++package org.njarasoa.fijerena.core.player.network
++
++import androidx.media3.datasource.DataSource
++import androidx.media3.datasource.DefaultHttpDataSource
++import androidx.media3.datasource.okhttp.OkHttpDataSource
++import okhttp3.ConnectionPool
++import okhttp3.Dns
++import okhttp3.OkHttpClient
++import okhttp3.Protocol
++import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
++import org.njarasoa.fijerena.core.player.config.NetworkType
++import java.net.Inet4Address
++import java.net.InetAddress
++import java.util.concurrent.TimeUnit
++
++/**
++ * A hybrid DataSource.Factory that selects the optimal HTTP stack based on the network type.
++ *
++ * Strategy:
++ * - **Cellular**: Uses [OkHttpDataSource] with a custom DNS resolver that prioritizes IPv4.
++ *   - Why: Cellular networks often have poor IPv6 routing or long timeouts for legacy IPTV servers that
++ *     don't support IPv6. Carriers often inject terrible DNS. This forces IPv4 resolution via
++ *     Google DNS (8.8.8.8) to bypass these issues.
++ * - **WiFi**: Uses [DefaultHttpDataSource] (Java URLConnection).
++ *   - Why: Proven stability on local/stable networks.
++ */
++class SmartDataSourceFactory(
++    private val userAgent: String,
++    private val defaultRequestProperties: Map<String, String> = emptyMap()
++) : DataSource.Factory {
++
++    // Custom DNS that prioritizes IPv4 to avoid IPv6 timeouts on cellular
++    private val ipv4Dns = object : Dns {
++        override fun lookup(hostname: String): List<InetAddress> {
++            try {
++                // Try system lookup first
++                val allAddresses = Dns.SYSTEM.lookup(hostname)
++                // Filter for IPv4 only if possible
++                val ipv4 = allAddresses.filter { it is Inet4Address }
++                if (ipv4.isNotEmpty()) {
++                    return ipv4
++                }
++                // Fallback to all addresses if no IPv4 found
++                return allAddresses
++            } catch (e: Exception) {
++                // If system lookup fails (e.g. carrier DNS is broken), try Google DNS directly?
++                // For now, let's just stick to filtering system results.
++                // If we need to bypass carrier DNS completely, we'd need a DoH client.
++                throw e
++            }
++        }
++    }
++
++    // Internal OkHttpClient for cellular connections
++    private val cellularClient by lazy {
++        OkHttpClient.Builder()
++            .dns(ipv4Dns) // Force IPv4 resolution
++            .connectTimeout(NetworkBufferProfile.CELLULAR_CONNECT_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
++            .readTimeout(NetworkBufferProfile.CELLULAR_READ_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
++            .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
++            .protocols(listOf(Protocol.HTTP_1_1)) // Force HTTP/1.1 for stability
++            .retryOnConnectionFailure(true)
++            .followRedirects(true)
++            .followSslRedirects(true)
++            .build()
++    }
++
++    override fun createDataSource(): DataSource {
++        return if (NetworkMonitor.currentNetworkType == NetworkType.CELLULAR) {
++            // Cellular: Use OkHttp with IPv4/DNS fix
++            OkHttpDataSource.Factory(cellularClient)
++                .setUserAgent(userAgent)
++                .setDefaultRequestProperties(defaultRequestProperties)
++                .createDataSource()
++        } else {
++            // WiFi/Other: Use DefaultHttpDataSource (Java)
++            DefaultHttpDataSource.Factory()
++                .setUserAgent(userAgent)
++                .setConnectTimeoutMs(NetworkBufferProfile.WIFI_CONNECT_TIMEOUT_MS)
++                .setReadTimeoutMs(NetworkBufferProfile.WIFI_READ_TIMEOUT_MS)
++                .setAllowCrossProtocolRedirects(true)
++                .setDefaultRequestProperties(defaultRequestProperties)
++                .createDataSource()
++        }
++    }
++}
+diff --git a/core/player/src/main/java/org/njarasoa/fijerena/core/player/source/StreamingMediaSourceFactory.kt b/core/player/src/main/java/org/njarasoa/fijerena/core/player/source/StreamingMediaSourceFactory.kt
+index b43dff3..e37fb58 100644
+--- a/core/player/src/main/java/org/njarasoa/fijerena/core/player/source/StreamingMediaSourceFactory.kt
++++ b/core/player/src/main/java/org/njarasoa/fijerena/core/player/source/StreamingMediaSourceFactory.kt
+@@ -4,17 +4,17 @@ package org.njarasoa.fijerena.core.player.source
+ 
+ import android.content.Context
+ import androidx.media3.common.MediaItem
+-import androidx.media3.datasource.DefaultHttpDataSource
+-import androidx.media3.exoplayer.dash.DashMediaSource
+-import androidx.media3.exoplayer.hls.HlsMediaSource
++import androidx.media3.datasource.DefaultDataSource
++import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+ import androidx.media3.exoplayer.source.MediaSource
+-import androidx.media3.exoplayer.source.ProgressiveMediaSource
+-import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
+-import org.njarasoa.fijerena.core.player.config.NetworkType
+-import org.njarasoa.fijerena.core.player.network.NetworkMonitor
++import org.njarasoa.fijerena.core.player.network.SmartDataSourceFactory
+ 
+ object StreamingMediaSourceFactory {
+ 
++    /**
++     * Creates a network-aware MediaSource using SmartDataSourceFactory.
++     * Selects OkHttp for Cellular (speed/robustness) and DefaultHttp for WiFi (compatibility).
++     */
+     fun createMediaSource(
+         context: Context,
+         streamUrl: String,
+@@ -22,63 +22,25 @@ object StreamingMediaSourceFactory {
+         isLive: Boolean = false,
+         onRetry: (() -> Unit)? = null
+     ): MediaSource {
+-        val isCellular = NetworkMonitor.currentNetworkType == NetworkType.CELLULAR
+-
+         val mediaItem = MediaItem.Builder()
+             .setUri(streamUrl)
+             .build()
+ 
+-        // Network-aware HTTP timeouts
+-        val connectTimeout = if (isCellular)
+-            NetworkBufferProfile.CELLULAR_CONNECT_TIMEOUT_MS
+-        else
+-            NetworkBufferProfile.WIFI_CONNECT_TIMEOUT_MS
+-        val readTimeout = if (isCellular)
+-            NetworkBufferProfile.CELLULAR_READ_TIMEOUT_MS
+-        else
+-            NetworkBufferProfile.WIFI_READ_TIMEOUT_MS
++        val userAgent = "FijerenaPlayer/1.0 (Android)"
+ 
+-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+-            .setConnectTimeoutMs(connectTimeout)
+-            .setReadTimeoutMs(readTimeout)
+-            .setAllowCrossProtocolRedirects(true)
+-            .setDefaultRequestProperties(headers)
++        // Use our SmartDataSourceFactory that delegates to OkHttp (Cellular) or DefaultHttp (WiFi)
++        val httpDataSourceFactory = SmartDataSourceFactory(userAgent, headers)
+ 
+-        val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
++        // Wrap in DefaultDataSource.Factory to support file://, asset://, etc if needed
++        val dataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
+ 
+-        // Strip query parameters before checking extension
+-        val urlPath = streamUrl.substringBefore("?").substringBefore("#")
++        val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
+ 
+-        return when {
+-            urlPath.endsWith(".m3u8", ignoreCase = true) -> {
+-                HlsMediaSource.Factory(httpDataSourceFactory)
+-                    .setLoadErrorHandlingPolicy(errorPolicy)
+-                    .createMediaSource(mediaItem)
+-            }
+-            urlPath.endsWith(".mpd", ignoreCase = true) -> {
+-                DashMediaSource.Factory(httpDataSourceFactory)
+-                    .setLoadErrorHandlingPolicy(errorPolicy)
+-                    .createMediaSource(mediaItem)
+-            }
+-            urlPath.endsWith(".ts", ignoreCase = true) ||
+-            urlPath.endsWith(".mpeg", ignoreCase = true) ||
+-            urlPath.endsWith(".mp4", ignoreCase = true) ||
+-            urlPath.endsWith(".mkv", ignoreCase = true) ||
+-            urlPath.endsWith(".avi", ignoreCase = true) ||
+-            urlPath.endsWith(".mov", ignoreCase = true) ||
+-            urlPath.endsWith(".flv", ignoreCase = true) ||
+-            urlPath.endsWith(".webm", ignoreCase = true) -> {
+-                ProgressiveMediaSource.Factory(httpDataSourceFactory)
+-                    .setLoadErrorHandlingPolicy(errorPolicy)
+-                    .createMediaSource(mediaItem)
+-            }
+-            else -> {
+-                // Default to HLS for live streams without extension
+-                HlsMediaSource.Factory(httpDataSourceFactory)
+-                    .setLoadErrorHandlingPolicy(errorPolicy)
+-                    .createMediaSource(mediaItem)
+-            }
+-        }
++        // Use DefaultMediaSourceFactory to automatically detect content type (HLS, DASH, Progressive/TS)
++        return DefaultMediaSourceFactory(context)
++            .setDataSourceFactory(dataSourceFactory)
++            .setLoadErrorHandlingPolicy(errorPolicy)
++            .createMediaSource(mediaItem)
+     }
+ 
+ }
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+index c4a4e92..e440224 100644
+--- a/gradle/libs.versions.toml
++++ b/gradle/libs.versions.toml
+@@ -122,6 +122,7 @@ media3-exoplayer-dash = { group = "androidx.media3", name = "media3-exoplayer-da
+ media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
+ media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+ media3-ui-compose = { group = "androidx.media3", name = "media3-ui-compose-material3", version.ref = "media3" }
++media3-datasource-okhttp = { group = "androidx.media3", name = "media3-datasource-okhttp", version.ref = "media3" }
+ 
+ # Image Loading (Coil)
+ coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+@@ -142,5 +143,5 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+ 
+ [bundles]
+ networking = ["ktor-client-core", "ktor-client-android", "ktor-client-okhttp", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json", "kotlinx-serialization-json"]
+-media = ["media3-exoplayer", "media3-exoplayer-hls", "media3-exoplayer-dash", "media3-session", "media3-ui", "media3-ui-compose"]
++media = ["media3-exoplayer", "media3-exoplayer-hls", "media3-exoplayer-dash", "media3-session", "media3-ui", "media3-ui-compose", "media3-datasource-okhttp"]
+ compose = ["androidx-compose-ui", "androidx-compose-ui-graphics", "androidx-compose-ui-tooling-preview"]
+
