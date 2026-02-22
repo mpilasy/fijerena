@@ -32,8 +32,10 @@ class SettingsExportManager(private val context: Context) {
 
     companion object {
         private const val TAG = "SettingsExportManager"
-        private const val EXPORT_VERSION = 2
+        private const val EXPORT_VERSION = 3
         private const val KEY_FAVORITES = "favorites_v2"
+        private const val KEY_FAVORITE_CATEGORIES = "favorite_categories"
+        private const val KEY_FAVORITE_SHOWS = "favorite_shows"
     }
 
     private val json = Json {
@@ -49,7 +51,9 @@ class SettingsExportManager(private val context: Context) {
         val global: GlobalSettings = GlobalSettings(),
         val providers: List<ExportedProvider> = emptyList(),
         val epgSources: List<ExportedEpgSource> = emptyList(),
-        val providerFavorites: List<ProviderFavorites> = emptyList()
+        val providerFavorites: List<ProviderFavorites> = emptyList(),
+        val providerFavoriteCategories: List<ProviderFavoriteCategories> = emptyList(),
+        val providerFavoriteShows: List<ProviderFavoriteShows> = emptyList()
     )
 
     @Serializable
@@ -96,6 +100,36 @@ class SettingsExportManager(private val context: Context) {
         val contentType: String
     )
 
+    @Serializable
+    data class ProviderFavoriteCategories(
+        val providerName: String,
+        val providerUrl: String,
+        val favoriteCategories: List<ExportedFavoriteCategory> = emptyList()
+    )
+
+    @Serializable
+    data class ExportedFavoriteCategory(
+        val categoryId: String,
+        val categoryName: String,
+        val contentType: String
+    )
+
+    @Serializable
+    data class ProviderFavoriteShows(
+        val providerName: String,
+        val providerUrl: String,
+        val favoriteShows: List<ExportedFavoriteShow> = emptyList()
+    )
+
+    @Serializable
+    data class ExportedFavoriteShow(
+        val showId: String,
+        val showName: String,
+        val categoryId: String,
+        val contentType: String,
+        val thumbnailUrl: String? = null
+    )
+
     /**
      * Controls which sections of the export file to import.
      */
@@ -121,7 +155,9 @@ class SettingsExportManager(private val context: Context) {
         val hasConflicts: Boolean get() = conflictingProviders.isNotEmpty()
         val hasProviders: Boolean get() = settings.providers.isNotEmpty()
         val hasEpgSources: Boolean get() = settings.epgSources.isNotEmpty()
-        val hasFavorites: Boolean get() = settings.providerFavorites.isNotEmpty()
+        val hasFavorites: Boolean get() = settings.providerFavorites.isNotEmpty() ||
+            settings.providerFavoriteCategories.isNotEmpty() ||
+            settings.providerFavoriteShows.isNotEmpty()
     }
 
     /**
@@ -190,11 +226,67 @@ class SettingsExportManager(private val context: Context) {
             )
         }
 
+        // Export favorite categories per provider
+        val providerFavoriteCategories = allProviders.mapNotNull { entity ->
+            val cachePrefs = context.getSharedPreferences(
+                "media_cache_${entity.id}",
+                Context.MODE_PRIVATE
+            )
+            val favCatJson = cachePrefs.getString(KEY_FAVORITE_CATEGORIES, null) ?: return@mapNotNull null
+            val favCats = try {
+                json.decodeFromString<List<FavoriteCategoryItem>>(favCatJson)
+            } catch (e: Exception) {
+                return@mapNotNull null
+            }
+            if (favCats.isEmpty()) return@mapNotNull null
+            ProviderFavoriteCategories(
+                providerName = entity.name,
+                providerUrl = entity.url,
+                favoriteCategories = favCats.map { fav ->
+                    ExportedFavoriteCategory(
+                        categoryId = fav.categoryId,
+                        categoryName = fav.categoryName,
+                        contentType = fav.contentType
+                    )
+                }
+            )
+        }
+
+        // Export favorite shows per provider
+        val providerFavoriteShows = allProviders.mapNotNull { entity ->
+            val cachePrefs = context.getSharedPreferences(
+                "media_cache_${entity.id}",
+                Context.MODE_PRIVATE
+            )
+            val favShowJson = cachePrefs.getString(KEY_FAVORITE_SHOWS, null) ?: return@mapNotNull null
+            val favShows = try {
+                json.decodeFromString<List<FavoriteShowItem>>(favShowJson)
+            } catch (e: Exception) {
+                return@mapNotNull null
+            }
+            if (favShows.isEmpty()) return@mapNotNull null
+            ProviderFavoriteShows(
+                providerName = entity.name,
+                providerUrl = entity.url,
+                favoriteShows = favShows.map { fav ->
+                    ExportedFavoriteShow(
+                        showId = fav.showId,
+                        showName = fav.showName,
+                        categoryId = fav.categoryId,
+                        contentType = fav.contentType,
+                        thumbnailUrl = fav.thumbnailUrl
+                    )
+                }
+            )
+        }
+
         val exported = ExportedSettings(
             global = global,
             providers = providers,
             epgSources = epgSources,
-            providerFavorites = providerFavorites
+            providerFavorites = providerFavorites,
+            providerFavoriteCategories = providerFavoriteCategories,
+            providerFavoriteShows = providerFavoriteShows
         )
 
         json.encodeToString(exported)
@@ -458,7 +550,91 @@ class SettingsExportManager(private val context: Context) {
                 }
             }
 
-            Log.d(TAG, "Import complete: $providersAdded added, $providersUpdated updated, $providersSkipped skipped, $sourcesAdded EPG sources added, $favoritesRestored favorites restored")
+            // Import favorite categories per provider
+            var favoriteCategoriesRestored = 0
+
+            if (options.importFavorites && exported.providerFavoriteCategories.isNotEmpty()) {
+                val allProvidersForCats = providerRepo.getAllProvidersList()
+                for (pfc in exported.providerFavoriteCategories) {
+                    val matchingProvider = allProvidersForCats.find { it.name == pfc.providerName && it.url == pfc.providerUrl }
+                        ?: allProvidersForCats.find { it.name == pfc.providerName }
+                        ?: continue
+                    val cachePrefs = context.getSharedPreferences(
+                        "media_cache_${matchingProvider.id}",
+                        Context.MODE_PRIVATE
+                    )
+                    val existingJson = cachePrefs.getString(KEY_FAVORITE_CATEGORIES, null)
+                    val existingFavCats = if (existingJson != null) {
+                        try {
+                            json.decodeFromString<List<FavoriteCategoryItem>>(existingJson)
+                        } catch (_: Exception) {
+                            emptyList()
+                        }
+                    } else {
+                        emptyList()
+                    }
+                    val existingKeys = existingFavCats.map { "${it.categoryId}::${it.contentType}" }.toSet()
+                    val newFavCats = pfc.favoriteCategories
+                        .filter { "${it.categoryId}::${it.contentType}" !in existingKeys }
+                        .map { fav ->
+                            FavoriteCategoryItem(
+                                categoryId = fav.categoryId,
+                                categoryName = fav.categoryName,
+                                contentType = fav.contentType
+                            )
+                        }
+                    if (newFavCats.isNotEmpty()) {
+                        val merged = existingFavCats + newFavCats
+                        cachePrefs.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(merged)).apply()
+                        favoriteCategoriesRestored += newFavCats.size
+                    }
+                }
+            }
+
+            // Import favorite shows per provider
+            var favoriteShowsRestored = 0
+
+            if (options.importFavorites && exported.providerFavoriteShows.isNotEmpty()) {
+                val allProvidersForShows = providerRepo.getAllProvidersList()
+                for (pfs in exported.providerFavoriteShows) {
+                    val matchingProvider = allProvidersForShows.find { it.name == pfs.providerName && it.url == pfs.providerUrl }
+                        ?: allProvidersForShows.find { it.name == pfs.providerName }
+                        ?: continue
+                    val cachePrefs = context.getSharedPreferences(
+                        "media_cache_${matchingProvider.id}",
+                        Context.MODE_PRIVATE
+                    )
+                    val existingJson = cachePrefs.getString(KEY_FAVORITE_SHOWS, null)
+                    val existingFavShows = if (existingJson != null) {
+                        try {
+                            json.decodeFromString<List<FavoriteShowItem>>(existingJson)
+                        } catch (_: Exception) {
+                            emptyList()
+                        }
+                    } else {
+                        emptyList()
+                    }
+                    val existingKeys = existingFavShows.map { "${it.showId}::${it.contentType}" }.toSet()
+                    val newFavShows = pfs.favoriteShows
+                        .filter { "${it.showId}::${it.contentType}" !in existingKeys }
+                        .map { fav ->
+                            FavoriteShowItem(
+                                showId = fav.showId,
+                                showName = fav.showName,
+                                categoryId = fav.categoryId,
+                                contentType = fav.contentType,
+                                thumbnailUrl = fav.thumbnailUrl
+                            )
+                        }
+                    if (newFavShows.isNotEmpty()) {
+                        val merged = existingFavShows + newFavShows
+                        cachePrefs.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(merged)).apply()
+                        favoriteShowsRestored += newFavShows.size
+                    }
+                }
+            }
+
+            Log.d(TAG, "Import complete: $providersAdded added, $providersUpdated updated, $providersSkipped skipped, $sourcesAdded EPG sources added, $favoritesRestored favorites restored, $favoriteCategoriesRestored fav categories restored, $favoriteShowsRestored fav shows restored")
 
             ImportResult(
                 providersAdded = providersAdded,
@@ -466,7 +642,9 @@ class SettingsExportManager(private val context: Context) {
                 providersSkipped = providersSkipped,
                 epgSourcesAdded = sourcesAdded,
                 epgSourcesSkipped = sourcesSkipped,
-                favoritesRestored = favoritesRestored
+                favoritesRestored = favoritesRestored,
+                favoriteCategoriesRestored = favoriteCategoriesRestored,
+                favoriteShowsRestored = favoriteShowsRestored
             )
         } catch (e: kotlinx.serialization.SerializationException) {
             Log.e(TAG, "Invalid settings file format", e)
@@ -505,6 +683,8 @@ class SettingsExportManager(private val context: Context) {
         val epgSourcesAdded: Int = 0,
         val epgSourcesSkipped: Int = 0,
         val favoritesRestored: Int = 0,
+        val favoriteCategoriesRestored: Int = 0,
+        val favoriteShowsRestored: Int = 0,
         val error: String? = null
     ) {
         val isSuccess: Boolean get() = error == null
@@ -518,6 +698,8 @@ class SettingsExportManager(private val context: Context) {
             if (epgSourcesAdded > 0) parts.add("$epgSourcesAdded EPG source(s) added")
             if (epgSourcesSkipped > 0) parts.add("$epgSourcesSkipped EPG source(s) already existed")
             if (favoritesRestored > 0) parts.add("$favoritesRestored favorite(s) restored")
+            if (favoriteCategoriesRestored > 0) parts.add("$favoriteCategoriesRestored favorite category(ies) restored")
+            if (favoriteShowsRestored > 0) parts.add("$favoriteShowsRestored favorite show(s) restored")
             if (parts.isEmpty()) parts.add("Settings updated")
             if (providersAdded > 0) parts.add("Passwords must be re-entered in provider settings")
             return parts.joinToString(". ") + "."

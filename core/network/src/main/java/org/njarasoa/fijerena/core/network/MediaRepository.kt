@@ -40,6 +40,24 @@ data class FavoriteItem(
 )
 
 @Serializable
+data class FavoriteCategoryItem(
+    val categoryId: String,
+    val categoryName: String,
+    val contentType: String,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+@Serializable
+data class FavoriteShowItem(
+    val showId: String,
+    val showName: String,
+    val categoryId: String,
+    val contentType: String,
+    val thumbnailUrl: String? = null,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+@Serializable
 data class RecentCategory(
     val categoryId: String,
     val categoryName: String,
@@ -75,6 +93,8 @@ class MediaRepository(
     companion object {
         private const val KEY_WATCH_HISTORY = "watch_history_v2"
         private const val KEY_FAVORITES = "favorites_v2"
+        private const val KEY_FAVORITE_CATEGORIES = "favorite_categories"
+        private const val KEY_FAVORITE_SHOWS = "favorite_shows"
         private const val KEY_RECENT_CATEGORIES = "recent_categories"
         private const val MAX_RECENT_CATEGORIES = 20
 
@@ -401,6 +421,106 @@ class MediaRepository(
 
     fun clearFavorites() {
         cache.edit().remove(KEY_FAVORITES).apply()
+    }
+
+    // --- Favorite Categories ---
+
+    fun addFavoriteCategory(categoryId: String, categoryName: String, contentType: String): Boolean {
+        val favorites = getFavoriteCategoryItems().toMutableList()
+        if (favorites.any { it.categoryId == categoryId && it.contentType == contentType }) {
+            return false
+        }
+        favorites.add(0, FavoriteCategoryItem(categoryId, categoryName, contentType))
+        val trimmed = favorites.take(providerSettings.favoritesMaxSize)
+        cache.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(trimmed)).apply()
+        return true
+    }
+
+    fun removeFavoriteCategory(categoryId: String, contentType: String): Boolean {
+        val favorites = getFavoriteCategoryItems().toMutableList()
+        val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
+        cache.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(favorites)).apply()
+        return removed
+    }
+
+    fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> {
+        val raw = cache.getString(KEY_FAVORITE_CATEGORIES, null) ?: return emptyList()
+        return try {
+            json.decodeFromString<List<FavoriteCategoryItem>>(raw)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> {
+        return getFavoriteCategoryItems()
+            .filter { it.contentType == contentType }
+            .map { fav ->
+                MediaCategory(
+                    id = fav.categoryId,
+                    name = fav.categoryName,
+                    isVirtual = false
+                )
+            }
+    }
+
+    fun isFavoriteCategory(categoryId: String, contentType: String): Boolean {
+        return getFavoriteCategoryItems().any { it.categoryId == categoryId && it.contentType == contentType }
+    }
+
+    fun clearFavoriteCategories() {
+        cache.edit().remove(KEY_FAVORITE_CATEGORIES).apply()
+    }
+
+    // --- Favorite Shows ---
+
+    fun addFavoriteShow(showId: String, showName: String, categoryId: String, contentType: String, thumbnailUrl: String? = null): Boolean {
+        val favorites = getFavoriteShowItems().toMutableList()
+        if (favorites.any { it.showId == showId && it.contentType == contentType }) {
+            return false
+        }
+        favorites.add(0, FavoriteShowItem(showId, showName, categoryId, contentType, thumbnailUrl))
+        val trimmed = favorites.take(providerSettings.favoritesMaxSize)
+        cache.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(trimmed)).apply()
+        return true
+    }
+
+    fun removeFavoriteShow(showId: String, contentType: String): Boolean {
+        val favorites = getFavoriteShowItems().toMutableList()
+        val removed = favorites.removeAll { it.showId == showId && it.contentType == contentType }
+        cache.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(favorites)).apply()
+        return removed
+    }
+
+    fun getFavoriteShowItems(): List<FavoriteShowItem> {
+        val raw = cache.getString(KEY_FAVORITE_SHOWS, null) ?: return emptyList()
+        return try {
+            json.decodeFromString<List<FavoriteShowItem>>(raw)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    fun getFavoriteShowsForContentType(contentType: String): List<MediaItem> {
+        return getFavoriteShowItems()
+            .filter { it.contentType == contentType }
+            .map { fav ->
+                MediaItem(
+                    id = fav.showId,
+                    name = fav.showName,
+                    mediaType = MediaType.SERIES,
+                    categoryId = fav.categoryId,
+                    thumbnailUrl = fav.thumbnailUrl
+                )
+            }
+    }
+
+    fun isFavoriteShow(showId: String, contentType: String): Boolean {
+        return getFavoriteShowItems().any { it.showId == showId && it.contentType == contentType }
+    }
+
+    fun clearFavoriteShows() {
+        cache.edit().remove(KEY_FAVORITE_SHOWS).apply()
     }
 
     fun savePlaybackPosition(
