@@ -69,7 +69,9 @@ Secondary accent (Vivid Orange `#FF6D00`) constant across themes. Status colors,
 
 ### Typography & Focus
 - 13-style Roboto scale (48-14sp). **Key rule:** All body text >=18sp for TV readability.
+- **UI Scaling:** Applied globally via `LocalDensity` in `MainActivity.kt`. Scales all `dp` and `sp` values (0.4f - 1.0f). `UiScale.kt` extension functions are now no-ops to avoid double scaling.
 - Focus states: scale 1.0→1.1 (200ms tween), 2dp blue border, 8dp glow. See `FocusModifiers.kt`.
+- **Corner Radius:** Restored to 8dp-20dp for UI elements (`CornerRadius.kt`). App container (`Surface` in `TvNavHost`) uses `RectangleShape` for sharp screen edges.
 
 ### Safe Margins (TV Overscan)
 56dp horizontal / 32dp vertical on all screen root containers: `Spacing.tvSafeMarginHorizontal`, `Spacing.tvSafeMarginVertical`.
@@ -77,6 +79,7 @@ Secondary accent (Vivid Orange `#FF6D00`) constant across themes. Status colors,
 ### Components
 **Cards:** `CinemaSelectableCard` (interactive), `CinemaInfoCard`, `CinemaCompactCard`, `CinemaStandardCard`
 **Buttons:** `CinemaPrimaryButton`, `CinemaSecondaryButton`, `CinemaTertiaryButton`, `CinemaIconButton`, `CinemaDangerButton`
+**Player Overlays:** Slide-in panels are 25% screen width. Channel names and titles use `basicMarquee()` for overflow.
 **Effects:** Glassmorphism (category sidebar), `AccentBlock.kt` (content-type gradients)
 
 ## Coding Standards

@@ -6,26 +6,28 @@ import androidx.compose.ui.unit.TextUnit
 
 /**
  * CompositionLocal for UI scale factor.
- * Used to scale category/grid UI elements (fonts, spacing, sizes).
+ * Note: Scaling is now applied globally via LocalDensity in MainActivity.
+ * The .scaled() extension functions are kept for compatibility but now return
+ * the original value to avoid double scaling.
  */
 val LocalUiScale = compositionLocalOf { 1.0f }
 
 /**
- * Extension function to scale Dp values
+ * Extension function to scale Dp values (now a no-op due to density scaling)
  */
-fun Dp.scaled(scale: Float): Dp = this * scale
+fun Dp.scaled(scale: Float): Dp = this
 
 /**
- * Extension function to scale TextUnit values
+ * Extension function to scale TextUnit values (now a no-op due to density scaling)
  */
-fun TextUnit.scaled(scale: Float): TextUnit = this * scale
+fun TextUnit.scaled(scale: Float): TextUnit = this
 
 /**
- * Extension function to scale Int values (for counts, dimensions)
+ * Extension function to scale Int values (now a no-op due to density scaling)
  */
-fun Int.scaled(scale: Float): Int = (this * scale).toInt()
+fun Int.scaled(scale: Float): Int = this
 
 /**
- * Extension function to scale Float values
+ * Extension function to scale Float values (now a no-op due to density scaling)
  */
-fun Float.scaled(scale: Float): Float = this * scale
+fun Float.scaled(scale: Float): Float = this

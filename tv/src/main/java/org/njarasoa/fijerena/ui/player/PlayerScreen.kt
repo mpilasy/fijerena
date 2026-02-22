@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -490,7 +491,9 @@ fun PlayerScreen(
                         text = displayedMetadata.channelName,
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
                     )
                     Text(
                         text = displayedMetadata.title,
@@ -498,7 +501,8 @@ fun PlayerScreen(
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.basicMarquee()
                     )
                 }
 
@@ -974,6 +978,9 @@ private fun ChannelListOverlay(
         if (focusRequesters.isNotEmpty()) focusRequesters[0].requestFocus()
     }
 
+    val configuration = LocalConfiguration.current
+    val overlayWidth = (configuration.screenWidthDp * 0.25f).dp
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -988,7 +995,7 @@ private fun ChannelListOverlay(
         GlassPanel(
             modifier = Modifier
                 .align(panelAlignment)
-                .width(TvDimensions.channelOverlayWidth)
+                .width(overlayWidth)
                 .fillMaxHeight()
                 .padding(Spacing.xxl),
             backgroundAlpha = 0.5f
@@ -1030,7 +1037,9 @@ private fun ChannelListOverlay(
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 1,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .basicMarquee()
                                 )
                             }
                         }

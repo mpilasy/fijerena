@@ -123,28 +123,24 @@ fun CategoryGridScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
-    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsState()
 
-    // Provide UI scale for all child composables
-    CompositionLocalProvider(LocalUiScale provides uiScale) {
-        CategoryGridContent(
-            uiState = uiState,
-            nowPlaying = nowPlaying,
-            supportsNativeEpg = supportsNativeEpg,
-            epgIndexState = epgIndexState,
-            configuration = configuration,
-            isDevMode = isDevMode,
-            catViewModel = viewModel,
-            onStreamSelected = onStreamSelected,
-            onSearchClick = onSearchClick,
-            onEpgClick = onEpgClick,
-            onBack = onBack,
-            contentType = contentType
-        )
-    }
+    CategoryGridContent(
+        uiState = uiState,
+        nowPlaying = nowPlaying,
+        supportsNativeEpg = supportsNativeEpg,
+        epgIndexState = epgIndexState,
+        configuration = configuration,
+        isDevMode = isDevMode,
+        catViewModel = viewModel,
+        onStreamSelected = onStreamSelected,
+        onSearchClick = onSearchClick,
+        onEpgClick = onEpgClick,
+        onBack = onBack,
+        contentType = contentType
+    )
 }
 
 @Composable

@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -64,7 +65,8 @@ import org.njarasoa.fijerena.feature.settings.SettingsScreen
 fun TvNavHost(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel(),
-    onThemeChanged: (String) -> Unit = {}
+    onThemeChanged: (String) -> Unit = {},
+    onUiScaleChanged: (Float) -> Unit = {}
 ) {
     val context = LocalContext.current
     val accountManager = remember { AccountManager(context.applicationContext) }
@@ -148,7 +150,10 @@ fun TvNavHost(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        shape = RectangleShape
+    ) {
         if (initializationComplete && startDestination != null) {
             NavHost(
                 navController = navController,
@@ -476,6 +481,7 @@ fun TvNavHost(
                         navController.navigateUp()
                     },
                     onThemeChanged = onThemeChanged,
+                    onUiScaleChanged = onUiScaleChanged,
                     onManageProviders = {
                         navController.navigate(Screen.ProviderSelection)
                     },
