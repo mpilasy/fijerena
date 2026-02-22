@@ -978,9 +978,6 @@ private fun ChannelListOverlay(
         if (focusRequesters.isNotEmpty()) focusRequesters[0].requestFocus()
     }
 
-    val configuration = LocalConfiguration.current
-    val overlayWidth = (configuration.screenWidthDp * 0.25f).dp
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -995,7 +992,7 @@ private fun ChannelListOverlay(
         GlassPanel(
             modifier = Modifier
                 .align(panelAlignment)
-                .width(overlayWidth)
+                .fillMaxWidth(0.25f)
                 .fillMaxHeight()
                 .padding(Spacing.xxl),
             backgroundAlpha = 0.5f
@@ -1010,7 +1007,10 @@ private fun ChannelListOverlay(
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = Spacing.md)
+                    maxLines = 1,
+                    modifier = Modifier
+                        .padding(bottom = Spacing.md)
+                        .basicMarquee()
                 )
                 if (streams.isEmpty()) {
                     Text(
