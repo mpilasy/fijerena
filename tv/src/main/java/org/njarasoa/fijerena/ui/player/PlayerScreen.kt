@@ -992,7 +992,7 @@ private fun ChannelListOverlay(
         GlassPanel(
             modifier = Modifier
                 .align(panelAlignment)
-                .fillMaxWidth(0.25f)
+                .fillMaxWidth(0.5f)
                 .fillMaxHeight()
                 .padding(Spacing.xxl),
             backgroundAlpha = 0.5f
