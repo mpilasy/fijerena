@@ -127,6 +127,12 @@ fun CategoryGridScreen(
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsState()
 
+    // Refresh last played item when screen resumes
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        viewModel.refreshLastPlayed()
+    }
+
     CategoryGridContent(
         uiState = uiState,
         nowPlaying = nowPlaying,

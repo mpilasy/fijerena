@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.player
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -403,15 +405,18 @@ fun TvPlayerScreen(
 @Composable
 private fun LoadingScreen() {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CinemaBackground),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator(
-                modifier = Modifier.size(TvDimensions.progressIndicator),
-                color = CinemaAccent
+                modifier = Modifier.size(TvDimensions.iconXLarge), // Larger spinner
+                color = CinemaAccent,
+                strokeWidth = 4.dp
             )
             Spacer(modifier = Modifier.padding(Spacing.md))
             Text(

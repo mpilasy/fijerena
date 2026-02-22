@@ -372,6 +372,16 @@ class CategoryViewModel(
         loadCategories()
     }
 
+    fun refreshLastPlayed() {
+        viewModelScope.launch {
+            val lastItemId = repository.getLastItemId(contentType)
+            val currentState = _uiState.value
+            if (currentState is UiState.Success && currentState.lastPlayedItemId != lastItemId) {
+                _uiState.value = currentState.copy(lastPlayedItemId = lastItemId)
+            }
+        }
+    }
+
     fun refreshCategories() {
         viewModelScope.launch {
             val currentState = _uiState.value
