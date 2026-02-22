@@ -19,7 +19,9 @@ import java.util.concurrent.Executors
 
 object StreamingMediaSourceFactory {
 
-    private const val USER_AGENT = "MediaPlayer/1.0 (Linux; Android)"
+    // Use a standard Chrome User-Agent to avoid carrier throttling (e.g., T-Mobile Binge On)
+    // which often targets generic "MediaPlayer" or "ExoPlayer" agents.
+    private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
     @Volatile
     private var cronetEngine: CronetEngine? = null

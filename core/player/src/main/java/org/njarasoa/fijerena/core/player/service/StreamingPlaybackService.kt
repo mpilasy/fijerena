@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.session.MediaSession
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+import org.njarasoa.fijerena.core.player.network.ThrottlingMonitor
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 
 @androidx.media3.common.util.UnstableApi
@@ -68,6 +70,13 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private val _qualitySwitchCount = MutableStateFlow(0)
     val qualitySwitchCount: StateFlow<Int> = _qualitySwitchCount.asStateFlow()
+
+    /**
+     * Exposes whether network throttling is suspected (e.g. carrier video throttling).
+     * Forwarded from the singleton ThrottlingMonitor.
+     */
+    val isThrottlingSuspected: StateFlow<Boolean>
+        get() = ThrottlingMonitor.isThrottlingSuspected
 
     private var onPositionSaveListener: ((Long, Long) -> Unit)? = null
 
@@ -142,7 +151,11 @@ class StreamingPlaybackService : MediaSessionService() {
         )
         adaptiveLoadControl = loadControl
 
+        val bandwidthMeter = DefaultBandwidthMeter.Builder(this).build()
+        ThrottlingMonitor.startMonitoring(bandwidthMeter)
+
         val player = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)
+            .setBandwidthMeter(bandwidthMeter)
             .setLoadControl(loadControl)
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(
@@ -197,6 +210,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     fun setContentType(contentType: PlayerConfigFactory.ContentType) {
+        ThrottlingMonitor.stopMonitoring()
         mediaSession?.run {
             player.removeListener(playerListener!!)
             player.release()
@@ -459,6 +473,7 @@ class StreamingPlaybackService : MediaSessionService() {
         serviceScope?.cancel()
         serviceScope = null
         adaptiveLoadControl = null
+        ThrottlingMonitor.stopMonitoring()
         NetworkMonitor.release()
         StreamingMediaSourceFactory.releaseCronet()
         instance = null
