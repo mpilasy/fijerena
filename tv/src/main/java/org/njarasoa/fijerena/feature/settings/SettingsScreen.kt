@@ -200,205 +200,6 @@ fun SettingsScreen(
         }
     }
 
-    // Import options dialog (selective import) — themed for TV
-    if (showImportOptionsDialog && pendingParsedImport != null) {
-        val parsed = pendingParsedImport!!
-        var optProviders by remember { mutableStateOf(pendingImportOptions.importProviders) }
-        var optEpg by remember { mutableStateOf(pendingImportOptions.importEpgSources) }
-        var optGlobal by remember { mutableStateOf(pendingImportOptions.importGlobalSettings) }
-        var optFavorites by remember { mutableStateOf(pendingImportOptions.importFavorites) }
-
-        androidx.activity.compose.BackHandler {
-            showImportOptionsDialog = false
-            if (!showConflictDialog) pendingParsedImport = null
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    org.njarasoa.fijerena.ui.theme.CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            GlassPanel(
-                modifier = Modifier
-                    .width(TvDimensions.dialogWidth)
-                    .padding(Spacing.xxl)
-            ) {
-                Column(
-                    modifier = Modifier.padding(Spacing.xxl),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
-                ) {
-                    Text(
-                        text = "Select What to Import",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = CinemaAccent
-                    )
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = optGlobal, onCheckedChange = { optGlobal = it })
-                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text("General Settings", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
-                    }
-                    if (parsed.hasProviders) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = optProviders, onCheckedChange = { optProviders = it })
-                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                            Text("Providers (${parsed.settings.providers.size})", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
-                        }
-                    }
-                    if (parsed.hasEpgSources) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = optEpg, onCheckedChange = { optEpg = it })
-                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                            Text("EPG Sources (${parsed.settings.epgSources.size})", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
-                        }
-                    }
-                    if (parsed.hasFavorites) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = optFavorites, onCheckedChange = { optFavorites = it })
-                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                            Text("Favorites", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(Spacing.sm))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
-                    ) {
-                        CinemaPrimaryButton(
-                            onClick = {
-                                val options = SettingsExportManager.ImportOptions(
-                                    importProviders = optProviders,
-                                    importEpgSources = optEpg,
-                                    importGlobalSettings = optGlobal,
-                                    importFavorites = optFavorites
-                                )
-                                pendingImportOptions = options
-                                val p = pendingParsedImport!!
-                                if (optProviders && parsed.hasConflicts) {
-                                    showConflictDialog = true
-                                    showImportOptionsDialog = false
-                                } else {
-                                    pendingParsedImport = null
-                                    showImportOptionsDialog = false
-                                    doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
-                                }
-                            },
-                            text = "Import",
-                            modifier = Modifier.weight(1f)
-                        )
-                        CinemaSecondaryButton(
-                            onClick = {
-                                showImportOptionsDialog = false
-                                pendingParsedImport = null
-                            },
-                            text = "Cancel",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    // Conflict resolution dialog — themed for TV
-    if (showConflictDialog && pendingParsedImport != null) {
-        val conflicts = pendingParsedImport!!.conflictingProviders
-
-        androidx.activity.compose.BackHandler {
-            showConflictDialog = false
-            pendingParsedImport = null
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    org.njarasoa.fijerena.ui.theme.CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            GlassPanel(
-                modifier = Modifier
-                    .width(TvDimensions.dialogWidth)
-                    .padding(Spacing.xxl)
-            ) {
-                Column(
-                    modifier = Modifier.padding(Spacing.xxl),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
-                ) {
-                    Text(
-                        text = "Provider Conflict",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = CinemaAccent
-                    )
-                    Text(
-                        text = "The following provider(s) already exist:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary
-                    )
-                    conflicts.forEach { name ->
-                        Text(
-                            text = "\u2022 $name",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextSecondary
-                        )
-                    }
-                    Text(
-                        text = "What would you like to do?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary
-                    )
-
-                    Spacer(modifier = Modifier.height(Spacing.sm))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
-                    ) {
-                        CinemaPrimaryButton(
-                            onClick = {
-                                showConflictDialog = false
-                                val parsed = pendingParsedImport!!
-                                val options = pendingImportOptions
-                                pendingParsedImport = null
-                                doImport(parsed, SettingsExportManager.ConflictResolution.OVERWRITE, options)
-                            },
-                            text = "Overwrite",
-                            modifier = Modifier.weight(1f)
-                        )
-                        CinemaSecondaryButton(
-                            onClick = {
-                                showConflictDialog = false
-                                val parsed = pendingParsedImport!!
-                                val options = pendingImportOptions
-                                pendingParsedImport = null
-                                doImport(parsed, SettingsExportManager.ConflictResolution.DUPLICATE, options)
-                            },
-                            text = "Duplicate",
-                            modifier = Modifier.weight(1f)
-                        )
-                        CinemaSecondaryButton(
-                            onClick = {
-                                showConflictDialog = false
-                                val parsed = pendingParsedImport!!
-                                val options = pendingImportOptions
-                                pendingParsedImport = null
-                                doImport(parsed, SettingsExportManager.ConflictResolution.SKIP, options)
-                            },
-                            text = "Skip",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-        }
-    }
-
     // Drive sync state
     val syncStatus by syncManager.syncStatus.collectAsState()
     val signedInEmail by syncManager.signedInEmail.collectAsState()
@@ -455,6 +256,7 @@ fun SettingsScreen(
 
     val scale = LocalUiScale.current
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -930,6 +732,224 @@ fun SettingsScreen(
 
         }
     }
+
+    // Import options dialog (selective import) — rendered on top of settings content
+    if (showImportOptionsDialog && pendingParsedImport != null) {
+        val parsed = pendingParsedImport!!
+        var optProviders by remember { mutableStateOf(pendingImportOptions.importProviders) }
+        var optEpg by remember { mutableStateOf(pendingImportOptions.importEpgSources) }
+        var optGlobal by remember { mutableStateOf(pendingImportOptions.importGlobalSettings) }
+        var optFavorites by remember { mutableStateOf(pendingImportOptions.importFavorites) }
+        val importDialogFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+
+        androidx.activity.compose.BackHandler {
+            showImportOptionsDialog = false
+            if (!showConflictDialog) pendingParsedImport = null
+        }
+
+        LaunchedEffect(Unit) {
+            importDialogFocusRequester.requestFocus()
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    org.njarasoa.fijerena.ui.theme.CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            GlassPanel(
+                modifier = Modifier
+                    .width(TvDimensions.dialogWidth)
+                    .padding(Spacing.xxl)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(Spacing.xxl)
+                        .focusRestorer { importDialogFocusRequester },
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                ) {
+                    Text(
+                        text = "Select What to Import",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = CinemaAccent
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = optGlobal, onCheckedChange = { optGlobal = it })
+                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                        Text("General Settings", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+                    }
+                    if (parsed.hasProviders) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = optProviders, onCheckedChange = { optProviders = it })
+                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                            Text("Providers (${parsed.settings.providers.size})", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+                        }
+                    }
+                    if (parsed.hasEpgSources) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = optEpg, onCheckedChange = { optEpg = it })
+                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                            Text("EPG Sources (${parsed.settings.epgSources.size})", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+                        }
+                    }
+                    if (parsed.hasFavorites) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = optFavorites, onCheckedChange = { optFavorites = it })
+                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                            Text("Favorites", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                    ) {
+                        CinemaPrimaryButton(
+                            onClick = {
+                                val options = SettingsExportManager.ImportOptions(
+                                    importProviders = optProviders,
+                                    importEpgSources = optEpg,
+                                    importGlobalSettings = optGlobal,
+                                    importFavorites = optFavorites
+                                )
+                                pendingImportOptions = options
+                                val p = pendingParsedImport!!
+                                if (optProviders && parsed.hasConflicts) {
+                                    showConflictDialog = true
+                                    showImportOptionsDialog = false
+                                } else {
+                                    pendingParsedImport = null
+                                    showImportOptionsDialog = false
+                                    doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
+                                }
+                            },
+                            text = "Import",
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(importDialogFocusRequester)
+                        )
+                        CinemaSecondaryButton(
+                            onClick = {
+                                showImportOptionsDialog = false
+                                pendingParsedImport = null
+                            },
+                            text = "Cancel",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // Conflict resolution dialog — rendered on top of settings content
+    if (showConflictDialog && pendingParsedImport != null) {
+        val conflicts = pendingParsedImport!!.conflictingProviders
+        val conflictDialogFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+
+        androidx.activity.compose.BackHandler {
+            showConflictDialog = false
+            pendingParsedImport = null
+        }
+
+        LaunchedEffect(Unit) {
+            conflictDialogFocusRequester.requestFocus()
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    org.njarasoa.fijerena.ui.theme.CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            GlassPanel(
+                modifier = Modifier
+                    .width(TvDimensions.dialogWidth)
+                    .padding(Spacing.xxl)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(Spacing.xxl)
+                        .focusRestorer { conflictDialogFocusRequester },
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                ) {
+                    Text(
+                        text = "Provider Conflict",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = CinemaAccent
+                    )
+                    Text(
+                        text = "The following provider(s) already exist:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextPrimary
+                    )
+                    conflicts.forEach { name ->
+                        Text(
+                            text = "\u2022 $name",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextSecondary
+                        )
+                    }
+                    Text(
+                        text = "What would you like to do?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextPrimary
+                    )
+
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                    ) {
+                        CinemaPrimaryButton(
+                            onClick = {
+                                showConflictDialog = false
+                                val parsed = pendingParsedImport!!
+                                val options = pendingImportOptions
+                                pendingParsedImport = null
+                                doImport(parsed, SettingsExportManager.ConflictResolution.OVERWRITE, options)
+                            },
+                            text = "Overwrite",
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(conflictDialogFocusRequester)
+                        )
+                        CinemaSecondaryButton(
+                            onClick = {
+                                showConflictDialog = false
+                                val parsed = pendingParsedImport!!
+                                val options = pendingImportOptions
+                                pendingParsedImport = null
+                                doImport(parsed, SettingsExportManager.ConflictResolution.DUPLICATE, options)
+                            },
+                            text = "Duplicate",
+                            modifier = Modifier.weight(1f)
+                        )
+                        CinemaSecondaryButton(
+                            onClick = {
+                                showConflictDialog = false
+                                val parsed = pendingParsedImport!!
+                                val options = pendingImportOptions
+                                pendingParsedImport = null
+                                doImport(parsed, SettingsExportManager.ConflictResolution.SKIP, options)
+                            },
+                            text = "Skip",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+    } // end Box
 }
 
 private fun formatEpgFileSize(bytes: Long): String {
