@@ -466,6 +466,18 @@ class CategoryViewModel(
         loadCategories()
     }
 
+    /**
+     * Refreshes the lastPlayedItemId in the current UI state.
+     * Called when returning from the player screen to update focus target.
+     */
+    fun refreshLastPlayedItem() {
+        val current = _uiState.value
+        if (current is UiState.Success) {
+            val lastItemId = repository.getLastItemId(contentType)
+            _uiState.value = current.copy(lastPlayedItemId = lastItemId)
+        }
+    }
+
     fun refreshCategories() {
         viewModelScope.launch {
             val currentState = _uiState.value
