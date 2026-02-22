@@ -225,6 +225,7 @@ class SettingsExportManager(private val context: Context) {
         try {
             val file = java.io.File(path)
             if (!file.exists()) return@withContext kotlin.Result.failure(Exception("File does not exist: $path"))
+            if (!file.canRead()) return@withContext kotlin.Result.failure(Exception("Permission denied: Cannot read $path"))
             
             val jsonString = file.readText(Charsets.UTF_8)
             val exported = json.decodeFromString<ExportedSettings>(jsonString)

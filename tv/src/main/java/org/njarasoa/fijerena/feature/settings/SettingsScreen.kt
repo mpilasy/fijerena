@@ -793,8 +793,22 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     CinemaSecondaryButton(
-                        onClick = { pendingImportPath = "/sdcard/Download/fijerena_settings.json" },
-                        text = "Quick Import from /sdcard/Download",
+                        onClick = {
+                            val downloadPath = "/sdcard/Download/fijerena_settings.json"
+                            val privatePath = context.getExternalFilesDir(null)?.absolutePath + "/fijerena_settings.json"
+                            
+                            coroutineScope.launch {
+                                // Try public download folder first
+                                val file = java.io.File(downloadPath)
+                                if (file.exists() && file.canRead()) {
+                                    pendingImportPath = downloadPath
+                                } else {
+                                    // Fallback to app private folder (no permission needed)
+                                    pendingImportPath = privatePath
+                                }
+                            }
+                        },
+                        text = "Quick Import from Downloads",
                         modifier = Modifier.fillMaxWidth()
                     )
                     if (exportImportMessage != null) {
