@@ -47,6 +47,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
@@ -126,6 +128,15 @@ fun CategoryGridScreen(
 
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsState()
+
+    // Refresh last played item when screen resumes (e.g. back from player)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
+    LaunchedEffect(lifecycleState) {
+        if (lifecycleState == Lifecycle.State.RESUMED) {
+            viewModel.refreshLastPlayedItem()
+        }
+    }
 
     CategoryGridContent(
         uiState = uiState,
@@ -694,16 +705,16 @@ private fun StreamList(
 
     val scale = LocalUiScale.current
 
-    // Auto-scroll and focus on last played item (only on initial load)
-    var hasAutoFocusedStream by remember { mutableStateOf(false) }
+    // Auto-scroll and focus on last played item (on initial load and when returning from player)
+    var lastFocusedItemId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(streams, lastPlayedItemId) {
-        if (!hasAutoFocusedStream && !streams.isNullOrEmpty() && lastPlayedItemId != null) {
+        if (!streams.isNullOrEmpty() && lastPlayedItemId != null && lastPlayedItemId != lastFocusedItemId) {
             val lastPlayedIndex = streams.indexOfFirst { it.id == lastPlayedItemId }
             if (lastPlayedIndex != -1) {
                 listState.animateScrollToItem(lastPlayedIndex)
                 focusRequesters[lastPlayedItemId]?.requestFocus()
-                hasAutoFocusedStream = true
+                lastFocusedItemId = lastPlayedItemId
             }
         }
     }
