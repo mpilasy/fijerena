@@ -21,6 +21,8 @@ class CategoryViewModel(
     companion object {
         const val CONTINUE_WATCHING_CATEGORY_ID = "continue_watching"
         const val FAVORITES_CATEGORY_ID = "favorites"
+        const val FAVORITE_CATEGORIES_ID = "favorite_categories"
+        const val FAVORITE_SHOWS_ID = "favorite_shows"
         const val LAST_WATCHED_CATEGORY_ID = "last_watched"
         const val RECENTLY_VIEWED_CATEGORIES_ID = "recently_viewed_categories"
     }
@@ -156,6 +158,28 @@ class CategoryViewModel(
             isVirtual = true
         ))
 
+        // Show Favorite Categories if any exist for this content type
+        val favCategories = repository.getFavoriteCategoriesForContentType(contentType)
+        if (favCategories.isNotEmpty()) {
+            virtualCategories.add(MediaCategory(
+                id = FAVORITE_CATEGORIES_ID,
+                name = "Favorite Categories",
+                isVirtual = true
+            ))
+        }
+
+        // Show Favorite Shows only for TV Shows content type
+        if (contentType == "TV_SHOWS") {
+            val favShows = repository.getFavoriteShowsForContentType(contentType)
+            if (favShows.isNotEmpty()) {
+                virtualCategories.add(MediaCategory(
+                    id = FAVORITE_SHOWS_ID,
+                    name = "Favorite Shows",
+                    isVirtual = true
+                ))
+            }
+        }
+
         virtualCategories.add(MediaCategory(
             id = LAST_WATCHED_CATEGORY_ID,
             name = "Last Watched",
@@ -261,6 +285,48 @@ class CategoryViewModel(
                 return@launch
             }
 
+            if (categoryId == FAVORITE_CATEGORIES_ID) {
+                val favCategories = repository.getFavoriteCategoriesForContentType(contentType)
+                currentStreams = favCategories.map { cat ->
+                    MediaItem(
+                        id = "fav_cat_${cat.id}",
+                        name = cat.name,
+                        mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
+                        categoryId = FAVORITE_CATEGORIES_ID,
+                        providerData = mapOf(
+                            "isCategoryRef" to "true",
+                            "categoryId" to cat.id
+                        )
+                    )
+                }
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedItemId = lastItemId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null
+                )
+                return@launch
+            }
+
+            if (categoryId == FAVORITE_SHOWS_ID) {
+                currentStreams = repository.getFavoriteShowsForContentType(contentType)
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedItemId = lastItemId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null
+                )
+                return@launch
+            }
+
             if (categoryId == RECENTLY_VIEWED_CATEGORIES_ID) {
                 val recentCategories = repository.getRecentlyViewedCategories(contentType)
                 currentStreams = recentCategories.map { recent ->
@@ -315,6 +381,8 @@ class CategoryViewModel(
                     if (isInitialLoad && items.isEmpty() && !initialLoadRetried &&
                         categoryId != CONTINUE_WATCHING_CATEGORY_ID &&
                         categoryId != FAVORITES_CATEGORY_ID &&
+                        categoryId != FAVORITE_CATEGORIES_ID &&
+                        categoryId != FAVORITE_SHOWS_ID &&
                         categoryId != LAST_WATCHED_CATEGORY_ID &&
                         categoryId != RECENTLY_VIEWED_CATEGORIES_ID) {
                         initialLoadRetried = true
@@ -368,6 +436,32 @@ class CategoryViewModel(
     fun isFavorite(itemId: String, contentType: String) =
         repository.isFavorite(itemId, contentType)
 
+    fun isFavoriteCategory(categoryId: String, contentType: String) =
+        repository.isFavoriteCategory(categoryId, contentType)
+
+    fun toggleFavoriteCategory(categoryId: String, categoryName: String, contentType: String) {
+        if (repository.isFavoriteCategory(categoryId, contentType)) {
+            repository.removeFavoriteCategory(categoryId, contentType)
+        } else {
+            repository.addFavoriteCategory(categoryId, categoryName, contentType)
+        }
+        // Refresh to update virtual categories list
+        refreshCategories()
+    }
+
+    fun isFavoriteShow(showId: String, contentType: String) =
+        repository.isFavoriteShow(showId, contentType)
+
+    fun toggleFavoriteShow(showId: String, showName: String, categoryId: String, contentType: String, thumbnailUrl: String? = null) {
+        if (repository.isFavoriteShow(showId, contentType)) {
+            repository.removeFavoriteShow(showId, contentType)
+        } else {
+            repository.addFavoriteShow(showId, showName, categoryId, contentType, thumbnailUrl)
+        }
+        // Refresh to update virtual categories list
+        refreshCategories()
+    }
+
     fun retry() {
         loadCategories()
     }
@@ -396,6 +490,24 @@ class CategoryViewModel(
                         name = "Favorites",
                         isVirtual = true
                     ))
+                    val favCategories = repository.getFavoriteCategoriesForContentType(contentType)
+                    if (favCategories.isNotEmpty()) {
+                        virtualCats.add(MediaCategory(
+                            id = FAVORITE_CATEGORIES_ID,
+                            name = "Favorite Categories",
+                            isVirtual = true
+                        ))
+                    }
+                    if (contentType == "TV_SHOWS") {
+                        val favShows = repository.getFavoriteShowsForContentType(contentType)
+                        if (favShows.isNotEmpty()) {
+                            virtualCats.add(MediaCategory(
+                                id = FAVORITE_SHOWS_ID,
+                                name = "Favorite Shows",
+                                isVirtual = true
+                            ))
+                        }
+                    }
                     virtualCats.add(MediaCategory(
                         id = LAST_WATCHED_CATEGORY_ID,
                         name = "Last Watched",
@@ -476,6 +588,48 @@ class CategoryViewModel(
                     lastPlayedItemId = lastItemId,
                     categoriesPayloadSize = getCategoriesPayloadSize(),
                     streamsPayloadSize = getPayloadSize(categoryId)
+                )
+                return@launch
+            }
+
+            if (categoryId == FAVORITE_CATEGORIES_ID) {
+                val favCategories = repository.getFavoriteCategoriesForContentType(contentType)
+                currentStreams = favCategories.map { cat ->
+                    MediaItem(
+                        id = "fav_cat_${cat.id}",
+                        name = cat.name,
+                        mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
+                        categoryId = FAVORITE_CATEGORIES_ID,
+                        providerData = mapOf(
+                            "isCategoryRef" to "true",
+                            "categoryId" to cat.id
+                        )
+                    )
+                }
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedItemId = lastItemId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null
+                )
+                return@launch
+            }
+
+            if (categoryId == FAVORITE_SHOWS_ID) {
+                currentStreams = repository.getFavoriteShowsForContentType(contentType)
+                _uiState.value = UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = currentStreams,
+                    streamsLoading = false,
+                    categoriesRefreshing = false,
+                    lastPlayedItemId = lastItemId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null
                 )
                 return@launch
             }

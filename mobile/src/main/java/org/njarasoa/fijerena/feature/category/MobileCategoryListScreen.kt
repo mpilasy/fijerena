@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.feature.category
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,13 +38,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +56,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -85,6 +93,37 @@ fun MobileCategoryListScreen(
     val epgIndexState by epgIndexer.state.collectAsState()
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode = remember { appSettings.isDevMode }
+
+    // Long-press favorite menu state
+    var favoriteMenuTarget by remember { mutableStateOf<MobileFavoriteMenuTarget?>(null) }
+
+    // Show the context menu dialog when a target is set
+    favoriteMenuTarget?.let { target ->
+        MobileFavoriteContextMenuDialog(
+            target = target,
+            onConfirm = {
+                when (target) {
+                    is MobileFavoriteMenuTarget.Category -> {
+                        viewModel.toggleFavoriteCategory(
+                            target.categoryId,
+                            target.categoryName,
+                            target.contentType
+                        )
+                    }
+                    is MobileFavoriteMenuTarget.Show -> {
+                        viewModel.toggleFavoriteShow(
+                            target.showId,
+                            target.showName,
+                            target.categoryId,
+                            target.contentType,
+                            target.thumbnailUrl
+                        )
+                    }
+                }
+            },
+            onDismiss = { favoriteMenuTarget = null }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -184,8 +223,18 @@ fun MobileCategoryListScreen(
                         CategoryChipRow(
                             categories = state.categories,
                             selectedCategoryId = state.selectedCategoryId,
+                            contentType = contentType,
+                            categoryViewModel = viewModel,
                             onCategorySelected = { categoryId ->
                                 viewModel.loadStreams(categoryId)
+                            },
+                            onCategoryLongPress = { category ->
+                                favoriteMenuTarget = MobileFavoriteMenuTarget.Category(
+                                    categoryId = category.id,
+                                    categoryName = category.name,
+                                    contentType = contentType,
+                                    isFavorite = viewModel.isFavoriteCategory(category.id, contentType)
+                                )
                             }
                         )
 
@@ -210,7 +259,7 @@ fun MobileCategoryListScreen(
                                 nowPlaying = nowPlaying,
                                 onItemSelected = { itemId, itemName, categoryId ->
                                     android.util.Log.d("MobileCategoryListScreen", "onItemSelected: id=$itemId, name=$itemName, cat=$categoryId")
-                                    // Check if this is a category reference from "Recent Categories"
+                                    // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
                                     val item = state.streams?.firstOrNull { it.id == itemId }
                                     if (item?.providerData?.get("isCategoryRef") == "true") {
                                         val targetCategoryId = item.providerData["categoryId"]
@@ -219,6 +268,20 @@ fun MobileCategoryListScreen(
                                         }
                                     } else {
                                         onStreamSelected(itemId, itemName, categoryId, contentType)
+                                    }
+                                },
+                                onItemLongPress = { item ->
+                                    // For TV Shows content type, show favorite show option
+                                    if (contentType == "TV_SHOWS" &&
+                                        item.mediaType == MediaType.SERIES) {
+                                        favoriteMenuTarget = MobileFavoriteMenuTarget.Show(
+                                            showId = item.id,
+                                            showName = item.name,
+                                            categoryId = item.categoryId,
+                                            contentType = contentType,
+                                            thumbnailUrl = item.thumbnailUrl,
+                                            isFavorite = viewModel.isFavoriteShow(item.id, contentType)
+                                        )
                                     }
                                 }
                             )
@@ -255,14 +318,20 @@ fun MobileCategoryListScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CategoryChipRow(
     categories: List<org.njarasoa.fijerena.core.player.domain.MediaCategory>,
     selectedCategoryId: String?,
-    onCategorySelected: (String) -> Unit
+    contentType: String,
+    categoryViewModel: CategoryViewModel,
+    onCategorySelected: (String) -> Unit,
+    onCategoryLongPress: (org.njarasoa.fijerena.core.player.domain.MediaCategory) -> Unit = {}
 ) {
     val virtualCategoryIds = setOf(
         CategoryViewModel.FAVORITES_CATEGORY_ID,
+        CategoryViewModel.FAVORITE_CATEGORIES_ID,
+        CategoryViewModel.FAVORITE_SHOWS_ID,
         CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
         CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
         CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
@@ -321,16 +390,32 @@ private fun CategoryChipRow(
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
         ) {
             items(regularCategories, key = { it.id }) { category ->
+                val isFavCat = categoryViewModel.isFavoriteCategory(category.id, contentType)
                 FilterChip(
                     selected = category.id == selectedCategoryId,
                     onClick = { onCategorySelected(category.id) },
                     label = {
-                        Text(
-                            text = category.name,
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee()
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isFavCat) {
+                                Text(
+                                    text = "\u2605",
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Text(
+                                text = category.name,
+                                maxLines = 1,
+                                modifier = Modifier.basicMarquee()
+                            )
+                        }
                     },
+                    modifier = Modifier.combinedClickable(
+                        onClick = { onCategorySelected(category.id) },
+                        onLongClick = { onCategoryLongPress(category) }
+                    ),
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -347,7 +432,8 @@ private fun StreamsList(
     streamsLoading: Boolean,
     selectedCategoryId: String?,
     nowPlaying: Map<String, EpgProgram> = emptyMap(),
-    onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit
+    onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
+    onItemLongPress: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {}
 ) {
     when {
         selectedCategoryId == null -> {
@@ -410,7 +496,8 @@ private fun StreamsList(
                         nowPlayingProgram = nowPlaying[item.id],
                         onClick = {
                             onItemSelected(item.id, item.name, item.categoryId)
-                        }
+                        },
+                        onLongClick = { onItemLongPress(item) }
                     )
                 }
             }
@@ -418,17 +505,88 @@ private fun StreamsList(
     }
 }
 
+/**
+ * Data class representing a pending favorite action from a long-press on mobile.
+ */
+private sealed class MobileFavoriteMenuTarget {
+    data class Category(
+        val categoryId: String,
+        val categoryName: String,
+        val contentType: String,
+        val isFavorite: Boolean
+    ) : MobileFavoriteMenuTarget()
+
+    data class Show(
+        val showId: String,
+        val showName: String,
+        val categoryId: String,
+        val contentType: String,
+        val thumbnailUrl: String?,
+        val isFavorite: Boolean
+    ) : MobileFavoriteMenuTarget()
+}
+
+/**
+ * Themed context menu dialog for favoriting categories/shows on mobile.
+ */
+@Composable
+private fun MobileFavoriteContextMenuDialog(
+    target: MobileFavoriteMenuTarget,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val (itemName, isFavorite) = when (target) {
+        is MobileFavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
+        is MobileFavoriteMenuTarget.Show -> target.showName to target.isFavorite
+    }
+
+    val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = itemName,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm()
+                    onDismiss()
+                }
+            ) {
+                Text(actionText)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(CinemaCornerRadius.large)
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun StreamCard(
     item: org.njarasoa.fijerena.core.player.domain.MediaItem,
     nowPlayingProgram: EpgProgram? = null,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(MobileDimensions.streamCardHeight),
+            .height(MobileDimensions.streamCardHeight)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),

@@ -21,11 +21,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,6 +45,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyCode
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -287,6 +293,37 @@ private fun TwoColumnLayout(
 
     val scale = LocalUiScale.current
 
+    // Long-press favorite menu state
+    var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
+
+    // Show the context menu dialog when a target is set
+    favoriteMenuTarget?.let { target ->
+        FavoriteContextMenuDialog(
+            target = target,
+            onConfirm = {
+                when (target) {
+                    is FavoriteMenuTarget.Category -> {
+                        categoryViewModel.toggleFavoriteCategory(
+                            target.categoryId,
+                            target.categoryName,
+                            target.contentType
+                        )
+                    }
+                    is FavoriteMenuTarget.Show -> {
+                        categoryViewModel.toggleFavoriteShow(
+                            target.showId,
+                            target.showName,
+                            target.categoryId,
+                            target.contentType,
+                            target.thumbnailUrl
+                        )
+                    }
+                }
+            },
+            onDismiss = { favoriteMenuTarget = null }
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
         Row(
@@ -387,8 +424,18 @@ private fun TwoColumnLayout(
                 categories = categories,
                 selectedCategoryId = selectedCategoryId,
                 categoriesRefreshing = categoriesRefreshing,
+                contentType = contentType,
+                categoryViewModel = categoryViewModel,
                 onCategorySelected = onCategorySelected,
                 onRefreshCategories = onRefreshCategories,
+                onCategoryLongPress = { category ->
+                    favoriteMenuTarget = FavoriteMenuTarget.Category(
+                        categoryId = category.id,
+                        categoryName = category.name,
+                        contentType = contentType,
+                        isFavorite = categoryViewModel.isFavoriteCategory(category.id, contentType)
+                    )
+                },
                 modifier = Modifier
                     .weight(0.3f)
                     .fillMaxHeight()
@@ -406,7 +453,7 @@ private fun TwoColumnLayout(
                 categoryViewModel = categoryViewModel,
                 isDevMode = appSettings.isDevMode,
                 onStreamSelected = { streamId, streamName, categoryId ->
-                    // Check if this is a category reference from "Recent Categories"
+                    // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
                     val item = streams?.firstOrNull { it.id == streamId }
                     if (item?.providerData?.get("isCategoryRef") == "true") {
                         val targetCategoryId = item.providerData["categoryId"]
@@ -415,6 +462,20 @@ private fun TwoColumnLayout(
                         }
                     } else {
                         onStreamSelected(streamId, streamName, categoryId)
+                    }
+                },
+                onStreamLongPress = { item ->
+                    // For TV Shows content type, show favorite show option
+                    if (contentType == "TV_SHOWS" &&
+                        item.mediaType == org.njarasoa.fijerena.core.player.domain.MediaType.SERIES) {
+                        favoriteMenuTarget = FavoriteMenuTarget.Show(
+                            showId = item.id,
+                            showName = item.name,
+                            categoryId = item.categoryId,
+                            contentType = contentType,
+                            thumbnailUrl = item.thumbnailUrl,
+                            isFavorite = categoryViewModel.isFavoriteShow(item.id, contentType)
+                        )
                     }
                 },
                 onRefreshStreams = onRefreshStreams,
@@ -431,13 +492,18 @@ private fun CategoryList(
     categories: List<MediaCategory>,
     selectedCategoryId: String?,
     categoriesRefreshing: Boolean,
+    contentType: String,
+    categoryViewModel: CategoryViewModel,
     onCategorySelected: (String) -> Unit,
     onRefreshCategories: () -> Unit,
+    onCategoryLongPress: (MediaCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Separate virtual and regular categories
     val virtualCategoryIds = setOf(
         CategoryViewModel.FAVORITES_CATEGORY_ID,
+        CategoryViewModel.FAVORITE_CATEGORIES_ID,
+        CategoryViewModel.FAVORITE_SHOWS_ID,
         CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
         CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
         CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
@@ -546,7 +612,9 @@ private fun CategoryList(
                             CategoryItem(
                                 category = category,
                                 isSelected = category.id == selectedCategoryId,
+                                isFavorite = false,
                                 onClick = { onCategorySelected(category.id) },
+                                onLongPress = {},
                                 focusRequester = focusRequesters[category.id]
                             )
                         }
@@ -578,7 +646,9 @@ private fun CategoryList(
                         CategoryItem(
                             category = category,
                             isSelected = category.id == selectedCategoryId,
+                            isFavorite = categoryViewModel.isFavoriteCategory(category.id, contentType),
                             onClick = { onCategorySelected(category.id) },
+                            onLongPress = { onCategoryLongPress(category) },
                             focusRequester = focusRequesters[category.id]
                         )
                     }
@@ -592,7 +662,9 @@ private fun CategoryList(
 private fun CategoryItem(
     category: MediaCategory,
     isSelected: Boolean,
+    isFavorite: Boolean = false,
     onClick: () -> Unit,
+    onLongPress: () -> Unit = {},
     focusRequester: FocusRequester? = null
 ) {
     val scale = LocalUiScale.current
@@ -602,6 +674,7 @@ private fun CategoryItem(
         modifier = Modifier
             .padding(horizontal = Spacing.md.scaled(scale))
             .fillMaxWidth()
+            .tvLongPress(onLongPress)
             .then(
                 if (focusRequester != null) {
                     Modifier.focusRequester(focusRequester)
@@ -636,12 +709,22 @@ private fun CategoryItem(
             )
         )
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(Spacing.md.scaled(scale)),
-            contentAlignment = Alignment.CenterStart
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
         ) {
+            if (isFavorite) {
+                Text(
+                    text = "\u2605",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                    ),
+                    color = CinemaAccent
+                )
+            }
             Text(
                 text = category.name,
                 style = MaterialTheme.typography.titleMedium.copy(
@@ -667,6 +750,7 @@ private fun StreamList(
     categoryViewModel: CategoryViewModel,
     isDevMode: Boolean,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onStreamLongPress: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -819,9 +903,13 @@ private fun StreamList(
                             StreamItem(
                                 item = item,
                                 isFavorite = categoryViewModel.isFavorite(item.id, contentType),
+                                isFavoriteShow = contentType == "TV_SHOWS" &&
+                                    item.mediaType == org.njarasoa.fijerena.core.player.domain.MediaType.SERIES &&
+                                    categoryViewModel.isFavoriteShow(item.id, contentType),
                                 watchProgress = progress,
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
+                                onLongPress = { onStreamLongPress(item) },
                                 focusRequester = focusRequesters[item.id]
                             )
                         }
@@ -836,9 +924,11 @@ private fun StreamList(
 private fun StreamItem(
     item: MediaItem,
     isFavorite: Boolean = false,
+    isFavoriteShow: Boolean = false,
     watchProgress: Float = 0f,
     nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
+    onLongPress: () -> Unit = {},
     focusRequester: FocusRequester? = null
 ) {
     val scale = LocalUiScale.current
@@ -848,6 +938,7 @@ private fun StreamItem(
         modifier = Modifier
             .padding(horizontal = Spacing.md.scaled(scale))
             .fillMaxWidth()
+            .tvLongPress(onLongPress)
             .then(
                 if (focusRequester != null) {
                     Modifier.focusRequester(focusRequester)
@@ -910,6 +1001,16 @@ private fun StreamItem(
                             )
                         }
 
+                        if (isFavoriteShow) {
+                            Text(
+                                text = "\u2661",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+                                ),
+                                color = org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
+                            )
+                        }
+
                         Text(
                             text = item.name,
                             style = MaterialTheme.typography.titleMedium.copy(
@@ -958,6 +1059,97 @@ private fun StreamItem(
                 )
             }
         }
+    }
+}
+
+/**
+ * Data class representing a pending favorite action from a long-press.
+ */
+private sealed class FavoriteMenuTarget {
+    data class Category(
+        val categoryId: String,
+        val categoryName: String,
+        val contentType: String,
+        val isFavorite: Boolean
+    ) : FavoriteMenuTarget()
+
+    data class Show(
+        val showId: String,
+        val showName: String,
+        val categoryId: String,
+        val contentType: String,
+        val thumbnailUrl: String?,
+        val isFavorite: Boolean
+    ) : FavoriteMenuTarget()
+}
+
+/**
+ * Themed context menu dialog for favoriting categories/shows.
+ * Uses AlertDialog with Cinema theme colors.
+ */
+@Composable
+private fun FavoriteContextMenuDialog(
+    target: FavoriteMenuTarget,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val (itemName, isFavorite) = when (target) {
+        is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
+        is FavoriteMenuTarget.Show -> target.showName to target.isFavorite
+    }
+
+    val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            androidx.tv.material3.Text(
+                text = itemName,
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaTextPrimary,
+                maxLines = 2
+            )
+        },
+        text = null,
+        confirmButton = {
+            CinemaPrimaryButton(
+                onClick = {
+                    onConfirm()
+                    onDismiss()
+                },
+                text = actionText
+            )
+        },
+        dismissButton = {
+            CinemaSecondaryButton(
+                onClick = onDismiss,
+                text = "Cancel"
+            )
+        },
+        containerColor = CinemaSurface,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
+        shape = RoundedCornerShape(CornerRadius.large)
+    )
+}
+
+/**
+ * Modifier that detects long-press of the D-pad center / Enter key on TV.
+ * Calls [onLongPress] when the key has been held long enough.
+ */
+private fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier = this.onPreviewKeyEvent { event ->
+    val keyCode = event.key.nativeKeyCode
+    val isDpadCenter = keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
+        keyCode == android.view.KeyEvent.KEYCODE_ENTER
+    if (isDpadCenter &&
+        event.type == KeyEventType.KeyDown &&
+        event.nativeKeyEvent.repeatCount > 0 &&
+        event.nativeKeyEvent.isLongPress
+    ) {
+        onLongPress()
+        true
+    } else {
+        false
     }
 }
 
