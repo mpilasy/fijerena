@@ -125,6 +125,7 @@ fun SettingsScreen(
     var epgRefreshTrigger by remember { mutableStateOf(0) }
     var pendingExportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingImportPath by remember { mutableStateOf<String?>(null) }
     var pendingParsedImport by remember { mutableStateOf<SettingsExportManager.ParsedImport?>(null) }
     var showConflictDialog by remember { mutableStateOf(false) }
     var showImportOptionsDialog by remember { mutableStateOf(false) }
@@ -148,7 +149,7 @@ fun SettingsScreen(
         pendingExportUri = null
     }
 
-    // Parse import file and show options dialog
+    // Parse import file (URI) and show options dialog
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportUri(uri)
@@ -160,6 +161,20 @@ fun SettingsScreen(
             exportImportMessage = "Import failed: ${e.message}"
         }
         pendingImportUri = null
+    }
+
+    // Parse import file (Path) and show options dialog
+    LaunchedEffect(pendingImportPath) {
+        val path = pendingImportPath ?: return@LaunchedEffect
+        val parseResult = exportManager.parseImportPath(path)
+        parseResult.onSuccess { parsed ->
+            pendingParsedImport = parsed
+            pendingImportOptions = SettingsExportManager.ImportOptions()
+            showImportOptionsDialog = true
+        }.onFailure { e ->
+            exportImportMessage = "Import failed: ${e.message}"
+        }
+        pendingImportPath = null
     }
 
     // Helper to perform import and refresh UI state
@@ -776,6 +791,12 @@ fun SettingsScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    CinemaSecondaryButton(
+                        onClick = { pendingImportPath = "/sdcard/Download/fijerena_settings.json" },
+                        text = "Quick Import from /sdcard/Download",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     if (exportImportMessage != null) {
                         Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                         Text(

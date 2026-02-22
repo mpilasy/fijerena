@@ -219,6 +219,31 @@ class SettingsExportManager(private val context: Context) {
     }
 
     /**
+     * Parse an import file from a direct file path and detect provider conflicts.
+     */
+    suspend fun parseImportPath(path: String): kotlin.Result<ParsedImport> = withContext(Dispatchers.IO) {
+        try {
+            val file = java.io.File(path)
+            if (!file.exists()) return@withContext kotlin.Result.failure(Exception("File does not exist: $path"))
+            
+            val jsonString = file.readText(Charsets.UTF_8)
+            val exported = json.decodeFromString<ExportedSettings>(jsonString)
+            val providerRepo = ProviderRepository(context)
+            val existingProviders = providerRepo.getAllProvidersList()
+
+            val conflicts = exported.providers
+                .filter { ep -> existingProviders.any { it.name == ep.name } }
+                .map { it.name }
+
+            kotlin.Result.success(ParsedImport(exported, jsonString, conflicts))
+        } catch (e: kotlinx.serialization.SerializationException) {
+            kotlin.Result.failure(Exception("Invalid settings file format"))
+        } catch (e: Exception) {
+            kotlin.Result.failure(e)
+        }
+    }
+
+    /**
      * Parse an import file and detect provider conflicts.
      * Call this before importFromJson() to check if user confirmation is needed.
      */
