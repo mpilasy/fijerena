@@ -90,6 +90,7 @@ import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 fun SettingsScreen(
     onBack: () -> Unit,
     onThemeChanged: (String) -> Unit = {},
+    onUiScaleChanged: (Float) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onManageEpg: () -> Unit = {},
     onProviderChanged: () -> Unit
@@ -373,8 +374,8 @@ fun SettingsScreen(
         }
     }
 
-    androidx.compose.runtime.CompositionLocalProvider(LocalUiScale provides uiScale) {
     val scale = LocalUiScale.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -389,11 +390,10 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val scale = LocalUiScale.current
             Text(
                 text = "Settings",
-                style = MaterialTheme.typography.displaySmall.copy(
-                    fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
-                ),
+                style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -596,6 +596,7 @@ fun SettingsScreen(
                                             onClick = {
                                                 uiScale = scaleValue
                                                 appSettings.uiScale = scaleValue
+                                                onUiScaleChanged(scaleValue)
                                             },
                                             text = label,
                                             modifier = Modifier.weight(1f)
@@ -830,8 +831,6 @@ fun SettingsScreen(
 
         }
     }
-
-    } // End CompositionLocalProvider
 }
 
 private fun formatEpgFileSize(bytes: Long): String {

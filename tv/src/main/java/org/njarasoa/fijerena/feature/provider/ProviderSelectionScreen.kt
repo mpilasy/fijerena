@@ -66,7 +66,6 @@ fun TvProviderSelectionScreen(
         viewModel.loadProviders()
     }
 
-    CompositionLocalProvider(LocalUiScale provides uiScale) {
     val scale = LocalUiScale.current
 
     Column(
@@ -185,7 +184,6 @@ fun TvProviderSelectionScreen(
             containerColor = CinemaSurface
         )
     }
-    } // CompositionLocalProvider
 }
 
 @Composable

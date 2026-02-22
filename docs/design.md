@@ -297,6 +297,13 @@ TV re-exports:    tv/.../theme/CinemaColors.kt    (computed get() properties)
 Mobile re-exports: mobile/.../theme/Color.kt       (computed get() properties)
 ```
 
+### UI Scaling System
+
+The app supports user-selectable UI scaling (0.4x - 1.0x).
+- **Implementation:** `MainActivity.kt` overrides `LocalDensity` globally.
+- **Mechanism:** `scaledDensity = Density(density = original * uiScale, fontScale = originalFontScale)`.
+- **Result:** All `dp` and `sp` values are automatically adjusted. `.scaled()` extensions in `UiScale.kt` are no-ops to prevent double scaling.
+
 ### Palettes
 
 | Theme | ID | Accent | Background | Surface |
@@ -377,7 +384,8 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 - D-pad key handling: OK = show controls, Double-OK = stats overlay, Back = exit
 - Channel switching: D-pad up/down (Live TV only, disabled for VOD)
 - Controls overlay: TvLazyRow of buttons (Play/Pause, Audio, Subtitle, Quality, Stats, Favorite)
-- Stream info display: title, EPG current/next programme, progress bar
+- Stream info display: title, EPG current/next programme, progress bar. Uses `basicMarquee()` for long titles.
+- Channel Overlays: Slide-in panels (Category/Last Watched) are 25% screen width. Channel names use `basicMarquee()`.
 - Stats overlay: repositionable (4 corners via D-pad), two-column layout
 - Auto-hide: controls after 15s, stream info after 3s
 

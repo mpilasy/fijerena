@@ -781,6 +781,35 @@ When a user edited a Jellyfin provider's username or password, the app continued
 
 ---
 
+## Phase 8: TV UI and Player Enhancements
+
+**Release Date:** 2026-02-21
+
+### Global UI Scaling System
+**Impact: Consistent scaling across all app components**
+
+- **Density-Based Scaling:** Moved from per-component manual scaling to a global `LocalDensity` override in `MainActivity.kt`.
+- **Automatic Adjustment:** All `dp` and `sp` values now scale automatically (0.4x to 1.0x) based on the user's `uiScale` setting.
+- **Real-time Updates:** Changes in the settings screen now apply instantly across the whole app.
+- **Double-Scaling Protection:** Replaced manual `.scaled()` calls with no-ops to prevent over-scaling of previously handled components.
+
+### Modern Player Overlays
+**Impact: More compact and readable player overlays**
+
+- **Overlay Width:** Slide-in channel list panels (Category and Last Watched) are now 25% of the screen width (was a fixed DP width).
+- **Scrolling Text (Marquee):** Added horizontal scrolling (`basicMarquee`) for long channel names and programme titles in:
+  - Slide-in side panels.
+  - Player top-bar metadata overlay.
+- **Improved Focus:** Consistent focus handling within the more compact overlay layout.
+
+### Refined TV Visuals
+**Impact: Restored premium look with sharp app borders**
+
+- **Restored Rounded Corners:** Re-enabled rounded edges (8dp to 20dp) for all UI elements (buttons, cards, dialogs) to maintain the "Cinema" design language.
+- **Sharp App Border:** The root app container now uses `RectangleShape`, ensuring that the background fills the entire screen with sharp edges at the display borders, avoiding redundant rounded corners on the whole app.
+
+---
+
 ## 🔮 Future Enhancements
 
 - **Playback Speed Control** — Variable speed for VOD content (0.5×, 1.25×, 1.5×, 2×)
