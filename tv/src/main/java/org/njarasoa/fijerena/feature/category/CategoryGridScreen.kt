@@ -127,6 +127,34 @@ fun CategoryGridScreen(
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsState()
 
+    var showMenuDialog by remember { mutableStateOf(false) }
+    var menuDialogItem by remember { mutableStateOf<MenuDialogItem?>(null) }
+
+    if (showMenuDialog && menuDialogItem != null) {
+        val item = menuDialogItem!!
+        val isFavorite = remember(item) {
+            if (item.type == ItemType.CATEGORY) {
+                viewModel.isFavoriteCategory(item.id)
+            } else {
+                viewModel.isFavorite(item.id, contentType)
+            }
+        }
+
+        MenuDialog(
+            itemName = item.name,
+            isFavorite = isFavorite,
+            onToggleFavorite = {
+                if (item.type == ItemType.CATEGORY) {
+                    viewModel.toggleFavoriteCategory(item.id, item.name)
+                } else {
+                    item.item?.let { viewModel.toggleFavoriteItem(it) }
+                }
+                showMenuDialog = false
+            },
+            onDismiss = { showMenuDialog = false }
+        )
+    }
+
     CategoryGridContent(
         uiState = uiState,
         nowPlaying = nowPlaying,
@@ -156,7 +184,9 @@ private fun CategoryGridContent(
     onSearchClick: () -> Unit,
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
     onBack: () -> Unit,
-    contentType: String
+    contentType: String,
+    onCategoryLongClick: (MediaCategory) -> Unit = {},
+    onStreamLongClick: (MediaItem) -> Unit = {}
 ) {
     val scale = LocalUiScale.current
 
@@ -178,33 +208,35 @@ private fun CategoryGridContent(
                 }
                 is CategoryViewModel.UiState.Success -> {
                     TwoColumnLayout(
-                    categoryViewModel = catViewModel,
-                    categories = state.categories,
-                    selectedCategoryId = state.selectedCategoryId,
-                    streams = state.streams,
-                    streamsLoading = state.streamsLoading,
-                    categoriesRefreshing = state.categoriesRefreshing,
-                    lastPlayedItemId = state.lastPlayedItemId,
-                    nowPlaying = nowPlaying,
-                    contentType = contentType,
-                    supportsNativeEpg = supportsNativeEpg,
-                    epgIndexState = epgIndexState,
-                    onCategorySelected = { categoryId ->
-                        catViewModel.loadStreams(categoryId)
-                    },
-                    onStreamSelected = { streamId, streamName, categoryId ->
-                        onStreamSelected(streamId, streamName, categoryId)
-                    },
-                    onRefreshCategories = {
-                        catViewModel.refreshCategories()
-                    },
-                    onRefreshStreams = { categoryId ->
-                        catViewModel.refreshStreams(categoryId)
-                    },
-                    onSearchClick = onSearchClick,
-                    onEpgClick = onEpgClick,
-                    onBack = onBack
-                )
+                        categoryViewModel = catViewModel,
+                        categories = state.categories,
+                        selectedCategoryId = state.selectedCategoryId,
+                        streams = state.streams,
+                        streamsLoading = state.streamsLoading,
+                        categoriesRefreshing = state.categoriesRefreshing,
+                        lastPlayedItemId = state.lastPlayedItemId,
+                        nowPlaying = nowPlaying,
+                        contentType = contentType,
+                        supportsNativeEpg = supportsNativeEpg,
+                        epgIndexState = epgIndexState,
+                        onCategorySelected = { categoryId ->
+                            catViewModel.loadStreams(categoryId)
+                        },
+                        onStreamSelected = { streamId, streamName, categoryId ->
+                            onStreamSelected(streamId, streamName, categoryId)
+                        },
+                        onRefreshCategories = {
+                            catViewModel.refreshCategories()
+                        },
+                        onRefreshStreams = { categoryId ->
+                            catViewModel.refreshStreams(categoryId)
+                        },
+                        onSearchClick = onSearchClick,
+                        onEpgClick = onEpgClick,
+                        onBack = onBack,
+                        onCategoryLongClick = onCategoryLongClick,
+                        onStreamLongClick = onStreamLongClick
+                    )
             }
                 is CategoryViewModel.UiState.Error -> {
                     ErrorScreen(
@@ -260,6 +292,51 @@ private fun CategoryGridContent(
     }
 }
 
+private enum class ItemType { CATEGORY, STREAM }
+private data class MenuDialogItem(val id: String, val name: String, val type: ItemType, val item: MediaItem? = null)
+
+@Composable
+private fun MenuDialog(
+    itemName: String,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = CinemaAlpha.overlayHeavy)),
+        contentAlignment = Alignment.Center
+    ) {
+        org.njarasoa.fijerena.ui.components.TvGlassPanel(
+            modifier = Modifier
+                .width(TvDimensions.dialogWidth)
+                .padding(Spacing.xxl)
+        ) {
+            Column(
+                modifier = Modifier.padding(Spacing.xxl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                Text(
+                    text = itemName,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                CinemaPrimaryButton(
+                    onClick = onToggleFavorite,
+                    text = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+                )
+
+                CinemaSecondaryButton(
+                    onClick = onDismiss,
+                    text = "Cancel"
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun TwoColumnLayout(
     categoryViewModel: CategoryViewModel,
@@ -279,7 +356,9 @@ private fun TwoColumnLayout(
     onRefreshStreams: (String) -> Unit,
     onSearchClick: () -> Unit,
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onCategoryLongClick: (MediaCategory) -> Unit,
+    onStreamLongClick: (MediaItem) -> Unit
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -389,6 +468,7 @@ private fun TwoColumnLayout(
                 categoriesRefreshing = categoriesRefreshing,
                 onCategorySelected = onCategorySelected,
                 onRefreshCategories = onRefreshCategories,
+                onCategoryLongClick = onCategoryLongClick,
                 modifier = Modifier
                     .weight(0.3f)
                     .fillMaxHeight()
@@ -406,7 +486,7 @@ private fun TwoColumnLayout(
                 categoryViewModel = categoryViewModel,
                 isDevMode = appSettings.isDevMode,
                 onStreamSelected = { streamId, streamName, categoryId ->
-                    // Check if this is a category reference from "Recent Categories"
+                    // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
                     val item = streams?.firstOrNull { it.id == streamId }
                     if (item?.providerData?.get("isCategoryRef") == "true") {
                         val targetCategoryId = item.providerData["categoryId"]
@@ -415,6 +495,20 @@ private fun TwoColumnLayout(
                         }
                     } else {
                         onStreamSelected(streamId, streamName, categoryId)
+                    }
+                },
+                onStreamLongClick = { item ->
+                    // If it's a category ref, treat as category
+                    if (item.providerData["isCategoryRef"] == "true") {
+                        val targetCategoryId = item.providerData["categoryId"]
+                        val cat = categories.find { it.id == targetCategoryId }
+                        if (cat != null) {
+                            onCategoryLongClick(cat)
+                        } else {
+                            onCategoryLongClick(MediaCategory(id = targetCategoryId ?: item.id, name = item.name))
+                        }
+                    } else {
+                        onStreamLongClick(item)
                     }
                 },
                 onRefreshStreams = onRefreshStreams,
@@ -433,6 +527,7 @@ private fun CategoryList(
     categoriesRefreshing: Boolean,
     onCategorySelected: (String) -> Unit,
     onRefreshCategories: () -> Unit,
+    onCategoryLongClick: (MediaCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Separate virtual and regular categories
@@ -547,6 +642,7 @@ private fun CategoryList(
                                 category = category,
                                 isSelected = category.id == selectedCategoryId,
                                 onClick = { onCategorySelected(category.id) },
+                                onLongClick = { onCategoryLongClick(category) },
                                 focusRequester = focusRequesters[category.id]
                             )
                         }
@@ -579,6 +675,7 @@ private fun CategoryList(
                             category = category,
                             isSelected = category.id == selectedCategoryId,
                             onClick = { onCategorySelected(category.id) },
+                            onLongClick = { onCategoryLongClick(category) },
                             focusRequester = focusRequesters[category.id]
                         )
                     }
@@ -593,12 +690,14 @@ private fun CategoryItem(
     category: MediaCategory,
     isSelected: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     focusRequester: FocusRequester? = null
 ) {
     val scale = LocalUiScale.current
 
     Card(
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = Modifier
             .padding(horizontal = Spacing.md.scaled(scale))
             .fillMaxWidth()
@@ -667,6 +766,7 @@ private fun StreamList(
     categoryViewModel: CategoryViewModel,
     isDevMode: Boolean,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onStreamLongClick: (MediaItem) -> Unit,
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -822,6 +922,7 @@ private fun StreamList(
                                 watchProgress = progress,
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
+                                onLongClick = { onStreamLongClick(item) },
                                 focusRequester = focusRequesters[item.id]
                             )
                         }
@@ -839,12 +940,14 @@ private fun StreamItem(
     watchProgress: Float = 0f,
     nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     focusRequester: FocusRequester? = null
 ) {
     val scale = LocalUiScale.current
 
     Card(
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = Modifier
             .padding(horizontal = Spacing.md.scaled(scale))
             .fillMaxWidth()

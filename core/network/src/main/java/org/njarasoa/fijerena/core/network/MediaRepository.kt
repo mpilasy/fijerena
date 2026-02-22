@@ -403,6 +403,35 @@ class MediaRepository(
         cache.edit().remove(KEY_FAVORITES).apply()
     }
 
+    // --- Favorite Categories ---
+
+    fun addFavoriteCategory(categoryId: String, categoryName: String, contentType: String): Boolean {
+        val favType = "CATEGORY_$contentType"
+        return addFavorite(categoryId, categoryName, "", favType)
+    }
+
+    fun removeFavoriteCategory(categoryId: String, contentType: String): Boolean {
+        val favType = "CATEGORY_$contentType"
+        return removeFavorite(categoryId, favType)
+    }
+
+    fun isFavoriteCategory(categoryId: String, contentType: String): Boolean {
+        val favType = "CATEGORY_$contentType"
+        return isFavorite(categoryId, favType)
+    }
+
+    fun getFavoriteCategories(contentType: String): List<MediaCategory> {
+        val favType = "CATEGORY_$contentType"
+        return getFavoriteItems()
+            .filter { it.contentType == favType }
+            .map { fav ->
+                MediaCategory(
+                    id = fav.itemId,
+                    name = fav.itemName
+                )
+            }
+    }
+
     fun savePlaybackPosition(
         itemId: String,
         itemName: String,

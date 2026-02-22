@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.feature.category
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,14 +37,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -85,6 +92,45 @@ fun MobileCategoryListScreen(
     val epgIndexState by epgIndexer.state.collectAsState()
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode = remember { appSettings.isDevMode }
+
+    var showMenuDialog by remember { mutableStateOf(false) }
+    var menuDialogItem by remember { mutableStateOf<MenuDialogItem?>(null) }
+
+    if (showMenuDialog && menuDialogItem != null) {
+        val item = menuDialogItem!!
+        val isFavorite = remember(item) {
+            if (item.type == ItemType.CATEGORY) {
+                viewModel.isFavoriteCategory(item.id)
+            } else {
+                viewModel.isFavorite(item.id, contentType)
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = { showMenuDialog = false },
+            title = { Text(item.name) },
+            text = { Text("Choose an action") },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (item.type == ItemType.CATEGORY) {
+                        viewModel.toggleFavoriteCategory(item.id, item.name)
+                    } else {
+                        if (item.item != null) {
+                            viewModel.toggleFavoriteItem(item.item)
+                        }
+                    }
+                    showMenuDialog = false
+                }) {
+                    Text(if (isFavorite) "Remove from Favorites" else "Add to Favorites")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMenuDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -186,6 +232,14 @@ fun MobileCategoryListScreen(
                             selectedCategoryId = state.selectedCategoryId,
                             onCategorySelected = { categoryId ->
                                 viewModel.loadStreams(categoryId)
+                            },
+                            onCategoryLongClick = { category ->
+                                menuDialogItem = MenuDialogItem(
+                                    id = category.id,
+                                    name = category.name,
+                                    type = ItemType.CATEGORY
+                                )
+                                showMenuDialog = true
                             }
                         )
 
@@ -210,7 +264,7 @@ fun MobileCategoryListScreen(
                                 nowPlaying = nowPlaying,
                                 onItemSelected = { itemId, itemName, categoryId ->
                                     android.util.Log.d("MobileCategoryListScreen", "onItemSelected: id=$itemId, name=$itemName, cat=$categoryId")
-                                    // Check if this is a category reference from "Recent Categories"
+                                    // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
                                     val item = state.streams?.firstOrNull { it.id == itemId }
                                     if (item?.providerData?.get("isCategoryRef") == "true") {
                                         val targetCategoryId = item.providerData["categoryId"]
@@ -220,6 +274,24 @@ fun MobileCategoryListScreen(
                                     } else {
                                         onStreamSelected(itemId, itemName, categoryId, contentType)
                                     }
+                                },
+                                onItemLongClick = { item ->
+                                    // If it's a category ref, treat as category
+                                    if (item.providerData["isCategoryRef"] == "true") {
+                                        menuDialogItem = MenuDialogItem(
+                                            id = item.providerData["categoryId"] ?: item.id,
+                                            name = item.name,
+                                            type = ItemType.CATEGORY
+                                        )
+                                    } else {
+                                        menuDialogItem = MenuDialogItem(
+                                            id = item.id,
+                                            name = item.name,
+                                            type = ItemType.STREAM,
+                                            item = item
+                                        )
+                                    }
+                                    showMenuDialog = true
                                 }
                             )
                         }
@@ -255,17 +327,29 @@ fun MobileCategoryListScreen(
     }
 }
 
+private enum class ItemType { CATEGORY, STREAM }
+
+private data class MenuDialogItem(
+    val id: String,
+    val name: String,
+    val type: ItemType,
+    val item: org.njarasoa.fijerena.core.player.domain.MediaItem? = null
+)
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CategoryChipRow(
     categories: List<org.njarasoa.fijerena.core.player.domain.MediaCategory>,
     selectedCategoryId: String?,
-    onCategorySelected: (String) -> Unit
+    onCategorySelected: (String) -> Unit,
+    onCategoryLongClick: (org.njarasoa.fijerena.core.player.domain.MediaCategory) -> Unit
 ) {
     val virtualCategoryIds = setOf(
         CategoryViewModel.FAVORITES_CATEGORY_ID,
         CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
         CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
-        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
+        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID,
+        CategoryViewModel.FAVORITE_CATEGORIES_ID
     )
     val virtualCategories = categories.filter { it.id in virtualCategoryIds }
     val regularCategories = categories.filter { it.id !in virtualCategoryIds }
@@ -292,21 +376,26 @@ private fun CategoryChipRow(
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
             ) {
                 items(virtualCategories, key = { it.id }) { category ->
-                    FilterChip(
-                        selected = category.id == selectedCategoryId,
-                        onClick = { onCategorySelected(category.id) },
-                        label = {
+                    val selected = category.id == selectedCategoryId
+                    Surface(
+                        modifier = Modifier.combinedClickable(
+                            onClick = { onCategorySelected(category.id) },
+                            onLongClick = { onCategoryLongClick(category) }
+                        ),
+                        shape = FilterChipDefaults.shape,
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                        border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                    ) {
+                        Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                             Text(
                                 text = category.name,
                                 maxLines = 1,
-                                modifier = Modifier.basicMarquee()
+                                modifier = Modifier.basicMarquee(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                             )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    )
+                        }
+                    }
                 }
             }
         }
@@ -321,21 +410,26 @@ private fun CategoryChipRow(
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
         ) {
             items(regularCategories, key = { it.id }) { category ->
-                FilterChip(
-                    selected = category.id == selectedCategoryId,
-                    onClick = { onCategorySelected(category.id) },
-                    label = {
+                val selected = category.id == selectedCategoryId
+                Surface(
+                    modifier = Modifier.combinedClickable(
+                        onClick = { onCategorySelected(category.id) },
+                        onLongClick = { onCategoryLongClick(category) }
+                    ),
+                    shape = FilterChipDefaults.shape,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                    border = if (selected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                ) {
+                    Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                         Text(
                             text = category.name,
                             maxLines = 1,
-                            modifier = Modifier.basicMarquee()
+                            modifier = Modifier.basicMarquee(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                         )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                )
+                    }
+                }
             }
         }
     }
@@ -347,7 +441,8 @@ private fun StreamsList(
     streamsLoading: Boolean,
     selectedCategoryId: String?,
     nowPlaying: Map<String, EpgProgram> = emptyMap(),
-    onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit
+    onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
+    onItemLongClick: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit
 ) {
     when {
         selectedCategoryId == null -> {
@@ -410,7 +505,8 @@ private fun StreamsList(
                         nowPlayingProgram = nowPlaying[item.id],
                         onClick = {
                             onItemSelected(item.id, item.name, item.categoryId)
-                        }
+                        },
+                        onLongClick = { onItemLongClick(item) }
                     )
                 }
             }
@@ -418,17 +514,22 @@ private fun StreamsList(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun StreamCard(
     item: org.njarasoa.fijerena.core.player.domain.MediaItem,
     nowPlayingProgram: EpgProgram? = null,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     Card(
-        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(MobileDimensions.streamCardHeight),
+            .height(MobileDimensions.streamCardHeight)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
