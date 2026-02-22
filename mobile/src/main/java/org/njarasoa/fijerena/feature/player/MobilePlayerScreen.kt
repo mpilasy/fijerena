@@ -140,6 +140,28 @@ fun MobilePlayerScreen(
     var showStats by remember { mutableStateOf(false) }
     var hasStartedPlaying by remember { mutableStateOf(false) }
 
+    // Auto-show stats on repeated buffer exhaustion (dev mode only)
+    LaunchedEffect(appSettings.isDevMode) {
+        if (!appSettings.isDevMode) return@LaunchedEffect
+        val rebufferTimestamps = mutableListOf<Long>()
+        var lastSeenCount = 0
+        while (true) {
+            val currentCount = StreamingPlaybackService.getInstance()?.rebufferCount?.value ?: 0
+            if (currentCount > lastSeenCount) {
+                val now = System.currentTimeMillis()
+                repeat(currentCount - lastSeenCount) {
+                    rebufferTimestamps.add(now)
+                }
+                lastSeenCount = currentCount
+                rebufferTimestamps.removeAll { now - it > 30_000L }
+                if (rebufferTimestamps.size >= 3 && !showStats) {
+                    showStats = true
+                }
+            }
+            kotlinx.coroutines.delay(1000L)
+        }
+    }
+
     // Live position polling for smooth VOD timer updates
     var livePosition by remember { mutableLongStateOf(0L) }
     var liveDuration by remember { mutableLongStateOf(0L) }
@@ -1048,11 +1070,9 @@ private fun ControlsOverlay(
                     )
                 }
 
-                // Stats (dev mode only)
-                if (isDeveloperMode) {
-                    IconButton(onClick = onStats) {
-                        Icon(Icons.Filled.BarChart, "Stats", tint = Color.White)
-                    }
+                // Stats for nerds (always visible)
+                IconButton(onClick = onStats) {
+                    Icon(Icons.Filled.BarChart, "Stats", tint = Color.White)
                 }
             }
         }

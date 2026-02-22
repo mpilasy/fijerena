@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,8 +43,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -100,8 +101,10 @@ import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -139,6 +142,30 @@ fun PlayerScreen(
     var showCategoryOverlay by remember { mutableStateOf(false) }
     var showLastWatchedOverlay by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
+
+    // Auto-show stats on repeated buffer exhaustion (dev mode only)
+    LaunchedEffect(isDeveloperMode) {
+        if (!isDeveloperMode) return@LaunchedEffect
+        val rebufferTimestamps = mutableListOf<Long>()
+        var lastSeenCount = 0
+        while (true) {
+            val currentCount = StreamingPlaybackService.getInstance()?.rebufferCount?.value ?: 0
+            if (currentCount > lastSeenCount) {
+                val now = System.currentTimeMillis()
+                repeat(currentCount - lastSeenCount) {
+                    rebufferTimestamps.add(now)
+                }
+                lastSeenCount = currentCount
+                // Remove timestamps older than 30 seconds
+                rebufferTimestamps.removeAll { now - it > 30_000L }
+                // Show stats if 3+ rebuffers in 30s window
+                if (rebufferTimestamps.size >= 3 && !showStats) {
+                    showStats = true
+                }
+            }
+            delay(1000L)
+        }
+    }
 
     // Live position polling for smooth VOD timer updates
     var livePosition by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
@@ -418,13 +445,13 @@ fun PlayerScreen(
             }
         )
 
-        // Loading/Error overlays (always show)
+        // Loading/Error overlays (always show, except Idle which is handled silently)
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Center
         ) {
             when (playbackState) {
-                PlaybackState.Idle -> IdleContent(onBack)
+                PlaybackState.Idle -> { /* Silent - no UI flash before stream loads */ }
                 PlaybackState.Buffering -> BufferingContent()
                 is PlaybackState.Ended -> EndedContent(onBack)
                 is PlaybackState.Error -> ErrorContent(
@@ -466,11 +493,13 @@ fun PlayerScreen(
             val subtitleTrackCount = viewModel.getSubtitleTracks().size
             val qualityCount = viewModel.getVideoQualities().size
 
-            // Focus requester for the center play/pause button
+            // Focus requester for the first focusable control
             val controlsFocusRequester = remember { FocusRequester() }
 
             LaunchedEffect(showControls) {
                 if (showControls) {
+                    // Small delay to allow composition to complete
+                    delay(100)
                     try { controlsFocusRequester.requestFocus() } catch (_: Exception) {}
                 }
             }
@@ -478,7 +507,7 @@ fun PlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = CinemaAlpha.tint))
+                    .background(Color.Black.copy(alpha = CinemaAlpha.focusedTint))
             ) {
                 // Top bar with channel name and title
                 Column(
@@ -506,40 +535,36 @@ fun PlayerScreen(
                     )
                 }
 
-                // Center row: Rewind | Play/Pause | FastForward (VOD only)
-                if (showControls) {
+                // Center row: Rewind | Play/Pause | FastForward (VOD only, hidden for live)
+                if (showControls && !isLive) {
                     Row(
                         modifier = Modifier.align(Center),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xxl),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (!isLive) {
-                            // Rewind -30s
-                            Button(
-                                onClick = { viewModel.seekRelative(-30_000L) },
-                                colors = androidx.tv.material3.ButtonDefaults.colors(
-                                    containerColor = Color.Transparent
-                                ),
-                                modifier = Modifier.size(TvDimensions.iconButtonSize)
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Filled.FastRewind,
-                                        contentDescription = "Rewind 30s",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(TvDimensions.iconLarge)
-                                    )
-                                    Text("-30s", style = MaterialTheme.typography.labelSmall, color = Color.White)
-                                }
+                        // Rewind -30s
+                        Button(
+                            onClick = { viewModel.seekRelative(-30_000L) },
+                            colors = androidx.tv.material3.ButtonDefaults.colors(
+                                containerColor = Color.Transparent
+                            ),
+                            modifier = Modifier.size(TvDimensions.iconButtonSize)
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Filled.FastRewind,
+                                    contentDescription = "Rewind 30s",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(TvDimensions.iconLarge)
+                                )
+                                Text("-30s", style = MaterialTheme.typography.labelSmall, color = Color.White)
                             }
                         }
 
                         // Play/Pause
                         Button(
                             onClick = {
-                                if (!isLive) {
-                                    if (isPaused) viewModel.resume() else viewModel.pause()
-                                }
+                                if (isPaused) viewModel.resume() else viewModel.pause()
                             },
                             colors = androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = Color.Transparent
@@ -549,31 +574,29 @@ fun PlayerScreen(
                                 .focusRequester(controlsFocusRequester)
                         ) {
                             Icon(
-                                imageVector = if (isPaused) Icons.Filled.PlayArrow else if (isLive) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                                imageVector = if (isPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
                                 contentDescription = if (isPaused) "Play" else "Pause",
                                 tint = Color.White,
                                 modifier = Modifier.size(TvDimensions.iconXLarge)
                             )
                         }
 
-                        if (!isLive) {
-                            // Fast Forward +1min
-                            Button(
-                                onClick = { viewModel.seekRelative(60_000L) },
-                                colors = androidx.tv.material3.ButtonDefaults.colors(
-                                    containerColor = Color.Transparent
-                                ),
-                                modifier = Modifier.size(TvDimensions.iconButtonSize)
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Filled.FastForward,
-                                        contentDescription = "Fast Forward 1min",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(TvDimensions.iconLarge)
-                                    )
-                                    Text("+1m", style = MaterialTheme.typography.labelSmall, color = Color.White)
-                                }
+                        // Fast Forward +1min
+                        Button(
+                            onClick = { viewModel.seekRelative(60_000L) },
+                            colors = androidx.tv.material3.ButtonDefaults.colors(
+                                containerColor = Color.Transparent
+                            ),
+                            modifier = Modifier.size(TvDimensions.iconButtonSize)
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Filled.FastForward,
+                                    contentDescription = "Fast Forward 1min",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(TvDimensions.iconLarge)
+                                )
+                                Text("+1m", style = MaterialTheme.typography.labelSmall, color = Color.White)
                             }
                         }
                     }
@@ -583,7 +606,8 @@ fun PlayerScreen(
                 GlassPanel(
                     modifier = Modifier
                         .align(BottomCenter)
-                        .fillMaxWidth()
+                        .fillMaxWidth(),
+                    backgroundAlpha = 0.6f
                 ) {
                     Column(
                         modifier = Modifier
@@ -760,16 +784,14 @@ fun PlayerScreen(
                                     }
                                 }
 
-                                // Stats (dev mode only)
-                                if (isDeveloperMode) {
-                                    Button(
-                                        onClick = { showStats = !showStats },
-                                        colors = androidx.tv.material3.ButtonDefaults.colors(
-                                            containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                        )
-                                    ) {
-                                        Icon(Icons.Filled.BarChart, "Stats", tint = Color.White)
-                                    }
+                                // Stats for nerds (always visible)
+                                Button(
+                                    onClick = { showStats = !showStats },
+                                    colors = androidx.tv.material3.ButtonDefaults.colors(
+                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                    )
+                                ) {
+                                    Icon(Icons.Filled.BarChart, "Stats", tint = Color.White)
                                 }
                             }
                         }
@@ -1058,7 +1080,7 @@ private fun AudioTrackSelectorDialog(
     val audioTracks = remember { viewModel.getAudioTracks() }
     var selectedIndex by remember { mutableStateOf(audioTracks.indexOfFirst { it.isSelected }.coerceAtLeast(0)) }
     val focusRequesters = remember { List(audioTracks.size) { FocusRequester() } }
-    val context = LocalContext.current
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
 
     // Request focus on selected item
     LaunchedEffect(Unit) {
@@ -1067,15 +1089,18 @@ private fun AudioTrackSelectorDialog(
         }
     }
 
+    BackHandler { onDismiss() }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.overlayHeavy)),
+            .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
         contentAlignment = Center
     ) {
         GlassPanel(
             modifier = Modifier
                 .width(TvDimensions.dialogWidth)
+                .heightIn(max = screenHeight * 0.8f)
                 .padding(Spacing.xxl)
         ) {
             Column(
@@ -1086,7 +1111,7 @@ private fun AudioTrackSelectorDialog(
             ) {
                 // Header
                 Text(
-                    text = "🔊 Select Audio Track",
+                    text = "Select Audio Track",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -1096,8 +1121,8 @@ private fun AudioTrackSelectorDialog(
                     Text(
                         text = "No audio tracks available",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = CinemaAlpha.textMedium),
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        color = CinemaTextSecondary,
+                        modifier = Modifier.padding(vertical = Spacing.md)
                     )
                     Button(
                         onClick = onDismiss,
@@ -1122,25 +1147,36 @@ private fun AudioTrackSelectorDialog(
                                     if (focusState.isFocused) {
                                         selectedIndex = index
                                     }
-                                }
-                                .then(
-                                    if (isSelected) Modifier.border(
-                                        TvDimensions.borderFocused,
-                                        MaterialTheme.colorScheme.primary,
-                                        RoundedCornerShape(CinemaCornerRadius.small)
-                                    ) else Modifier
-                                ),
+                                },
                             colors = androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
                                 else CinemaSurfaceVariant,
-                                contentColor = Color.White
+                                contentColor = CinemaTextPrimary,
+                                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                                focusedContentColor = CinemaTextPrimary
+                            ),
+                            border = androidx.tv.material3.ButtonDefaults.border(
+                                border = androidx.tv.material3.Border(
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = if (isSelected) TvDimensions.borderFocused else 0.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                                    ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                                ),
+                                focusedBorder = androidx.tv.material3.Border(
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = TvDimensions.borderFocused,
+                                        color = MaterialTheme.colorScheme.primary
+                                    ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                                )
                             )
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    .padding(Spacing.xs),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1154,7 +1190,7 @@ private fun AudioTrackSelectorDialog(
                                     )
                                     if (track.isSelected) {
                                         Text(
-                                            text = "✓ Active",
+                                            text = "Active",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -1163,13 +1199,13 @@ private fun AudioTrackSelectorDialog(
                                 Text(
                                     text = "${track.channelCount}ch • ${track.sampleRate / 1000}kHz",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = CinemaAlpha.textLow)
+                                    color = CinemaTextTertiary
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
 
                     // Close button
                     Button(
@@ -1186,26 +1222,11 @@ private fun AudioTrackSelectorDialog(
                 Text(
                     text = "Use D-pad to navigate • OK to select • BACK to cancel",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-        }
-    }
-
-    // Handle back button
-    DisposableEffect(Unit) {
-        val callback = object : androidx.activity.OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                onDismiss()
-            }
-        }
-        val activity = context as? androidx.activity.ComponentActivity
-        activity?.onBackPressedDispatcher?.addCallback(callback)
-
-        onDispose {
-            callback.remove()
         }
     }
 }
@@ -1218,7 +1239,7 @@ private fun SubtitleSelectorDialog(
     val subtitleTracks = remember { viewModel.getSubtitleTracks() }
     var selectedIndex by remember { mutableStateOf(subtitleTracks.indexOfFirst { it.isSelected }.coerceAtLeast(-1)) }
     val focusRequesters = remember { List(subtitleTracks.size + 1) { FocusRequester() } } // +1 for "Off" option
-    val context = LocalContext.current
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
 
     // Request focus on selected item or "Off" option
     LaunchedEffect(Unit) {
@@ -1228,15 +1249,18 @@ private fun SubtitleSelectorDialog(
         }
     }
 
+    BackHandler { onDismiss() }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.overlayHeavy)),
+            .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
         contentAlignment = Center
     ) {
         GlassPanel(
             modifier = Modifier
                 .width(TvDimensions.dialogWidth)
+                .heightIn(max = screenHeight * 0.8f)
                 .padding(Spacing.xxl)
         ) {
             Column(
@@ -1247,7 +1271,7 @@ private fun SubtitleSelectorDialog(
             ) {
                 // Header
                 Text(
-                    text = "💬 Select Subtitles",
+                    text = "Select Subtitles",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -1268,24 +1292,35 @@ private fun SubtitleSelectorDialog(
                             if (focusState.isFocused) {
                                 selectedIndex = -1
                             }
-                        }
-                        .then(
-                            if (isOffSelected) Modifier.border(
-                                TvDimensions.borderFocused,
-                                MaterialTheme.colorScheme.primary,
-                                RoundedCornerShape(CinemaCornerRadius.small)
-                            ) else Modifier
-                        ),
+                        },
                     colors = androidx.tv.material3.ButtonDefaults.colors(
                         containerColor = if (isOffSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
                         else CinemaSurfaceVariant,
-                        contentColor = Color.White
+                        contentColor = CinemaTextPrimary,
+                        focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                        focusedContentColor = CinemaTextPrimary
+                    ),
+                    border = androidx.tv.material3.ButtonDefaults.border(
+                        border = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isOffSelected) TvDimensions.borderFocused else 0.dp,
+                                color = if (isOffSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(CinemaCornerRadius.small)
+                        ),
+                        focusedBorder = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = TvDimensions.borderFocused,
+                                color = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(CinemaCornerRadius.small)
+                        )
                     )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(8.dp),
+                            .padding(Spacing.xs),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1296,7 +1331,7 @@ private fun SubtitleSelectorDialog(
                         )
                         if (isOffSelected) {
                             Text(
-                                text = "✓ Active",
+                                text = "Active",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -1308,8 +1343,8 @@ private fun SubtitleSelectorDialog(
                     Text(
                         text = "No subtitle tracks available",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = CinemaAlpha.textMedium),
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        color = CinemaTextSecondary,
+                        modifier = Modifier.padding(vertical = Spacing.md)
                     )
                 } else {
                     // Track list
@@ -1328,25 +1363,36 @@ private fun SubtitleSelectorDialog(
                                     if (focusState.isFocused) {
                                         selectedIndex = index
                                     }
-                                }
-                                .then(
-                                    if (isSelected) Modifier.border(
-                                        TvDimensions.borderFocused,
-                                        MaterialTheme.colorScheme.primary,
-                                        RoundedCornerShape(CinemaCornerRadius.small)
-                                    ) else Modifier
-                                ),
+                                },
                             colors = androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
                                 else CinemaSurfaceVariant,
-                                contentColor = Color.White
+                                contentColor = CinemaTextPrimary,
+                                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                                focusedContentColor = CinemaTextPrimary
+                            ),
+                            border = androidx.tv.material3.ButtonDefaults.border(
+                                border = androidx.tv.material3.Border(
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = if (isSelected) TvDimensions.borderFocused else 0.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                                    ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                                ),
+                                focusedBorder = androidx.tv.material3.Border(
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = TvDimensions.borderFocused,
+                                        color = MaterialTheme.colorScheme.primary
+                                    ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                                )
                             )
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    .padding(Spacing.xs),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1360,7 +1406,7 @@ private fun SubtitleSelectorDialog(
                                     )
                                     if (track.isSelected) {
                                         Text(
-                                            text = "✓ Active",
+                                            text = "Active",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -1369,14 +1415,14 @@ private fun SubtitleSelectorDialog(
                                 Text(
                                     text = track.mimeType.substringAfterLast("/").uppercase(),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = CinemaAlpha.textLow)
+                                    color = CinemaTextTertiary
                                 )
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.xs))
 
                 // Close button
                 Button(
@@ -1390,28 +1436,13 @@ private fun SubtitleSelectorDialog(
 
                 // Hint text
                 Text(
-                    text = "Use D-pad to navigate • OK to select • BACK to cancel",
+                    text = "Use D-pad to navigate \u2022 OK to select \u2022 BACK to cancel",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-        }
-    }
-
-    // Handle back button
-    DisposableEffect(Unit) {
-        val callback = object : androidx.activity.OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                onDismiss()
-            }
-        }
-        val activity = context as? androidx.activity.ComponentActivity
-        activity?.onBackPressedDispatcher?.addCallback(callback)
-
-        onDispose {
-            callback.remove()
         }
     }
 }
@@ -1424,7 +1455,7 @@ private fun QualitySelectorDialog(
     val videoQualities = remember { viewModel.getVideoQualities() }
     var selectedIndex by remember { mutableStateOf(videoQualities.indexOfFirst { it.isSelected }.coerceAtLeast(-1)) }
     val focusRequesters = remember { List(videoQualities.size + 1) { FocusRequester() } } // +1 for "Auto" option
-    val context = LocalContext.current
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
 
     // Request focus on selected item or "Auto" option
     LaunchedEffect(Unit) {
@@ -1434,15 +1465,18 @@ private fun QualitySelectorDialog(
         }
     }
 
+    BackHandler { onDismiss() }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.overlayHeavy)),
+            .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
         contentAlignment = Center
     ) {
         GlassPanel(
             modifier = Modifier
                 .width(TvDimensions.dialogWidth)
+                .heightIn(max = screenHeight * 0.8f)
                 .padding(Spacing.xxl)
         ) {
             Column(
@@ -1453,7 +1487,7 @@ private fun QualitySelectorDialog(
             ) {
                 // Header
                 Text(
-                    text = "⚙️ Select Quality",
+                    text = "Select Quality",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -1474,24 +1508,35 @@ private fun QualitySelectorDialog(
                             if (focusState.isFocused) {
                                 selectedIndex = -1
                             }
-                        }
-                        .then(
-                            if (isAutoSelected) Modifier.border(
-                                TvDimensions.borderFocused,
-                                MaterialTheme.colorScheme.primary,
-                                RoundedCornerShape(CinemaCornerRadius.small)
-                            ) else Modifier
-                        ),
+                        },
                     colors = androidx.tv.material3.ButtonDefaults.colors(
                         containerColor = if (isAutoSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
                         else CinemaSurfaceVariant,
-                        contentColor = Color.White
+                        contentColor = CinemaTextPrimary,
+                        focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                        focusedContentColor = CinemaTextPrimary
+                    ),
+                    border = androidx.tv.material3.ButtonDefaults.border(
+                        border = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isAutoSelected) TvDimensions.borderFocused else 0.dp,
+                                color = if (isAutoSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(CinemaCornerRadius.small)
+                        ),
+                        focusedBorder = androidx.tv.material3.Border(
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = TvDimensions.borderFocused,
+                                color = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(CinemaCornerRadius.small)
+                        )
                     )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(8.dp),
+                            .padding(Spacing.xs),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1504,12 +1549,12 @@ private fun QualitySelectorDialog(
                             Text(
                                 text = "Automatically adjust quality based on network",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = CinemaAlpha.textLow)
+                                color = CinemaTextTertiary
                             )
                         }
                         if (isAutoSelected) {
                             Text(
-                                text = "✓ Active",
+                                text = "Active",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -1521,8 +1566,8 @@ private fun QualitySelectorDialog(
                     Text(
                         text = "No quality options available",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = CinemaAlpha.textMedium),
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        color = CinemaTextSecondary,
+                        modifier = Modifier.padding(vertical = Spacing.md)
                     )
                 } else {
                     // Quality list
@@ -1541,25 +1586,36 @@ private fun QualitySelectorDialog(
                                     if (focusState.isFocused) {
                                         selectedIndex = index
                                     }
-                                }
-                                .then(
-                                    if (isSelected) Modifier.border(
-                                        TvDimensions.borderFocused,
-                                        MaterialTheme.colorScheme.primary,
-                                        RoundedCornerShape(CinemaCornerRadius.small)
-                                    ) else Modifier
-                                ),
+                                },
                             colors = androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
                                 else CinemaSurfaceVariant,
-                                contentColor = Color.White
+                                contentColor = CinemaTextPrimary,
+                                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                                focusedContentColor = CinemaTextPrimary
+                            ),
+                            border = androidx.tv.material3.ButtonDefaults.border(
+                                border = androidx.tv.material3.Border(
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = if (isSelected) TvDimensions.borderFocused else 0.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                                    ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                                ),
+                                focusedBorder = androidx.tv.material3.Border(
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = TvDimensions.borderFocused,
+                                        color = MaterialTheme.colorScheme.primary
+                                    ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                                )
                             )
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    .padding(Spacing.xs),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1573,7 +1629,7 @@ private fun QualitySelectorDialog(
                                     )
                                     if (quality.isSelected) {
                                         Text(
-                                            text = "✓ Active",
+                                            text = "Active",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -1582,14 +1638,14 @@ private fun QualitySelectorDialog(
                                 Text(
                                     text = "${quality.width}×${quality.height} • ${quality.frameRate.toInt()}fps",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = CinemaAlpha.textLow)
+                                    color = CinemaTextTertiary
                                 )
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.xs))
 
                 // Close button
                 Button(
@@ -1605,26 +1661,11 @@ private fun QualitySelectorDialog(
                 Text(
                     text = "Use D-pad to navigate • OK to select • BACK to cancel",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-        }
-    }
-
-    // Handle back button
-    DisposableEffect(Unit) {
-        val callback = object : androidx.activity.OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                onDismiss()
-            }
-        }
-        val activity = context as? androidx.activity.ComponentActivity
-        activity?.onBackPressedDispatcher?.addCallback(callback)
-
-        onDispose {
-            callback.remove()
         }
     }
 }
@@ -2207,25 +2248,28 @@ private fun MetadataOverlay(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                item {
-                    if (isPaused) {
-                        Button(onClick = { onResume?.invoke() }) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                                Text("Resume")
+                // Play/Pause button (VOD only, not for live streams)
+                if (!metadata.isLive) {
+                    item {
+                        if (isPaused) {
+                            Button(onClick = { onResume?.invoke() }) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                                    Text("Resume")
+                                }
                             }
-                        }
-                    } else {
-                        Button(onClick = { onPause?.invoke() }) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Filled.Pause, contentDescription = null)
-                                Text("Pause")
+                        } else {
+                            Button(onClick = { onPause?.invoke() }) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Filled.Pause, contentDescription = null)
+                                    Text("Pause")
+                                }
                             }
                         }
                     }
@@ -2360,7 +2404,8 @@ private fun IdleContent(onBack: () -> Unit) {
 private fun BufferingContent() {
     CircularProgressIndicator(
         color = CinemaAccent,
-        modifier = Modifier.size(Spacing.xxl)
+        strokeWidth = TvDimensions.progressBar,
+        modifier = Modifier.size(TvDimensions.progressIndicator)
     )
 }
 
