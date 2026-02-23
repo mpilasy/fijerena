@@ -162,5 +162,4 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ## Shared Coding Standards (Universal)
 - **Style:** Single return statement only.
-- **Indentation:** 3 spaces.
 - **OS:** Ubuntu Linux.
