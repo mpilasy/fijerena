@@ -21,8 +21,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
@@ -70,6 +72,7 @@ fun TvNavHost(
 ) {
     val context = LocalContext.current
     val accountManager = remember { AccountManager(context.applicationContext) }
+    val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
     // Use mutable states for asynchronous data loading
@@ -77,31 +80,59 @@ fun TvNavHost(
     var lastContentType by remember { mutableStateOf<String?>(null) }
     var initializationComplete by remember { mutableStateOf(false) }
 
-    // Async initialization
+    // Async initialization — use cached provider flag for instant start destination,
+    // then verify with Room DB in background
     LaunchedEffect(Unit) {
         val providerRepo = ProviderRepository(context.applicationContext)
-        
-        // Migrate legacy AccountManager credentials to Room if needed
-        if (providerRepo.getProviderCount() == 0) {
-            val legacyCreds = accountManager.exportForMigration()
-            if (legacyCreds != null) {
-                val (url, username, password) = legacyCreds
-                val name = org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext).providerName
-                providerRepo.addProvider(name, url, username, password)
+        val cachedHasProvider = appSettings.hasProviderCache
+
+        // Fast path: use cached value to show UI immediately
+        if (cachedHasProvider) {
+            // Read last content type in parallel with provider verification
+            val contentTypeDeferred = async {
+                val activeProvider = providerRepo.getActiveProvider()
+                if (activeProvider != null) {
+                    val prefs = context.applicationContext.getSharedPreferences(
+                        "media_cache_${activeProvider.id}",
+                        android.content.Context.MODE_PRIVATE
+                    )
+                    prefs.getString("last_content_type", null)
+                } else null
             }
-        }
-        
-        val providerCount = providerRepo.getProviderCount()
-        hasProvider = providerCount > 0
-        
-        if (providerCount > 0) {
-            val activeProvider = providerRepo.getActiveProvider()
-            if (activeProvider != null) {
-                val prefs = context.applicationContext.getSharedPreferences(
-                    "media_cache_${activeProvider.id}",
-                    android.content.Context.MODE_PRIVATE
-                )
-                lastContentType = prefs.getString("last_content_type", null)
+
+            val providerCountDeferred = async {
+                providerRepo.getProviderCount()
+            }
+
+            lastContentType = contentTypeDeferred.await()
+            val providerCount = providerCountDeferred.await()
+            hasProvider = providerCount > 0
+            appSettings.hasProviderCache = providerCount > 0
+        } else {
+            // Cold start or no providers — check DB
+            // Migrate legacy AccountManager credentials to Room if needed
+            if (providerRepo.getProviderCount() == 0) {
+                val legacyCreds = accountManager.exportForMigration()
+                if (legacyCreds != null) {
+                    val (url, username, password) = legacyCreds
+                    val name = appSettings.providerName
+                    providerRepo.addProvider(name, url, username, password)
+                }
+            }
+
+            val providerCount = providerRepo.getProviderCount()
+            hasProvider = providerCount > 0
+            appSettings.hasProviderCache = providerCount > 0
+
+            if (providerCount > 0) {
+                val activeProvider = providerRepo.getActiveProvider()
+                if (activeProvider != null) {
+                    val prefs = context.applicationContext.getSharedPreferences(
+                        "media_cache_${activeProvider.id}",
+                        android.content.Context.MODE_PRIVATE
+                    )
+                    lastContentType = prefs.getString("last_content_type", null)
+                }
             }
         }
         initializationComplete = true
@@ -419,6 +450,7 @@ fun TvNavHost(
                         navController.navigateUp()
                     },
                     onSuccess = {
+                        appSettings.hasProviderCache = true
                         navController.navigateUp()
                     }
                 )

@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalTvMaterial3Api::class)
+@file:OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 
 package org.njarasoa.fijerena.feature.epg
 
@@ -28,7 +28,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
@@ -43,7 +47,14 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Icon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -78,6 +89,11 @@ fun TvEpgManagementScreen(
 
     val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
+    val initialFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        initialFocusRequester.requestFocus()
+    }
 
     CompositionLocalProvider(LocalUiScale provides uiScale) {
     val scale = LocalUiScale.current
@@ -102,7 +118,9 @@ fun TvEpgManagementScreen(
         TvLazyColumn(
             contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
             verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRestorer { initialFocusRequester }
         ) {
             // Status section
             item {
@@ -120,7 +138,7 @@ fun TvEpgManagementScreen(
                         val statusText = when (val state = indexState) {
                             is EpgIndexState.NotIndexed -> "No EPG data"
                             is EpgIndexState.Indexing -> "Indexing: ${state.progressPercent}%"
-                            is EpgIndexState.Indexed -> "${formatCount(state.programmeCount)} programmes, ${formatCount(state.channelCount)} channels"
+                            is EpgIndexState.Indexed -> "${formatCount(state.channelCount)} channels, ${formatCount(state.programmeCount)} programmes"
                             is EpgIndexState.Failed -> "Failed: ${state.reason}"
                         }
                         Text(
@@ -247,7 +265,8 @@ fun TvEpgManagementScreen(
                             )
                             CinemaPrimaryButton(
                                 onClick = { showAddDialog = true },
-                                text = "Add Source"
+                                text = "Add Source",
+                                modifier = Modifier.focusRequester(initialFocusRequester)
                             )
                         }
                     }
@@ -352,19 +371,19 @@ fun TvEpgManagementScreen(
                             }
 
                             Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                            CinemaPrimaryButton(
+                            CinemaIconButton(
                                 onClick = { viewModel.refreshSource(source.id) },
-                                text = "Refresh"
+                                icon = { Icon(Icons.Default.Refresh, contentDescription = "Refresh") }
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                            CinemaSecondaryButton(
+                            CinemaIconButton(
                                 onClick = { editingSource = source },
-                                text = "Edit"
+                                icon = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                            CinemaDangerButton(
+                            CinemaDangerIconButton(
                                 onClick = { showDeleteConfirm = source.id },
-                                text = "Delete"
+                                icon = { Icon(Icons.Default.Delete, contentDescription = "Delete") }
                             )
                         }
                     }

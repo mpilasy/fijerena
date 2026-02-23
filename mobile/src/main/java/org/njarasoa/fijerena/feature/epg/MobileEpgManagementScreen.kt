@@ -98,7 +98,7 @@ fun MobileEpgManagementScreen(
                 val statusText = when (val state = indexState) {
                     is EpgIndexState.NotIndexed -> "No EPG data"
                     is EpgIndexState.Indexing -> "Indexing: ${state.progressPercent}%"
-                    is EpgIndexState.Indexed -> "${formatCount(state.programmeCount)} programmes, ${formatCount(state.channelCount)} channels"
+                    is EpgIndexState.Indexed -> "${formatCount(state.channelCount)} channels, ${formatCount(state.programmeCount)} programmes"
                     is EpgIndexState.Failed -> "Failed: ${state.reason}"
                 }
                 Text(
