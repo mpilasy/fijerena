@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
+import org.njarasoa.fijerena.core.player.model.ChapterInfo
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
@@ -345,6 +346,31 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
         // Sort by resolution (highest first)
         return qualities.sortedByDescending { it.height }
+    }
+
+    /**
+     * Get chapter markers from the current media item's metadata.
+     * Jellyfin stores chapters in mediaMetadata.extras as parallel arrays.
+     */
+    fun getChapters(): List<ChapterInfo> {
+        val controller = _controller.value ?: return emptyList()
+        val extras = controller.mediaMetadata.extras ?: return emptyList()
+
+        val titles = extras.getStringArrayList("chapterTitles") ?: return emptyList()
+        val startTimesMs = extras.getLongArray("chapterStartTimesMs") ?: return emptyList()
+
+        if (titles.size != startTimesMs.size) return emptyList()
+
+        val duration = controller.duration.coerceAtLeast(0L)
+        return titles.mapIndexed { index, title ->
+            val startMs = startTimesMs[index]
+            val endMs = if (index + 1 < startTimesMs.size) startTimesMs[index + 1] else duration
+            ChapterInfo(
+                title = title.ifEmpty { "Chapter ${index + 1}" },
+                startTimeMs = startMs,
+                endTimeMs = endMs
+            )
+        }
     }
 
     /**

@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VolumeUp
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -111,6 +112,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -141,6 +144,9 @@ fun PlayerScreen(
     var showStreamInfo by remember { mutableStateOf(false) }
     var showCategoryOverlay by remember { mutableStateOf(false) }
     var showLastWatchedOverlay by remember { mutableStateOf(false) }
+    var showChapterSelector by remember { mutableStateOf(false) }
+    var showTopOfHourClock by remember { mutableStateOf(false) }
+    var clockTick by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
     val focusRequester = remember { FocusRequester() }
 
     // Auto-show stats on repeated buffer exhaustion (dev mode only)
@@ -219,6 +225,18 @@ fun PlayerScreen(
     // Request focus on mount
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
+    }
+
+    // Top-of-hour clock: show 30s before the hour, hide 90s after
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = Calendar.getInstance()
+            val totalSecondsIntoHour = now.get(Calendar.MINUTE) * 60 + now.get(Calendar.SECOND)
+            val showAtSecond = 59 * 60 + 30 // 3570s into the hour
+            showTopOfHourClock = totalSecondsIntoHour >= showAtSecond || totalSecondsIntoHour < 90
+            clockTick = System.currentTimeMillis()
+            delay(1000L)
+        }
     }
 
     // Update displayed metadata when stream actually starts playing
@@ -514,6 +532,18 @@ fun PlayerScreen(
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = CinemaAlpha.focusedTint))
             ) {
+                // Clock in top-right corner
+                @Suppress("UNUSED_VARIABLE")
+                val tick = clockTick
+                Text(
+                    text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date()),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
+                )
+
                 // Top bar with channel name and title
                 Column(
                     modifier = Modifier
@@ -734,6 +764,19 @@ fun PlayerScreen(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Chapter selector
+                                val chapters = viewModel.getChapters()
+                                if (chapters.isNotEmpty()) {
+                                    Button(
+                                        onClick = { showChapterSelector = true },
+                                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                                            containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                        )
+                                    ) {
+                                        Icon(Icons.AutoMirrored.Filled.List, "Chapters", tint = Color.White)
+                                    }
+                                }
+
                                 // Audio track selector
                                 if (audioTrackCount > 1) {
                                     Button(
@@ -827,6 +870,38 @@ fun PlayerScreen(
                 viewModel = viewModel,
                 onDismiss = { showQualitySelector = false }
             )
+        }
+
+        // Chapter selector dialog
+        if (showChapterSelector) {
+            ChapterSelectorDialog(
+                viewModel = viewModel,
+                onDismiss = { showChapterSelector = false }
+            )
+        }
+
+        // Autonomous top-of-hour clock
+        AnimatedVisibility(
+            visible = showTopOfHourClock && !showControls && !showStreamInfo && !showStats,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            @Suppress("UNUSED_VARIABLE")
+            val tick = clockTick
+            val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(Spacing.xl),
+                contentAlignment = Alignment.TopEnd
+            ) {
+                Text(
+                    text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date()),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    modifier = Modifier.height(screenHeight * 0.1f)
+                )
+            }
         }
 
         // Control hints for first-time users
@@ -1224,6 +1299,165 @@ private fun AudioTrackSelectorDialog(
                 }
 
                 // Hint text
+                Text(
+                    text = "Use D-pad to navigate • OK to select • BACK to cancel",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CinemaTextDisabled,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChapterSelectorDialog(
+    viewModel: PlaybackViewModel,
+    onDismiss: () -> Unit
+) {
+    val chapters = remember { viewModel.getChapters() }
+    val currentPosition = when (val ps = viewModel.playbackState.value) {
+        is PlaybackState.Playing -> ps.position
+        is PlaybackState.Paused -> ps.position
+        else -> 0L
+    }
+    val currentChapterIndex = chapters.indexOfLast { it.startTimeMs <= currentPosition }.coerceAtLeast(0)
+    var selectedIndex by remember { mutableStateOf(currentChapterIndex) }
+    val focusRequesters = remember { List(chapters.size) { FocusRequester() } }
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+
+    LaunchedEffect(Unit) {
+        if (currentChapterIndex in focusRequesters.indices) {
+            focusRequesters[currentChapterIndex].requestFocus()
+        }
+    }
+
+    BackHandler { onDismiss() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+        contentAlignment = Center
+    ) {
+        GlassPanel(
+            modifier = Modifier
+                .width(TvDimensions.dialogWidth)
+                .heightIn(max = screenHeight * 0.8f)
+                .padding(Spacing.xxl)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(Spacing.xxl)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                Text(
+                    text = "Chapters",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                if (chapters.isEmpty()) {
+                    Text(
+                        text = "No chapters available",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = CinemaTextSecondary,
+                        modifier = Modifier.padding(vertical = Spacing.md)
+                    )
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.align(CenterHorizontally)
+                    ) {
+                        Text("Close")
+                    }
+                } else {
+                    chapters.forEachIndexed { index, chapter ->
+                        val isSelected = index == selectedIndex
+                        val isCurrent = index == currentChapterIndex
+                        Button(
+                            onClick = {
+                                viewModel.seekTo(chapter.startTimeMs)
+                                onDismiss()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequesters[index])
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused) {
+                                        selectedIndex = index
+                                    }
+                                },
+                            colors = androidx.tv.material3.ButtonDefaults.colors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
+                                else CinemaSurfaceVariant,
+                                contentColor = CinemaTextPrimary,
+                                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                                focusedContentColor = CinemaTextPrimary
+                            ),
+                            border = androidx.tv.material3.ButtonDefaults.border(
+                                border = androidx.tv.material3.Border(
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = if (isSelected) TvDimensions.borderFocused else 0.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                                    ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                                ),
+                                focusedBorder = androidx.tv.material3.Border(
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = TvDimensions.borderFocused,
+                                        color = MaterialTheme.colorScheme.primary
+                                    ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                                )
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(Spacing.xs),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
+                                ) {
+                                    Text(
+                                        text = chapter.title,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                    Text(
+                                        text = formatTime(chapter.startTimeMs),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = CinemaTextTertiary
+                                    )
+                                }
+                                if (isCurrent) {
+                                    Text(
+                                        text = "Now",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.xs))
+
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(CenterHorizontally)
+                            .width(TvDimensions.selectionListWidth)
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+
                 Text(
                     text = "Use D-pad to navigate • OK to select • BACK to cancel",
                     style = MaterialTheme.typography.bodySmall,

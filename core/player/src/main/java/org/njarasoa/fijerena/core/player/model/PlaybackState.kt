@@ -58,3 +58,9 @@ data class VideoQualityInfo(
     val label: String, // e.g., "1080p (5.2 Mbps)"
     val isSelected: Boolean
 )
+
+data class ChapterInfo(
+    val title: String,
+    val startTimeMs: Long,
+    val endTimeMs: Long
+)
