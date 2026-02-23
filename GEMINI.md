@@ -76,7 +76,7 @@ The project follows a modular, Clean Architecture pattern with MVVM.
 
 ### 4. EPG & Data
 - **EPG Indexing:** XMLTV data is indexed into a Room SQLite DB with FTS4 support.
-- **Search:** Primary search uses `FTS4 MATCH`, with `LIKE` as a fallback.
+- **Search:** Supports multi-word queries. Primary search uses `FTS4 MATCH` (for EPG) or client-side word-matching (for Xtream VOD), with `LIKE` as a fallback.
 - **Multi-Source EPG:** Managed via `EpgFileManager` with streaming ingestion on fixed devices.
 
 ## 🔍 Investigation Strategy
