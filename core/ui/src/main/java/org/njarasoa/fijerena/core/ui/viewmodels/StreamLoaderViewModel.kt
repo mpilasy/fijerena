@@ -167,7 +167,7 @@ class StreamLoaderViewModel(
 
                     if (contentType == "LIVE_TV") {
                         val currentItem = currentStreams.find { it.id == streamId }
-                            ?: MediaItem(streamId, streamName, org.njarasoa.fijerena.core.player.domain.MediaType.CHANNEL, categoryId)
+                            ?: MediaItem(streamId, streamName, org.njarasoa.fijerena.core.player.domain.MediaType.LIVE_CHANNEL, categoryId)
 
                         val epgData = repo.getEpgBulkForItems(listOf(currentItem)).getOrNull()
                         val listings = epgData?.get(streamId)?.listings ?: emptyList()
