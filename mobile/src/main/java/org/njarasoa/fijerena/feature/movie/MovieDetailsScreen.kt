@@ -5,6 +5,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -55,6 +57,9 @@ fun MobileMovieDetailsScreen(
     var resumePositionMs by remember { mutableStateOf(0L) }
     var resumeDurationMs by remember { mutableStateOf(0L) }
 
+    // Favorite state
+    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, "MOVIES")) }
+
     android.util.Log.d("MovieDetailsScreen", "State: isLoading=$isLoading, error=$error, movieDetail=${movieDetail != null}")
 
     // Load movie info on launch
@@ -91,6 +96,22 @@ fun MobileMovieDetailsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        if (isFavorite) {
+                            mediaRepository.removeFavorite(movieId, "MOVIES")
+                        } else {
+                            mediaRepository.addFavorite(movieId, movieName, categoryId, "MOVIES")
+                        }
+                        isFavorite = !isFavorite
+                    }) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             )

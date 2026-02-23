@@ -119,6 +119,14 @@ fun MobileCategoryListScreen(
                             target.thumbnailUrl
                         )
                     }
+                    is MobileFavoriteMenuTarget.Stream -> {
+                        viewModel.toggleFavoriteStream(
+                            target.itemId,
+                            target.itemName,
+                            target.categoryId,
+                            target.contentType
+                        )
+                    }
                 }
             },
             onDismiss = { favoriteMenuTarget = null }
@@ -271,7 +279,6 @@ fun MobileCategoryListScreen(
                                     }
                                 },
                                 onItemLongPress = { item ->
-                                    // For TV Shows content type, show favorite show option
                                     if (contentType == "TV_SHOWS" &&
                                         item.mediaType == MediaType.SERIES) {
                                         favoriteMenuTarget = MobileFavoriteMenuTarget.Show(
@@ -281,6 +288,14 @@ fun MobileCategoryListScreen(
                                             contentType = contentType,
                                             thumbnailUrl = item.thumbnailUrl,
                                             isFavorite = viewModel.isFavoriteShow(item.id, contentType)
+                                        )
+                                    } else {
+                                        favoriteMenuTarget = MobileFavoriteMenuTarget.Stream(
+                                            itemId = item.id,
+                                            itemName = item.name,
+                                            categoryId = item.categoryId,
+                                            contentType = contentType,
+                                            isFavorite = viewModel.isFavorite(item.id, contentType)
                                         )
                                     }
                                 }
@@ -393,7 +408,7 @@ private fun CategoryChipRow(
                 val isFavCat = categoryViewModel.isFavoriteCategory(category.id, contentType)
                 FilterChip(
                     selected = category.id == selectedCategoryId,
-                    onClick = { onCategorySelected(category.id) },
+                    onClick = {},
                     label = {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
@@ -524,6 +539,14 @@ private sealed class MobileFavoriteMenuTarget {
         val thumbnailUrl: String?,
         val isFavorite: Boolean
     ) : MobileFavoriteMenuTarget()
+
+    data class Stream(
+        val itemId: String,
+        val itemName: String,
+        val categoryId: String,
+        val contentType: String,
+        val isFavorite: Boolean
+    ) : MobileFavoriteMenuTarget()
 }
 
 /**
@@ -538,6 +561,7 @@ private fun MobileFavoriteContextMenuDialog(
     val (itemName, isFavorite) = when (target) {
         is MobileFavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
         is MobileFavoriteMenuTarget.Show -> target.showName to target.isFavorite
+        is MobileFavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
     }
 
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
@@ -579,7 +603,6 @@ private fun StreamCard(
     onLongClick: () -> Unit = {}
 ) {
     Card(
-        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .height(MobileDimensions.streamCardHeight)

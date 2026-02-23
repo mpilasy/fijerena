@@ -49,9 +49,23 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.composed
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyCode
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
@@ -101,6 +115,48 @@ fun SearchScreen(
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
+    val mediaRepository = remember {
+        val appContext = context.applicationContext
+        kotlinx.coroutines.runBlocking {
+            val providerRepo = ProviderRepository(appContext)
+            val entity = providerRepo.getActiveProvider()
+            val repo = MediaRepository(appContext, entity?.id ?: 0L)
+            if (entity != null) {
+                val password = providerRepo.getPassword(entity.id) ?: ""
+                val provider = MediaProviderFactory.create(entity, appContext, password)
+                provider.connect()
+                repo.setProvider(provider)
+            }
+            repo
+        }
+    }
+
+    // Favorite long-press state
+    var favoriteMenuTarget by remember { mutableStateOf<SearchFavoriteTarget?>(null) }
+
+    favoriteMenuTarget?.let { target ->
+        SearchFavoriteDialog(
+            target = target,
+            onConfirm = {
+                when (target) {
+                    is SearchFavoriteTarget.Category -> {
+                        if (target.isFavorite) mediaRepository.removeFavoriteCategory(target.categoryId, target.contentType)
+                        else mediaRepository.addFavoriteCategory(target.categoryId, target.categoryName, target.contentType)
+                    }
+                    is SearchFavoriteTarget.Show -> {
+                        if (target.isFavorite) mediaRepository.removeFavoriteShow(target.itemId, target.contentType)
+                        else mediaRepository.addFavoriteShow(target.itemId, target.itemName, target.categoryId, target.contentType, target.thumbnailUrl)
+                    }
+                    is SearchFavoriteTarget.Stream -> {
+                        if (target.isFavorite) mediaRepository.removeFavorite(target.itemId, target.contentType)
+                        else mediaRepository.addFavorite(target.itemId, target.itemName, target.categoryId, target.contentType)
+                    }
+                }
+            },
+            onDismiss = { favoriteMenuTarget = null }
+        )
+    }
+
     CompositionLocalProvider(LocalUiScale provides uiScale) {
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -139,8 +195,37 @@ fun SearchScreen(
                         onResultClick = { result ->
                             onStreamSelected(result.itemId, result.streamName, result.categoryId)
                         },
+                        onResultLongPress = { result ->
+                            val target = if (result.contentType == "TV_SHOWS" && result.mediaType == MediaType.SERIES) {
+                                SearchFavoriteTarget.Show(
+                                    itemId = result.itemId,
+                                    itemName = result.streamName,
+                                    categoryId = result.categoryId,
+                                    contentType = result.contentType,
+                                    thumbnailUrl = result.thumbnailUrl,
+                                    isFavorite = mediaRepository.isFavoriteShow(result.itemId, result.contentType)
+                                )
+                            } else {
+                                SearchFavoriteTarget.Stream(
+                                    itemId = result.itemId,
+                                    itemName = result.streamName,
+                                    categoryId = result.categoryId,
+                                    contentType = result.contentType,
+                                    isFavorite = mediaRepository.isFavorite(result.itemId, result.contentType)
+                                )
+                            }
+                            favoriteMenuTarget = target
+                        },
                         onCategoryClick = { catResult ->
                             onCategorySelected(catResult.categoryId, catResult.contentType)
+                        },
+                        onCategoryLongPress = { catResult ->
+                            favoriteMenuTarget = SearchFavoriteTarget.Category(
+                                categoryId = catResult.categoryId,
+                                categoryName = catResult.categoryName,
+                                contentType = catResult.contentType,
+                                isFavorite = mediaRepository.isFavoriteCategory(catResult.categoryId, catResult.contentType)
+                            )
                         }
                     )
                 }
@@ -232,7 +317,9 @@ private fun SearchContent(
     devStats: String?,
     onSearchSubmit: (String) -> Unit,
     onResultClick: (SearchResult) -> Unit,
-    onCategoryClick: (CategorySearchResult) -> Unit
+    onResultLongPress: (SearchResult) -> Unit,
+    onCategoryClick: (CategorySearchResult) -> Unit,
+    onCategoryLongPress: (CategorySearchResult) -> Unit
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     // Local state for text field - manages user input independently
@@ -278,7 +365,9 @@ private fun SearchContent(
                 searchProgress = searchProgress,
                 devStats = devStats,
                 onResultClick = onResultClick,
-                onCategoryClick = onCategoryClick
+                onResultLongPress = onResultLongPress,
+                onCategoryClick = onCategoryClick,
+                onCategoryLongPress = onCategoryLongPress
             )
         }
     }
@@ -351,7 +440,9 @@ private fun SearchResultsList(
     searchProgress: String?,
     devStats: String?,
     onResultClick: (SearchResult) -> Unit,
-    onCategoryClick: (CategorySearchResult) -> Unit
+    onResultLongPress: (SearchResult) -> Unit,
+    onCategoryClick: (CategorySearchResult) -> Unit,
+    onCategoryLongPress: (CategorySearchResult) -> Unit
 ) {
     val focusRequesters = remember(results) {
         results.associate { it.itemId to FocusRequester() }
@@ -460,7 +551,8 @@ private fun SearchResultsList(
                     items(categoryResults, key = { "cat_${it.categoryId}" }) { catResult ->
                         CategoryResultItem(
                             result = catResult,
-                            onClick = { onCategoryClick(catResult) }
+                            onClick = { onCategoryClick(catResult) },
+                            onLongPress = { onCategoryLongPress(catResult) }
                         )
                     }
                 }
@@ -480,6 +572,7 @@ private fun SearchResultsList(
                         SearchResultItem(
                             result = result,
                             onClick = { onResultClick(result) },
+                            onLongPress = { onResultLongPress(result) },
                             focusRequester = focusRequesters[result.itemId]
                         )
                     }
@@ -492,14 +585,16 @@ private fun SearchResultsList(
 @Composable
 private fun CategoryResultItem(
     result: CategorySearchResult,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongPress: () -> Unit = {}
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier
             .padding(horizontal = Spacing.md)
             .fillMaxWidth()
-            .height(TvDimensions.cardHeight),
+            .height(TvDimensions.cardHeight)
+            .tvLongPress(onLongPress),
         colors = CardDefaults.colors(
             containerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
             contentColor = CinemaTextPrimary,
@@ -551,6 +646,7 @@ private fun CategoryResultItem(
 private fun SearchResultItem(
     result: SearchResult,
     onClick: () -> Unit,
+    onLongPress: () -> Unit = {},
     focusRequester: FocusRequester?
 ) {
     Card(
@@ -559,6 +655,7 @@ private fun SearchResultItem(
             .padding(horizontal = Spacing.md)
             .fillMaxWidth()
             .height(TvDimensions.cardHeight)
+            .tvLongPress(onLongPress)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
         colors = CardDefaults.colors(
             containerColor = CinemaSurface,
@@ -612,6 +709,104 @@ private fun SearchResultItem(
                     color = CinemaTextSecondary
                 )
             }
+        }
+    }
+}
+
+private sealed class SearchFavoriteTarget {
+    data class Category(
+        val categoryId: String,
+        val categoryName: String,
+        val contentType: String,
+        val isFavorite: Boolean
+    ) : SearchFavoriteTarget()
+
+    data class Show(
+        val itemId: String,
+        val itemName: String,
+        val categoryId: String,
+        val contentType: String,
+        val thumbnailUrl: String?,
+        val isFavorite: Boolean
+    ) : SearchFavoriteTarget()
+
+    data class Stream(
+        val itemId: String,
+        val itemName: String,
+        val categoryId: String,
+        val contentType: String,
+        val isFavorite: Boolean
+    ) : SearchFavoriteTarget()
+}
+
+@Composable
+private fun SearchFavoriteDialog(
+    target: SearchFavoriteTarget,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val (itemName, isFavorite) = when (target) {
+        is SearchFavoriteTarget.Category -> target.categoryName to target.isFavorite
+        is SearchFavoriteTarget.Show -> target.itemName to target.isFavorite
+        is SearchFavoriteTarget.Stream -> target.itemName to target.isFavorite
+    }
+    val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            androidx.tv.material3.Text(
+                text = itemName,
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaTextPrimary,
+                maxLines = 2
+            )
+        },
+        text = null,
+        confirmButton = {
+            CinemaPrimaryButton(
+                onClick = {
+                    onConfirm()
+                    onDismiss()
+                },
+                text = actionText
+            )
+        },
+        dismissButton = {
+            CinemaSecondaryButton(
+                onClick = onDismiss,
+                text = "Cancel"
+            )
+        },
+        containerColor = CinemaSurface,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
+        shape = RoundedCornerShape(CornerRadius.large)
+    )
+}
+
+private fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier = composed {
+    var longPressDetected by remember { mutableStateOf(false) }
+    this.onPreviewKeyEvent { event ->
+        val keyCode = event.key.nativeKeyCode
+        val isDpadCenter = keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == android.view.KeyEvent.KEYCODE_ENTER
+        if (isDpadCenter &&
+            event.type == KeyEventType.KeyDown &&
+            event.nativeKeyEvent.repeatCount > 0 &&
+            event.nativeKeyEvent.isLongPress &&
+            !longPressDetected
+        ) {
+            longPressDetected = true
+            true
+        } else if (isDpadCenter && event.type == KeyEventType.KeyDown && longPressDetected) {
+            true
+        } else if (isDpadCenter && event.type == KeyEventType.KeyUp && longPressDetected) {
+            longPressDetected = false
+            onLongPress()
+            true
+        } else {
+            false
         }
     }
 }

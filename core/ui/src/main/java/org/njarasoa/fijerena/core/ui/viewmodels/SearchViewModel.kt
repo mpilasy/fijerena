@@ -48,7 +48,8 @@ class SearchViewModel(
         val categoryId: String,
         val categoryName: String,
         val contentType: String,
-        val thumbnailUrl: String? = null
+        val thumbnailUrl: String? = null,
+        val mediaType: org.njarasoa.fijerena.core.player.domain.MediaType? = null
     )
 
     data class CategorySearchResult(
@@ -161,7 +162,8 @@ class SearchViewModel(
                                 categoryId = item.categoryId,
                                 categoryName = "",
                                 contentType = contentType,
-                                thumbnailUrl = item.thumbnailUrl
+                                thumbnailUrl = item.thumbnailUrl,
+                                mediaType = item.mediaType
                             )
                         }.let { sortResults(it, normalizedQuery) }
 
@@ -236,7 +238,8 @@ class SearchViewModel(
                                 categoryId = category.id,
                                 categoryName = category.name,
                                 contentType = contentType,
-                                thumbnailUrl = item.thumbnailUrl
+                                thumbnailUrl = item.thumbnailUrl,
+                                mediaType = item.mediaType
                             )
                         }
                     results.addAll(matchingItems)

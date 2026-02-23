@@ -462,6 +462,15 @@ class CategoryViewModel(
         refreshCategories()
     }
 
+    fun toggleFavoriteStream(itemId: String, itemName: String, categoryId: String, contentType: String) {
+        if (repository.isFavorite(itemId, contentType)) {
+            repository.removeFavorite(itemId, contentType)
+        } else {
+            repository.addFavorite(itemId, itemName, categoryId, contentType)
+        }
+        refreshCategories()
+    }
+
     fun retry() {
         loadCategories()
     }

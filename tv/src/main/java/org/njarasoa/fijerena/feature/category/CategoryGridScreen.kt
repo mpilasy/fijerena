@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -329,6 +330,14 @@ private fun TwoColumnLayout(
                             target.thumbnailUrl
                         )
                     }
+                    is FavoriteMenuTarget.Stream -> {
+                        categoryViewModel.toggleFavoriteStream(
+                            target.itemId,
+                            target.itemName,
+                            target.categoryId,
+                            target.contentType
+                        )
+                    }
                 }
             },
             onDismiss = { favoriteMenuTarget = null }
@@ -476,7 +485,6 @@ private fun TwoColumnLayout(
                     }
                 },
                 onStreamLongPress = { item ->
-                    // For TV Shows content type, show favorite show option
                     if (contentType == "TV_SHOWS" &&
                         item.mediaType == org.njarasoa.fijerena.core.player.domain.MediaType.SERIES) {
                         favoriteMenuTarget = FavoriteMenuTarget.Show(
@@ -486,6 +494,14 @@ private fun TwoColumnLayout(
                             contentType = contentType,
                             thumbnailUrl = item.thumbnailUrl,
                             isFavorite = categoryViewModel.isFavoriteShow(item.id, contentType)
+                        )
+                    } else {
+                        favoriteMenuTarget = FavoriteMenuTarget.Stream(
+                            itemId = item.id,
+                            itemName = item.name,
+                            categoryId = item.categoryId,
+                            contentType = contentType,
+                            isFavorite = categoryViewModel.isFavorite(item.id, contentType)
                         )
                     }
                 },
@@ -1092,6 +1108,14 @@ private sealed class FavoriteMenuTarget {
         val thumbnailUrl: String?,
         val isFavorite: Boolean
     ) : FavoriteMenuTarget()
+
+    data class Stream(
+        val itemId: String,
+        val itemName: String,
+        val categoryId: String,
+        val contentType: String,
+        val isFavorite: Boolean
+    ) : FavoriteMenuTarget()
 }
 
 /**
@@ -1107,6 +1131,7 @@ private fun FavoriteContextMenuDialog(
     val (itemName, isFavorite) = when (target) {
         is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
         is FavoriteMenuTarget.Show -> target.showName to target.isFavorite
+        is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
     }
 
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
@@ -1148,19 +1173,32 @@ private fun FavoriteContextMenuDialog(
  * Modifier that detects long-press of the D-pad center / Enter key on TV.
  * Calls [onLongPress] when the key has been held long enough.
  */
-private fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier = this.onPreviewKeyEvent { event ->
-    val keyCode = event.key.nativeKeyCode
-    val isDpadCenter = keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
-        keyCode == android.view.KeyEvent.KEYCODE_ENTER
-    if (isDpadCenter &&
-        event.type == KeyEventType.KeyDown &&
-        event.nativeKeyEvent.repeatCount > 0 &&
-        event.nativeKeyEvent.isLongPress
-    ) {
-        onLongPress()
-        true
-    } else {
-        false
+private fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier = composed {
+    var longPressDetected by remember { mutableStateOf(false) }
+    this.onPreviewKeyEvent { event ->
+        val keyCode = event.key.nativeKeyCode
+        val isDpadCenter = keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == android.view.KeyEvent.KEYCODE_ENTER
+        if (isDpadCenter &&
+            event.type == KeyEventType.KeyDown &&
+            event.nativeKeyEvent.repeatCount > 0 &&
+            event.nativeKeyEvent.isLongPress &&
+            !longPressDetected
+        ) {
+            // Mark that a long-press happened, but don't fire callback yet
+            longPressDetected = true
+            true
+        } else if (isDpadCenter && event.type == KeyEventType.KeyDown && longPressDetected) {
+            // Consume repeated KeyDown events while held
+            true
+        } else if (isDpadCenter && event.type == KeyEventType.KeyUp && longPressDetected) {
+            // Fire callback on release so the dialog opens after the key is up
+            longPressDetected = false
+            onLongPress()
+            true
+        } else {
+            false
+        }
     }
 }
 
