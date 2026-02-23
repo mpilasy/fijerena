@@ -1,6 +1,6 @@
 # AGENTS.md - AI Agent Guide for Fijerena
 
-Welcome to the Fijerena project. This document serves as the master guide for AI agents working on this codebase. It consolidates critical architectural rules, coding standards, and development workflows.
+Welcome to the Fijerena project. This document serves as the master guide for AI agents working on this codebase. It consolidates critical architectural rules, coding standards, development workflows, and detailed feature implementations.
 
 ---
 
@@ -9,19 +9,21 @@ Fijerena is a premium, native Android media player built with Kotlin and Jetpack
 
 **Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android Mobile (5.0+).
 
+**App Icon:** Blue Marble (Earth) with red/cyan 3D glasses. Adaptive icon (foreground PNGs in `mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, black background XML) + legacy webp mipmaps.
+
 ---
 
 ## 🛠️ Tech Stack & Dependencies
 Refer to `gradle/libs.versions.toml` for the authoritative versions.
 - **Language:** Kotlin 2.3.0
-- **UI:** Jetpack Compose (2024.12.01 BOM)
-- **TV UI:** `androidx.tv.material3` (1.0.0-alpha10)
-- **Media Player:** Media3 ExoPlayer (1.9.1)
-- **Networking:** Ktor (3.4.0) with OkHttp engine
-- **Database:** Room (2.8.4) with FTS4 search
-- **Navigation:** Navigation Compose with `kotlinx.serialization`
-- **Image Loading:** Coil (3.1.0)
-- **SMB Support:** `smbj` (0.13.0)
+- **UI:** 100% Jetpack Compose (2024.12.01 BOM). `androidx.tv.material3` for TV screens.
+- **Media Player:** Media3 ExoPlayer (1.9.1). Optimized for 4K/HDR hardware acceleration.
+- **Networking:** Ktor (3.4.0) with OkHttp engine & kotlinx.serialization (JSON).
+- **Navigation:** Adaptive Navigation Suite / Navigation Compose with `kotlinx.serialization`.
+- **Database:** Room (2.8.4) with FTS4 search.
+- **Image Loading:** Coil (3.1.0).
+- **SMB Support:** `smbj` (0.13.0).
+- **Theming:** Dynamic runtime switching via `CinemaThemeHolder` + `CinemaThemePalette`.
 
 ---
 
@@ -49,44 +51,75 @@ fijerena/
 
 ### 1. STRICT: No Hardcoded UI Values
 Every color, dimension, spacing, and animation duration **must** come from design token constants. Never use raw literals like `16.dp` or `Color.White`.
-- **Colors:** Use `CinemaColors` or `MaterialTheme.colorScheme`.
-- **Spacing:** Use `CinemaSpacing` (xxs to xxl).
-- **Typography:** Minimum **18sp** for body text on TV.
+- **Shared Tokens (core/ui):** `CinemaColors`, `CinemaAlpha`, `CinemaAnimation`, `CinemaCornerRadius`, `CinemaSpacing`.
+- **TV Tokens:** `TvDimensions`, `TvFocusTokens`.
+- **Mobile Tokens:** `MobileDimensions`.
+- **Platform re-exports:** TV `CinemaColors.kt`/`Spacing.kt`, mobile `Color.kt`/`Spacing.kt`.
+- **Colors:** Prefer `MaterialTheme.colorScheme.*` or platform re-exports.
 
 ### 2. D-Pad & Focus Management (TV)
 Every interactive `@Composable` must be D-pad navigable.
 - Use `focusRestorer()` and `focusable()`.
-- Implement clear focus indicators (Scale 1.0 -> 1.1, blue border, glow).
+- Implement clear focus indicators: Scale 1.0 -> 1.1 (200ms tween), 2dp blue border, 8dp glow. See `FocusModifiers.kt`.
 - Avoid complex animations on mid-range TV chipsets (e.g., Sony Bravia).
 
 ### 3. Safe Margins (TV Overscan)
-Apply TV-safe margins to all root containers to compensate for overscan:
-- **Horizontal:** 56dp (`Spacing.tvSafeMarginHorizontal`)
-- **Vertical:** 32dp (`Spacing.tvSafeMarginVertical`)
+Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
+- `Spacing.tvSafeMarginHorizontal`, `Spacing.tvSafeMarginVertical`.
 - UI should remain 5% away from screen edges.
+
+### 4. Typography
+- 13-style Roboto scale (48-14sp).
+- **Rule:** All body text **>=18sp** for TV readability.
+- UI Scaling (0.4f - 1.0f) is applied globally via `LocalDensity` in `MainActivity.kt`.
 
 ---
 
 ## 🎬 Player Implementation
+
+### Configuration & Source
 - **Source Creation:** Always use `StreamingMediaSourceFactory.createMediaSource()`.
+- **Formats:** HLS (`.m3u8`), DASH (`.mpd`), MPEG-TS (`.ts`, `.mpeg`).
 - **Buffer Strategy:** `AdaptiveLoadControl` dynamically swaps buffer profiles (Live TV vs VOD, WiFi vs Cellular) at runtime.
 - **Codec Priority:** Optimized per device (Shield: AV1 -> HEVC -> AVC; Sony: HEVC -> AVC).
+
+### Controls & Navigation
 - **State Management:** `PlaybackViewModel` delegates to `StreamingPlaybackService` (a `MediaSessionService`).
+- **OK / Center Key:** **Shows controls only** — it never pauses or resumes playback.
+- **Pause:** Explicit via pause button, `KEYCODE_MEDIA_PLAY_PAUSE`, or mobile double-tap (VOD only).
 - **Seeking:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
-- **Controls — critical rules:**
-  - OK / center key **shows controls only** — it never pauses or resumes playback.
-  - Pause is explicit: pause button, `KEYCODE_MEDIA_PLAY_PAUSE`, or mobile double-tap (VOD only).
-  - D-pad Left/Right on Live TV open channel overlay panels (never seek on live).
-  - Channel overlays use `ChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` animations and `GlassPanel(backgroundAlpha=0.5f)`.
-  - Mobile uses `detectTapGestures` (not `.clickable`) and merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
+- **Channel Overlays (Live TV):** D-pad Left/Right (TV) or Swipe (Mobile) open channel overlays. Use `ChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` and `GlassPanel(backgroundAlpha=0.5f)`.
+- **Mobile Gestures:** `detectTapGestures` (tap=controls, double-tap=pause/resume VOD). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
+
+### Features
+- **Audio/Subtitle/Quality:** In-playback track switching dialogs.
+- **EPG in Player:** Shows current/next programme. Fetched via `getEpgBulkForItems()`.
+- **Stats Overlay:** Double-tap OK. Shows codecs, network stats, dropped frames, etc.
+- **Auto-resume:** Saves position every 5s; resume if 2-95% progress.
 
 ---
 
 ## 📡 EPG & Indexing System
-- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion (streaming on TV, temp-file on mobile).
-- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` using Room batch transactions.
+- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion.
+- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room) using FTS4.
 - **Search:** Two-tier strategy: SQLite **FTS4 MATCH** (primary) -> **LIKE** (fallback).
-- **Timezone:** Per-source `timezoneOffsetHours` override is applied at parse time.
+- **Timezone:** Per-source `timezoneOffsetHours` override applied at parse time.
+- **Management:** Multi-source EPG management in `Screen.EpgManagement`.
+
+---
+
+## 🔄 App Navigation & Features
+
+### Flow
+1. **Startup:** Auto-navigates based on provider/saved state.
+2. **Selection:** Content Type -> Category Grid -> Details (VOD) -> Player.
+3. **Navigation IDs:** Always use `String` for IDs.
+
+### Features
+- **Search:** Two-phase parallel search for Xtream; server-side for Jellyfin.
+- **Virtual Categories:** Favorites (configurable 10-500), Last Watched (1-100), Continue Watching (VOD), Recent Categories.
+- **Jellyfin Quick Connect:** Supported for easy auth.
+- **Settings:** Provider management, theme selection, EPG management, cache management, UI scale, export/import (JSON).
 
 ---
 
@@ -117,3 +150,17 @@ Apply TV-safe margins to all root containers to compensate for overscan:
 1. **Start** every session by reading project documentation and this file.
 2. **Verify** every UI change: "Is this D-pad friendly?"
 3. **Never** hardcode dimensions or colors.
+4. **Use design tokens** for all visual attributes.
+5. **Fulfill the Directive:** Only perform modifications when explicitly instructed.
+
+# Agent Instructions
+
+## Model Routing Rules
+- [Claude] For boilerplate/docs: Use `haiku`.
+- [Gemini] For boilerplate/docs: Use `flash`.
+- [Universal] For architectural changes: Use `pro` / `sonnet`.
+
+## Shared Coding Standards (Universal)
+- **Style:** Single return statement only.
+- **Indentation:** 3 spaces.
+- **OS:** Ubuntu Linux.
