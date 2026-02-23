@@ -27,12 +27,14 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -71,6 +73,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
+import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -267,28 +270,14 @@ fun TvAddProviderScreen(
                 Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
                 // Name field (all types)
-                OutlinedTextField(
+                ReadOnlyFieldWithEdit(
                     value = name,
                     onValueChange = {
                         name = it
                         error = null
                     },
-                    label = { Text("Provider Name") },
-                    placeholder = { Text("e.g. My IPTV") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextSecondary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        focusedContainerColor = CinemaSurfaceVariant,
-                        focusedPlaceholderColor = CinemaTextSecondary,
-                        unfocusedPlaceholderColor = CinemaTextSecondary
-                    )
+                    label = "Provider Name",
+                    placeholder = "e.g. My IPTV"
                 )
 
                 // Type-specific fields
@@ -296,8 +285,7 @@ fun TvAddProviderScreen(
                     ProviderType.XTREAM -> {
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // URL field
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = url,
                             onValueChange = { newValue ->
                                 val parsed = parseUrlCredentials(newValue)
@@ -310,82 +298,41 @@ fun TvAddProviderScreen(
                                 }
                                 error = null
                             },
-                            label = { Text("Server URL") },
-                            placeholder = { Text("http://provider.example.com") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            label = "Server URL",
+                            placeholder = "http://provider.example.com",
+                            keyboardType = KeyboardType.Uri
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // Username field
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = username,
                             onValueChange = {
                                 username = it
                                 error = null
                             },
-                            label = { Text("Username") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            label = "Username"
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // Password field
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = password,
                             onValueChange = {
                                 password = it
                                 error = null
                             },
-                            label = { Text("Password") },
-                            singleLine = true,
+                            label = "Password",
                             visualTransformation = PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            keyboardType = KeyboardType.Password,
+                            displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else ""
                         )
                     }
 
                     ProviderType.JELLYFIN -> {
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // Server URL field
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = url,
                             onValueChange = { newValue ->
                                 val parsed = parseUrlCredentials(newValue)
@@ -398,74 +345,34 @@ fun TvAddProviderScreen(
                                 }
                                 error = null
                             },
-                            label = { Text("Server URL") },
-                            placeholder = { Text("http://192.168.1.100:8096") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            label = "Server URL",
+                            placeholder = "http://192.168.1.100:8096",
+                            keyboardType = KeyboardType.Uri
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // Username field
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = username,
                             onValueChange = {
                                 username = it
                                 error = null
                             },
-                            label = { Text("Username") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            label = "Username"
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // Password field
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = password,
                             onValueChange = {
                                 password = it
                                 error = null
                             },
-                            label = { Text("Password") },
-                            singleLine = true,
+                            label = "Password",
                             visualTransformation = PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            keyboardType = KeyboardType.Password,
+                            displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else ""
                         )
 
                         if (!isEditMode) {
@@ -497,106 +404,51 @@ fun TvAddProviderScreen(
                     ProviderType.SMB -> {
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // Host/IP field
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = host,
                             onValueChange = {
                                 host = it
                                 error = null
                             },
-                            label = { Text("Host / IP") },
-                            placeholder = { Text("192.168.1.100") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            label = "Host / IP",
+                            placeholder = "192.168.1.100"
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // Share Name field
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = shareName,
                             onValueChange = {
                                 shareName = it
                                 error = null
                             },
-                            label = { Text("Share Name") },
-                            placeholder = { Text("media") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            label = "Share Name",
+                            placeholder = "media"
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // Username field (optional)
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = username,
                             onValueChange = {
                                 username = it
                                 error = null
                             },
-                            label = { Text("Username (optional)") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            label = "Username (optional)"
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        // Password field (optional)
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = password,
                             onValueChange = {
                                 password = it
                                 error = null
                             },
-                            label = { Text("Password (optional)") },
-                            singleLine = true,
+                            label = "Password (optional)",
                             visualTransformation = PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            keyboardType = KeyboardType.Password,
+                            displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else ""
                         )
                     }
 
@@ -607,28 +459,15 @@ fun TvAddProviderScreen(
                     ProviderType.REMOTE_M3U -> {
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        OutlinedTextField(
+                        ReadOnlyFieldWithEdit(
                             value = url,
                             onValueChange = {
                                 url = it
                                 error = null
                             },
-                            label = { Text("M3U Playlist URL") },
-                            placeholder = { Text("https://example.com/playlist.m3u") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            label = "M3U Playlist URL",
+                            placeholder = "https://example.com/playlist.m3u",
+                            keyboardType = KeyboardType.Uri
                         )
                     }
                 }
@@ -679,7 +518,13 @@ fun TvAddProviderScreen(
                                     providerSettings = newSettings
                                     syncManager.syncProviderSettings(editId)
                                 }
-                            }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = CinemaAccent,
+                                checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                                uncheckedThumbColor = CinemaTextSecondary,
+                                uncheckedTrackColor = CinemaSurfaceVariant
+                            )
                         )
                     }
 
@@ -965,7 +810,13 @@ fun TvAddProviderScreen(
                                         providerSettings = newSettings
                                         syncManager.syncProviderSettings(editId)
                                     }
-                                }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = CinemaAccent,
+                                    checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                                    uncheckedThumbColor = CinemaTextSecondary,
+                                    uncheckedTrackColor = CinemaSurfaceVariant
+                                )
                             )
                         }
                     }
@@ -1479,13 +1330,22 @@ fun TvAddProviderScreen(
                                 Text("Language Script Filter:", style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)), color = CinemaTextPrimary)
                                 Text("Show only categories in selected scripts (none = show all)", style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)), color = CinemaTextSecondary)
                                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+                                    val scriptCheckboxColors = CheckboxDefaults.colors(
+                                        checkedColor = CinemaAccent,
+                                        uncheckedColor = CinemaTextSecondary,
+                                        checkmarkColor = CinemaTextPrimary
+                                    )
                                     ScriptType.entries.forEach { script ->
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.tvFocusableNoScale()
+                                        ) {
                                             Checkbox(
                                                 checked = script in selectedScripts,
                                                 onCheckedChange = { checked ->
                                                     selectedScripts = if (checked) selectedScripts + script else selectedScripts - script
-                                                }
+                                                },
+                                                colors = scriptCheckboxColors
                                             )
                                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                                             Text(text = script.displayName, style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)), color = CinemaTextPrimary)

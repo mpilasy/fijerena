@@ -377,7 +377,7 @@ fun MobileSettingsScreen(
                     sourceCount = epgIndexer.getSourceCount()
                 }
                 val summaryText = when (val idx = indexState) {
-                    is EpgIndexState.Indexed -> "${formatProgrammeCount(idx.programmeCount)} programmes, ${formatProgrammeCount(idx.channelCount)} channels"
+                    is EpgIndexState.Indexed -> "${formatProgrammeCount(idx.channelCount)} channels, ${formatProgrammeCount(idx.programmeCount)} programmes"
                     is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
                     is EpgIndexState.NotIndexed -> if (sourceCount > 0) "$sourceCount source(s) configured, not yet indexed" else "No sources configured"
                     is EpgIndexState.Failed -> "Error: ${idx.reason}"

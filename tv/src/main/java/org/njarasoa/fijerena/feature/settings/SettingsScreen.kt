@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.OutlinedTextField
@@ -64,7 +65,11 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.Icon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -255,6 +260,11 @@ fun SettingsScreen(
     }
 
     val scale = LocalUiScale.current
+    val initialFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        initialFocusRequester.requestFocus()
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
     Column(
@@ -285,7 +295,9 @@ fun SettingsScreen(
         TvLazyColumn(
             contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
             verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRestorer { initialFocusRequester }
         ) {
             // Provider Details
             item {
@@ -321,7 +333,8 @@ fun SettingsScreen(
                         }
                         CinemaSecondaryButton(
                             onClick = onManageProviders,
-                            text = "Manage Providers"
+                            text = "Manage Providers",
+                            modifier = Modifier.focusRequester(initialFocusRequester)
                         )
                     }
                 }
@@ -413,7 +426,7 @@ fun SettingsScreen(
                         sourceCount = epgIndexer.getSourceCount()
                     }
                     val summaryText = when (val idx = indexState) {
-                        is EpgIndexState.Indexed -> "${formatProgrammeCount(idx.programmeCount)} programmes, ${formatProgrammeCount(idx.channelCount)} channels"
+                        is EpgIndexState.Indexed -> "${formatProgrammeCount(idx.channelCount)} channels, ${formatProgrammeCount(idx.programmeCount)} programmes"
                         is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
                         is EpgIndexState.NotIndexed -> if (sourceCount > 0) "$sourceCount source(s) configured, not yet indexed" else "No sources configured"
                         is EpgIndexState.Failed -> "Error: ${idx.reason}"
@@ -493,14 +506,13 @@ fun SettingsScreen(
             // Developer Mode
             item {
                 GlassPanel(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .tvFocusableNoScale()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(Spacing.md.scaled(scale)),
+                        .padding(Spacing.md.scaled(scale))
+                        .tvFocusableNoScale(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -523,7 +535,13 @@ fun SettingsScreen(
                         onCheckedChange = { enabled ->
                             isDevMode = enabled
                             appSettings.isDevMode = enabled
-                        }
+                        },
+                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                            checkedThumbColor = CinemaAccent,
+                            checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                            uncheckedThumbColor = CinemaTextSecondary,
+                            uncheckedTrackColor = CinemaSurfaceVariant
+                        )
                     )
                 }
                 }
@@ -584,11 +602,11 @@ fun SettingsScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                            CinemaPrimaryButton(
+                            CinemaIconButton(
                                 onClick = {
                                     coroutineScope.launch { syncManager.syncNow() }
                                 },
-                                text = "Sync Now"
+                                icon = { Icon(Icons.Default.Sync, contentDescription = "Sync Now") }
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaDangerButton(
@@ -776,28 +794,45 @@ fun SettingsScreen(
                         color = CinemaAccent
                     )
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = optGlobal, onCheckedChange = { optGlobal = it })
+                    val checkboxColors = CheckboxDefaults.colors(
+                        checkedColor = CinemaAccent,
+                        uncheckedColor = CinemaTextSecondary,
+                        checkmarkColor = CinemaTextPrimary
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.tvFocusableNoScale()
+                    ) {
+                        Checkbox(checked = optGlobal, onCheckedChange = { optGlobal = it }, colors = checkboxColors)
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
                         Text("General Settings", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
                     }
                     if (parsed.hasProviders) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = optProviders, onCheckedChange = { optProviders = it })
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.tvFocusableNoScale()
+                        ) {
+                            Checkbox(checked = optProviders, onCheckedChange = { optProviders = it }, colors = checkboxColors)
                             Spacer(modifier = Modifier.width(CinemaSpacing.xs))
                             Text("Providers (${parsed.settings.providers.size})", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
                         }
                     }
                     if (parsed.hasEpgSources) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = optEpg, onCheckedChange = { optEpg = it })
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.tvFocusableNoScale()
+                        ) {
+                            Checkbox(checked = optEpg, onCheckedChange = { optEpg = it }, colors = checkboxColors)
                             Spacer(modifier = Modifier.width(CinemaSpacing.xs))
                             Text("EPG Sources (${parsed.settings.epgSources.size})", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
                         }
                     }
                     if (parsed.hasFavorites) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = optFavorites, onCheckedChange = { optFavorites = it })
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.tvFocusableNoScale()
+                        ) {
+                            Checkbox(checked = optFavorites, onCheckedChange = { optFavorites = it }, colors = checkboxColors)
                             Spacer(modifier = Modifier.width(CinemaSpacing.xs))
                             Text("Favorites", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
                         }

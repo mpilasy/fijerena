@@ -26,6 +26,7 @@ class AppSettings(context: Context) {
         private const val KEY_EPG_AUTO_REFRESH = "epg_auto_refresh"
         private const val KEY_CELLULAR_LIVE_MULTIPLIER = "cellular_live_multiplier"
         private const val KEY_CELLULAR_VOD_MULTIPLIER = "cellular_vod_multiplier"
+        private const val KEY_HAS_PROVIDER_CACHE = "has_provider_cache"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
@@ -156,6 +157,15 @@ class AppSettings(context: Context) {
             val clamped = value.coerceIn(MIN_CELLULAR_MULTIPLIER, MAX_CELLULAR_MULTIPLIER)
             prefs.edit().putFloat(KEY_CELLULAR_VOD_MULTIPLIER, clamped).apply()
         }
+
+    /**
+     * Cached flag for whether at least one provider exists.
+     * Used for fast startup — avoids Room DB query on cold start.
+     * Must be updated whenever providers are added or removed.
+     */
+    var hasProviderCache: Boolean
+        get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
+        set(value) = prefs.edit().putBoolean(KEY_HAS_PROVIDER_CACHE, value).apply()
 
     /**
      * Reset both cellular buffer multipliers to default (1.0x).

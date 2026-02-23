@@ -253,6 +253,56 @@ fun CinemaIconButton(
 }
 
 /**
+ * Danger Icon Button - For destructive icon-only actions
+ * Square button with icon, uses orange/danger color scheme.
+ *
+ * @param onClick Callback when button is clicked
+ * @param icon Composable icon content
+ * @param modifier Optional modifier
+ * @param enabled Whether button is enabled (default true)
+ * @param size Button size (default 48.dp)
+ */
+@Composable
+fun CinemaDangerIconButton(
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    size: androidx.compose.ui.unit.Dp = 48.dp
+) {
+    val scale = LocalUiScale.current
+    Button(
+        onClick = onClick,
+        modifier = modifier.size(size.scaled(scale)),
+        enabled = enabled,
+        colors = ButtonDefaults.colors(
+            containerColor = CinemaOrange.copy(alpha = CinemaAlpha.tint),
+            contentColor = CinemaOrange,
+            focusedContainerColor = CinemaOrange,
+            focusedContentColor = CinemaTextPrimary,
+            pressedContainerColor = CinemaOrange.copy(alpha = CinemaAlpha.textMedium),
+            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
+            disabledContentColor = CinemaOrange.copy(alpha = CinemaAlpha.textFaint)
+        ),
+        scale = ButtonDefaults.scale(
+            scale = TvFocusTokens.defaultScale,
+            focusedScale = 1.15f,
+            pressedScale = 0.9f,
+            disabledScale = TvFocusTokens.defaultScale
+        ),
+        border = ButtonDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary)
+            )
+        ),
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
+        contentPadding = PaddingValues(Spacing.xs.scaled(scale))
+    ) {
+        icon()
+    }
+}
+
+/**
  * Danger Button - Destructive actions
  * Vivid Orange background with white text for destructive actions.
  * Use for dangerous operations like "Delete", "Logout", "Clear All", etc.
