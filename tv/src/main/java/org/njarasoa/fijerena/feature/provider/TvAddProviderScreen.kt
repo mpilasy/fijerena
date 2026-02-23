@@ -30,10 +30,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -74,6 +72,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.inputs.TvEditableTextField
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
@@ -93,11 +92,17 @@ fun TvAddProviderScreen(
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
     var name by remember { mutableStateOf("") }
+    var isEditingName by remember { mutableStateOf(false) }
     var url by remember { mutableStateOf("") }
+    var isEditingUrl by remember { mutableStateOf(false) }
     var username by remember { mutableStateOf("") }
+    var isEditingUsername by remember { mutableStateOf(false) }
     var password by remember { mutableStateOf("") }
+    var isEditingPassword by remember { mutableStateOf(false) }
     var host by remember { mutableStateOf("") }
+    var isEditingHost by remember { mutableStateOf(false) }
     var shareName by remember { mutableStateOf("") }
+    var isEditingShareName by remember { mutableStateOf(false) }
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsState()
@@ -124,10 +129,8 @@ fun TvAddProviderScreen(
     var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
     var autoResumeEnabled by remember { mutableStateOf(true) }
     var watchHistorySize by remember { mutableStateOf("25") }
-    var newWatchHistorySize by remember { mutableStateOf("") }
     var isEditingQueueSize by remember { mutableStateOf(false) }
     var favoritesMaxSize by remember { mutableStateOf("100") }
-    var newFavoritesMaxSize by remember { mutableStateOf("") }
     var isEditingFavoritesSize by remember { mutableStateOf(false) }
     var cachingEnabled by remember { mutableStateOf(true) }
     var categoryFilters by remember { mutableStateOf(CategoryFilters()) }
@@ -267,28 +270,18 @@ fun TvAddProviderScreen(
                 Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
                 // Name field (all types)
-                OutlinedTextField(
+                TvEditableTextField(
                     value = name,
                     onValueChange = {
                         name = it
                         error = null
                     },
-                    label = { Text("Provider Name") },
+                    label = "Provider Name",
+                    isEditing = isEditingName,
+                    onEditClick = { isEditingName = true },
                     placeholder = { Text("e.g. My IPTV") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextSecondary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        focusedContainerColor = CinemaSurfaceVariant,
-                        focusedPlaceholderColor = CinemaTextSecondary,
-                        unfocusedPlaceholderColor = CinemaTextSecondary
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 // Type-specific fields
@@ -297,7 +290,7 @@ fun TvAddProviderScreen(
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // URL field
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = url,
                             onValueChange = { newValue ->
                                 val parsed = parseUrlCredentials(newValue)
@@ -310,74 +303,47 @@ fun TvAddProviderScreen(
                                 }
                                 error = null
                             },
-                            label = { Text("Server URL") },
+                            label = "Server URL",
+                            isEditing = isEditingUrl,
+                            onEditClick = { isEditingUrl = true },
                             placeholder = { Text("http://provider.example.com") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Username field
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = username,
                             onValueChange = {
                                 username = it
                                 error = null
                             },
-                            label = { Text("Username") },
+                            label = "Username",
+                            isEditing = isEditingUsername,
+                            onEditClick = { isEditingUsername = true },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Password field
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = password,
                             onValueChange = {
                                 password = it
                                 error = null
                             },
-                            label = { Text("Password") },
+                            label = "Password",
+                            isEditing = isEditingPassword,
+                            onEditClick = { isEditingPassword = true },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 
@@ -385,7 +351,7 @@ fun TvAddProviderScreen(
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Server URL field
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = url,
                             onValueChange = { newValue ->
                                 val parsed = parseUrlCredentials(newValue)
@@ -398,74 +364,47 @@ fun TvAddProviderScreen(
                                 }
                                 error = null
                             },
-                            label = { Text("Server URL") },
+                            label = "Server URL",
+                            isEditing = isEditingUrl,
+                            onEditClick = { isEditingUrl = true },
                             placeholder = { Text("http://192.168.1.100:8096") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Username field
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = username,
                             onValueChange = {
                                 username = it
                                 error = null
                             },
-                            label = { Text("Username") },
+                            label = "Username",
+                            isEditing = isEditingUsername,
+                            onEditClick = { isEditingUsername = true },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Password field
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = password,
                             onValueChange = {
                                 password = it
                                 error = null
                             },
-                            label = { Text("Password") },
+                            label = "Password",
+                            isEditing = isEditingPassword,
+                            onEditClick = { isEditingPassword = true },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         if (!isEditMode) {
@@ -498,105 +437,69 @@ fun TvAddProviderScreen(
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Host/IP field
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = host,
                             onValueChange = {
                                 host = it
                                 error = null
                             },
-                            label = { Text("Host / IP") },
+                            label = "Host / IP",
+                            isEditing = isEditingHost,
+                            onEditClick = { isEditingHost = true },
                             placeholder = { Text("192.168.1.100") },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Share Name field
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = shareName,
                             onValueChange = {
                                 shareName = it
                                 error = null
                             },
-                            label = { Text("Share Name") },
+                            label = "Share Name",
+                            isEditing = isEditingShareName,
+                            onEditClick = { isEditingShareName = true },
                             placeholder = { Text("media") },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Username field (optional)
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = username,
                             onValueChange = {
                                 username = it
                                 error = null
                             },
-                            label = { Text("Username (optional)") },
+                            label = "Username (optional)",
+                            isEditing = isEditingUsername,
+                            onEditClick = { isEditingUsername = true },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
                         // Password field (optional)
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = password,
                             onValueChange = {
                                 password = it
                                 error = null
                             },
-                            label = { Text("Password (optional)") },
+                            label = "Password (optional)",
+                            isEditing = isEditingPassword,
+                            onEditClick = { isEditingPassword = true },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 
@@ -607,28 +510,19 @@ fun TvAddProviderScreen(
                     ProviderType.REMOTE_M3U -> {
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                        OutlinedTextField(
+                        TvEditableTextField(
                             value = url,
                             onValueChange = {
                                 url = it
                                 error = null
                             },
-                            label = { Text("M3U Playlist URL") },
+                            label = "M3U Playlist URL",
+                            isEditing = isEditingUrl,
+                            onEditClick = { isEditingUrl = true },
                             placeholder = { Text("https://example.com/playlist.m3u") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary
-                            )
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
                         )
                     }
                 }
@@ -699,71 +593,20 @@ fun TvAddProviderScreen(
                         )
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-                        if (!isEditingQueueSize) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = watchHistorySize,
-                                    style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        isEditingQueueSize = true
-                                        newWatchHistorySize = watchHistorySize
-                                    },
-                                    text = "Edit"
-                                )
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                TextField(
-                                    value = newWatchHistorySize,
-                                    onValueChange = { newValue ->
-                                        if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
-                                            newWatchHistorySize = newValue
-                                        }
-                                    },
-                                    label = { Text("Queue Size") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    singleLine = true,
-                                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale))
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        isEditingQueueSize = false
-                                        newWatchHistorySize = ""
-                                    },
-                                    text = "Cancel"
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                                CinemaPrimaryButton(
-                                    onClick = {
-                                        val size = newWatchHistorySize.toIntOrNull()
-                                        if (size != null && size in 1..100) {
-                                            watchHistorySize = size.toString()
-                                            isEditingQueueSize = false
-                                            newWatchHistorySize = ""
-                                            coroutineScope.launch {
-                                                val newSettings = providerSettings.copy(watchHistorySize = size)
-                                                providerRepo.updateProviderSettings(editId, newSettings)
-                                                providerSettings = newSettings
-                                                syncManager.syncProviderSettings(editId)
-                                            }
-                                        }
-                                    },
-                                    enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true,
-                                    text = "Save"
-                                )
-                            }
-                        }
+                        TvEditableTextField(
+                            value = watchHistorySize,
+                            onValueChange = { newValue ->
+                                if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
+                                    watchHistorySize = newValue
+                                }
+                            },
+                            label = "Queue Size (1-100)",
+                            isEditing = isEditingQueueSize,
+                            onEditClick = { isEditingQueueSize = true },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -782,71 +625,20 @@ fun TvAddProviderScreen(
                         )
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-                        if (!isEditingFavoritesSize) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = favoritesMaxSize,
-                                    style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        isEditingFavoritesSize = true
-                                        newFavoritesMaxSize = favoritesMaxSize
-                                    },
-                                    text = "Edit"
-                                )
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                TextField(
-                                    value = newFavoritesMaxSize,
-                                    onValueChange = { newValue ->
-                                        if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
-                                            newFavoritesMaxSize = newValue
-                                        }
-                                    },
-                                    label = { Text("Max Size") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    singleLine = true,
-                                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale))
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        isEditingFavoritesSize = false
-                                        newFavoritesMaxSize = ""
-                                    },
-                                    text = "Cancel"
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                                CinemaPrimaryButton(
-                                    onClick = {
-                                        val size = newFavoritesMaxSize.toIntOrNull()
-                                        if (size != null && size in 10..500) {
-                                            favoritesMaxSize = size.toString()
-                                            isEditingFavoritesSize = false
-                                            newFavoritesMaxSize = ""
-                                            coroutineScope.launch {
-                                                val newSettings = providerSettings.copy(favoritesMaxSize = size)
-                                                providerRepo.updateProviderSettings(editId, newSettings)
-                                                providerSettings = newSettings
-                                                syncManager.syncProviderSettings(editId)
-                                            }
-                                        }
-                                    },
-                                    enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true,
-                                    text = "Save"
-                                )
-                            }
-                        }
+                        TvEditableTextField(
+                            value = favoritesMaxSize,
+                            onValueChange = { newValue ->
+                                if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
+                                    favoritesMaxSize = newValue
+                                }
+                            },
+                            label = "Favorites Max Size (10-500)",
+                            isEditing = isEditingFavoritesSize,
+                            onEditClick = { isEditingFavoritesSize = true },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -1196,6 +988,18 @@ fun TvAddProviderScreen(
                                 val saveConfig = if (selectedType == ProviderType.SMB) {
                                     """{"host":"${host.trim()}","share":"${shareName.trim()}"}"""
                                 } else ""
+
+                                if (isEditMode) {
+                                    // Save deferred settings
+                                    coroutineScope.launch {
+                                        val newSettings = providerSettings.copy(
+                                            watchHistorySize = watchHistorySize.toIntOrNull() ?: 25,
+                                            favoritesMaxSize = favoritesMaxSize.toIntOrNull() ?: 100
+                                        )
+                                        providerRepo.updateProviderSettings(editId, newSettings)
+                                        syncManager.syncProviderSettings(editId)
+                                    }
+                                }
 
                                 viewModel.validateAndSave(
                                     id = if (isEditMode) editId else null,

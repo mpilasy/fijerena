@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +33,7 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.inputs.TvEditableTextField
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
@@ -56,6 +56,7 @@ fun EditProviderScreen(
 
     val currentUrl = remember { accountManager.getCredentials()?.url ?: "" }
     var urlInput by remember { mutableStateOf(currentUrl) }
+    var isEditingUrl by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -93,27 +94,18 @@ fun EditProviderScreen(
                 Spacer(modifier = Modifier.height(Spacing.lg))
 
                 // URL Input Field
-                OutlinedTextField(
+                TvEditableTextField(
                     value = urlInput,
                     onValueChange = {
                         urlInput = it
                         error = null
                     },
-                    label = { Text("Provider URL") },
+                    label = "Provider URL",
+                    isEditing = isEditingUrl,
+                    onEditClick = { isEditingUrl = true },
                     placeholder = { Text("Enter new provider URL") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextSecondary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        focusedPlaceholderColor = CinemaTextSecondary,
-                        unfocusedPlaceholderColor = CinemaTextSecondary
-                    )
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(Spacing.md))

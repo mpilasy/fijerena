@@ -19,6 +19,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -64,7 +68,10 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.TvCheckboxRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -584,18 +591,18 @@ fun SettingsScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                            CinemaPrimaryButton(
+                            CinemaIconButton(
                                 onClick = {
                                     coroutineScope.launch { syncManager.syncNow() }
                                 },
-                                text = "Sync Now"
+                                icon = { Icon(Icons.Default.Sync, contentDescription = "Sync Now", tint = CinemaAccent) }
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                            CinemaDangerButton(
+                            CinemaDangerIconButton(
                                 onClick = {
                                     coroutineScope.launch { syncManager.signOut() }
                                 },
-                                text = "Sign Out"
+                                icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Sign Out", tint = CinemaTextPrimary) }
                             )
                         }
                     } else {
@@ -776,31 +783,31 @@ fun SettingsScreen(
                         color = CinemaAccent
                     )
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = optGlobal, onCheckedChange = { optGlobal = it })
-                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text("General Settings", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
-                    }
+                    TvCheckboxRow(
+                        text = "General Settings",
+                        checked = optGlobal,
+                        onCheckedChange = { optGlobal = it }
+                    )
                     if (parsed.hasProviders) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = optProviders, onCheckedChange = { optProviders = it })
-                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                            Text("Providers (${parsed.settings.providers.size})", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
-                        }
+                        TvCheckboxRow(
+                            text = "Providers (${parsed.settings.providers.size})",
+                            checked = optProviders,
+                            onCheckedChange = { optProviders = it }
+                        )
                     }
                     if (parsed.hasEpgSources) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = optEpg, onCheckedChange = { optEpg = it })
-                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                            Text("EPG Sources (${parsed.settings.epgSources.size})", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
-                        }
+                        TvCheckboxRow(
+                            text = "EPG Sources (${parsed.settings.epgSources.size})",
+                            checked = optEpg,
+                            onCheckedChange = { optEpg = it }
+                        )
                     }
                     if (parsed.hasFavorites) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = optFavorites, onCheckedChange = { optFavorites = it })
-                            Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                            Text("Favorites", style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
-                        }
+                        TvCheckboxRow(
+                            text = "Favorites",
+                            checked = optFavorites,
+                            onCheckedChange = { optFavorites = it }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(Spacing.sm))

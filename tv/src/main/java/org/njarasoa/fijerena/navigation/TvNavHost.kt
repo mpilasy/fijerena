@@ -110,21 +110,12 @@ fun TvNavHost(
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
     // Determine initial destination based on provider configuration
-    val startDestination = remember(initializationComplete, hasProvider) {
+    val startDestination = remember(initializationComplete, hasProvider, lastContentType) {
         if (!initializationComplete) null
         else if (hasProvider == true) {
-            Screen.ContentTypeSelection
+            if (lastContentType != null) Screen.CategoryList(lastContentType!!) else Screen.ContentTypeSelection
         } else {
             Screen.Settings
-        }
-    }
-
-    // Auto-navigate to last content type on startup
-    LaunchedEffect(lastContentType, initializationComplete) {
-        if (initializationComplete && lastContentType != null) {
-            navController.navigate(Screen.CategoryList(lastContentType!!)) {
-                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
-            }
         }
     }
 

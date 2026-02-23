@@ -14,7 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -44,6 +48,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -120,7 +125,7 @@ fun TvEpgManagementScreen(
                         val statusText = when (val state = indexState) {
                             is EpgIndexState.NotIndexed -> "No EPG data"
                             is EpgIndexState.Indexing -> "Indexing: ${state.progressPercent}%"
-                            is EpgIndexState.Indexed -> "${formatCount(state.programmeCount)} programmes, ${formatCount(state.channelCount)} channels"
+                            is EpgIndexState.Indexed -> "${formatCount(state.channelCount)} channels, ${formatCount(state.programmeCount)} programmes"
                             is EpgIndexState.Failed -> "Failed: ${state.reason}"
                         }
                         Text(
@@ -245,9 +250,9 @@ fun TvEpgManagementScreen(
                                 ),
                                 color = CinemaAccent
                             )
-                            CinemaPrimaryButton(
+                            CinemaIconButton(
                                 onClick = { showAddDialog = true },
-                                text = "Add Source"
+                                icon = { Icon(Icons.Default.Add, contentDescription = "Add Source", tint = CinemaAccent) }
                             )
                         }
                     }
@@ -352,9 +357,9 @@ fun TvEpgManagementScreen(
                             }
 
                             Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                            CinemaPrimaryButton(
+                            CinemaIconButton(
                                 onClick = { viewModel.refreshSource(source.id) },
-                                text = "Refresh"
+                                icon = { Icon(Icons.Default.Refresh, contentDescription = "Refresh Source", tint = CinemaAccent) }
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaSecondaryButton(
@@ -408,10 +413,10 @@ fun TvEpgManagementScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                         ) {
-                            CinemaPrimaryButton(
+                            CinemaIconButton(
                                 onClick = { viewModel.refreshAll() },
                                 enabled = sources.isNotEmpty(),
-                                text = "Refresh All"
+                                icon = { Icon(Icons.Default.Refresh, contentDescription = "Refresh All", tint = CinemaAccent) }
                             )
                             CinemaSecondaryButton(
                                 onClick = { viewModel.cleanupFiles() },

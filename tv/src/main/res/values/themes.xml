@@ -1,4 +1,6 @@
 <resources>
 
-    <style name="Theme.FirstVideoPlayer" parent="Theme.AppCompat.DayNight.NoActionBar" />
+    <style name="Theme.FirstVideoPlayer" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>
