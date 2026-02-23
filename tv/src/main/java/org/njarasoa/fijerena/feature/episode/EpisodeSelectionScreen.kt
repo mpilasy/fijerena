@@ -30,8 +30,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -187,9 +185,6 @@ private fun EpisodeListContent(
     val listState = rememberLazyListState()
     val scale = LocalUiScale.current
 
-    // Favorite state for the show
-    var isFavoriteShow by remember { mutableStateOf(mediaRepository.isFavoriteShow(seriesDetail.id, "TV_SHOWS")) }
-
     // Selected episode for detail panel
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
 
@@ -295,33 +290,6 @@ private fun EpisodeListContent(
                             ),
                             color = CinemaTextPrimary
                         )
-                        // Favorite button
-                        IconButton(
-                            onClick = {
-                                if (isFavoriteShow) {
-                                    mediaRepository.removeFavoriteShow(seriesDetail.id, "TV_SHOWS")
-                                } else {
-                                    mediaRepository.addFavoriteShow(
-                                        seriesDetail.id,
-                                        seriesDetail.name,
-                                        categoryId,
-                                        "TV_SHOWS",
-                                        seriesDetail.coverUrl
-                                    )
-                                }
-                                isFavoriteShow = !isFavoriteShow
-                            },
-                            modifier = Modifier
-                                .size(TvDimensions.iconMedium.scaled(scale))
-                                .tvFocusableNoScale()
-                        ) {
-                            Icon(
-                                imageVector = if (isFavoriteShow) Icons.Filled.Star else Icons.Filled.StarBorder,
-                                contentDescription = if (isFavoriteShow) "Remove from Favorites" else "Add to Favorites",
-                                tint = if (isFavoriteShow) CinemaAccent else CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale))
-                            )
-                        }
                         // Refresh button
                         IconButton(
                             onClick = {
@@ -459,9 +427,6 @@ private fun EpisodeDetailPanel(
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
-
-    // Favorite state for the show
-    var isFavoriteShow by remember { mutableStateOf(mediaRepository.isFavoriteShow(seriesDetail.id, "TV_SHOWS")) }
 
     // Load resume position
     var resumePositionMs by remember { mutableStateOf(0L) }
@@ -641,32 +606,6 @@ private fun EpisodeDetailPanel(
                                 },
                                 text = "▶ Play Episode",
                                 modifier = Modifier.focusRequester(playButtonFocusRequester)
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                if (isFavoriteShow) {
-                                    mediaRepository.removeFavoriteShow(seriesDetail.id, "TV_SHOWS")
-                                } else {
-                                    mediaRepository.addFavoriteShow(
-                                        seriesDetail.id,
-                                        seriesDetail.name,
-                                        categoryId,
-                                        "TV_SHOWS",
-                                        seriesDetail.coverUrl
-                                    )
-                                }
-                                isFavoriteShow = !isFavoriteShow
-                            },
-                            modifier = Modifier
-                                .size(TvDimensions.iconMedium)
-                                .tvFocusableNoScale()
-                        ) {
-                            Icon(
-                                imageVector = if (isFavoriteShow) Icons.Filled.Star else Icons.Filled.StarBorder,
-                                contentDescription = if (isFavoriteShow) "Remove from Favorites" else "Add to Favorites",
-                                tint = if (isFavoriteShow) CinemaAccent else CinemaTextSecondary,
-                                modifier = Modifier.size(TvDimensions.iconMedium)
                             )
                         }
                     }

@@ -289,6 +289,11 @@ fun PlayerScreen(
                                 onPreviousChannel()
                                 showStreamInfo = true
                                 true
+                            } else if (!showControls && !currentMetadata.isLive) {
+                                println("PlayerScreen: VOD - Showing controls on UP")
+                                showControls = true
+                                showStreamInfo = true
+                                true
                             } else {
                                 println("PlayerScreen: Not switching channel (controls visible or not live)")
                                 false

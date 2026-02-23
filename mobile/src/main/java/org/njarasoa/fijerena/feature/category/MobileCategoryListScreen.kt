@@ -57,7 +57,6 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.MediaItem
-import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -108,15 +107,6 @@ fun MobileCategoryListScreen(
                             target.categoryId,
                             target.categoryName,
                             target.contentType
-                        )
-                    }
-                    is MobileFavoriteMenuTarget.Show -> {
-                        viewModel.toggleFavoriteShow(
-                            target.showId,
-                            target.showName,
-                            target.categoryId,
-                            target.contentType,
-                            target.thumbnailUrl
                         )
                     }
                     is MobileFavoriteMenuTarget.Stream -> {
@@ -279,25 +269,13 @@ fun MobileCategoryListScreen(
                                     }
                                 },
                                 onItemLongPress = { item ->
-                                    if (contentType == "TV_SHOWS" &&
-                                        item.mediaType == MediaType.SERIES) {
-                                        favoriteMenuTarget = MobileFavoriteMenuTarget.Show(
-                                            showId = item.id,
-                                            showName = item.name,
-                                            categoryId = item.categoryId,
-                                            contentType = contentType,
-                                            thumbnailUrl = item.thumbnailUrl,
-                                            isFavorite = viewModel.isFavoriteShow(item.id, contentType)
-                                        )
-                                    } else {
-                                        favoriteMenuTarget = MobileFavoriteMenuTarget.Stream(
-                                            itemId = item.id,
-                                            itemName = item.name,
-                                            categoryId = item.categoryId,
-                                            contentType = contentType,
-                                            isFavorite = viewModel.isFavorite(item.id, contentType)
-                                        )
-                                    }
+                                    favoriteMenuTarget = MobileFavoriteMenuTarget.Stream(
+                                        itemId = item.id,
+                                        itemName = item.name,
+                                        categoryId = item.categoryId,
+                                        contentType = contentType,
+                                        isFavorite = viewModel.isFavorite(item.id, contentType)
+                                    )
                                 }
                             )
                         }
@@ -346,7 +324,6 @@ private fun CategoryChipRow(
     val virtualCategoryIds = setOf(
         CategoryViewModel.FAVORITES_CATEGORY_ID,
         CategoryViewModel.FAVORITE_CATEGORIES_ID,
-        CategoryViewModel.FAVORITE_SHOWS_ID,
         CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
         CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
         CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
@@ -531,15 +508,6 @@ private sealed class MobileFavoriteMenuTarget {
         val isFavorite: Boolean
     ) : MobileFavoriteMenuTarget()
 
-    data class Show(
-        val showId: String,
-        val showName: String,
-        val categoryId: String,
-        val contentType: String,
-        val thumbnailUrl: String?,
-        val isFavorite: Boolean
-    ) : MobileFavoriteMenuTarget()
-
     data class Stream(
         val itemId: String,
         val itemName: String,
@@ -550,7 +518,7 @@ private sealed class MobileFavoriteMenuTarget {
 }
 
 /**
- * Themed context menu dialog for favoriting categories/shows on mobile.
+ * Themed context menu dialog for favoriting categories/streams on mobile.
  */
 @Composable
 private fun MobileFavoriteContextMenuDialog(
@@ -560,7 +528,6 @@ private fun MobileFavoriteContextMenuDialog(
 ) {
     val (itemName, isFavorite) = when (target) {
         is MobileFavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
-        is MobileFavoriteMenuTarget.Show -> target.showName to target.isFavorite
         is MobileFavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
     }
 

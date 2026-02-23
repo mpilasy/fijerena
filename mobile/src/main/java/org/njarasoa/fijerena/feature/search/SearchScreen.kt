@@ -27,7 +27,6 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -82,10 +81,6 @@ fun MobileSearchScreen(
                     is MobileSearchFavoriteTarget.Category -> {
                         if (target.isFavorite) mediaRepository.removeFavoriteCategory(target.categoryId, target.contentType)
                         else mediaRepository.addFavoriteCategory(target.categoryId, target.categoryName, target.contentType)
-                    }
-                    is MobileSearchFavoriteTarget.Show -> {
-                        if (target.isFavorite) mediaRepository.removeFavoriteShow(target.itemId, target.contentType)
-                        else mediaRepository.addFavoriteShow(target.itemId, target.itemName, target.categoryId, target.contentType, target.thumbnailUrl)
                     }
                     is MobileSearchFavoriteTarget.Stream -> {
                         if (target.isFavorite) mediaRepository.removeFavorite(target.itemId, target.contentType)
@@ -198,24 +193,13 @@ fun MobileSearchScreen(
                                 )
                             },
                             onResultLongPress = { result ->
-                                favoriteMenuTarget = if (result.contentType == "TV_SHOWS" && result.mediaType == MediaType.SERIES) {
-                                    MobileSearchFavoriteTarget.Show(
-                                        itemId = result.itemId,
-                                        itemName = result.streamName,
-                                        categoryId = result.categoryId,
-                                        contentType = result.contentType,
-                                        thumbnailUrl = result.thumbnailUrl,
-                                        isFavorite = mediaRepository.isFavoriteShow(result.itemId, result.contentType)
-                                    )
-                                } else {
-                                    MobileSearchFavoriteTarget.Stream(
-                                        itemId = result.itemId,
-                                        itemName = result.streamName,
-                                        categoryId = result.categoryId,
-                                        contentType = result.contentType,
-                                        isFavorite = mediaRepository.isFavorite(result.itemId, result.contentType)
-                                    )
-                                }
+                                favoriteMenuTarget = MobileSearchFavoriteTarget.Stream(
+                                    itemId = result.itemId,
+                                    itemName = result.streamName,
+                                    categoryId = result.categoryId,
+                                    contentType = result.contentType,
+                                    isFavorite = mediaRepository.isFavorite(result.itemId, result.contentType)
+                                )
                             },
                             onCategoryClick = { catResult ->
                                 onCategorySelected(catResult.categoryId, catResult.contentType)
@@ -518,15 +502,6 @@ private sealed class MobileSearchFavoriteTarget {
         val isFavorite: Boolean
     ) : MobileSearchFavoriteTarget()
 
-    data class Show(
-        val itemId: String,
-        val itemName: String,
-        val categoryId: String,
-        val contentType: String,
-        val thumbnailUrl: String?,
-        val isFavorite: Boolean
-    ) : MobileSearchFavoriteTarget()
-
     data class Stream(
         val itemId: String,
         val itemName: String,
@@ -544,7 +519,6 @@ private fun MobileSearchFavoriteDialog(
 ) {
     val (itemName, isFavorite) = when (target) {
         is MobileSearchFavoriteTarget.Category -> target.categoryName to target.isFavorite
-        is MobileSearchFavoriteTarget.Show -> target.itemName to target.isFavorite
         is MobileSearchFavoriteTarget.Stream -> target.itemName to target.isFavorite
     }
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
