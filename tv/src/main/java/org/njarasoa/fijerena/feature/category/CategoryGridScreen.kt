@@ -321,15 +321,6 @@ private fun TwoColumnLayout(
                             target.contentType
                         )
                     }
-                    is FavoriteMenuTarget.Show -> {
-                        categoryViewModel.toggleFavoriteShow(
-                            target.showId,
-                            target.showName,
-                            target.categoryId,
-                            target.contentType,
-                            target.thumbnailUrl
-                        )
-                    }
                     is FavoriteMenuTarget.Stream -> {
                         categoryViewModel.toggleFavoriteStream(
                             target.itemId,
@@ -485,25 +476,13 @@ private fun TwoColumnLayout(
                     }
                 },
                 onStreamLongPress = { item ->
-                    if (contentType == "TV_SHOWS" &&
-                        item.mediaType == org.njarasoa.fijerena.core.player.domain.MediaType.SERIES) {
-                        favoriteMenuTarget = FavoriteMenuTarget.Show(
-                            showId = item.id,
-                            showName = item.name,
-                            categoryId = item.categoryId,
-                            contentType = contentType,
-                            thumbnailUrl = item.thumbnailUrl,
-                            isFavorite = categoryViewModel.isFavoriteShow(item.id, contentType)
-                        )
-                    } else {
-                        favoriteMenuTarget = FavoriteMenuTarget.Stream(
-                            itemId = item.id,
-                            itemName = item.name,
-                            categoryId = item.categoryId,
-                            contentType = contentType,
-                            isFavorite = categoryViewModel.isFavorite(item.id, contentType)
-                        )
-                    }
+                    favoriteMenuTarget = FavoriteMenuTarget.Stream(
+                        itemId = item.id,
+                        itemName = item.name,
+                        categoryId = item.categoryId,
+                        contentType = contentType,
+                        isFavorite = categoryViewModel.isFavorite(item.id, contentType)
+                    )
                 },
                 onRefreshStreams = onRefreshStreams,
                 modifier = Modifier
@@ -530,7 +509,6 @@ private fun CategoryList(
     val virtualCategoryIds = setOf(
         CategoryViewModel.FAVORITES_CATEGORY_ID,
         CategoryViewModel.FAVORITE_CATEGORIES_ID,
-        CategoryViewModel.FAVORITE_SHOWS_ID,
         CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
         CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
         CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
@@ -930,9 +908,6 @@ private fun StreamList(
                             StreamItem(
                                 item = item,
                                 isFavorite = categoryViewModel.isFavorite(item.id, contentType),
-                                isFavoriteShow = contentType == "TV_SHOWS" &&
-                                    item.mediaType == org.njarasoa.fijerena.core.player.domain.MediaType.SERIES &&
-                                    categoryViewModel.isFavoriteShow(item.id, contentType),
                                 watchProgress = progress,
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
@@ -951,7 +926,6 @@ private fun StreamList(
 private fun StreamItem(
     item: MediaItem,
     isFavorite: Boolean = false,
-    isFavoriteShow: Boolean = false,
     watchProgress: Float = 0f,
     nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
@@ -1028,16 +1002,6 @@ private fun StreamItem(
                             )
                         }
 
-                        if (isFavoriteShow) {
-                            Text(
-                                text = "\u2661",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                                ),
-                                color = org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
-                            )
-                        }
-
                         Text(
                             text = item.name,
                             style = MaterialTheme.typography.titleMedium.copy(
@@ -1100,15 +1064,6 @@ private sealed class FavoriteMenuTarget {
         val isFavorite: Boolean
     ) : FavoriteMenuTarget()
 
-    data class Show(
-        val showId: String,
-        val showName: String,
-        val categoryId: String,
-        val contentType: String,
-        val thumbnailUrl: String?,
-        val isFavorite: Boolean
-    ) : FavoriteMenuTarget()
-
     data class Stream(
         val itemId: String,
         val itemName: String,
@@ -1130,7 +1085,6 @@ private fun FavoriteContextMenuDialog(
 ) {
     val (itemName, isFavorite) = when (target) {
         is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
-        is FavoriteMenuTarget.Show -> target.showName to target.isFavorite
         is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
     }
 
