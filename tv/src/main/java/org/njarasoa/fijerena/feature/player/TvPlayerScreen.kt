@@ -12,38 +12,29 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.PlaybackState
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
-import org.njarasoa.fijerena.core.player.domain.MediaItem
-import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 
 /**
- * TV player screen that integrates stream playback via MediaRepository.
+ * TV player screen that integrates stream playback via StreamLoaderViewModel.
  *
  * Features:
  * - Fetches stream URL from MediaRepository (provider-agnostic)
@@ -63,50 +54,32 @@ fun TvPlayerScreen(
     seriesId: String? = null,
     seriesName: String? = null,
     startFromBeginning: Boolean = false,
-    viewModel: PlaybackViewModel = viewModel()
+    playbackViewModel: PlaybackViewModel = viewModel(),
+    loaderViewModel: StreamLoaderViewModel = viewModel(
+        factory = StreamLoaderViewModelFactory(
+            context = LocalContext.current,
+            initialStreamId = streamId,
+            initialStreamName = streamName,
+            categoryId = categoryId,
+            contentType = contentType,
+            episodeId = episodeId,
+            episodeExtension = episodeExtension,
+            seriesId = seriesId,
+            seriesName = seriesName,
+            startFromBeginning = startFromBeginning
+        )
+    )
 ) {
-    val context = LocalContext.current
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        val providerRepo = ProviderRepository(appContext)
-        val repo = MediaRepository(appContext, 0L)
-        kotlinx.coroutines.runBlocking {
-            val entity = providerRepo.getActiveProvider()
-            if (entity != null) {
-                val resolvedRepo = MediaRepository(appContext, entity.id)
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                resolvedRepo.setProvider(provider)
-                resolvedRepo
-            } else repo
-        }
-    }
-    val appSettings = remember { AppSettings(context.applicationContext) }
-
-    var streamUrl by remember { mutableStateOf<String?>(null) }
-    var streamHeaders by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    var streamList by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-    var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-    var lastWatchedVersion by remember { mutableIntStateOf(0) }
-    var currentStreamIndex by remember { mutableIntStateOf(0) }
-    var currentStreamId by remember { mutableStateOf(streamId) }
-    var currentStreamName by remember { mutableStateOf(streamName) }
-
-    // EPG state for current and next programme
-    var currentEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
-    var nextEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
-
-    val coroutineScope = rememberCoroutineScope()
+    val streamState by loaderViewModel.state.collectAsState()
+    val currentStreamState by androidx.compose.runtime.rememberUpdatedState(streamState)
 
     // Stop playback when leaving the player screen
     DisposableEffect(Unit) {
         onDispose {
             // Save final position before leaving (for VOD content)
-            if (contentType != "LIVE_TV") {
-                val ps = viewModel.playbackState.value
+            val currentState = currentStreamState
+            if (currentState is StreamLoaderViewModel.StreamState.Success && !currentState.isLive) {
+                val ps = playbackViewModel.playbackState.value
                 val pos = when (ps) {
                     is PlaybackState.Playing -> ps.position
                     is PlaybackState.Paused -> ps.position
@@ -118,17 +91,11 @@ fun TvPlayerScreen(
                     else -> null
                 }
                 if (pos != null && dur != null && dur > 0) {
-                    mediaRepository.savePlaybackPosition(currentStreamId, currentStreamName, categoryId, contentType, pos, dur)
+                    loaderViewModel.recordHistory(pos, dur)
                 }
             }
-            viewModel.stop()
+            playbackViewModel.stop()
         }
-    }
-
-    // Favorite state (async for server-backed providers)
-    var isFavorite by remember { mutableStateOf(false) }
-    LaunchedEffect(currentStreamId, contentType) {
-        isFavorite = mediaRepository.isFavoriteSuspend(currentStreamId, contentType)
     }
 
     // Configure player buffer profile based on content type
@@ -138,209 +105,51 @@ fun TvPlayerScreen(
             "MOVIES", "TV_SHOWS" -> PlayerConfigFactory.ContentType.VOD
             else -> PlayerConfigFactory.ContentType.VOD
         }
-        println("TvPlayerScreen: Configuring player for $playerContentType")
         StreamingPlaybackService.getInstance()?.setContentType(playerContentType)
     }
 
     // Set up auto-save listener for playback position
-    LaunchedEffect(streamId, streamName, categoryId, contentType) {
+    LaunchedEffect(Unit) {
         StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration ->
-            mediaRepository.savePlaybackPosition(
-                itemId = currentStreamId,
-                itemName = currentStreamName,
-                categoryId = categoryId,
-                contentType = contentType,
-                position = position,
-                duration = duration
-            )
-            coroutineScope.launch {
-                mediaRepository.onPlaybackProgress(currentStreamId, position, duration)
-            }
+             loaderViewModel.recordHistory(position, duration)
         }
     }
 
-    // Load stream list for channel switching
-    LaunchedEffect(categoryId) {
-        println("TvPlayerScreen: Loading stream list for category=$categoryId, contentType=$contentType")
-        val result = mediaRepository.getItems(categoryId, contentType)
-        result.fold(
-            onSuccess = { items ->
-                streamList = items
-                println("TvPlayerScreen: Loaded ${streamList.size} streams")
-                // Find current stream index
-                currentStreamIndex = streamList.indexOfFirst { it.id == streamId }
-                if (currentStreamIndex == -1) currentStreamIndex = 0
-                println("TvPlayerScreen: Current stream index=$currentStreamIndex")
-            },
-            onFailure = {
-                println("TvPlayerScreen: Error loading streams: ${it.message}")
-                // Keep empty list, disable navigation
-            }
-        )
-    }
+    // Playback Trigger
+    // Use derived state or specific key to avoid re-triggering on EPG updates
+    val currentStreamId = (streamState as? StreamLoaderViewModel.StreamState.Success)?.streamId
 
-    // Load last watched streams for overlay (Live TV only), refresh after save
-    LaunchedEffect(lastWatchedVersion) {
-        if (contentType == "LIVE_TV") {
-            lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend(contentType)
-        }
-    }
-
-    // Fetch EPG data for current channel (Live TV only)
-    LaunchedEffect(currentStreamId, streamList) {
-        if (contentType != "LIVE_TV" || streamList.isEmpty()) {
-            currentEpgProgram = null
-            nextEpgProgram = null
-            return@LaunchedEffect
-        }
-        val currentItem = streamList.firstOrNull { it.id == currentStreamId } ?: return@LaunchedEffect
-        try {
-            val epgData = mediaRepository.getEpgBulkForItems(listOf(currentItem)).getOrNull()
-            val listings = epgData?.get(currentStreamId)?.listings ?: emptyList()
-            val now = System.currentTimeMillis() / 1000
-            currentEpgProgram = listings.firstOrNull { now in it.startTime..it.endTime }
-            nextEpgProgram = if (currentEpgProgram != null) {
-                listings.firstOrNull { it.startTime >= currentEpgProgram!!.endTime }
-            } else null
-        } catch (_: Exception) {
-            currentEpgProgram = null
-            nextEpgProgram = null
-        }
-    }
-
-    // Channel switching functions
-    fun switchToNextChannel() {
-        println("TvPlayerScreen: switchToNextChannel called, streamList size=${streamList.size}")
-        if (streamList.isEmpty()) {
-            println("TvPlayerScreen: streamList is empty, ignoring")
-            return
-        }
-        val nextIndex = (currentStreamIndex + 1) % streamList.size
-        val nextStream = streamList[nextIndex]
-        println("TvPlayerScreen: Switching from index $currentStreamIndex to $nextIndex (${nextStream.name})")
-        currentStreamIndex = nextIndex
-        currentStreamId = nextStream.id
-        currentStreamName = nextStream.name
-    }
-
-    fun switchToPreviousChannel() {
-        println("TvPlayerScreen: switchToPreviousChannel called, streamList size=${streamList.size}")
-        if (streamList.isEmpty()) {
-            println("TvPlayerScreen: streamList is empty, ignoring")
-            return
-        }
-        val prevIndex = if (currentStreamIndex == 0) {
-            streamList.size - 1
-        } else {
-            currentStreamIndex - 1
-        }
-        val prevStream = streamList[prevIndex]
-        println("TvPlayerScreen: Switching from index $currentStreamIndex to $prevIndex (${prevStream.name})")
-        currentStreamIndex = prevIndex
-        currentStreamId = prevStream.id
-        currentStreamName = prevStream.name
-    }
-
-    // Resolve playable stream URL on launch
-    LaunchedEffect(currentStreamId, episodeId) {
-        isLoading = true
-        error = null
-        println("TvPlayerScreen: Building URL for contentType=$contentType, streamId=$currentStreamId, episodeId=$episodeId, extension=$episodeExtension")
-        val result = mediaRepository.resolvePlayableStream(
-            itemId = currentStreamId,
-            contentType = contentType,
-            episodeId = episodeId,
-            extension = episodeExtension
-        )
-        result.fold(
-            onSuccess = { playable ->
-                streamUrl = playable.uri
-                streamHeaders = playable.headers
-                println("TvPlayerScreen: Stream URL built successfully: ${playable.uri}")
-                isLoading = false
-            },
-            onFailure = { e ->
-                error = e.message ?: "Failed to load stream"
-                println("TvPlayerScreen: Error building stream URL: $error")
-                isLoading = false
-            }
-        )
-    }
-
-    // Fetch saved position if VOD content (async for server-backed providers)
-    var savedPosition by remember { mutableStateOf<org.njarasoa.fijerena.core.network.WatchedItem?>(null) }
-    var positionLoaded by remember { mutableStateOf(false) }
-    LaunchedEffect(currentStreamId, contentType) {
-        positionLoaded = false
-        savedPosition = if (!startFromBeginning && contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
-            mediaRepository.getPlaybackPositionSuspend(currentStreamId, contentType)
-        } else null
-        positionLoaded = true
-    }
-
-    // Save to last watched history after 5 seconds of viewing
-    LaunchedEffect(currentStreamId, contentType) {
-        delay(5000)
-        val watchHistoryItemId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
-        val watchHistoryItemName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
-        mediaRepository.saveLastPlayedItem(categoryId, watchHistoryItemId, watchHistoryItemName, contentType)
-        lastWatchedVersion++
-    }
-
-    // Start playback when URL is ready or stream info changes
-    LaunchedEffect(streamUrl, currentStreamId, currentStreamName, positionLoaded) {
-        if (!positionLoaded) return@LaunchedEffect
-        streamUrl?.let { url ->
-            // Save last played item
-            // For TV shows, save the series info (not episode) so "Last Watched" works correctly
-
-            println("TvPlayerScreen: Playing stream (streamId=$currentStreamId, name=$currentStreamName)")
-            println("TvPlayerScreen: Stream URL: $url")
-
-            // Determine resume position
-            val resumePosition = savedPosition?.let { saved ->
-                val progressPercent = if (saved.duration > 0) {
-                    (saved.playbackPosition.toFloat() / saved.duration.toFloat()) * 100f
-                } else 0f
-
-                // Only resume if 2-95% watched
-                if (progressPercent in 2.0..95.0 && !saved.isCompleted) {
-                    println("TvPlayerScreen: Resuming playback from ${saved.playbackPosition}ms (${progressPercent.toInt()}%)")
-                    saved.playbackPosition
-                } else {
-                    println("TvPlayerScreen: Starting from beginning (progress: ${progressPercent.toInt()}%, completed: ${saved.isCompleted})")
-                    0L
-                }
-            } ?: 0L
-
+    LaunchedEffect(currentStreamId) {
+        val state = streamState
+        if (state is StreamLoaderViewModel.StreamState.Success) {
             val metadata = PlayerMetadata(
-                title = currentStreamName,
-                channelName = "IPTV.atr",
-                streamUrl = url,
-                isLive = contentType == "LIVE_TV", // Only live TV is live, movies/shows are VOD
-                headers = streamHeaders
+                title = state.streamName,
+                channelName = "IPTV.atr", // Could be fetched from provider settings
+                streamUrl = state.streamUrl,
+                isLive = state.isLive,
+                headers = state.streamHeaders
             )
-            viewModel.playStream(metadata, resumePosition)
+            playbackViewModel.playStream(metadata, state.resumePosition)
         }
     }
 
-    when {
-        isLoading -> {
+    when (val state = streamState) {
+        is StreamLoaderViewModel.StreamState.Loading -> {
             LoadingScreen()
         }
-        error != null -> {
+        is StreamLoaderViewModel.StreamState.Error -> {
             ErrorScreen(
-                message = error ?: "Unknown error",
+                message = state.message,
                 onBack = onBack
             )
         }
-        else -> {
+        is StreamLoaderViewModel.StreamState.Success -> {
             PlayerScreen(
-                viewModel = viewModel,
+                viewModel = playbackViewModel,
                 onBack = {
                     // Save position before stopping (stop sets state to Idle)
-                    if (contentType != "LIVE_TV") {
-                        val ps = viewModel.playbackState.value
+                    if (!state.isLive) {
+                        val ps = playbackViewModel.playbackState.value
                         val pos = when (ps) {
                             is PlaybackState.Playing -> ps.position
                             is PlaybackState.Paused -> ps.position
@@ -352,48 +161,24 @@ fun TvPlayerScreen(
                             else -> null
                         }
                         if (pos != null && dur != null && dur > 0) {
-                            mediaRepository.savePlaybackPosition(
-                                currentStreamId, currentStreamName, categoryId, contentType, pos, dur
-                            )
-                            coroutineScope.launch {
-                                mediaRepository.onPlaybackProgress(currentStreamId, pos, dur)
-                            }
+                            loaderViewModel.recordHistory(pos, dur)
                         }
                     }
-                    viewModel.stop()
+                    playbackViewModel.stop()
                     onBack()
                 },
-                onNextChannel = { switchToNextChannel() },
-                onPreviousChannel = { switchToPreviousChannel() },
-                isFavorite = isFavorite,
-                currentEpgProgram = currentEpgProgram,
-                nextEpgProgram = nextEpgProgram,
-                categoryStreams = streamList,
-                lastWatchedStreams = lastWatchedStreams.filter { it.id != currentStreamId },
+                onNextChannel = { loaderViewModel.nextChannel() },
+                onPreviousChannel = { loaderViewModel.prevChannel() },
+                isFavorite = state.isFavorite,
+                currentEpgProgram = state.currentEpgProgram,
+                nextEpgProgram = state.nextEpgProgram,
+                categoryStreams = state.categoryStreams,
+                lastWatchedStreams = state.lastWatchedStreams.filter { it.id != state.streamId },
                 onStreamSelected = { item ->
-                    val index = streamList.indexOfFirst { it.id == item.id }
-                    if (index >= 0) {
-                        currentStreamIndex = index
-                    }
-                    // Always switch — last-watched items may not be in the current category
-                    currentStreamId = item.id
-                    currentStreamName = item.name
+                    loaderViewModel.loadStream(item)
                 },
                 onToggleFavorite = {
-                    coroutineScope.launch {
-                        if (isFavorite) {
-                            val removed = mediaRepository.removeFavoriteSuspend(currentStreamId, contentType)
-                            if (removed) isFavorite = false
-                        } else {
-                            val added = mediaRepository.addFavoriteSuspend(
-                                currentStreamId,
-                                currentStreamName,
-                                categoryId,
-                                contentType
-                            )
-                            if (added) isFavorite = true
-                        }
-                    }
+                    loaderViewModel.toggleFavorite()
                 }
             )
         }

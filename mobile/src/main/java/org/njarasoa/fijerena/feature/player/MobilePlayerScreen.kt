@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package org.njarasoa.fijerena.feature.player
 
 import android.app.Activity
@@ -11,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,15 +50,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -74,6 +74,7 @@ import java.util.Locale
 /**
  * Mobile player screen with touch controls, audio/subtitle/quality selectors,
  * favorites, playback resume, and Stats for Nerds overlay.
+ * Refactored to use StreamLoaderViewModel.
  */
 @Composable
 fun MobilePlayerScreen(
@@ -87,10 +88,25 @@ fun MobilePlayerScreen(
     seriesId: String? = null,
     seriesName: String? = null,
     startFromBeginning: Boolean = false,
-    viewModel: PlaybackViewModel = viewModel()
+    viewModel: PlaybackViewModel = viewModel(),
+    loaderViewModel: StreamLoaderViewModel = viewModel(
+        factory = StreamLoaderViewModelFactory(
+            context = LocalContext.current,
+            initialStreamId = streamId,
+            initialStreamName = streamName,
+            categoryId = categoryId,
+            contentType = contentType,
+            episodeId = episodeId,
+            episodeExtension = episodeExtension,
+            seriesId = seriesId,
+            seriesName = seriesName,
+            startFromBeginning = startFromBeginning
+        )
+    )
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
+    val appSettings = remember { AppSettings(context.applicationContext) }
 
     // Unlock orientation for video playback, restore portrait on exit
     DisposableEffect(Unit) {
@@ -100,42 +116,13 @@ fun MobilePlayerScreen(
         }
     }
 
-    val appSettings = remember { AppSettings(context.applicationContext) }
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        val providerRepo = ProviderRepository(appContext)
-        val repo = MediaRepository(appContext, 0L)
-        kotlinx.coroutines.runBlocking {
-            val entity = providerRepo.getActiveProvider()
-            if (entity != null) {
-                val resolvedRepo = MediaRepository(appContext, entity.id)
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                resolvedRepo.setProvider(provider)
-                resolvedRepo
-            } else repo
-        }
-    }
+    val streamState by loaderViewModel.state.collectAsState()
+    val currentStreamState by rememberUpdatedState(streamState)
 
-    // Channel switching state (Live TV only)
-    var currentStreamId by remember { mutableStateOf(streamId) }
-    var currentStreamName by remember { mutableStateOf(streamName) }
-    var streamList by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-    var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-    var lastWatchedVersion by remember { mutableIntStateOf(0) }
-    var currentStreamIndex by remember { mutableStateOf(0) }
+    // UI State
     var showChannelToast by remember { mutableStateOf(false) }
     var showCategoryOverlay by remember { mutableStateOf(false) }
     var showLastWatchedOverlay by remember { mutableStateOf(false) }
-
-    // EPG state for current and next programme
-    var currentEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
-    var nextEpgProgram by remember { mutableStateOf<EpgProgram?>(null) }
-
-    var streamUrl by remember { mutableStateOf<String?>(null) }
-    var streamHeaders by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
     var showControls by remember { mutableStateOf(true) }
     var showStats by remember { mutableStateOf(false) }
     var hasStartedPlaying by remember { mutableStateOf(false) }
@@ -183,51 +170,6 @@ fun MobilePlayerScreen(
         }
     }
 
-    val coroutineScope = rememberCoroutineScope()
-
-    // Load stream list for channel switching (Live TV only)
-    LaunchedEffect(categoryId, contentType) {
-        if (contentType == "LIVE_TV") {
-            val result = mediaRepository.getItems(categoryId, contentType)
-            result.fold(
-                onSuccess = { items ->
-                    streamList = items
-                    currentStreamIndex = items.indexOfFirst { it.id == streamId }
-                    if (currentStreamIndex == -1) currentStreamIndex = 0
-                },
-                onFailure = { /* Keep empty list, disable channel switching */ }
-            )
-        }
-    }
-
-    // Load last watched streams for overlay (Live TV only), refresh after save
-    LaunchedEffect(lastWatchedVersion) {
-        if (contentType == "LIVE_TV") {
-            lastWatchedStreams = mediaRepository.getWatchHistoryForContentTypeSuspend(contentType)
-        }
-    }
-
-    // Channel switching functions
-    fun switchToNextChannel() {
-        if (streamList.isEmpty()) return
-        val nextIndex = (currentStreamIndex + 1) % streamList.size
-        val nextStream = streamList[nextIndex]
-        currentStreamIndex = nextIndex
-        currentStreamId = nextStream.id
-        currentStreamName = nextStream.name
-        showChannelToast = true
-    }
-
-    fun switchToPreviousChannel() {
-        if (streamList.isEmpty()) return
-        val prevIndex = if (currentStreamIndex == 0) streamList.size - 1 else currentStreamIndex - 1
-        val prevStream = streamList[prevIndex]
-        currentStreamIndex = prevIndex
-        currentStreamId = prevStream.id
-        currentStreamName = prevStream.name
-        showChannelToast = true
-    }
-
     // Auto-hide channel toast
     LaunchedEffect(showChannelToast) {
         if (showChannelToast) {
@@ -236,38 +178,10 @@ fun MobilePlayerScreen(
         }
     }
 
-    // Fetch EPG data for current channel (Live TV only)
-    LaunchedEffect(currentStreamId, streamList) {
-        if (contentType != "LIVE_TV" || streamList.isEmpty()) {
-            currentEpgProgram = null
-            nextEpgProgram = null
-            return@LaunchedEffect
-        }
-        val currentItem = streamList.firstOrNull { it.id == currentStreamId } ?: return@LaunchedEffect
-        try {
-            val epgData = mediaRepository.getEpgBulkForItems(listOf(currentItem)).getOrNull()
-            val listings = epgData?.get(currentStreamId)?.listings ?: emptyList()
-            val now = System.currentTimeMillis() / 1000
-            currentEpgProgram = listings.firstOrNull { now in it.startTime..it.endTime }
-            nextEpgProgram = if (currentEpgProgram != null) {
-                listings.firstOrNull { it.startTime >= currentEpgProgram!!.endTime }
-            } else null
-        } catch (_: Exception) {
-            currentEpgProgram = null
-            nextEpgProgram = null
-        }
-    }
-
     // Selector dialogs
     var showAudioTrackSelector by remember { mutableStateOf(false) }
     var showSubtitleSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
-
-    // Favorites (async for server-backed providers)
-    var isFavorite by remember { mutableStateOf(false) }
-    LaunchedEffect(currentStreamId, contentType) {
-        isFavorite = mediaRepository.isFavoriteSuspend(currentStreamId, contentType)
-    }
 
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
 
@@ -295,8 +209,7 @@ fun MobilePlayerScreen(
                     else -> null
                 }
                 if (pos != null && dur != null && dur > 0) {
-                    mediaRepository.savePlaybackPosition(currentStreamId, currentStreamName, categoryId, contentType, pos, dur)
-                    mediaRepository.onPlaybackProgress(currentStreamId, pos, dur)
+                    loaderViewModel.recordHistory(pos, dur)
                 }
             }
         }
@@ -320,86 +233,34 @@ fun MobilePlayerScreen(
         StreamingPlaybackService.getInstance()?.setContentType(playerContentType)
     }
 
-    // Load stream URL
-    LaunchedEffect(currentStreamId, episodeId) {
-        isLoading = true
-        error = null
-        val result = mediaRepository.resolvePlayableStream(
-            itemId = currentStreamId,
-            contentType = contentType,
-            episodeId = episodeId,
-            extension = episodeExtension
-        )
-        result.fold(
-            onSuccess = { playable ->
-                android.util.Log.d("MobilePlayerScreen", "Resolved Stream URL: ${playable.uri}")
-                streamUrl = playable.uri
-                streamHeaders = playable.headers
-                isLoading = false
-            },
-            onFailure = { e ->
-                android.util.Log.e("MobilePlayerScreen", "Failed to resolve stream: ${e.message}", e)
-                error = e.message ?: "Failed to load stream"
-                isLoading = false
-            }
-        )
-    }
-
-    // Fetch saved position for VOD resume (async for server-backed providers)
-    var savedPosition by remember { mutableStateOf<org.njarasoa.fijerena.core.network.WatchedItem?>(null) }
-    var positionLoaded by remember { mutableStateOf(false) }
-    LaunchedEffect(currentStreamId, contentType) {
-        positionLoaded = false
-        savedPosition = if (!startFromBeginning && contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
-            mediaRepository.getPlaybackPositionSuspend(currentStreamId, contentType)
-        } else null
-        positionLoaded = true
-    }
-
-    // Save to last watched history after 5 seconds of viewing
-    LaunchedEffect(currentStreamId, contentType) {
-        delay(5000)
-        val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else currentStreamId
-        val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else currentStreamName
-        mediaRepository.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
-        lastWatchedVersion++
-    }
-
     // Start playback when URL is ready or channel changes
-    LaunchedEffect(streamUrl, currentStreamId, currentStreamName, positionLoaded) {
-        if (!positionLoaded) return@LaunchedEffect
-        streamUrl?.let { url ->
-            // Determine resume position
-            val resumePosition = savedPosition?.let { saved ->
-                val progressPercent = if (saved.duration > 0) {
-                    (saved.playbackPosition.toFloat() / saved.duration.toFloat()) * 100f
-                } else 0f
-                // Only resume if 2-95% watched
-                if (progressPercent in 2.0..95.0 && !saved.isCompleted) {
-                    saved.playbackPosition
-                } else 0L
-            } ?: 0L
+    val currentStreamId = (streamState as? StreamLoaderViewModel.StreamState.Success)?.streamId
+    LaunchedEffect(currentStreamId) {
+        val state = streamState
+        if (state is StreamLoaderViewModel.StreamState.Success) {
+            // Show toast if channel changed (implicit logic: if ID changed)
+            showChannelToast = true
 
             val metadata = PlayerMetadata(
-                title = currentStreamName,
+                title = state.streamName,
                 channelName = appSettings.providerName,
-                streamUrl = url,
-                isLive = contentType == "LIVE_TV",
-                headers = streamHeaders
+                streamUrl = state.streamUrl,
+                isLive = state.isLive,
+                headers = state.streamHeaders
             )
-            viewModel.playStream(metadata, resumePosition)
+            viewModel.playStream(metadata, state.resumePosition)
         }
     }
 
-    when {
-        isLoading -> {
+    when (val state = streamState) {
+        is StreamLoaderViewModel.StreamState.Loading -> {
             LoadingScreen()
         }
-        error != null -> {
-            ErrorScreen(message = error ?: "Unknown error", onBack = onBack)
+        is StreamLoaderViewModel.StreamState.Error -> {
+            ErrorScreen(message = state.message, onBack = onBack)
         }
-        else -> {
-            val isLiveContent = contentType == "LIVE_TV"
+        is StreamLoaderViewModel.StreamState.Success -> {
+            val isLiveContent = state.isLive
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -422,7 +283,7 @@ fun MobilePlayerScreen(
                     }
                     .then(
                         if (isLiveContent) {
-                            Modifier.pointerInput(streamList, showCategoryOverlay, showLastWatchedOverlay) {
+                            Modifier.pointerInput(state.categoryStreams, showCategoryOverlay, showLastWatchedOverlay) {
                                 var verticalAccumulator = 0f
                                 var horizontalAccumulator = 0f
                                 detectDragGestures(
@@ -436,8 +297,8 @@ fun MobilePlayerScreen(
                                         horizontalAccumulator += dragAmount.x
                                         // Vertical: channel switching
                                         if (kotlin.math.abs(verticalAccumulator) > 100f) {
-                                            if (verticalAccumulator < 0) switchToNextChannel()
-                                            else switchToPreviousChannel()
+                                            if (verticalAccumulator < 0) loaderViewModel.nextChannel()
+                                            else loaderViewModel.prevChannel()
                                             verticalAccumulator = 0f
                                         }
                                         // Horizontal: overlay panels
@@ -479,20 +340,21 @@ fun MobilePlayerScreen(
                     playerView.player = service?.getPlayer()
 
                     onDispose {
-                        // Save final position before leaving
-                        if (contentType != "LIVE_TV") {
-                            val pos = when (val ps = viewModel.playbackState.value) {
+                        val currentState = currentStreamState
+                        if (currentState is StreamLoaderViewModel.StreamState.Success && !currentState.isLive) {
+                            val ps = viewModel.playbackState.value
+                            val pos = when (ps) {
                                 is PlaybackState.Playing -> ps.position
                                 is PlaybackState.Paused -> ps.position
                                 else -> null
                             }
-                            val dur = when (val ps = viewModel.playbackState.value) {
+                            val dur = when (ps) {
                                 is PlaybackState.Playing -> ps.duration
                                 is PlaybackState.Paused -> ps.duration
                                 else -> null
                             }
                             if (pos != null && dur != null && dur > 0) {
-                                mediaRepository.savePlaybackPosition(currentStreamId, currentStreamName, categoryId, contentType, pos, dur)
+                                loaderViewModel.recordHistory(pos, dur)
                             }
                         }
                         // Stop playback when leaving the player screen
@@ -533,13 +395,13 @@ fun MobilePlayerScreen(
                         playbackState = playbackState,
                         metadata = currentMetadata,
                         viewModel = viewModel,
-                        isLive = contentType == "LIVE_TV",
+                        isLive = isLiveContent,
                         isDeveloperMode = appSettings.isDevMode,
-                        isFavorite = isFavorite,
+                        isFavorite = state.isFavorite,
                         livePosition = livePosition,
                         liveDuration = liveDuration,
-                        currentEpgProgram = currentEpgProgram,
-                        nextEpgProgram = nextEpgProgram,
+                        currentEpgProgram = state.currentEpgProgram,
+                        nextEpgProgram = state.nextEpgProgram,
                         onPlayPause = {
                             if (playbackState is PlaybackState.Paused) {
                                 viewModel.resume()
@@ -547,11 +409,11 @@ fun MobilePlayerScreen(
                                 viewModel.pause()
                             }
                         },
-                        onFastForward = if (contentType != "LIVE_TV") ({ viewModel.seekRelative(60_000L) }) else null,
-                        onRewind = if (contentType != "LIVE_TV") ({ viewModel.seekRelative(-30_000L) }) else null,
+                        onFastForward = if (!isLiveContent) ({ viewModel.seekRelative(60_000L) }) else null,
+                        onRewind = if (!isLiveContent) ({ viewModel.seekRelative(-30_000L) }) else null,
                         onBack = {
                             // Save position before stopping (stop sets state to Idle)
-                            if (contentType != "LIVE_TV") {
+                            if (!isLiveContent) {
                                 val ps = viewModel.playbackState.value
                                 val pos = when (ps) {
                                     is PlaybackState.Playing -> ps.position
@@ -564,10 +426,7 @@ fun MobilePlayerScreen(
                                     else -> null
                                 }
                                 if (pos != null && dur != null && dur > 0) {
-                                    mediaRepository.savePlaybackPosition(currentStreamId, currentStreamName, categoryId, contentType, pos, dur)
-                                    coroutineScope.launch {
-                                        mediaRepository.onPlaybackProgress(currentStreamId, pos, dur)
-                                    }
+                                    loaderViewModel.recordHistory(pos, dur)
                                 }
                             }
                             viewModel.stop()
@@ -578,17 +437,7 @@ fun MobilePlayerScreen(
                         onSubtitle = { showSubtitleSelector = true },
                         onQuality = { showQualitySelector = true },
                         onToggleFavorite = {
-                            coroutineScope.launch {
-                                if (isFavorite) {
-                                    if (mediaRepository.removeFavoriteSuspend(currentStreamId, contentType)) {
-                                        isFavorite = false
-                                    }
-                                } else {
-                                    if (mediaRepository.addFavoriteSuspend(currentStreamId, currentStreamName, categoryId, contentType)) {
-                                        isFavorite = true
-                                    }
-                                }
-                            }
+                             loaderViewModel.toggleFavorite()
                         }
                     )
                 }
@@ -614,8 +463,8 @@ fun MobilePlayerScreen(
                     modifier = Modifier.align(Alignment.TopCenter)
                 ) {
                     ChannelToast(
-                        channelName = currentStreamName,
-                        currentEpgProgram = currentEpgProgram
+                        channelName = state.streamName,
+                        currentEpgProgram = state.currentEpgProgram
                     )
                 }
             }
@@ -628,17 +477,11 @@ fun MobilePlayerScreen(
             ) {
                 MobileChannelListSheet(
                     title = "Category Channels",
-                    streams = streamList,
+                    streams = state.categoryStreams,
                     panelAlignment = Alignment.CenterStart,
                     onSelect = { item ->
                         showCategoryOverlay = false
-                        val index = streamList.indexOfFirst { it.id == item.id }
-                        if (index >= 0) {
-                            currentStreamIndex = index
-                            currentStreamId = item.id
-                            currentStreamName = item.name
-                            showChannelToast = true
-                        }
+                        loaderViewModel.loadStream(item)
                     },
                     onDismiss = { showCategoryOverlay = false }
                 )
@@ -652,22 +495,11 @@ fun MobilePlayerScreen(
             ) {
                 MobileChannelListSheet(
                     title = "Last Watched",
-                    streams = lastWatchedStreams.filter { it.id != currentStreamId },
+                    streams = state.lastWatchedStreams.filter { it.id != state.streamId },
                     panelAlignment = Alignment.CenterEnd,
                     onSelect = { item ->
                         showLastWatchedOverlay = false
-                        val index = streamList.indexOfFirst { it.id == item.id }
-                        if (index >= 0) {
-                            currentStreamIndex = index
-                            currentStreamId = item.id
-                            currentStreamName = item.name
-                            showChannelToast = true
-                        } else {
-                            // Stream not in category list, switch directly
-                            currentStreamId = item.id
-                            currentStreamName = item.name
-                            showChannelToast = true
-                        }
+                        loaderViewModel.loadStream(item)
                     },
                     onDismiss = { showLastWatchedOverlay = false }
                 )
