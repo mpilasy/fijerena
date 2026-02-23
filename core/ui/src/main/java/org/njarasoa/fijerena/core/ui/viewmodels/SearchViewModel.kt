@@ -170,7 +170,7 @@ class SearchViewModel(
                         val serverCategories = repository.getFilteredCategories(contentType)
                         val matchingCategories = serverCategories.getOrDefault(emptyList())
                             .filter { !it.isVirtual }
-                            .filter { it.name.lowercase().contains(normalizedQuery) }
+                            .filter { matchesQuery(it.name, normalizedQuery) }
                             .map { CategorySearchResult(it.id, it.name, contentType) }
 
                         _uiState.value = UiState.Success(
@@ -208,7 +208,7 @@ class SearchViewModel(
             val normalizedQuery = query.trim().lowercase()
 
             val matchingCategories = realCategories
-                .filter { it.name.lowercase().contains(normalizedQuery) }
+                .filter { matchesQuery(it.name, normalizedQuery) }
                 .map { CategorySearchResult(it.id, it.name, contentType) }
 
             _uiState.value = UiState.Success(
@@ -230,7 +230,7 @@ class SearchViewModel(
                 if (cached != null) {
                     categoriesSearched++
                     val matchingItems = cached
-                        .filter { it.name.lowercase().contains(normalizedQuery) }
+                        .filter { matchesQuery(it.name, normalizedQuery) }
                         .map { item ->
                             SearchResult(
                                 itemId = item.id,
@@ -324,7 +324,7 @@ class SearchViewModel(
                     if (items != null) {
                         networkBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
                         val matchingItems = items
-                            .filter { it.name.lowercase().contains(normalizedQuery) }
+                            .filter { matchesQuery(it.name, normalizedQuery) }
                             .map { item ->
                                 SearchResult(
                                     itemId = item.id,
@@ -394,13 +394,27 @@ class SearchViewModel(
         }
     }
 
+    private fun matchesQuery(text: String, query: String): Boolean {
+        if (query.isBlank()) return true
+        val words = query.lowercase().split(" ").filter { it.isNotBlank() }
+        if (words.isEmpty()) return true
+        val lowerText = text.lowercase()
+        return words.all { lowerText.contains(it) }
+    }
+
     private fun sortResults(results: List<SearchResult>, normalizedQuery: String): List<SearchResult> {
         return results.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
             .thenBy {
+                val lowerName = it.streamName.lowercase()
                 when {
-                    it.streamName.lowercase() == normalizedQuery -> 0
-                    it.streamName.lowercase().startsWith(normalizedQuery) -> 1
-                    else -> 2
+                    lowerName == normalizedQuery -> 0
+                    lowerName.startsWith(normalizedQuery) -> 1
+                    else -> {
+                        val words = normalizedQuery.split(" ").filter { it.isNotBlank() }
+                        if (words.isNotEmpty() && words.all { w -> lowerName.contains(w) }) {
+                            if (lowerName.startsWith(words[0])) 2 else 3
+                        } else 4
+                    }
                 }
             }
             .thenBy { it.streamName })
