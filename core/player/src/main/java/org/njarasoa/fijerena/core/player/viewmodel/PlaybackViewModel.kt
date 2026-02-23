@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
+import org.njarasoa.fijerena.core.player.model.Chapter
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
@@ -28,6 +29,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private val _currentMetadata = MutableStateFlow(PlayerMetadata())
     val currentMetadata: StateFlow<PlayerMetadata> = _currentMetadata.asStateFlow()
+
+    private val _chapters = MutableStateFlow<List<Chapter>>(emptyList())
+    val chapters: StateFlow<List<Chapter>> = _chapters.asStateFlow()
 
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
@@ -110,6 +114,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 viewModelScope.launch {
                     service.currentMetadata.collect { metadata ->
                         _currentMetadata.value = metadata
+                    }
+                }
+
+                // Observe service's chapters
+                viewModelScope.launch {
+                    service.chapters.collect { chapters ->
+                        _chapters.value = chapters
                     }
                 }
                 break
@@ -196,6 +207,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             else -> return
         }
         seekTo((currentPos + offsetMs).coerceIn(0L, duration))
+    }
+
+    fun seekToChapter(chapter: Chapter) {
+        seekTo(chapter.startPositionMs)
     }
 
     /**

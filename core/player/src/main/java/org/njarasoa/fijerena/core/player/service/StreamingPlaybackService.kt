@@ -17,6 +17,9 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.common.Metadata
+import androidx.media3.extractor.metadata.id3.ChapterFrame
+import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,9 +27,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.model.Chapter
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
@@ -44,6 +49,9 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private val _currentMetadata = MutableStateFlow(PlayerMetadata())
     val currentMetadata: StateFlow<PlayerMetadata> = _currentMetadata.asStateFlow()
+
+    private val _chapters = MutableStateFlow<List<Chapter>>(emptyList())
+    val chapters: StateFlow<List<Chapter>> = _chapters.asStateFlow()
 
     private val _droppedFrames = MutableStateFlow(0L)
     val droppedFrames: StateFlow<Long> = _droppedFrames.asStateFlow()
@@ -173,6 +181,13 @@ class StreamingPlaybackService : MediaSessionService() {
             },
             onStreamEndedOrError = { errorMessage ->
                 handleStreamEndedOrError(errorMessage)
+            },
+            onChaptersFound = { newChapters ->
+                _chapters.update { current ->
+                    val combined = current + newChapters
+                    val sorted = combined.distinctBy { it.startPositionMs }.sortedBy { it.startPositionMs }
+                    sorted.mapIndexed { index, chapter -> chapter.copy(index = index) }
+                }
             }
         )
         player.addListener(playerListener!!)
@@ -222,6 +237,7 @@ class StreamingPlaybackService : MediaSessionService() {
         _qualitySwitchCount.value = 0
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
+        _chapters.value = emptyList()
 
         val mediaSource = StreamingMediaSourceFactory.createMediaSource(
             context = this,
@@ -470,7 +486,8 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onWakeLockRequired: () -> Unit,
         private val player: Player,
         private val onPositionSave: ((Long, Long) -> Unit)? = null,
-        private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {}
+        private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {},
+        private val onChaptersFound: (List<Chapter>) -> Unit = {}
     ) : Player.Listener {
         private var isInErrorState = false
         private var lastSavedPosition = 0L
@@ -479,6 +496,36 @@ class StreamingPlaybackService : MediaSessionService() {
         fun resetErrorState() {
             isInErrorState = false
         }
+        override fun onMetadata(metadata: Metadata) {
+            val chapters = mutableListOf<Chapter>()
+            for (i in 0 until metadata.length()) {
+                val entry = metadata.get(i)
+                if (entry is ChapterFrame) {
+                    val titleFrame = entry.subFrames.filterIsInstance<TextInformationFrame>()
+                        .firstOrNull { it.id == "TIT2" }
+
+                    val title = titleFrame?.value ?: entry.chapterId
+
+                    chapters.add(
+                        Chapter(
+                            index = 0, // Will be re-indexed when sorted
+                            title = title,
+                            startPositionMs = entry.startTimeMs,
+                            endPositionMs = entry.endTimeMs
+                        )
+                    )
+                }
+            }
+            if (chapters.isNotEmpty()) {
+                // Assign indices based on start time
+                chapters.sortBy { it.startPositionMs }
+                val indexedChapters = chapters.mapIndexed { index, chapter ->
+                    chapter.copy(index = index)
+                }
+                onChaptersFound(indexedChapters)
+            }
+        }
+
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_READY && player.isPlaying) {
                 val currentPosition = player.currentPosition
@@ -704,6 +751,10 @@ class StreamingPlaybackService : MediaSessionService() {
 
         fun getCurrentMetadata(service: StreamingPlaybackService): StateFlow<PlayerMetadata> {
             return service.currentMetadata
+        }
+
+        fun getChapters(service: StreamingPlaybackService): StateFlow<List<Chapter>> {
+            return service.chapters
         }
     }
 }

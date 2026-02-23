@@ -33,12 +33,14 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VolumeUp
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.model.Chapter
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -111,6 +113,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 @Composable
@@ -129,6 +132,7 @@ fun PlayerScreen(
 ) {
     val playbackState = viewModel.playbackState.collectAsState().value
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
+    val chapters = viewModel.chapters.collectAsState().value
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDeveloperMode = remember { appSettings.isDevMode }
@@ -138,6 +142,7 @@ fun PlayerScreen(
     var showAudioTrackSelector by remember { mutableStateOf(false) }
     var showSubtitleSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
+    var showChapterSelector by remember { mutableStateOf(false) }
     var showStreamInfo by remember { mutableStateOf(false) }
     var showCategoryOverlay by remember { mutableStateOf(false) }
     var showLastWatchedOverlay by remember { mutableStateOf(false) }
@@ -770,6 +775,18 @@ fun PlayerScreen(
                                     }
                                 }
 
+                                // Chapters
+                                if (chapters.isNotEmpty()) {
+                                    Button(
+                                        onClick = { showChapterSelector = true },
+                                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                                            containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                        )
+                                    ) {
+                                        Icon(Icons.Filled.FormatListBulleted, "Chapters", tint = Color.White)
+                                    }
+                                }
+
                                 // Favorite toggle
                                 if (onToggleFavorite != null) {
                                     Button(
@@ -829,6 +846,18 @@ fun PlayerScreen(
             )
         }
 
+        // Chapter selector dialog
+        if (showChapterSelector) {
+            ChapterSelectorDialog(
+                chapters = chapters,
+                onChapterSelected = { chapter ->
+                    viewModel.seekToChapter(chapter)
+                    showChapterSelector = false
+                },
+                onDismiss = { showChapterSelector = false }
+            )
+        }
+
         // Control hints for first-time users
         if (showControlHints && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)) {
             ControlHintsOverlay(
@@ -876,6 +905,75 @@ fun PlayerScreen(
                     onStreamSelected?.invoke(item)
                 },
                 onDismiss = { showLastWatchedOverlay = false }
+            )
+        }
+
+        // Top Right Clock
+        ClockOverlay(
+            showControls = showControls,
+            showStreamInfo = showStreamInfo
+        )
+    }
+}
+
+@Composable
+private fun ClockOverlay(
+    showControls: Boolean,
+    showStreamInfo: Boolean
+) {
+    var currentTimeMillis by remember { androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentTimeMillis = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
+
+    val showClock = remember(currentTimeMillis, showControls, showStreamInfo) {
+        val calendar = Calendar.getInstance().apply { timeInMillis = currentTimeMillis }
+        val minute = calendar.get(Calendar.MINUTE)
+        val second = calendar.get(Calendar.SECOND)
+        // 30s before top of hour for 90s total (until XX:01:00)
+        val isNearTopOfHour = (minute == 59 && second >= 30) || (minute == 0)
+
+        isNearTopOfHour || showControls || showStreamInfo
+    }
+
+    AnimatedVisibility(
+        visible = showClock,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        TopRightClock(currentTimeMillis)
+    }
+}
+
+@Composable
+private fun TopRightClock(currentTimeMillis: Long) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+    val screenHeight = configuration.screenHeightDp.dp
+    val clockWidth = screenWidth * 0.1f
+    val clockHeight = screenHeight * 0.1f
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(Spacing.md), // Safe margin
+        contentAlignment = Alignment.TopEnd
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = clockWidth, height = clockHeight)
+                .background(Color.Black.copy(alpha = 0.5f), shape = RoundedCornerShape(CinemaCornerRadius.medium)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = formatEpochTime(currentTimeMillis / 1000),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = Color.White
             )
         }
     }
@@ -1447,6 +1545,115 @@ private fun SubtitleSelectorDialog(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChapterSelectorDialog(
+    chapters: List<Chapter>,
+    onChapterSelected: (Chapter) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val focusRequesters = remember { List(chapters.size) { FocusRequester() } }
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+
+    LaunchedEffect(Unit) {
+        if (focusRequesters.isNotEmpty()) {
+            focusRequesters[0].requestFocus()
+        }
+    }
+
+    BackHandler { onDismiss() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+        contentAlignment = Center
+    ) {
+        GlassPanel(
+            modifier = Modifier
+                .width(TvDimensions.dialogWidth)
+                .heightIn(max = screenHeight * 0.8f)
+                .padding(Spacing.xxl)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(Spacing.xxl)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
+            ) {
+                // Header
+                Text(
+                    text = "Select Chapter",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Chapter list
+                chapters.forEachIndexed { index, chapter ->
+                    Button(
+                        onClick = { onChapterSelected(chapter) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequesters[index]),
+                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                            containerColor = CinemaSurfaceVariant,
+                            contentColor = CinemaTextPrimary,
+                            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                            focusedContentColor = CinemaTextPrimary
+                        ),
+                        border = androidx.tv.material3.ButtonDefaults.border(
+                            border = androidx.tv.material3.Border(
+                                border = androidx.compose.foundation.BorderStroke(
+                                    width = 0.dp,
+                                    color = Color.Transparent
+                                ),
+                                shape = RoundedCornerShape(CinemaCornerRadius.small)
+                            ),
+                            focusedBorder = androidx.tv.material3.Border(
+                                border = androidx.compose.foundation.BorderStroke(
+                                    width = TvDimensions.borderFocused,
+                                    color = MaterialTheme.colorScheme.primary
+                                ),
+                                shape = RoundedCornerShape(CinemaCornerRadius.small)
+                            )
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(Spacing.xs),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = chapter.title,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = formatTime(chapter.startPositionMs),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CinemaTextTertiary
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(Spacing.xs))
+
+                // Close button
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(CenterHorizontally)
+                        .width(TvDimensions.selectionListWidth)
+                ) {
+                    Text("Cancel")
+                }
             }
         }
     }
