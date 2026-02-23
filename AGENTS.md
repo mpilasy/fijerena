@@ -116,7 +116,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 3. **Navigation IDs:** Always use `String` for IDs.
 
 ### Features
-- **Search:** Two-phase parallel search for Xtream; server-side for Jellyfin.
+- **Search:** Two-phase parallel search for Xtream with multi-word matching; server-side for Jellyfin.
 - **Virtual Categories:** Favorites (configurable 10-500), Last Watched (1-100), Continue Watching (VOD), Recent Categories.
 - **Jellyfin Quick Connect:** Supported for easy auth.
 - **Settings:** Provider management, theme selection, EPG management, cache management, UI scale, export/import (JSON).
