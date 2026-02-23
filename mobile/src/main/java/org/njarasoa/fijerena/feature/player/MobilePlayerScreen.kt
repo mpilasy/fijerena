@@ -68,6 +68,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -182,6 +183,8 @@ fun MobilePlayerScreen(
     var showAudioTrackSelector by remember { mutableStateOf(false) }
     var showSubtitleSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
+    var showTopOfHourClock by remember { mutableStateOf(false) }
+    var clockTick by remember { mutableLongStateOf(0L) }
 
     val currentMetadata = viewModel.currentMetadata.collectAsState().value
 
@@ -220,6 +223,18 @@ fun MobilePlayerScreen(
         if (showControls && !showStats) {
             delay(CinemaAnimation.controlsAutoHideMobileMs)
             showControls = false
+        }
+    }
+
+    // Top-of-hour clock: show 30s before the hour, hide 90s after
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = Calendar.getInstance()
+            val totalSecondsIntoHour = now.get(Calendar.MINUTE) * 60 + now.get(Calendar.SECOND)
+            val showAtSecond = 59 * 60 + 30
+            showTopOfHourClock = totalSecondsIntoHour >= showAtSecond || totalSecondsIntoHour < 90
+            clockTick = System.currentTimeMillis()
+            delay(1000L)
         }
     }
 
@@ -400,6 +415,7 @@ fun MobilePlayerScreen(
                         isFavorite = state.isFavorite,
                         livePosition = livePosition,
                         liveDuration = liveDuration,
+                        clockTick = clockTick,
                         currentEpgProgram = state.currentEpgProgram,
                         nextEpgProgram = state.nextEpgProgram,
                         onPlayPause = {
@@ -453,6 +469,28 @@ fun MobilePlayerScreen(
                         metadata = currentMetadata,
                         onClose = { showStats = false }
                     )
+                }
+
+                // Autonomous top-of-hour clock
+                AnimatedVisibility(
+                    visible = showTopOfHourClock && !showControls && !showStats,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    @Suppress("UNUSED_VARIABLE")
+                    val tick = clockTick
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(CinemaSpacing.md),
+                        contentAlignment = Alignment.TopEnd
+                    ) {
+                        Text(
+                            text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date()),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White.copy(alpha = CinemaAlpha.textDisabled)
+                        )
+                    }
                 }
 
                 // Channel switch toast (Live TV only)
@@ -630,6 +668,7 @@ private fun ControlsOverlay(
     isFavorite: Boolean,
     livePosition: Long,
     liveDuration: Long,
+    clockTick: Long = 0L,
     currentEpgProgram: EpgProgram? = null,
     nextEpgProgram: EpgProgram? = null,
     onPlayPause: () -> Unit,
@@ -655,12 +694,12 @@ private fun ControlsOverlay(
                 indication = null
             ) { }
     ) {
-        // Top bar with title
+        // Top bar with title and clock
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(CinemaSpacing.md),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -669,8 +708,18 @@ private fun ControlsOverlay(
                 text = metadata.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = CinemaSpacing.xs),
                 maxLines = 1
+            )
+            // Clock
+            @Suppress("UNUSED_VARIABLE")
+            val tick = clockTick
+            Text(
+                text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date()),
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
             )
         }
 
