@@ -20,8 +20,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -46,6 +54,48 @@ fun MobileSearchScreen(
     var searchQuery by remember { mutableStateOf("") }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
+
+    val mediaRepository = remember {
+        val appContext = context.applicationContext
+        val providerRepo = ProviderRepository(appContext)
+        kotlinx.coroutines.runBlocking {
+            val entity = providerRepo.getActiveProvider()
+            if (entity != null) {
+                val resolvedRepo = MediaRepository(appContext, entity.id)
+                val password = providerRepo.getPassword(entity.id) ?: ""
+                val provider = MediaProviderFactory.create(entity, appContext, password)
+                provider.connect()
+                resolvedRepo.setProvider(provider)
+                resolvedRepo
+            } else MediaRepository(appContext, 0L)
+        }
+    }
+
+    // Favorite long-press state
+    var favoriteMenuTarget by remember { mutableStateOf<MobileSearchFavoriteTarget?>(null) }
+
+    favoriteMenuTarget?.let { target ->
+        MobileSearchFavoriteDialog(
+            target = target,
+            onConfirm = {
+                when (target) {
+                    is MobileSearchFavoriteTarget.Category -> {
+                        if (target.isFavorite) mediaRepository.removeFavoriteCategory(target.categoryId, target.contentType)
+                        else mediaRepository.addFavoriteCategory(target.categoryId, target.categoryName, target.contentType)
+                    }
+                    is MobileSearchFavoriteTarget.Show -> {
+                        if (target.isFavorite) mediaRepository.removeFavoriteShow(target.itemId, target.contentType)
+                        else mediaRepository.addFavoriteShow(target.itemId, target.itemName, target.categoryId, target.contentType, target.thumbnailUrl)
+                    }
+                    is MobileSearchFavoriteTarget.Stream -> {
+                        if (target.isFavorite) mediaRepository.removeFavorite(target.itemId, target.contentType)
+                        else mediaRepository.addFavorite(target.itemId, target.itemName, target.categoryId, target.contentType)
+                    }
+                }
+            },
+            onDismiss = { favoriteMenuTarget = null }
+        )
+    }
 
     // Restore search query from ViewModel on screen re-entry (e.g. back from stream playback)
     LaunchedEffect(Unit) {
@@ -147,8 +197,36 @@ fun MobileSearchScreen(
                                     result.contentType
                                 )
                             },
+                            onResultLongPress = { result ->
+                                favoriteMenuTarget = if (result.contentType == "TV_SHOWS" && result.mediaType == MediaType.SERIES) {
+                                    MobileSearchFavoriteTarget.Show(
+                                        itemId = result.itemId,
+                                        itemName = result.streamName,
+                                        categoryId = result.categoryId,
+                                        contentType = result.contentType,
+                                        thumbnailUrl = result.thumbnailUrl,
+                                        isFavorite = mediaRepository.isFavoriteShow(result.itemId, result.contentType)
+                                    )
+                                } else {
+                                    MobileSearchFavoriteTarget.Stream(
+                                        itemId = result.itemId,
+                                        itemName = result.streamName,
+                                        categoryId = result.categoryId,
+                                        contentType = result.contentType,
+                                        isFavorite = mediaRepository.isFavorite(result.itemId, result.contentType)
+                                    )
+                                }
+                            },
                             onCategoryClick = { catResult ->
                                 onCategorySelected(catResult.categoryId, catResult.contentType)
+                            },
+                            onCategoryLongPress = { catResult ->
+                                favoriteMenuTarget = MobileSearchFavoriteTarget.Category(
+                                    categoryId = catResult.categoryId,
+                                    categoryName = catResult.categoryName,
+                                    contentType = catResult.contentType,
+                                    isFavorite = mediaRepository.isFavoriteCategory(catResult.categoryId, catResult.contentType)
+                                )
                             }
                         )
                     }
@@ -210,7 +288,9 @@ private fun SearchResults(
     searchProgress: String?,
     devStats: String?,
     onResultClick: (SearchViewModel.SearchResult) -> Unit,
-    onCategoryClick: (SearchViewModel.CategorySearchResult) -> Unit
+    onResultLongPress: (SearchViewModel.SearchResult) -> Unit,
+    onCategoryClick: (SearchViewModel.CategorySearchResult) -> Unit,
+    onCategoryLongPress: (SearchViewModel.CategorySearchResult) -> Unit
 ) {
     val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
     if (!hasResults && query.isBlank()) {
@@ -310,7 +390,8 @@ private fun SearchResults(
                 items(categoryResults, key = { "cat_${it.categoryId}" }) { catResult ->
                     CategoryResultCard(
                         result = catResult,
-                        onClick = { onCategoryClick(catResult) }
+                        onClick = { onCategoryClick(catResult) },
+                        onLongClick = { onCategoryLongPress(catResult) }
                     )
                 }
             }
@@ -326,7 +407,8 @@ private fun SearchResults(
                 items(results, key = { it.itemId }) { result ->
                     SearchResultCard(
                         result = result,
-                        onClick = { onResultClick(result) }
+                        onClick = { onResultClick(result) },
+                        onLongClick = { onResultLongPress(result) }
                     )
                 }
             }
@@ -335,13 +417,19 @@ private fun SearchResults(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun CategoryResultCard(
     result: SearchViewModel.CategorySearchResult,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
     Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = CinemaAlpha.tint)
         )
@@ -369,15 +457,20 @@ private fun CategoryResultCard(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun SearchResultCard(
     result: SearchViewModel.SearchResult,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
     Card(
-        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(MobileDimensions.streamCardHeight),
+            .height(MobileDimensions.streamCardHeight)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -415,4 +508,71 @@ private fun SearchResultCard(
             }
         }
     }
+}
+
+private sealed class MobileSearchFavoriteTarget {
+    data class Category(
+        val categoryId: String,
+        val categoryName: String,
+        val contentType: String,
+        val isFavorite: Boolean
+    ) : MobileSearchFavoriteTarget()
+
+    data class Show(
+        val itemId: String,
+        val itemName: String,
+        val categoryId: String,
+        val contentType: String,
+        val thumbnailUrl: String?,
+        val isFavorite: Boolean
+    ) : MobileSearchFavoriteTarget()
+
+    data class Stream(
+        val itemId: String,
+        val itemName: String,
+        val categoryId: String,
+        val contentType: String,
+        val isFavorite: Boolean
+    ) : MobileSearchFavoriteTarget()
+}
+
+@Composable
+private fun MobileSearchFavoriteDialog(
+    target: MobileSearchFavoriteTarget,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val (itemName, isFavorite) = when (target) {
+        is MobileSearchFavoriteTarget.Category -> target.categoryName to target.isFavorite
+        is MobileSearchFavoriteTarget.Show -> target.itemName to target.isFavorite
+        is MobileSearchFavoriteTarget.Stream -> target.itemName to target.isFavorite
+    }
+    val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = itemName,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm()
+                    onDismiss()
+                }
+            ) {
+                Text(actionText)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        shape = RoundedCornerShape(CinemaCornerRadius.large)
+    )
 }

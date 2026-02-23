@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -65,6 +67,9 @@ fun MobileEpisodeSelectionScreen(
     var refreshTrigger by remember { mutableStateOf(0) }
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
 
+    // Favorite state for the show
+    var isFavoriteShow by remember { mutableStateOf(mediaRepository.isFavoriteShow(seriesId, "TV_SHOWS")) }
+
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {
         selectedEpisode = null
@@ -103,6 +108,28 @@ fun MobileEpisodeSelectionScreen(
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        if (isFavoriteShow) {
+                            mediaRepository.removeFavoriteShow(seriesId, "TV_SHOWS")
+                        } else {
+                            mediaRepository.addFavoriteShow(
+                                seriesId,
+                                seriesName,
+                                categoryId,
+                                "TV_SHOWS",
+                                null
+                            )
+                        }
+                        isFavoriteShow = !isFavoriteShow
+                    }) {
+                        Icon(
+                            imageVector = if (isFavoriteShow) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = if (isFavoriteShow) "Remove from Favorites" else "Add to Favorites",
+                            tint = if (isFavoriteShow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             )
         }
@@ -126,6 +153,7 @@ fun MobileEpisodeSelectionScreen(
                     EpisodeDetailContent(
                         episode = selectedEpisode!!,
                         seriesDetail = seriesDetail!!,
+                        categoryId = categoryId,
                         mediaRepository = mediaRepository,
                         onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
                             onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
@@ -298,10 +326,14 @@ private fun EpisodeListContent(
 private fun EpisodeDetailContent(
     episode: DomainEpisodeItem,
     seriesDetail: SeriesDetail,
+    categoryId: String,
     mediaRepository: MediaRepository,
     onPlay: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit
 ) {
     val extension = episode.extension ?: "mp4"
+
+    // Favorite state for the show
+    var isFavoriteShow by remember { mutableStateOf(mediaRepository.isFavoriteShow(seriesDetail.id, "TV_SHOWS")) }
 
     // Load resume position
     var resumePositionMs by remember { mutableStateOf(0L) }
@@ -405,7 +437,7 @@ private fun EpisodeDetailContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-        // Play / Resume buttons
+        // Play / Resume buttons + Favorite
         val hasResume = resumePositionMs > 0L
         if (hasResume) {
             val resumeTimeText = formatMillis(resumePositionMs)
@@ -435,6 +467,34 @@ private fun EpisodeDetailContent(
             ) {
                 Text("▶ Play Episode")
             }
+        }
+
+        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+
+        OutlinedButton(
+            onClick = {
+                if (isFavoriteShow) {
+                    mediaRepository.removeFavoriteShow(seriesDetail.id, "TV_SHOWS")
+                } else {
+                    mediaRepository.addFavoriteShow(
+                        seriesDetail.id,
+                        seriesDetail.name,
+                        categoryId,
+                        "TV_SHOWS",
+                        seriesDetail.coverUrl
+                    )
+                }
+                isFavoriteShow = !isFavoriteShow
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = if (isFavoriteShow) Icons.Filled.Star else Icons.Filled.StarBorder,
+                contentDescription = null,
+                modifier = Modifier.size(CinemaSpacing.lg)
+            )
+            Spacer(modifier = Modifier.width(CinemaSpacing.sm))
+            Text(if (isFavoriteShow) "Remove from Favorites" else "Add to Favorites")
         }
 
         // Plot/Description

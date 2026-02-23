@@ -20,6 +20,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
@@ -154,6 +157,8 @@ fun MovieDetailsScreen(
                     movieDetail = movieDetail!!,
                     movieId = movieId,
                     movieName = movieName,
+                    categoryId = categoryId,
+                    mediaRepository = mediaRepository,
                     resumePositionMs = resumePositionMs,
                     resumeDurationMs = resumeDurationMs,
                     onPlayMovie = onPlayMovie,
@@ -170,6 +175,8 @@ private fun MovieDetailsContent(
     movieDetail: MovieDetail,
     movieId: String,
     movieName: String,
+    categoryId: String,
+    mediaRepository: MediaRepository,
     resumePositionMs: Long,
     resumeDurationMs: Long,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
@@ -181,6 +188,9 @@ private fun MovieDetailsContent(
     val providerName by remember { mutableStateOf(appSettings.providerName) }
     val extension = movieDetail.extension ?: "mp4"
     val scale = LocalUiScale.current
+
+    // Favorite state
+    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, "MOVIES")) }
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
@@ -234,7 +244,28 @@ private fun MovieDetailsContent(
                         ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    // Always show refresh button
+                    // Favorite button
+                    IconButton(
+                        onClick = {
+                            if (isFavorite) {
+                                mediaRepository.removeFavorite(movieId, "MOVIES")
+                            } else {
+                                mediaRepository.addFavorite(movieId, movieDetail.name.ifEmpty { movieName }, categoryId, "MOVIES")
+                            }
+                            isFavorite = !isFavorite
+                        },
+                        modifier = Modifier
+                            .size(TvDimensions.iconMedium.scaled(scale))
+                            .tvFocusableNoScale()
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                            tint = if (isFavorite) CinemaAccent else CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale))
+                        )
+                    }
+                    // Refresh button
                     IconButton(
                         onClick = {
                             isRefreshing = true
