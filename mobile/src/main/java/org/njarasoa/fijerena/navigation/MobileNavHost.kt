@@ -186,6 +186,9 @@ fun MobileNavHost(
                     },
                     onEpgBrowser = {
                         navController.navigate(Screen.EpgBrowser)
+                    },
+                    onSearch = {
+                        navController.navigate(Screen.Search("ALL"))
                     }
                 )
             }
@@ -380,7 +383,7 @@ fun MobileNavHost(
                     contentType = searchScreen.contentType,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         // Navigate based on content type
-                        when (searchScreen.contentType) {
+                        when (contentType) {
                             "TV_SHOWS" -> navController.navigate(
                                 Screen.EpisodeSelection(
                                     seriesId = itemId,
@@ -400,7 +403,7 @@ fun MobileNavHost(
                                     streamId = itemId,
                                     streamName = itemName,
                                     categoryId = categoryId,
-                                    contentType = searchScreen.contentType
+                                    contentType = contentType
                                 )
                             )
                         }
