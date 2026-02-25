@@ -200,6 +200,9 @@ fun TvNavHost(
                             popUpTo(Screen.ContentTypeSelection) { inclusive = false }
                         }
                     },
+                    onSearch = {
+                        navController.navigate(Screen.Search("ALL"))
+                    },
                     onSettings = {
                         navController.navigate(Screen.Settings)
                     },
@@ -296,9 +299,9 @@ fun TvNavHost(
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
                 SearchScreen(
                     contentType = searchScreen.contentType,
-                    onStreamSelected = { itemId, streamName, categoryId ->
-                        // Navigate based on content type
-                        when (searchScreen.contentType) {
+                    onStreamSelected = { itemId, streamName, categoryId, itemContentType ->
+                        // Navigate based on item's content type
+                        when (itemContentType) {
                             "TV_SHOWS" -> navController.navigate(
                                 Screen.EpisodeSelection(
                                     seriesId = itemId,
@@ -318,7 +321,7 @@ fun TvNavHost(
                                     streamId = itemId,
                                     streamName = streamName,
                                     categoryId = categoryId,
-                                    contentType = searchScreen.contentType
+                                    contentType = itemContentType
                                 )
                             )
                         }
