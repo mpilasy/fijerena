@@ -99,6 +99,9 @@ class XtreamRepository(
      */
     private val liveStreamRefreshThresholdMs: Long = 5 * 60 * 1000L // 5 minutes
 
+    @Volatile
+    private var favoritesCache: List<FavoriteStream>? = null
+
     // Payload size tracking for dev mode (now tracks DB operation sizes/counts if needed, or removed)
     // Fetch time tracking (in milliseconds)
     private val fetchTimes = ConcurrentHashMap<String, Long>()
@@ -647,6 +650,7 @@ class XtreamRepository(
     fun clearCache() {
         // Clear SharedPreferences timestamps and legacy keys
         cache.edit().clear().apply()
+        favoritesCache = null
         fetchTimes.clear()
 
         // Clear DB
@@ -873,6 +877,9 @@ class XtreamRepository(
         // Trim to max size
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
 
+        // Update cache
+        favoritesCache = trimmed
+
         // Save
         cache.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
         return true
@@ -884,7 +891,12 @@ class XtreamRepository(
     fun removeFavorite(streamId: Int, contentType: String): Boolean {
         val favorites = getFavorites().toMutableList()
         val removed = favorites.removeAll { it.streamId == streamId && it.contentType == contentType }
-        cache.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
+
+        if (removed) {
+            // Update cache
+            favoritesCache = favorites
+            cache.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
+        }
         return removed
     }
 
@@ -892,9 +904,18 @@ class XtreamRepository(
      * Get all favorites
      */
     fun getFavorites(): List<FavoriteStream> {
-        val json = cache.getString(KEY_FAVORITES, null) ?: return emptyList()
+        favoritesCache?.let { return it }
+
+        val json = cache.getString(KEY_FAVORITES, null)
+        if (json == null) {
+            favoritesCache = emptyList()
+            return emptyList()
+        }
+
         return try {
-            this.json.decodeFromString<List<FavoriteStream>>(json)
+            val list = this.json.decodeFromString<List<FavoriteStream>>(json)
+            favoritesCache = list
+            list
         } catch (e: Exception) {
             emptyList()
         }
@@ -911,6 +932,7 @@ class XtreamRepository(
      * Clear all favorites
      */
     fun clearFavorites() {
+        favoritesCache = emptyList()
         cache.edit().remove(KEY_FAVORITES).apply()
     }
 
