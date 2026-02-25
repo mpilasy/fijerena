@@ -99,6 +99,9 @@ class XtreamRepository(
     // Fetch time tracking (in milliseconds)
     private val fetchTimes = ConcurrentHashMap<String, Long>()
 
+    @Volatile
+    private var cachedWatchHistory: List<WatchedStream>? = null
+
     companion object {
         private const val TAG = "XtreamRepository"
 
@@ -831,18 +834,27 @@ class XtreamRepository(
         // Save to cache
         val historyJson = json.encodeToString(trimmedHistory)
         cache.edit().putString(KEY_WATCH_HISTORY, historyJson).apply()
+        cachedWatchHistory = trimmedHistory
     }
 
     /**
      * Get watch history (last 25 watched streams)
      */
     fun getWatchHistory(): List<WatchedStream> {
-        val historyJson = cache.getString(KEY_WATCH_HISTORY, null) ?: return emptyList()
-        return try {
-            json.decodeFromString<List<WatchedStream>>(historyJson)
-        } catch (e: Exception) {
+        cachedWatchHistory?.let { return it }
+
+        val historyJson = cache.getString(KEY_WATCH_HISTORY, null)
+        val history = if (historyJson == null) {
             emptyList()
+        } else {
+            try {
+                json.decodeFromString<List<WatchedStream>>(historyJson)
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
+        cachedWatchHistory = history
+        return history
     }
 
     /**
@@ -850,6 +862,7 @@ class XtreamRepository(
      */
     fun clearWatchHistory() {
         cache.edit().remove(KEY_WATCH_HISTORY).apply()
+        cachedWatchHistory = emptyList()
     }
 
     /**
@@ -1058,6 +1071,7 @@ class XtreamRepository(
             val item = history[index]
             history[index] = item.copy(playbackPosition = 0L, isCompleted = false)
             cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
+            cachedWatchHistory = history
         }
     }
 

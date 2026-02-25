@@ -52,4 +52,8 @@ dependencies {
         exclude(group = "org.apache.httpcomponents")
     }
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    // Testing
+    testImplementation(libs.junit)
+    testImplementation("io.mockk:mockk:1.13.8")
 }
