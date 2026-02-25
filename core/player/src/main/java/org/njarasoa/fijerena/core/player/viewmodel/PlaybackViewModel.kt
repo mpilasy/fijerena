@@ -189,12 +189,18 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         val currentPos = when (state) {
             is PlaybackState.Playing -> state.position
             is PlaybackState.Paused -> state.position
-            else -> return
+            PlaybackState.Idle,
+            PlaybackState.Buffering,
+            PlaybackState.Ended,
+            is PlaybackState.Error -> return
         }
         val duration = when (state) {
             is PlaybackState.Playing -> state.duration
             is PlaybackState.Paused -> state.duration
-            else -> return
+            PlaybackState.Idle,
+            PlaybackState.Buffering,
+            PlaybackState.Ended,
+            is PlaybackState.Error -> return
         }
         seekTo((currentPos + offsetMs).coerceIn(0L, duration))
     }

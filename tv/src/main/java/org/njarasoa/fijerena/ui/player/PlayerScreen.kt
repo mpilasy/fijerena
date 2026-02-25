@@ -38,7 +38,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -656,7 +656,7 @@ fun PlayerScreen(
 
                             if (duration > 0) {
                                 LinearProgressIndicator(
-                                    progress = position.toFloat() / duration.toFloat(),
+                                    progress = { position.toFloat() / duration.toFloat() },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(TvDimensions.progressBar),
@@ -737,7 +737,7 @@ fun PlayerScreen(
                                         ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(0f, 1f)
                                     } else 0f
                                     LinearProgressIndicator(
-                                        progress = epgProgress,
+                                        progress = { epgProgress },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(top = Spacing.xxs)
@@ -785,7 +785,7 @@ fun PlayerScreen(
                                             containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
                                         )
                                     ) {
-                                        Icon(Icons.Filled.VolumeUp, "Audio", tint = Color.White)
+                                        Icon(Icons.AutoMirrored.Filled.VolumeUp, "Audio", tint = Color.White)
                                     }
                                 }
 
@@ -2437,7 +2437,7 @@ private fun MetadataOverlay(
             if (duration > 0 && !metadata.isLive) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     LinearProgressIndicator(
-                        progress = if (duration > 0) position.toFloat() / duration.toFloat() else 0f,
+                        progress = { if (duration > 0) position.toFloat() / duration.toFloat() else 0f },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(TvDimensions.progressBar),
@@ -2520,7 +2520,7 @@ private fun MetadataOverlay(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Filled.VolumeUp, contentDescription = null)
+                            Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null)
                             Text("Audio")
                         }
                     }

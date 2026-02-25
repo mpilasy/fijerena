@@ -58,6 +58,11 @@ class SearchViewModel(
         val contentType: String
     )
 
+    private data class SearchableCategory(
+        val category: org.njarasoa.fijerena.core.player.domain.MediaCategory,
+        val contentType: String
+    )
+
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
@@ -66,10 +71,11 @@ class SearchViewModel(
     companion object {
         private const val PARALLEL_BATCH_SIZE = 20
         private const val TARGET_RESULTS = 200
+        const val CONTENT_TYPE_ALL = "ALL"
     }
 
     // Pre-fetched categories (loaded in background on init)
-    private var prefetchedCategories: List<org.njarasoa.fijerena.core.player.domain.MediaCategory>? = null
+    private var prefetchedCategories: List<SearchableCategory>? = null
 
     init {
         _uiState.value = UiState.Success(
@@ -83,24 +89,38 @@ class SearchViewModel(
             if (!repository.isConnected()) {
                 repository.connect()
             }
-            val result = repository.getFilteredCategories(contentType)
-            result.onSuccess { categories ->
-                val realCategories = categories.filter { it.id != "last_watched" && !it.isVirtual }
-                prefetchedCategories = realCategories
 
-                // Pre-fetch all category items that aren't cached yet
-                val semaphore = Semaphore(PARALLEL_BATCH_SIZE)
-                realCategories.map { category ->
-                    launch {
-                        if (repository.getItemsIfCached(category.id, contentType) != null) return@launch
-                        semaphore.withPermit {
-                            try {
-                                repository.getItemsForSearch(category.id, contentType)
-                            } catch (_: Exception) { }
+            val targetContentTypes = if (contentType == CONTENT_TYPE_ALL) {
+                repository.getCapabilities()?.supportedContentTypes?.toList() ?: emptyList()
+            } else {
+                listOf(contentType)
+            }
+
+            val allCategories = mutableListOf<SearchableCategory>()
+            val semaphore = Semaphore(PARALLEL_BATCH_SIZE)
+
+            targetContentTypes.forEach { type ->
+                val result = repository.getFilteredCategories(type)
+                result.onSuccess { categories ->
+                    val realCategories = categories.filter { it.id != "last_watched" && !it.isVirtual }
+                    realCategories.forEach { cat ->
+                        allCategories.add(SearchableCategory(cat, type))
+                    }
+
+                    // Launch prefetch for this batch
+                    realCategories.map { category ->
+                        launch {
+                            if (repository.getItemsIfCached(category.id, type) != null) return@launch
+                            semaphore.withPermit {
+                                try {
+                                    repository.getItemsForSearch(category.id, type)
+                                } catch (_: Exception) { }
+                            }
                         }
                     }
                 }
             }
+            prefetchedCategories = allCategories
         }
     }
 
@@ -143,73 +163,108 @@ class SearchViewModel(
                 }
             }
 
+            val targetContentTypes = if (contentType == CONTENT_TYPE_ALL) {
+                repository.getCapabilities()?.supportedContentTypes?.toList() ?: emptyList()
+            } else {
+                listOf(contentType)
+            }
+
             _uiState.value = UiState.Loading
 
             // Try server-side search first (e.g., Jellyfin)
-            val serverResult = repository.search(query, contentType)
-            if (serverResult != null) {
-                serverResult.fold(
-                    onSuccess = { items ->
-                        val elapsed = System.currentTimeMillis() - startTime
-                        val bulkDataSize = repository.getLastSearchDataSize(contentType)
-                        networkBytes = bulkDataSize
-                            ?: items.sumOf { it.name.length.toLong() * 2 + 64 }
-                        val normalizedQuery = query.trim().lowercase()
-                        val results = items.map { item ->
-                            SearchResult(
-                                itemId = item.id,
-                                streamName = item.name,
-                                categoryId = item.categoryId,
-                                categoryName = "",
-                                contentType = contentType,
-                                thumbnailUrl = item.thumbnailUrl,
-                                mediaType = item.mediaType
-                            )
-                        }.let { sortResults(it, normalizedQuery) }
+            val serverResults = mutableListOf<SearchResult>()
+            var serverSearchSuccess = false
+            var serverError: String? = null
 
-                        val serverCategories = repository.getFilteredCategories(contentType)
-                        val matchingCategories = serverCategories.getOrDefault(emptyList())
-                            .filter { !it.isVirtual }
-                            .filter { matchesQuery(it.name, normalizedQuery) }
-                            .map { CategorySearchResult(it.id, it.name, contentType) }
+            for (type in targetContentTypes) {
+                val serverResult = repository.search(query, type)
+                if (serverResult != null) {
+                    serverResult.fold(
+                        onSuccess = { items ->
+                            serverSearchSuccess = true
+                            val bulkDataSize = repository.getLastSearchDataSize(type)
+                            networkBytes += bulkDataSize
+                                ?: items.sumOf { it.name.length.toLong() * 2 + 64 }
 
-                        _uiState.value = UiState.Success(
-                            categoryResults = matchingCategories,
-                            allResults = results,
-                            filteredResults = results,
-                            query = query,
-                            isSearching = false,
-                            searchProgress = "Search complete",
-                            searchDataSize = formatBytes(networkBytes),
-                            totalDuration = formatSeconds(elapsed),
-                            networkWallDuration = formatSeconds(elapsed),
-                            networkAccumDuration = formatSeconds(elapsed),
-                            networkCalls = 1
-                        )
-                    },
-                    onFailure = {
-                        _uiState.value = UiState.Error(it.message ?: "Search failed")
-                    }
+                            items.forEach { item ->
+                                serverResults.add(
+                                    SearchResult(
+                                        itemId = item.id,
+                                        streamName = item.name,
+                                        categoryId = item.categoryId,
+                                        categoryName = "",
+                                        contentType = type,
+                                        thumbnailUrl = item.thumbnailUrl,
+                                        mediaType = item.mediaType
+                                    )
+                                )
+                            }
+                        },
+                        onFailure = {
+                            serverError = it.message
+                        }
+                    )
+                }
+            }
+
+            if (serverSearchSuccess) {
+                val elapsed = System.currentTimeMillis() - startTime
+                val normalizedQuery = query.trim().lowercase()
+                val sortedResults = sortResults(serverResults, normalizedQuery)
+
+                val matchingCategories = mutableListOf<CategorySearchResult>()
+                for (type in targetContentTypes) {
+                    val serverCategories = repository.getFilteredCategories(type)
+                    serverCategories.getOrDefault(emptyList())
+                        .filter { !it.isVirtual }
+                        .filter { matchesQuery(it.name, normalizedQuery) }
+                        .forEach {
+                            matchingCategories.add(CategorySearchResult(it.id, it.name, type))
+                        }
+                }
+
+                _uiState.value = UiState.Success(
+                    categoryResults = matchingCategories,
+                    allResults = sortedResults,
+                    filteredResults = sortedResults,
+                    query = query,
+                    isSearching = false,
+                    searchProgress = "Search complete",
+                    searchDataSize = formatBytes(networkBytes),
+                    totalDuration = formatSeconds(elapsed),
+                    networkWallDuration = formatSeconds(elapsed),
+                    networkAccumDuration = formatSeconds(elapsed),
+                    networkCalls = 1 // Simplified
                 )
                 return
             }
 
             // Fall back to parallel client-side category iteration
             val realCategories = prefetchedCategories ?: run {
-                val categoriesResult = repository.getFilteredCategories(contentType)
-                val categories = categoriesResult.getOrElse {
-                    _uiState.value = UiState.Error(it.message ?: "Failed to load categories")
+                val allFetched = mutableListOf<SearchableCategory>()
+                for (type in targetContentTypes) {
+                    val categoriesResult = repository.getFilteredCategories(type)
+                    val categories = categoriesResult.getOrElse {
+                        // continue to next type on error
+                        continue
+                    }
+                    categories.filter { it.id != "last_watched" && !it.isVirtual }.forEach {
+                        allFetched.add(SearchableCategory(it, type))
+                    }
+                }
+                if (allFetched.isEmpty() && targetContentTypes.isNotEmpty()) {
+                    _uiState.value = UiState.Error("Failed to load categories")
                     return
                 }
-                categories.filter { it.id != "last_watched" && !it.isVirtual }
+                allFetched
             }
 
             val results = mutableListOf<SearchResult>()
             val normalizedQuery = query.trim().lowercase()
 
             val matchingCategories = realCategories
-                .filter { matchesQuery(it.name, normalizedQuery) }
-                .map { CategorySearchResult(it.id, it.name, contentType) }
+                .filter { matchesQuery(it.category.name, normalizedQuery) }
+                .map { CategorySearchResult(it.category.id, it.category.name, it.contentType) }
 
             _uiState.value = UiState.Success(
                 categoryResults = matchingCategories,
@@ -223,10 +278,10 @@ class SearchViewModel(
             var categoriesSearched = 0
 
             // Phase 1: Sweep all categories from cache (instant, no network)
-            val uncachedCategories = mutableListOf<org.njarasoa.fijerena.core.player.domain.MediaCategory>()
-            for (category in realCategories) {
+            val uncachedCategories = mutableListOf<SearchableCategory>()
+            for (sc in realCategories) {
                 currentCoroutineContext().job.ensureActive() // respect cancellation
-                val cached = repository.getItemsIfCached(category.id, contentType)
+                val cached = repository.getItemsIfCached(sc.category.id, sc.contentType)
                 if (cached != null) {
                     categoriesSearched++
                     val matchingItems = cached
@@ -235,16 +290,16 @@ class SearchViewModel(
                             SearchResult(
                                 itemId = item.id,
                                 streamName = item.name,
-                                categoryId = category.id,
-                                categoryName = category.name,
-                                contentType = contentType,
+                                categoryId = sc.category.id,
+                                categoryName = sc.category.name,
+                                contentType = sc.contentType,
                                 thumbnailUrl = item.thumbnailUrl,
                                 mediaType = item.mediaType
                             )
                         }
                     results.addAll(matchingItems)
                 } else {
-                    uncachedCategories.add(category)
+                    uncachedCategories.add(sc)
                 }
             }
 
@@ -278,6 +333,7 @@ class SearchViewModel(
 
                 data class FetchResult(
                     val category: org.njarasoa.fijerena.core.player.domain.MediaCategory,
+                    val contentType: String,
                     val items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
                     val callDurationMs: Long,
                     val error: String? = null
@@ -285,14 +341,14 @@ class SearchViewModel(
                 val fetchChannel = Channel<FetchResult>(Channel.UNLIMITED)
 
                 val producerJob = scope.launch(Dispatchers.IO) {
-                    for (category in uncachedCategories) {
+                    for (sc in uncachedCategories) {
                         launch {
                             semaphore.withPermit {
                                 val t0 = System.currentTimeMillis()
                                 var items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>? = null
                                 var error: String? = null
                                 try {
-                                    val result = repository.getItemsForSearch(category.id, contentType)
+                                    val result = repository.getItemsForSearch(sc.category.id, sc.contentType)
                                     items = result.getOrNull()
                                     if (items == null) {
                                         error = result.exceptionOrNull()?.message ?: "Unknown failure"
@@ -301,7 +357,7 @@ class SearchViewModel(
                                     error = e.message ?: e.javaClass.simpleName
                                 }
                                 val dt = System.currentTimeMillis() - t0
-                                fetchChannel.send(FetchResult(category, items, dt, error))
+                                fetchChannel.send(FetchResult(sc.category, sc.contentType, items, dt, error))
                             }
                         }
                     }
@@ -331,7 +387,7 @@ class SearchViewModel(
                                     streamName = item.name,
                                     categoryId = fetch.category.id,
                                     categoryName = fetch.category.name,
-                                    contentType = contentType,
+                                    contentType = fetch.contentType,
                                     thumbnailUrl = item.thumbnailUrl
                                 )
                             }
