@@ -220,18 +220,18 @@ class JellyfinApiService(
 
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getItems(
-        parentId: String,
+        parentId: String? = null,
         includeItemTypes: String? = null,
         sortBy: String = "SortName",
         sortOrder: String = "Ascending"
     ): Result<List<JellyfinItem>> {
         return try {
             client.prepareGet("$serverUrl/Users/$userId/Items") {
-                parameter("ParentId", parentId)
+                parentId?.let { parameter("ParentId", it) }
                 includeItemTypes?.let { parameter("IncludeItemTypes", it) }
                 parameter("SortBy", sortBy)
                 parameter("SortOrder", sortOrder)
-                parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData")
+                parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData,ParentId")
                 parameter("Recursive", true)
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
@@ -250,18 +250,18 @@ class JellyfinApiService(
      */
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     suspend fun getItemsStreaming(
-        parentId: String,
+        parentId: String? = null,
         includeItemTypes: String? = null,
         sortBy: String = "SortName",
         sortOrder: String = "Ascending",
         onItem: (JellyfinItem) -> Unit
     ) {
         client.prepareGet("$serverUrl/Users/$userId/Items") {
-            parameter("ParentId", parentId)
+            parentId?.let { parameter("ParentId", it) }
             includeItemTypes?.let { parameter("IncludeItemTypes", it) }
             parameter("SortBy", sortBy)
             parameter("SortOrder", sortOrder)
-            parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData")
+            parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData,ParentId")
             parameter("Recursive", true)
         }.execute { response ->
             response.bodyAsChannel().toInputStream().use { stream ->
