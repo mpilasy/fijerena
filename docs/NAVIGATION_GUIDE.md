@@ -69,6 +69,10 @@ App Startup
 
 ContentTypeSelection
 ├─→ EpgBrowser (book icon, visible when EPG indexed)
+├─→ Search("ALL") [Global Search]
+│     ├─→ Player (if result is LIVE_TV)
+│     ├─→ MovieDetails → Player (if result is MOVIES)
+│     └─→ EpisodeSelection → Player (if result is TV_SHOWS)
 ├─→ CategoryList(LIVE_TV)
 │     ├─→ Player (direct)
 │     ├─→ Search(LIVE_TV)
@@ -86,6 +90,16 @@ ContentTypeSelection
       ├─→ EpgManagement
       └─→ CellularBufferSettings (dev mode only)
 ```
+
+### Global Search Routing
+
+Global search (`Screen.Search("ALL")`) is accessible from the Content Type Selection screen. Because results can come from different repositories, navigation from a search result is dynamically routed based on the result's `contentType`:
+
+- **Live TV**: Routes directly to `Screen.Player`.
+- **Movies**: Routes to `Screen.MovieDetails`.
+- **TV Shows**: Routes to `Screen.EpisodeSelection`.
+
+The `SearchViewModel` manages categories and individual stream results across all supported content types.
 
 ### Navigation Rules
 

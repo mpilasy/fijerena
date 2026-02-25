@@ -39,11 +39,17 @@ Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute 
 
 ## Search
 
+### Global Search ("ALL")
+Unified search across all content types (Live TV, Movies, TV Shows) and categories.
+- **Grouped Results:** Results are organized by content type headers.
+- **Collapsible Headers:** Each group (Live TV, Movies, TV Shows) can be expanded or collapsed to manage long result lists.
+- **Combined View:** Matches for both categories and individual streams are shown within their respective content type groups.
+
 ### Xtream (two-phase client-side)
 1. **Phase 1 (instant):** Sweeps cached categories for matches
-2. **Phase 2 (network):** Fetches uncached categories in parallel (semaphore = 20, up to 200 results)
+2. **Phase 2 (network):** Fetches uncached categories in background
 
-Minimum 2 characters, explicit trigger. Background pre-fetch warms cache on category screen load.
+Minimum 2 characters to trigger. Background pre-fetch warms cache on category screen load.
 
 ### Jellyfin (server-side)
 Native Jellyfin REST search. Returns movies and series matching the query.
