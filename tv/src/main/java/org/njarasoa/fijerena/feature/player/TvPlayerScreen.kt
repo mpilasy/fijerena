@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.*
@@ -101,8 +102,8 @@ fun TvPlayerScreen(
     // Configure player buffer profile based on content type
     LaunchedEffect(contentType) {
         val playerContentType = when (contentType) {
-            "LIVE_TV" -> PlayerConfigFactory.ContentType.LIVE_TV
-            "MOVIES", "TV_SHOWS" -> PlayerConfigFactory.ContentType.VOD
+            ContentType.LIVE_TV -> PlayerConfigFactory.ContentType.LIVE_TV
+            ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
             else -> PlayerConfigFactory.ContentType.VOD
         }
         StreamingPlaybackService.getInstance()?.setContentType(playerContentType)

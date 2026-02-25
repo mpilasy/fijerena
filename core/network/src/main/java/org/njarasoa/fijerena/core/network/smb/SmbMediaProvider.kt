@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.smb
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -17,7 +18,7 @@ class SmbMediaProvider(
 ) : MediaProvider {
 
     override val capabilities = ProviderCapabilities(
-        supportedContentTypes = setOf("MOVIES"),
+        supportedContentTypes = setOf(ContentType.MOVIES),
         supportsEpg = false,
         supportsSearch = true,
         supportsAuthentication = true,

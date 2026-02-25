@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -50,7 +51,7 @@ fun MobileContentTypeSelectionScreen(
     val coroutineScope = rememberCoroutineScope()
     var providerName by remember { mutableStateOf("") }
     var providerType by remember { mutableStateOf("") }
-    var supportedContentTypes by remember { mutableStateOf<Set<String>>(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
+    var supportedContentTypes by remember { mutableStateOf<Set<String>>(setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS)) }
     var showProviderPicker by remember { mutableStateOf(false) }
     var allProviders by remember { mutableStateOf<List<ProviderEntity>>(emptyList()) }
     var activeProviderId by remember { mutableStateOf(0L) }
@@ -102,20 +103,20 @@ fun MobileContentTypeSelectionScreen(
         val filters = categoryFilters
         val hasFilters = filters.prefixes.isNotEmpty() || filters.allowedScripts.isNotEmpty()
         withContext(Dispatchers.IO) {
-            if ("LIVE_TV" in mp.capabilities.supportedContentTypes) {
-                mp.getCategories("LIVE_TV").onSuccess { cats ->
+            if (ContentType.LIVE_TV in mp.capabilities.supportedContentTypes) {
+                mp.getCategories(ContentType.LIVE_TV).onSuccess { cats ->
                     val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
                     liveTvCounts = Pair(filtered, cats.size)
                 }
             }
-            if ("MOVIES" in mp.capabilities.supportedContentTypes) {
-                mp.getCategories("MOVIES").onSuccess { cats ->
+            if (ContentType.MOVIES in mp.capabilities.supportedContentTypes) {
+                mp.getCategories(ContentType.MOVIES).onSuccess { cats ->
                     val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
                     moviesCounts = Pair(filtered, cats.size)
                 }
             }
-            if ("TV_SHOWS" in mp.capabilities.supportedContentTypes) {
-                mp.getCategories("TV_SHOWS").onSuccess { cats ->
+            if (ContentType.TV_SHOWS in mp.capabilities.supportedContentTypes) {
+                mp.getCategories(ContentType.TV_SHOWS).onSuccess { cats ->
                     val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
                     tvShowsCounts = Pair(filtered, cats.size)
                 }
@@ -168,36 +169,36 @@ fun MobileContentTypeSelectionScreen(
             )
 
             val isDevMode = appSettings.isDevMode
-            if ("LIVE_TV" in supportedContentTypes) {
+            if (ContentType.LIVE_TV in supportedContentTypes) {
                 GradientContentCard(
                     title = "Live TV",
                     description = "Watch live television channels",
                     categoryCounts = liveTvCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                    onClick = { onContentTypeSelected("LIVE_TV") }
+                    onClick = { onContentTypeSelected(ContentType.LIVE_TV) }
                 )
             }
 
-            if ("MOVIES" in supportedContentTypes) {
+            if (ContentType.MOVIES in supportedContentTypes) {
                 GradientContentCard(
                     title = "Movies",
                     description = "Browse on-demand movies",
                     categoryCounts = moviesCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                    onClick = { onContentTypeSelected("MOVIES") }
+                    onClick = { onContentTypeSelected(ContentType.MOVIES) }
                 )
             }
 
-            if ("TV_SHOWS" in supportedContentTypes) {
+            if (ContentType.TV_SHOWS in supportedContentTypes) {
                 GradientContentCard(
                     title = "TV Shows",
                     description = "Watch series and episodes",
                     categoryCounts = tvShowsCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                    onClick = { onContentTypeSelected("TV_SHOWS") }
+                    onClick = { onContentTypeSelected(ContentType.TV_SHOWS) }
                 )
             }
         }

@@ -56,6 +56,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -134,7 +135,7 @@ fun MobileCategoryListScreen(
                 },
                 actions = {
                     // EPG button - show for Live TV when native EPG or XMLTV file is available
-                    if (contentType == "LIVE_TV") {
+                    if (contentType == ContentType.LIVE_TV) {
                         val state = uiState
                         if (state is CategoryViewModel.UiState.Success) {
                             val selectedCatId = state.selectedCategoryId
@@ -172,7 +173,7 @@ fun MobileCategoryListScreen(
                 is CategoryViewModel.UiState.Success -> {
                     Column(modifier = Modifier.fillMaxSize()) {
                         // EPG error/status banner (Live TV only)
-                        if (contentType == "LIVE_TV") {
+                        if (contentType == ContentType.LIVE_TV) {
                             val epgMessage = when (epgIndexState) {
                                 is EpgIndexState.Failed -> "EPG indexing failed"
                                 is EpgIndexState.Indexing ->

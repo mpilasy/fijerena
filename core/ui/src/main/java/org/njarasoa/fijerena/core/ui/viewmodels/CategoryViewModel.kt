@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -45,8 +46,8 @@ class CategoryViewModel(
         val key = when {
             categoryId.startsWith("vod_") -> "category_$categoryId"
             categoryId.startsWith("series_") -> "category_$categoryId"
-            contentType == "MOVIES" -> "category_vod_$categoryId"
-            contentType == "TV_SHOWS" -> "category_series_$categoryId"
+            contentType == ContentType.MOVIES -> "category_vod_$categoryId"
+            contentType == ContentType.TV_SHOWS -> "category_series_$categoryId"
             else -> "category_$categoryId"
         }
         return repository.getPayloadSize(key)
@@ -54,9 +55,9 @@ class CategoryViewModel(
 
     fun getCategoriesPayloadSize(): String? {
         return when (contentType) {
-            "LIVE_TV" -> repository.getPayloadSize("live_categories")
-            "MOVIES" -> repository.getPayloadSize("vod_categories")
-            "TV_SHOWS" -> repository.getPayloadSize("series_categories")
+            ContentType.LIVE_TV -> repository.getPayloadSize("live_categories")
+            ContentType.MOVIES -> repository.getPayloadSize("vod_categories")
+            ContentType.TV_SHOWS -> repository.getPayloadSize("series_categories")
             else -> null
         }
     }
@@ -65,8 +66,8 @@ class CategoryViewModel(
         val key = when {
             categoryId.startsWith("vod_") -> "category_$categoryId"
             categoryId.startsWith("series_") -> "category_$categoryId"
-            contentType == "MOVIES" -> "category_vod_$categoryId"
-            contentType == "TV_SHOWS" -> "category_series_$categoryId"
+            contentType == ContentType.MOVIES -> "category_vod_$categoryId"
+            contentType == ContentType.TV_SHOWS -> "category_series_$categoryId"
             else -> "category_$categoryId"
         }
         return repository.getFetchTimeFormatted(key)
@@ -74,9 +75,9 @@ class CategoryViewModel(
 
     fun getCategoriesFetchTime(): String? {
         return when (contentType) {
-            "LIVE_TV" -> repository.getFetchTimeFormatted("live_categories")
-            "MOVIES" -> repository.getFetchTimeFormatted("vod_categories")
-            "TV_SHOWS" -> repository.getFetchTimeFormatted("series_categories")
+            ContentType.LIVE_TV -> repository.getFetchTimeFormatted("live_categories")
+            ContentType.MOVIES -> repository.getFetchTimeFormatted("vod_categories")
+            ContentType.TV_SHOWS -> repository.getFetchTimeFormatted("series_categories")
             else -> null
         }
     }
@@ -344,7 +345,7 @@ class CategoryViewModel(
     }
 
     private fun loadNowPlaying(items: List<MediaItem>) {
-        if (contentType != "LIVE_TV") return
+        if (contentType != ContentType.LIVE_TV) return
         viewModelScope.launch {
             val caps = repository.getCapabilities()
             val hasExternalEpg = repository.hasIndexedEpgData()
@@ -405,7 +406,7 @@ class CategoryViewModel(
 
     private fun rebuildVirtualCategories(regularCategories: List<MediaCategory>): List<MediaCategory> {
         val virtualCats = mutableListOf<MediaCategory>()
-        if (contentType != "LIVE_TV") {
+        if (contentType != ContentType.LIVE_TV) {
             virtualCats.add(MediaCategory(
                 id = CONTINUE_WATCHING_CATEGORY_ID,
                 name = "Continue Watching",

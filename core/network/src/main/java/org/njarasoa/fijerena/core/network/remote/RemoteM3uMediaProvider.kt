@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network.remote
 import android.content.Context
 import android.util.Log
 import org.njarasoa.fijerena.core.network.local.M3uParser
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -33,7 +34,7 @@ class RemoteM3uMediaProvider(
     }
 
     override val capabilities = ProviderCapabilities(
-        supportedContentTypes = setOf("LIVE_TV", "MOVIES"),
+        supportedContentTypes = setOf(ContentType.LIVE_TV, ContentType.MOVIES),
         supportsEpg = false,
         supportsSearch = true,
         supportsAuthentication = false,
@@ -77,7 +78,7 @@ class RemoteM3uMediaProvider(
         }
 
         val filteredCategories = when (contentType) {
-            "LIVE_TV" -> {
+            ContentType.LIVE_TV -> {
                 val liveCategoryIds = items.filter { it.mediaType == MediaType.LIVE_CHANNEL }
                     .map { it.categoryId }.toSet()
                 categories.filter { it.id in liveCategoryIds }

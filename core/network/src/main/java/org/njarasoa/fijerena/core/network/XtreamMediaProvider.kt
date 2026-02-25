@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
@@ -21,7 +22,7 @@ class XtreamMediaProvider(
     private val searchDataSizes = mutableMapOf<String, Long>()
 
     override val capabilities = ProviderCapabilities(
-        supportedContentTypes = setOf("LIVE_TV", "MOVIES", "TV_SHOWS"),
+        supportedContentTypes = setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS),
         supportsEpg = true,
         supportsSearch = true,
         supportsAuthentication = true,
@@ -45,9 +46,9 @@ class XtreamMediaProvider(
 
     override suspend fun getCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
         val result = when (contentType) {
-            "LIVE_TV" -> repository.getCategories()
-            "MOVIES" -> repository.getVodCategories()
-            "TV_SHOWS" -> repository.getSeriesCategories()
+            ContentType.LIVE_TV -> repository.getCategories()
+            ContentType.MOVIES -> repository.getVodCategories()
+            ContentType.TV_SHOWS -> repository.getSeriesCategories()
             else -> repository.getCategories()
         }
         return when (result) {
@@ -60,15 +61,15 @@ class XtreamMediaProvider(
 
     override suspend fun getItems(categoryId: String, contentType: String): kotlin.Result<List<MediaItem>> {
         val mediaType = when (contentType) {
-            "LIVE_TV" -> MediaType.LIVE_CHANNEL
-            "MOVIES" -> MediaType.MOVIE
-            "TV_SHOWS" -> MediaType.SERIES
+            ContentType.LIVE_TV -> MediaType.LIVE_CHANNEL
+            ContentType.MOVIES -> MediaType.MOVIE
+            ContentType.TV_SHOWS -> MediaType.SERIES
             else -> MediaType.LIVE_CHANNEL
         }
         val result = when (contentType) {
-            "LIVE_TV" -> repository.getStreams(categoryId)
-            "MOVIES" -> repository.getVodStreams(categoryId)
-            "TV_SHOWS" -> repository.getSeries(categoryId)
+            ContentType.LIVE_TV -> repository.getStreams(categoryId)
+            ContentType.MOVIES -> repository.getVodStreams(categoryId)
+            ContentType.TV_SHOWS -> repository.getSeries(categoryId)
             else -> repository.getStreams(categoryId)
         }
         return when (result) {
@@ -109,7 +110,7 @@ class XtreamMediaProvider(
         episodeId: String?,
         extension: String?
     ): kotlin.Result<PlayableStream> {
-        val isLive = contentType == "LIVE_TV"
+        val isLive = contentType == ContentType.LIVE_TV
 
         if (episodeId != null && extension != null) {
             return when (val result = repository.buildEpisodeStreamUrl(episodeId, extension)) {
@@ -141,15 +142,15 @@ class XtreamMediaProvider(
 
     override fun getItemsIfCached(categoryId: String, contentType: String): List<MediaItem>? {
         val mediaType = when (contentType) {
-            "LIVE_TV" -> MediaType.LIVE_CHANNEL
-            "MOVIES" -> MediaType.MOVIE
-            "TV_SHOWS" -> MediaType.SERIES
+            ContentType.LIVE_TV -> MediaType.LIVE_CHANNEL
+            ContentType.MOVIES -> MediaType.MOVIE
+            ContentType.TV_SHOWS -> MediaType.SERIES
             else -> MediaType.LIVE_CHANNEL
         }
         val cached = when (contentType) {
-            "LIVE_TV" -> repository.getStreamsCached(categoryId)
-            "MOVIES" -> repository.getVodStreamsCached(categoryId)
-            "TV_SHOWS" -> repository.getSeriesCached(categoryId)
+            ContentType.LIVE_TV -> repository.getStreamsCached(categoryId)
+            ContentType.MOVIES -> repository.getVodStreamsCached(categoryId)
+            ContentType.TV_SHOWS -> repository.getSeriesCached(categoryId)
             else -> repository.getStreamsCached(categoryId)
         }
         return cached?.map { it.toDomain(mediaType) }

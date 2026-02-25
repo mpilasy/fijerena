@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.feature.provider.MobileAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
@@ -205,7 +206,7 @@ fun MobileNavHost(
                     initialCategoryId = categoryListScreen.initialCategoryId,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         when (categoryListScreen.contentType) {
-                            "TV_SHOWS" -> {
+                            ContentType.TV_SHOWS -> {
                                 // For TV shows, navigate to episode selection
                                 navController.navigate(
                                     Screen.EpisodeSelection(
@@ -215,7 +216,7 @@ fun MobileNavHost(
                                     )
                                 )
                             }
-                            "MOVIES" -> {
+                            ContentType.MOVIES -> {
                                 // For movies, navigate to movie details
                                 navController.navigate(
                                     Screen.MovieDetails(
@@ -381,14 +382,14 @@ fun MobileNavHost(
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         // Navigate based on content type
                         when (searchScreen.contentType) {
-                            "TV_SHOWS" -> navController.navigate(
+                            ContentType.TV_SHOWS -> navController.navigate(
                                 Screen.EpisodeSelection(
                                     seriesId = itemId,
                                     seriesName = itemName,
                                     categoryId = categoryId
                                 )
                             )
-                            "MOVIES" -> navController.navigate(
+                            ContentType.MOVIES -> navController.navigate(
                                 Screen.MovieDetails(
                                     movieId = itemId,
                                     movieName = itemName,
@@ -431,7 +432,7 @@ fun MobileNavHost(
                                 streamId = movieId,
                                 streamName = movieName,
                                 categoryId = movieDetailsScreen.categoryId,
-                                contentType = "MOVIES",
+                                contentType = ContentType.MOVIES,
                                 episodeExtension = extension,
                                 startFromBeginning = startFromBeginning
                             )
@@ -456,7 +457,7 @@ fun MobileNavHost(
                                 streamId = episodeId,
                                 streamName = episodeTitle,
                                 categoryId = episodeSelectionScreen.categoryId,
-                                contentType = "TV_SHOWS",
+                                contentType = ContentType.TV_SHOWS,
                                 episodeId = episodeId,
                                 episodeExtension = extension,
                                 seriesId = episodeSelectionScreen.seriesId,
@@ -490,7 +491,7 @@ fun MobileNavHost(
                                 streamId = channel.id,
                                 streamName = channel.name,
                                 categoryId = channel.categoryId,
-                                contentType = "LIVE_TV"
+                                contentType = ContentType.LIVE_TV
                             )
                         )
                     },
@@ -500,7 +501,7 @@ fun MobileNavHost(
                                 streamId = streamId,
                                 streamName = streamName,
                                 categoryId = categoryId,
-                                contentType = "LIVE_TV"
+                                contentType = ContentType.LIVE_TV
                             )
                         )
                     },

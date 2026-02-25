@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -255,15 +256,15 @@ class MediaRepository(
     fun saveLastPlayedItem(categoryId: String, itemId: String, itemName: String, contentType: String) {
         val editor = cache.edit()
         when (contentType) {
-            "LIVE_TV" -> {
+            ContentType.LIVE_TV -> {
                 editor.putString(KEY_LAST_LIVE_CATEGORY, categoryId)
                 editor.putString(KEY_LAST_LIVE_ITEM, itemId)
             }
-            "MOVIES" -> {
+            ContentType.MOVIES -> {
                 editor.putString(KEY_LAST_MOVIES_CATEGORY, categoryId)
                 editor.putString(KEY_LAST_MOVIES_ITEM, itemId)
             }
-            "TV_SHOWS" -> {
+            ContentType.TV_SHOWS -> {
                 editor.putString(KEY_LAST_TVSHOWS_CATEGORY, categoryId)
                 editor.putString(KEY_LAST_TVSHOWS_ITEM, itemId)
             }
@@ -277,18 +278,18 @@ class MediaRepository(
 
     fun getLastCategoryId(contentType: String): String? {
         return when (contentType) {
-            "LIVE_TV" -> cache.getString(KEY_LAST_LIVE_CATEGORY, null)
-            "MOVIES" -> cache.getString(KEY_LAST_MOVIES_CATEGORY, null)
-            "TV_SHOWS" -> cache.getString(KEY_LAST_TVSHOWS_CATEGORY, null)
+            ContentType.LIVE_TV -> cache.getString(KEY_LAST_LIVE_CATEGORY, null)
+            ContentType.MOVIES -> cache.getString(KEY_LAST_MOVIES_CATEGORY, null)
+            ContentType.TV_SHOWS -> cache.getString(KEY_LAST_TVSHOWS_CATEGORY, null)
             else -> null
         }
     }
 
     fun getLastItemId(contentType: String): String? {
         return when (contentType) {
-            "LIVE_TV" -> cache.getString(KEY_LAST_LIVE_ITEM, null)
-            "MOVIES" -> cache.getString(KEY_LAST_MOVIES_ITEM, null)
-            "TV_SHOWS" -> cache.getString(KEY_LAST_TVSHOWS_ITEM, null)
+            ContentType.LIVE_TV -> cache.getString(KEY_LAST_LIVE_ITEM, null)
+            ContentType.MOVIES -> cache.getString(KEY_LAST_MOVIES_ITEM, null)
+            ContentType.TV_SHOWS -> cache.getString(KEY_LAST_TVSHOWS_ITEM, null)
             else -> null
         }
     }
@@ -531,7 +532,7 @@ class MediaRepository(
         position: Long,
         duration: Long
     ) {
-        if (contentType == "LIVE_TV") return
+        if (contentType == ContentType.LIVE_TV) return
         if (usesServerUserData) return
         val progressPercent = if (duration > 0) {
             (position.toFloat() / duration.toFloat()) * 100f
@@ -698,9 +699,9 @@ class MediaRepository(
 
     private fun contentTypeToMediaType(contentType: String): MediaType {
         return when (contentType) {
-            "LIVE_TV" -> MediaType.LIVE_CHANNEL
-            "MOVIES" -> MediaType.MOVIE
-            "TV_SHOWS" -> MediaType.SERIES
+            ContentType.LIVE_TV -> MediaType.LIVE_CHANNEL
+            ContentType.MOVIES -> MediaType.MOVIE
+            ContentType.TV_SHOWS -> MediaType.SERIES
             else -> MediaType.LIVE_CHANNEL
         }
     }
