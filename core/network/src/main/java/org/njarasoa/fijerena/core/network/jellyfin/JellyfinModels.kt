@@ -35,6 +35,7 @@ data class JellyfinItem(
     @SerialName("RunTimeTicks") val runTimeTicks: Long? = null,
     @SerialName("IndexNumber") val indexNumber: Int? = null,
     @SerialName("ParentIndexNumber") val parentIndexNumber: Int? = null,
+    @SerialName("ParentId") val parentId: String? = null,
     @SerialName("SeriesName") val seriesName: String? = null,
     @SerialName("SeriesId") val seriesId: String? = null,
     @SerialName("SeasonId") val seasonId: String? = null,
