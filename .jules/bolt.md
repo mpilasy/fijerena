@@ -1,0 +1,3 @@
+## 2024-05-23 - [Coil ImageLoader Anti-Pattern]
+**Learning:** Found a major performance bottleneck where `ImageLoader` was being instantiated inside a list item Composable (`CinemaThumbnail`). This creates a new `ImageLoader` (with its own memory/disk cache and thread pool) for every single item in a list/grid, bypassing the shared cache and consuming massive resources.
+**Action:** Always use `ImageRequest` with the singleton `ImageLoader` (via `LocalImageLoader.current` or implicit default) for list items. Only create custom `ImageLoader`s at the application level or for very specific, isolated scopes. Use `remember { ImageRequest.Builder(context)... }` to configure per-request options like transitions.
