@@ -264,6 +264,7 @@ class SearchViewModel(
             val normalizedQuery = query.trim().lowercase()
             val queryWords = SearchUtils.getQueryWords(normalizedQuery)
 
+            // Optimized query matching using pre-calculated query words
             val matchingCategories = realCategories
                 .filter { SearchUtils.matchesQuery(it.category.name, queryWords) }
                 .map { CategorySearchResult(it.category.id, it.category.name, it.contentType) }

@@ -7,7 +7,6 @@ object SearchUtils {
 
     fun matchesQuery(text: String, queryWords: List<String>): Boolean {
         if (queryWords.isEmpty()) return true
-        val lowerText = text.lowercase()
-        return queryWords.all { lowerText.contains(it) }
+        return queryWords.all { text.contains(it, ignoreCase = true) }
     }
 }
