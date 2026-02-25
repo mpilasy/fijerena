@@ -185,7 +185,7 @@ private fun MovieDetailsContent(
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
         // Movie metadata - genre on its own line
-        movieDetail.metadata?.genre?.let { genre ->
+        movieDetail.metadata.genre?.let { genre ->
             Text(
                 text = genre,
                 style = MaterialTheme.typography.titleMedium,
@@ -194,22 +194,22 @@ private fun MovieDetailsContent(
         }
 
         // Rating and duration on same row
-        val hasRating = movieDetail.metadata?.rating != null
-        val hasDuration = movieDetail.metadata?.duration != null
+        val hasRating = movieDetail.metadata.rating != null
+        val hasDuration = movieDetail.metadata.duration != null
         if (hasRating || hasDuration) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                movieDetail.metadata?.rating?.let { rating ->
+                movieDetail.metadata.rating?.let { rating ->
                     Text(
                         text = "★ $rating",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )
                 }
-                movieDetail.metadata?.duration?.let { duration ->
+                movieDetail.metadata.duration?.let { duration ->
                     Text(
                         text = formatDuration(duration),
                         style = MaterialTheme.typography.titleMedium,
@@ -218,8 +218,8 @@ private fun MovieDetailsContent(
                 }
                 // "Ends at" based on remaining duration
                 val endsAtContext = LocalContext.current
-                val endsAtText = remember(movieDetail.metadata?.duration, resumePositionMs) {
-                    computeEndsAt(endsAtContext, movieDetail.metadata?.duration, resumePositionMs)
+                val endsAtText = remember(movieDetail.metadata.duration, resumePositionMs) {
+                    computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
                 }
                 if (endsAtText != null) {
                     Text(
@@ -270,7 +270,7 @@ private fun MovieDetailsContent(
         }
 
         // Plot/Description
-        movieDetail.metadata?.plot?.let { plot ->
+        movieDetail.metadata.plot?.let { plot ->
             Spacer(modifier = Modifier.height(CinemaSpacing.lg))
             Text(
                 text = plot,
@@ -281,7 +281,7 @@ private fun MovieDetailsContent(
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
         // Release date
-        movieDetail.metadata?.releaseDate?.let { releaseDate ->
+        movieDetail.metadata.releaseDate?.let { releaseDate ->
             Text(
                 text = "Released: $releaseDate",
                 style = MaterialTheme.typography.bodySmall,
@@ -291,7 +291,7 @@ private fun MovieDetailsContent(
         }
 
         // Cast
-        movieDetail.metadata?.cast?.let { cast ->
+        movieDetail.metadata.cast?.let { cast ->
             Text(
                 text = "Cast: $cast",
                 style = MaterialTheme.typography.bodySmall,
@@ -303,7 +303,7 @@ private fun MovieDetailsContent(
         }
 
         // Director
-        movieDetail.metadata?.director?.let { director ->
+        movieDetail.metadata.director?.let { director ->
             Text(
                 text = "Director: $director",
                 style = MaterialTheme.typography.bodySmall,

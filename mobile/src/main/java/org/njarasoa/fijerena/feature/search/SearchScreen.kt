@@ -8,13 +8,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import java.util.Locale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.text.KeyboardActions
@@ -181,6 +186,7 @@ fun MobileSearchScreen(
                             categoryResults = state.categoryResults,
                             results = state.filteredResults,
                             query = state.query,
+                            queryContentType = contentType,
                             isSearching = state.isSearching,
                             searchProgress = state.searchProgress ?: "",
                             devStats = devStats,
@@ -268,6 +274,7 @@ private fun SearchResults(
     categoryResults: List<SearchViewModel.CategorySearchResult>,
     results: List<SearchViewModel.SearchResult>,
     query: String,
+    queryContentType: String,
     isSearching: Boolean,
     searchProgress: String?,
     devStats: String?,
@@ -276,6 +283,16 @@ private fun SearchResults(
     onCategoryClick: (SearchViewModel.CategorySearchResult) -> Unit,
     onCategoryLongPress: (SearchViewModel.CategorySearchResult) -> Unit
 ) {
+    var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
+
+    fun toggleGroup(contentType: String) {
+        expandedGroups = if (expandedGroups.contains(contentType)) {
+            expandedGroups - contentType
+        } else {
+            expandedGroups + contentType
+        }
+    }
+
     val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
     if (!hasResults && query.isBlank()) {
         Box(
@@ -362,41 +379,125 @@ private fun SearchResults(
                 }
             }
 
-            if (categoryResults.isNotEmpty()) {
-                item(key = "category_header") {
-                    Text(
-                        text = "Categories",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = Spacing.xxs)
-                    )
+            if (queryContentType == "ALL") {
+                val contentTypes = (categoryResults.map { it.contentType } + results.map { it.contentType }).distinct()
+                val sortedTypes = listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (contentTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
+
+                sortedTypes.forEach { type ->
+                    val typeCats = categoryResults.filter { it.contentType == type }
+                    val typeStreams = results.filter { it.contentType == type }
+
+                    if (typeCats.isNotEmpty() || typeStreams.isNotEmpty()) {
+                        val isExpanded = expandedGroups.contains(type)
+                        item(key = "header_$type") {
+                            MobileCollapsibleHeader(
+                                title = getContentTypeLabel(type),
+                                isExpanded = isExpanded,
+                                onToggle = { toggleGroup(type) }
+                            )
+                        }
+
+                        if (isExpanded) {
+                            items(typeCats, key = { "cat_${it.categoryId}_${it.contentType}" }) { catResult ->
+                                CategoryResultCard(
+                                    result = catResult,
+                                    onClick = { onCategoryClick(catResult) },
+                                    onLongClick = { onCategoryLongPress(catResult) }
+                                )
+                            }
+                            items(typeStreams, key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" }) { result ->
+                                SearchResultCard(
+                                    result = result,
+                                    onClick = { onResultClick(result) },
+                                    onLongClick = { onResultLongPress(result) }
+                                )
+                            }
+                        }
+                    }
                 }
-                items(categoryResults, key = { "cat_${it.categoryId}" }) { catResult ->
-                    CategoryResultCard(
-                        result = catResult,
-                        onClick = { onCategoryClick(catResult) },
-                        onLongClick = { onCategoryLongPress(catResult) }
-                    )
+            } else {
+                if (categoryResults.isNotEmpty()) {
+                    item(key = "category_header") {
+                        Text(
+                            text = "Categories",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(vertical = Spacing.xxs)
+                        )
+                    }
+                    items(categoryResults, key = { "cat_${it.categoryId}_${it.contentType}" }) { catResult ->
+                        CategoryResultCard(
+                            result = catResult,
+                            onClick = { onCategoryClick(catResult) },
+                            onLongClick = { onCategoryLongPress(catResult) }
+                        )
+                    }
                 }
-            }
-            if (results.isNotEmpty()) {
-                item(key = "stream_header") {
-                    Text(
-                        text = "Streams",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = Spacing.xxs)
-                    )
-                }
-                items(results, key = { it.itemId }) { result ->
-                    SearchResultCard(
-                        result = result,
-                        onClick = { onResultClick(result) },
-                        onLongClick = { onResultLongPress(result) }
-                    )
+                if (results.isNotEmpty()) {
+                    item(key = "stream_header") {
+                        Text(
+                            text = "Streams",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(vertical = Spacing.xxs)
+                        )
+                    }
+                    items(results, key = { it.itemId }) { result ->
+                        SearchResultCard(
+                            result = result,
+                            onClick = { onResultClick(result) },
+                            onLongClick = { onResultLongPress(result) }
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MobileCollapsibleHeader(
+    title: String,
+    isExpanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Surface(
+        onClick = onToggle,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = Spacing.xxs),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CinemaAlpha.tint),
+        shape = RoundedCornerShape(CinemaCornerRadius.small)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(MobileDimensions.iconSmall)
+            )
+        }
+    }
+}
+
+private fun getContentTypeLabel(contentType: String): String {
+    return when (contentType) {
+        "LIVE_TV" -> "Live TV"
+        "MOVIES" -> "Movies"
+        "TV_SHOWS" -> "TV Shows"
+        else -> contentType.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
     }
 }
 
