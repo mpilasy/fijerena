@@ -174,7 +174,7 @@ class StreamLoaderViewModel(
                         val now = System.currentTimeMillis() / 1000
                         currentProgram = listings.firstOrNull { now in it.startTime..it.endTime }
                         nextProgram = if (currentProgram != null) {
-                            listings.firstOrNull { it.startTime >= currentProgram!!.endTime }
+                            listings.firstOrNull { it.startTime >= currentProgram.endTime }
                         } else null
                     }
 

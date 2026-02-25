@@ -144,12 +144,12 @@ class XtreamRepository(
             val authResponse = service.authenticate()
 
             // Validate authentication response
-            if (authResponse.userInfo?.auth != 1) {
+            if (authResponse.userInfo.auth != 1) {
                 throw Exception("Authentication failed: Invalid credentials")
             }
 
-            if (authResponse.userInfo?.status != "Active") {
-                throw Exception("Account is not active: ${authResponse.userInfo?.status}")
+            if (authResponse.userInfo.status != "Active") {
+                throw Exception("Account is not active: ${authResponse.userInfo.status}")
             }
 
             // Save credentials
@@ -174,14 +174,14 @@ class XtreamRepository(
             val authResponse = service.authenticate()
 
             // Validate authentication response
-            if (authResponse.userInfo?.auth != 1) {
+            if (authResponse.userInfo.auth != 1) {
                 accountManager.clearCredentials()
                 throw Exception("Stored credentials are invalid")
             }
 
-            if (authResponse.userInfo?.status != "Active") {
+            if (authResponse.userInfo.status != "Active") {
                 accountManager.clearCredentials()
-                throw Exception("Account is not active: ${authResponse.userInfo?.status}")
+                throw Exception("Account is not active: ${authResponse.userInfo.status}")
             }
 
             // Update stored auth response
@@ -220,12 +220,12 @@ class XtreamRepository(
             val authResponse = service.authenticate()
 
             // Validate authentication response
-            if (authResponse.userInfo?.auth != 1) {
+            if (authResponse.userInfo.auth != 1) {
                 throw Exception("Authentication failed with new URL")
             }
 
-            if (authResponse.userInfo?.status != "Active") {
-                throw Exception("Account is not active: ${authResponse.userInfo?.status}")
+            if (authResponse.userInfo.status != "Active") {
+                throw Exception("Account is not active: ${authResponse.userInfo.status}")
             }
 
             // Save updated credentials with new URL
@@ -617,12 +617,12 @@ class XtreamRepository(
             val service = XtreamApiService(url, username, password)
             val authResponse = service.authenticate()
 
-            if (authResponse.userInfo?.auth != 1) {
+            if (authResponse.userInfo.auth != 1) {
                 throw Exception("Authentication failed: Invalid credentials")
             }
 
-            if (authResponse.userInfo?.status != "Active") {
-                throw Exception("Account is not active: ${authResponse.userInfo?.status}")
+            if (authResponse.userInfo.status != "Active") {
+                throw Exception("Account is not active: ${authResponse.userInfo.status}")
             }
 
             apiService = service
