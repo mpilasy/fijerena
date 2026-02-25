@@ -49,6 +49,9 @@ Prefer real hardware for validation:
 
 ## Recently Completed
 
+- **Architectural Refactoring**: Extracted all business logic from Composable layers into unified ViewModels (`StreamLoaderViewModel`, `MovieDetailsViewModel`, `SeriesDetailsViewModel`).
+- **UI Performance**: Eliminated `runBlocking` from UI thread; all repository initializations now happen asynchronously in background dispatchers.
+- **Repository Singletons**: Introduced `AppContainer` to manage repository instances, reducing redundant instantiations and ensuring consistent state.
 - **Global Search**: Unified "ALL" content type search across Live TV, Movies, and TV Shows.
 - **Collapsible Grouping**: Search results grouped by source with interactive expand/collapse headers.
 - **Lint & Build Warning Fixes**: Resolved all "Unnecessary safe call", deprecated icon, and manifest warning issues.

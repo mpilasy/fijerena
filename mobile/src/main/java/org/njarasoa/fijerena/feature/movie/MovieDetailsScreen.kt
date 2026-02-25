@@ -13,16 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,62 +30,16 @@ fun MobileMovieDetailsScreen(
     movieName: String,
     categoryId: String,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
-    onBack: () -> Unit
-) {
-    val context = LocalContext.current
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        val providerRepo = ProviderRepository(appContext)
-        kotlinx.coroutines.runBlocking {
-            val entity = providerRepo.getActiveProvider()
-            if (entity != null) {
-                val resolvedRepo = MediaRepository(appContext, entity.id)
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect() // Authenticate before making API calls
-                resolvedRepo.setProvider(provider)
-                resolvedRepo
-            } else MediaRepository(appContext, 0L)
-        }
-    }
-
-    var movieDetail by remember { mutableStateOf<MovieDetail?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var resumePositionMs by remember { mutableStateOf(0L) }
-    var resumeDurationMs by remember { mutableStateOf(0L) }
-
-    // Favorite state
-    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, "MOVIES")) }
-
-    android.util.Log.d("MovieDetailsScreen", "State: isLoading=$isLoading, error=$error, movieDetail=${movieDetail != null}")
-
-    // Load movie info on launch
-    LaunchedEffect(movieId) {
-        isLoading = true
-        error = null
-        val result = mediaRepository.getMovieDetail(movieId)
-        result.fold(
-            onSuccess = { detail ->
-                movieDetail = detail
-                isLoading = false
-            },
-            onFailure = { e ->
-                error = e.message ?: "Failed to load movie info"
-                isLoading = false
-            }
+    onBack: () -> Unit,
+    viewModel: MovieDetailsViewModel = viewModel(
+        factory = MovieDetailsViewModelFactory(
+            context = LocalContext.current,
+            movieId = movieId,
+            categoryId = categoryId
         )
-
-        // Load resume position
-        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, "MOVIES")
-        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
-            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
-            if (progress in 2.0..95.0) {
-                resumePositionMs = watched.playbackPosition
-                resumeDurationMs = watched.duration
-            }
-        }
-    }
+    )
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -99,19 +51,17 @@ fun MobileMovieDetailsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        if (isFavorite) {
-                            mediaRepository.removeFavorite(movieId, "MOVIES")
-                        } else {
-                            mediaRepository.addFavorite(movieId, movieName, categoryId, "MOVIES")
+                    if (uiState is MovieDetailsViewModel.UiState.Success) {
+                        val state = uiState as MovieDetailsViewModel.UiState.Success
+                        IconButton(onClick = {
+                            viewModel.toggleFavorite(state.movieDetail.name.ifEmpty { movieName })
+                        }) {
+                            Icon(
+                                imageVector = if (state.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                contentDescription = if (state.isFavorite) "Remove from Favorites" else "Add to Favorites",
+                                tint = if (state.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        isFavorite = !isFavorite
-                    }) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
-                            contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
-                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             )
@@ -122,23 +72,23 @@ fun MobileMovieDetailsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when {
-                isLoading -> {
+            when (val state = uiState) {
+                is MovieDetailsViewModel.UiState.Loading -> {
                     LoadingScreen()
                 }
-                error != null -> {
+                is MovieDetailsViewModel.UiState.Error -> {
                     ErrorScreen(
-                        message = error ?: "Unknown error",
+                        message = state.message,
                         onBack = onBack
                     )
                 }
-                movieDetail != null -> {
+                is MovieDetailsViewModel.UiState.Success -> {
                     MovieDetailsContent(
-                        movieDetail = movieDetail!!,
+                        movieDetail = state.movieDetail,
                         movieId = movieId,
                         movieName = movieName,
-                        resumePositionMs = resumePositionMs,
-                        resumeDurationMs = resumeDurationMs,
+                        resumePositionMs = state.resumePositionMs,
+                        resumeDurationMs = state.resumeDurationMs,
                         onPlayMovie = onPlayMovie
                     )
                 }

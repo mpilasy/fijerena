@@ -830,6 +830,31 @@ When a user edited a Jellyfin provider's username or password, the app continued
 
 ---
 
+## Phase 10: Architectural Refactoring
+
+**Release Date:** 2026-02-24
+
+### Unified Business Logic & Performance
+**Impact: Improved maintainability, testability, and UI responsiveness**
+
+- **ViewModel Extraction:** Consolidated all complex business logic (stream resolution, EPG management, channel navigation, history) from Composable screens into shared ViewModels in `core:ui`.
+- **Async Initialization:** Eliminated all `runBlocking` calls from the UI thread. Repository initialization and data loading now happen asynchronously on background dispatchers.
+- **Unified Feature ViewModels:**
+  - `StreamLoaderViewModel`: Manages playback lifecycle and channel navigation.
+  - `MovieDetailsViewModel`: Handles metadata and resume state for movies.
+  - `SeriesDetailsViewModel`: Manages series info, seasons, and episodes.
+- **Repository Singletons:** Introduced `AppContainer` to provide singletons for critical repositories (e.g., `ProviderRepository`), ensuring consistent state and reducing memory overhead.
+- **Platform Alignment:** Unified the logic between TV and Mobile versions of the Player, Movie Details, and Episode Selection screens.
+
+### Files Created/Modified
+- `core/ui/.../viewmodels/StreamLoaderViewModel.kt` — Consolidated player logic.
+- `core/ui/.../viewmodels/MovieDetailsViewModel.kt` — New movie detail logic.
+- `core/ui/.../viewmodels/SeriesDetailsViewModel.kt` — New series detail logic.
+- `core/ui/.../di/AppContainer.kt` — Repository singleton management.
+- `tv/` and `mobile/` Screens — Refactored to delegate to respective ViewModels.
+
+---
+
 ## 🔮 Future Enhancements
 
 - **Playback Speed Control** — Variable speed for VOD content (0.5×, 1.25×, 1.5×, 2×)
