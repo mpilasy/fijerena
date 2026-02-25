@@ -810,6 +810,26 @@ When a user edited a Jellyfin provider's username or password, the app continued
 
 ---
 
+## Phase 9: Search Enhancements
+
+**Release Date:** 2026-02-24
+
+### Collapsible Search Results Grouping
+**Impact: Improved organization and navigation of global search results**
+
+- **Unified Grouping:** Search results for "ALL" content types are now categorized into Live TV, Movies, and TV Shows groups.
+- **Combined View:** Both matching categories and individual streams are displayed together under their respective content type headers.
+- **Interactive Headers:** Expandable/collapsible headers with visual indicators (`KeyboardArrowDown`/`KeyboardArrowUp`) allow users to toggle the visibility of each group.
+- **State Persistence:** Expanded/collapsed states are preserved during navigation and screen rotations using `rememberSaveable`.
+- **Platform Parity:** Implemented consistently across both TV (D-pad optimized) and Mobile (touch optimized) interfaces.
+
+### Files Modified
+- `tv/.../feature/search/SearchScreen.kt` — Added collapsible grouping logic and `CollapsibleHeader` composable.
+- `mobile/.../feature/search/SearchScreen.kt` — Added collapsible grouping logic and `MobileCollapsibleHeader` composable.
+- `core/ui/.../viewmodels/SearchViewModel.kt` — Refined search result data structures.
+
+---
+
 ## 🔮 Future Enhancements
 
 - **Playback Speed Control** — Variable speed for VOD content (0.5×, 1.25×, 1.5×, 2×)

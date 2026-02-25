@@ -49,6 +49,11 @@ Prefer real hardware for validation:
 
 ## Recently Completed
 
+- **Global Search**: Unified "ALL" content type search across Live TV, Movies, and TV Shows.
+- **Collapsible Grouping**: Search results grouped by source with interactive expand/collapse headers.
+- **Lint & Build Warning Fixes**: Resolved all "Unnecessary safe call", deprecated icon, and manifest warning issues.
+- **Missing Permissions**: Declared required network state and internet permissions in library modules.
+- **Progress Indicator Migration**: Updated to modern lambda-based LinearProgressIndicator.
 - Player overlays: category (left) + last-watched (right) with slide animations, semi-transparent GlassPanel
 - OK/tap never pauses — pause is explicit (button, media key, double-tap)
 - Mobile: double-tap to pause/resume VOD; swipe left/right for Live TV overlays
