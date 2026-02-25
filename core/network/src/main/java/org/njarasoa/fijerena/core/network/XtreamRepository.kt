@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -99,6 +100,8 @@ class XtreamRepository(
     private val fetchTimes = ConcurrentHashMap<String, Long>()
 
     companion object {
+        private const val TAG = "XtreamRepository"
+
         // Cache expiry is now configurable via AppSettings (default: 24 hours)
         private const val KEY_CATEGORIES_TIMESTAMP = "categories_timestamp"
         private const val KEY_VOD_CATEGORIES_TIMESTAMP = "vod_categories_timestamp"
@@ -1225,7 +1228,7 @@ class XtreamRepository(
                      }
 
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     Log.e(TAG, "Failed to sync categories ($type)", e)
                  }
             }
         }
@@ -1303,7 +1306,7 @@ class XtreamRepository(
                      }
 
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     Log.e(TAG, "Failed to sync streams ($type)", e)
                  }
             }
         }
@@ -1381,7 +1384,7 @@ class XtreamRepository(
                      }
 
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     Log.e(TAG, "Failed to sync series", e)
                  }
             }
         }
