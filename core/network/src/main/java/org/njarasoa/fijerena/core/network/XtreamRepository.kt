@@ -587,7 +587,6 @@ class XtreamRepository(
             val seriesInfo = service.getSeriesInfo(seriesId)
             val fetchTime = System.currentTimeMillis() - startTime
             fetchTimes["series_$seriesId"] = fetchTime
-            trackPayloadSize("series_$seriesId", seriesInfo)
             seriesInfo
         }
     }
@@ -600,7 +599,6 @@ class XtreamRepository(
             val vodInfo = service.getVodInfo(vodId)
             val fetchTime = System.currentTimeMillis() - startTime
             fetchTimes["vod_$vodId"] = fetchTime
-            trackPayloadSize("vod_$vodId", vodInfo)
             vodInfo
         }
     }
@@ -910,13 +908,6 @@ class XtreamRepository(
      */
     fun clearFavorites() {
         cache.edit().remove(KEY_FAVORITES).apply()
-    }
-
-    /**
-     * Track payload size for dev mode (No-op after DB migration)
-     */
-    private inline fun <reified T> trackPayloadSize(key: String, data: T) {
-        // No-op
     }
 
     /**
