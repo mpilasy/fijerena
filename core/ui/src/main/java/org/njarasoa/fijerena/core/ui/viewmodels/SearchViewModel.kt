@@ -493,4 +493,32 @@ class SearchViewModel(
             }
             .thenBy { it.streamName })
     }
+
+    fun isFavorite(itemId: String, contentType: String): Boolean {
+        return repository.isFavorite(itemId, contentType)
+    }
+
+    fun isFavoriteCategory(categoryId: String, contentType: String): Boolean {
+        return repository.isFavoriteCategory(categoryId, contentType)
+    }
+
+    fun toggleFavorite(itemId: String, itemName: String, categoryId: String, contentType: String, isFavorite: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (isFavorite) {
+                repository.removeFavorite(itemId, contentType)
+            } else {
+                repository.addFavorite(itemId, itemName, categoryId, contentType)
+            }
+        }
+    }
+
+    fun toggleFavoriteCategory(categoryId: String, categoryName: String, contentType: String, isFavorite: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (isFavorite) {
+                repository.removeFavoriteCategory(categoryId, contentType)
+            } else {
+                repository.addFavoriteCategory(categoryId, categoryName, contentType)
+            }
+        }
+    }
 }
