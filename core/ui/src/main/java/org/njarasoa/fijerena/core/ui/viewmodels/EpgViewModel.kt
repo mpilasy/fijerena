@@ -17,9 +17,19 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 class EpgViewModel(
-    private val repository: MediaRepository,
+    private val context: android.content.Context,
     private val categoryId: String
 ) : ViewModel() {
+
+    private var repository: org.njarasoa.fijerena.core.network.MediaRepository? = null
+
+    private suspend fun ensureRepo(): org.njarasoa.fijerena.core.network.MediaRepository {
+        if (repository == null) {
+            val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+            repository = container.getMediaRepository()
+        }
+        return repository!!
+    }
 
     sealed class UiState {
         data object Loading : UiState()
@@ -27,7 +37,7 @@ class EpgViewModel(
             val channelRows: List<EpgChannelRow>,
             val timeSlots: List<TimeSlot>,
             val currentTimeSlot: Int,
-            val selectedDate: LocalDate,
+            val selectedDate: java.time.LocalDate,
             val epgLoadTime: String? = null,
             val epgMatchInfo: String? = null
         ) : UiState()
@@ -39,7 +49,7 @@ class EpgViewModel(
 
     data class EpgSearchResult(
         val program: EpgProgram,
-        val channel: MediaItem,
+        val channel: org.njarasoa.fijerena.core.player.domain.MediaItem,
         val isCurrent: Boolean
     )
 
@@ -52,28 +62,35 @@ class EpgViewModel(
     private val _searchResults = MutableStateFlow<List<EpgSearchResult>>(emptyList())
     val searchResults: StateFlow<List<EpgSearchResult>> = _searchResults.asStateFlow()
 
-    private var currentDate = LocalDate.now()
+    private var currentDate = java.time.LocalDate.now()
 
     init {
         loadEpgData()
     }
 
-    fun loadEpgData(date: LocalDate = currentDate) {
+    fun loadEpgData(date: java.time.LocalDate = currentDate) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             currentDate = date
             val startTime = System.currentTimeMillis()
 
+            val repo = try {
+                ensureRepo()
+            } catch (e: Exception) {
+                _uiState.value = UiState.Error("Initialization failed: ${e.message}")
+                return@launch
+            }
+
             // Check if provider supports EPG (allow if external XMLTV URL is configured)
-            val capabilities = repository.getCapabilities()
-            val hasExternalEpg = repository.hasIndexedEpgData()
+            val capabilities = repo.getCapabilities()
+            val hasExternalEpg = repo.hasIndexedEpgData()
             if (capabilities != null && !capabilities.supportsEpg && !hasExternalEpg) {
                 _uiState.value = UiState.Error("EPG is not supported by this provider")
                 return@launch
             }
 
             // Get items for category
-            val itemsResult = repository.getItems(categoryId, "LIVE_TV")
+            val itemsResult = repo.getItems(categoryId, "LIVE_TV")
             val items = itemsResult.getOrElse {
                 _uiState.value = UiState.Error("Failed to load channels: ${it.message}")
                 return@launch
@@ -85,7 +102,7 @@ class EpgViewModel(
             }
 
             // Get EPG for all items (uses XMLTV if configured, falls back to provider EPG)
-            val epgResult = repository.getEpgBulkForItems(items)
+            val epgResult = repo.getEpgBulkForItems(items)
             val epgData = epgResult.getOrElse {
                 _uiState.value = UiState.Error("Failed to load EPG data: ${it.message}")
                 return@launch
@@ -114,9 +131,10 @@ class EpgViewModel(
 
     fun forceRefresh() {
         viewModelScope.launch {
+            val repo = ensureRepo()
             _isRefreshing.value = true
-            repository.clearEpgCache()
-            repository.clearXmltvCache()
+            repo.clearEpgCache()
+            repo.clearXmltvCache()
             loadEpgData(currentDate)
             _isRefreshing.value = false
         }
@@ -126,7 +144,7 @@ class EpgViewModel(
 
     fun selectNextDay() = loadEpgData(currentDate.plusDays(1))
 
-    fun jumpToNow() = loadEpgData(LocalDate.now())
+    fun jumpToNow() = loadEpgData(java.time.LocalDate.now())
 
     fun searchPrograms(query: String) {
         _searchQuery.value = query
@@ -144,7 +162,7 @@ class EpgViewModel(
                     EpgSearchResult(
                         program = program,
                         channel = row.channel,
-                        isCurrent = EpgUtils.isCurrentProgram(program)
+                        isCurrent = org.njarasoa.fijerena.core.player.model.EpgUtils.isCurrentProgram(program)
                     )
                 }
         }.sortedByDescending { it.isCurrent }
@@ -156,12 +174,12 @@ class EpgViewModel(
     }
 
     private fun buildChannelRows(
-        items: List<MediaItem>,
-        epgData: Map<String, EpgResponse>,
-        date: LocalDate
-    ): List<EpgChannelRow> {
-        val dayStart = date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
-        val dayEnd = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
+        items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>,
+        epgData: Map<String, org.njarasoa.fijerena.core.player.model.EpgResponse>,
+        date: java.time.LocalDate
+    ): List<org.njarasoa.fijerena.core.player.model.EpgChannelRow> {
+        val dayStart = date.atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond()
+        val dayEnd = date.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond()
 
         return items.map { item ->
             val programs = epgData[item.id]?.listings?.filter {
@@ -169,19 +187,19 @@ class EpgViewModel(
                 (it.startTime < dayStart && it.endTime > dayEnd)
             }?.sortedBy { it.startTime } ?: emptyList()
 
-            EpgChannelRow(item, programs)
+            org.njarasoa.fijerena.core.player.model.EpgChannelRow(item, programs)
         }
     }
 
-    private fun generateTimeSlots(date: LocalDate): List<TimeSlot> {
-        val slots = mutableListOf<TimeSlot>()
-        val dayStart = date.atStartOfDay(ZoneId.systemDefault())
+    private fun generateTimeSlots(date: java.time.LocalDate): List<org.njarasoa.fijerena.core.player.model.TimeSlot> {
+        val slots = mutableListOf<org.njarasoa.fijerena.core.player.model.TimeSlot>()
+        val dayStart = date.atStartOfDay(java.time.ZoneId.systemDefault())
 
         for (i in 0 until 48) {
             val slotStart = dayStart.plusMinutes(i * 30L)
             val slotEnd = slotStart.plusMinutes(30)
             slots.add(
-                TimeSlot(
+                org.njarasoa.fijerena.core.player.model.TimeSlot(
                     startTime = slotStart.toEpochSecond(),
                     endTime = slotEnd.toEpochSecond(),
                     slotIndex = i
@@ -191,9 +209,10 @@ class EpgViewModel(
         return slots
     }
 
-    private fun calculateCurrentTimeSlot(timeSlots: List<TimeSlot>): Int {
+    private fun calculateCurrentTimeSlot(timeSlots: List<org.njarasoa.fijerena.core.player.model.TimeSlot>): Int {
         val now = System.currentTimeMillis() / 1000
         val index = timeSlots.indexOfFirst { now in it.startTime..it.endTime }
         return if (index >= 0) index else 0
     }
 }
+

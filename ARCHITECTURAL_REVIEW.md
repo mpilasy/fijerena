@@ -45,29 +45,29 @@ The current pattern creates a new instance of `MediaRepository` every time the s
 ## 3. Restructuring Opportunities
 
 ### Unified Feature ViewModel (`StreamLoaderViewModel`)
-To resolve the logic duplication and blocking issues in the player, a new ViewModel should be introduced in `core:ui`.
-- **Name:** `StreamLoaderViewModel` (or `PlayerFeatureViewModel`).
-- **Responsibility:**
-    - Asynchronously initialize `MediaRepository`.
-    - Resolve playbable streams.
-    - Manage the playlist/channel list state.
-    - Handle `next/prev` logic.
-    - Fetch and expose EPG data.
-    - Handle history saving.
-- **Benefit:** The UI (Mobile/TV) becomes a dumb view that observes `state` (Loading, Playing, Error) and passes events to the ViewModel.
+*Status: Implemented*
+To resolve the logic duplication and blocking issues in the player, a unified ViewModel (`StreamLoaderViewModel`) was introduced in `core:ui`. It now handles:
+- Asynchronously initializing `MediaRepository` via `AppContainer`.
+- Resolving playable streams.
+- Managing playlist/channel list state.
+- Handling `next/prev` logic.
+- Fetching and exposing EPG data.
+- Handling history saving.
+The UI (Mobile/TV) is now a dumb view that observes `state` (Loading, Playing, Error) and passes events to the ViewModel.
 
 ### Dependency Injection (DI)
-The project currently lacks a DI framework (Hilt/Koin). Introducing Hilt would:
-- Eliminate manual repository creation in ViewModels/UI.
-- Ensure repositories are singletons.
-- Simplify testing by allowing mock injection.
-
-**Recommendation:** Start by introducing a shared `Container` or `ViewModelFactory` that holds repository singletons, if full Hilt integration is too large a scope.
+*Status: Partially Implemented (Manual DI Container)*
+The project now utilizes a manual DI container (`AppContainer`) in `core:ui` to manage repository singletons.
+- This eliminates manual repository creation in ViewModels/UI.
+- Ensures `ProviderRepository` and `MediaRepository` are singletons.
+- Resolves the UI thread blocking issues caused by synchronous `runBlocking` repository initialization in factories.
 
 ### Module Boundaries
 - **Core:Player vs Core:Network:** The separation is good (`player` does not depend on `network`).
-- **Core:UI:** Properly bridges the gap, depending on both. This is the correct place for the proposed `StreamLoaderViewModel`.
+- **Core:UI:** Properly bridges the gap, depending on both. This is the correct place for the shared ViewModels.
 
-## 4. Immediate Action Plan
-1.  **Extract Logic:** Create `StreamLoaderViewModel` in `core:ui` to consolidate player business logic.
-2.  **Refactor UI:** Update `MobilePlayerScreen` and `TvPlayerScreen` to use this ViewModel, removing `runBlocking` and duplicated logic.
+## 4. Completed Action Plan
+1.  **Extract Logic:** Created `StreamLoaderViewModel`, `MovieDetailsViewModel`, and `SeriesDetailsViewModel` in `core:ui` to consolidate business logic.
+2.  **Refactor UI:** Updated Mobile and TV screens to use these ViewModels, removing `runBlocking` and duplicated logic.
+3.  **Implement DI:** Created `AppContainer` to manage repository singletons and updated all ViewModel factories (`CategoryViewModelFactory`, `SearchViewModelFactory`, etc.) to use it.
+4.  **Fix Hanging Issues:** Made `MediaRepository` initialization asynchronous in ViewModels and marked the `provider` field as `@Volatile` to ensure thread safety.
