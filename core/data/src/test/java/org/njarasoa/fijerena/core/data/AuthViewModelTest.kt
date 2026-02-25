@@ -57,6 +57,16 @@ class AuthViewModelTest {
         assertTrue(viewModel.isSessionExpired())
     }
 
+    @Test
+    fun `isSessionExpired returns false when expDate is Unlimited`() {
+        val viewModel = AuthViewModel()
+        val authResponse = createAuthResponse(expDate = "Unlimited")
+
+        viewModel.setAuthSession(authResponse, "http://example.com")
+
+        assertFalse(viewModel.isSessionExpired())
+    }
+
     private fun createAuthResponse(expDate: String?): XtreamAuthResponse {
         return XtreamAuthResponse(
             userInfo = XtreamUserInfo(
