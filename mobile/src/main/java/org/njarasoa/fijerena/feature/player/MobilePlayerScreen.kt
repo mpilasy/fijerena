@@ -33,7 +33,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -875,7 +875,7 @@ private fun ControlsOverlay(
                 // Audio track selector (only if multiple tracks)
                 if (audioTrackCount > 1) {
                     IconButton(onClick = onAudioTrack) {
-                        Icon(Icons.Filled.VolumeUp, "Audio", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.VolumeUp, "Audio", tint = Color.White)
                     }
                 }
 

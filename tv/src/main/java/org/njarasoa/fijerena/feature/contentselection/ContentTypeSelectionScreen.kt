@@ -26,6 +26,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
@@ -87,6 +88,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun ContentTypeSelectionScreen(
     onContentTypeSelected: (ContentType) -> Unit,
     onSettings: () -> Unit,
+    onSearch: () -> Unit = {},
     onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {}
 ) {
@@ -258,6 +260,16 @@ fun ContentTypeSelectionScreen(
                             }
                         )
                     }
+                    CinemaIconButton(
+                        onClick = onSearch,
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search All",
+                                tint = CinemaAccentLight
+                            )
+                        }
+                    )
                     CinemaIconButton(
                         onClick = onSettings,
                         icon = {
