@@ -70,6 +70,7 @@ class MediaRepository(
     private val providerId: Long,
     private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT
 ) {
+    @Volatile
     private var provider: MediaProvider? = null
 
     private val cacheName = "media_cache_$providerId"

@@ -24,6 +24,8 @@ The project follows a modular, Clean Architecture pattern with MVVM.
 
 ### Architectural Rules
 - **Circular Dependencies:** `core:player` MUST NOT depend on `core:network`.
+- **Dependency Injection:** Always use the `AppContainer` (in `core:ui`) to obtain repository singletons (`MediaRepository`, `ProviderRepository`). Never manually instantiate repositories in ViewModels to prevent redundant database connections and ensure consistent state.
+- **Asynchronous Initialization:** ViewModels must initialize their repository dependencies asynchronously to prevent UI thread blocking during screen composition.
 - **Unified Domain:** All provider-specific models must be mapped to unified domain models in `core:player/domain/`.
 - **Type Safety:** All media and category IDs must be `String` to ensure compatibility across different provider types.
 
