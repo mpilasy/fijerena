@@ -5,6 +5,7 @@ package org.njarasoa.fijerena.feature.movie
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,23 +38,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
@@ -80,89 +81,45 @@ fun MovieDetailsScreen(
     movieName: String,
     categoryId: String,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: MovieDetailsViewModel = viewModel(
+        factory = MovieDetailsViewModelFactory(
+            context = LocalContext.current.applicationContext,
+            movieId = movieId
+        )
+    )
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        kotlinx.coroutines.runBlocking {
-            val providerRepo = ProviderRepository(appContext)
-            val entity = providerRepo.getActiveProvider()
-            val repo = MediaRepository(appContext, entity?.id ?: 0L)
-            if (entity != null) {
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect() // Authenticate before making API calls
-                repo.setProvider(provider)
-            }
-            repo
-        }
-    }
 
-    var movieDetail by remember { mutableStateOf<MovieDetail?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var refreshTrigger by remember { mutableStateOf(0) }
-    var resumePositionMs by remember { mutableStateOf(0L) }
-    var resumeDurationMs by remember { mutableStateOf(0L) }
-
-    fun refresh() {
-        refreshTrigger++
-    }
-
-    // Load movie info on launch
-    LaunchedEffect(movieId, refreshTrigger) {
-        isLoading = true
-        error = null
-
-        val result = mediaRepository.getMovieDetail(movieId)
-        result.fold(
-            onSuccess = { detail ->
-                movieDetail = detail
-                isLoading = false
-            },
-            onFailure = { e ->
-                error = e.message ?: "Failed to load movie info"
-                isLoading = false
-            }
-        )
-
-        // Load resume position
-        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, "MOVIES")
-        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
-            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
-            if (progress in 2.0..95.0) {
-                resumePositionMs = watched.playbackPosition
-                resumeDurationMs = watched.duration
-            }
-        }
-    }
+    val uiState by viewModel.uiState.collectAsState()
+    val isFavorite by viewModel.isFavorite.collectAsState()
 
     // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
-        when {
-            isLoading -> {
+        when (val state = uiState) {
+            is MovieDetailsViewModel.UiState.Loading -> {
                 LoadingScreen()
             }
-            error != null -> {
+            is MovieDetailsViewModel.UiState.Error -> {
                 ErrorScreen(
-                    message = error ?: "Unknown error",
+                    message = state.message,
                     onBack = onBack
                 )
             }
-            movieDetail != null -> {
+            is MovieDetailsViewModel.UiState.Success -> {
                 MovieDetailsContent(
-                    movieDetail = movieDetail!!,
+                    movieDetail = state.movieDetail,
                     movieId = movieId,
                     movieName = movieName,
                     categoryId = categoryId,
-                    mediaRepository = mediaRepository,
-                    resumePositionMs = resumePositionMs,
-                    resumeDurationMs = resumeDurationMs,
+                    isFavorite = isFavorite,
+                    resumePositionMs = state.resumePositionMs,
+                    resumeDurationMs = state.resumeDurationMs,
                     onPlayMovie = onPlayMovie,
-                    onRefresh = { refresh() },
+                    onToggleFavorite = { viewModel.toggleFavorite(state.movieDetail.name, categoryId) },
+                    onRefresh = { viewModel.loadMovieDetail() },
                     onBack = onBack
                 )
             }
@@ -176,10 +133,11 @@ private fun MovieDetailsContent(
     movieId: String,
     movieName: String,
     categoryId: String,
-    mediaRepository: MediaRepository,
+    isFavorite: Boolean,
     resumePositionMs: Long,
     resumeDurationMs: Long,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onToggleFavorite: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -188,9 +146,6 @@ private fun MovieDetailsContent(
     val providerName by remember { mutableStateOf(appSettings.providerName) }
     val extension = movieDetail.extension ?: "mp4"
     val scale = LocalUiScale.current
-
-    // Favorite state
-    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, "MOVIES")) }
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
@@ -246,14 +201,7 @@ private fun MovieDetailsContent(
                     )
                     // Favorite button
                     IconButton(
-                        onClick = {
-                            if (isFavorite) {
-                                mediaRepository.removeFavorite(movieId, "MOVIES")
-                            } else {
-                                mediaRepository.addFavorite(movieId, movieDetail.name.ifEmpty { movieName }, categoryId, "MOVIES")
-                            }
-                            isFavorite = !isFavorite
-                        },
+                        onClick = onToggleFavorite,
                         modifier = Modifier
                             .size(TvDimensions.iconMedium.scaled(scale))
                             .tvFocusableNoScale()

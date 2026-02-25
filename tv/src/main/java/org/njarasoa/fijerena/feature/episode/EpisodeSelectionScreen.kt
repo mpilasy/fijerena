@@ -36,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,21 +48,22 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.viewmodels.EpisodeSelectionViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.EpisodeSelectionViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -80,13 +82,6 @@ import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 
 /**
  * Episode selection screen for TV shows.
- *
- * Features:
- * - Displays series information (title, plot)
- * - Lists all episodes grouped by season
- * - Inline episode detail panel when an episode is selected
- * - D-pad friendly navigation
- * - Loads episode data from MediaRepository
  */
 @Composable
 fun EpisodeSelectionScreen(
@@ -94,76 +89,49 @@ fun EpisodeSelectionScreen(
     seriesName: String,
     categoryId: String,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: EpisodeSelectionViewModel = viewModel(
+        factory = EpisodeSelectionViewModelFactory(
+            context = LocalContext.current.applicationContext,
+            seriesId = seriesId
+        )
+    )
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        kotlinx.coroutines.runBlocking {
-            val providerRepo = ProviderRepository(appContext)
-            val entity = providerRepo.getActiveProvider()
-            val repo = MediaRepository(appContext, entity?.id ?: 0L)
-            if (entity != null) {
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect() // Authenticate before making API calls
-                repo.setProvider(provider)
-            }
-            repo
-        }
-    }
 
-    var seriesDetail by remember { mutableStateOf<SeriesDetail?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var refreshTrigger by remember { mutableStateOf(0) }
-
-    fun refresh() {
-        refreshTrigger++
-    }
-
-    // Load series info on launch
-    LaunchedEffect(seriesId, refreshTrigger) {
-        isLoading = true
-        error = null
-
-        val result = mediaRepository.getSeriesDetail(seriesId)
-        result.fold(
-            onSuccess = { detail ->
-                seriesDetail = detail
-                isLoading = false
-            },
-            onFailure = { e ->
-                error = e.message ?: "Failed to load series info"
-                isLoading = false
-            }
-        )
-    }
+    val uiState by viewModel.uiState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val mediaRepository = viewModel.getRepository()
 
     // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
-        when {
-            isLoading -> {
+        when (val state = uiState) {
+            is EpisodeSelectionViewModel.UiState.Loading -> {
                 LoadingScreen()
             }
-            error != null -> {
+            is EpisodeSelectionViewModel.UiState.Error -> {
                 ErrorScreen(
-                    message = error ?: "Unknown error",
+                    message = state.message,
                     onBack = onBack
                 )
             }
-            seriesDetail != null -> {
-                EpisodeListContent(
-                    seriesDetail = seriesDetail!!,
-                    seriesName = seriesName,
-                    categoryId = categoryId,
-                    mediaRepository = mediaRepository,
-                    onEpisodeSelected = onEpisodeSelected,
-                    onRefresh = { refresh() },
-                    onBack = onBack
-                )
+            is EpisodeSelectionViewModel.UiState.Success -> {
+                if (mediaRepository != null) {
+                    EpisodeListContent(
+                        seriesDetail = state.seriesDetail,
+                        seriesName = seriesName,
+                        categoryId = categoryId,
+                        mediaRepository = mediaRepository,
+                        isRefreshing = isRefreshing,
+                        onEpisodeSelected = onEpisodeSelected,
+                        onRefresh = { viewModel.loadSeriesDetail(isRefresh = true) },
+                        onBack = onBack
+                    )
+                } else {
+                    LoadingScreen()
+                }
             }
         }
     }
@@ -175,6 +143,7 @@ private fun EpisodeListContent(
     seriesName: String,
     categoryId: String,
     mediaRepository: MediaRepository,
+    isRefreshing: Boolean,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit
@@ -194,7 +163,6 @@ private fun EpisodeListContent(
     }
 
     // Track refresh state for animation
-    var isRefreshing by remember { mutableStateOf(false) }
     var targetRotation by remember { mutableStateOf(0f) }
 
     val rotation by animateFloatAsState(
@@ -292,11 +260,7 @@ private fun EpisodeListContent(
                         )
                         // Refresh button
                         IconButton(
-                            onClick = {
-                                isRefreshing = true
-                                onRefresh()
-                                isRefreshing = false
-                            },
+                            onClick = onRefresh,
                             enabled = !isRefreshing,
                             modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale))
                         ) {

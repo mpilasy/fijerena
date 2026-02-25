@@ -43,7 +43,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
-import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -58,9 +57,6 @@ import androidx.compose.ui.input.key.nativeKeyCode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -86,12 +82,6 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * Search screen for searching streams across all categories.
- *
- * Features:
- * - Search input field at top
- * - Real-time filtered results below
- * - D-pad navigation between search field and results
- * - TV-optimized with 5% overscan padding
  */
 @Composable
 fun SearchScreen(
@@ -110,25 +100,8 @@ fun SearchScreen(
         }
     )
     val uiState by viewModel.uiState.collectAsState()
-    val configuration = LocalConfiguration.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
-
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        kotlinx.coroutines.runBlocking {
-            val providerRepo = ProviderRepository(appContext)
-            val entity = providerRepo.getActiveProvider()
-            val repo = MediaRepository(appContext, entity?.id ?: 0L)
-            if (entity != null) {
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect()
-                repo.setProvider(provider)
-            }
-            repo
-        }
-    }
 
     // Favorite long-press state
     var favoriteMenuTarget by remember { mutableStateOf<SearchFavoriteTarget?>(null) }
@@ -139,12 +112,10 @@ fun SearchScreen(
             onConfirm = {
                 when (target) {
                     is SearchFavoriteTarget.Category -> {
-                        if (target.isFavorite) mediaRepository.removeFavoriteCategory(target.categoryId, target.contentType)
-                        else mediaRepository.addFavoriteCategory(target.categoryId, target.categoryName, target.contentType)
+                        viewModel.toggleFavoriteCategory(target.categoryId, target.categoryName, target.contentType)
                     }
                     is SearchFavoriteTarget.Stream -> {
-                        if (target.isFavorite) mediaRepository.removeFavorite(target.itemId, target.contentType)
-                        else mediaRepository.addFavorite(target.itemId, target.itemName, target.categoryId, target.contentType)
+                        viewModel.toggleFavoriteStream(target.itemId, target.itemName, target.categoryId, target.contentType)
                     }
                 }
             },
@@ -169,22 +140,21 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(Spacing.lg))
 
-            when (uiState) {
+            when (val state = uiState) {
                 is SearchViewModel.UiState.Loading -> LoadingView()
-                is SearchViewModel.UiState.Error -> ErrorView((uiState as SearchViewModel.UiState.Error).message)
+                is SearchViewModel.UiState.Error -> ErrorView(state.message)
                 is SearchViewModel.UiState.Success -> {
-                    val successState = uiState as SearchViewModel.UiState.Success
-                    val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
-                    val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
-                    val devStats = if (appSettings.isDevMode && successState.searchDataSize != null) {
-                        "${successState.searchDataSize} fetched | ${successState.totalDuration} total | network: ${successState.networkWallDuration} wall / ${successState.networkAccumDuration} accum | ${successState.networkCalls} calls$failedSuffix$errorSuffix"
+                    val failedSuffix = if (state.failedCalls > 0) " (${state.failedCalls} failed)" else ""
+                    val errorSuffix = if (state.firstError != null) "\n${state.firstError}" else ""
+                    val devStats = if (appSettings.isDevMode && state.searchDataSize != null) {
+                        "${state.searchDataSize} fetched | ${state.totalDuration} total | network: ${state.networkWallDuration} wall / ${state.networkAccumDuration} accum | ${state.networkCalls} calls$failedSuffix$errorSuffix"
                     } else null
                     SearchContent(
-                        query = successState.query,
-                        categoryResults = successState.categoryResults,
-                        results = successState.filteredResults,
-                        isSearching = successState.isSearching,
-                        searchProgress = successState.searchProgress ?: "",
+                        query = state.query,
+                        categoryResults = state.categoryResults,
+                        results = state.filteredResults,
+                        isSearching = state.isSearching,
+                        searchProgress = state.searchProgress ?: "",
                         devStats = devStats,
                         onSearchSubmit = { viewModel.performSearch(it) },
                         onResultClick = { result ->
@@ -196,7 +166,7 @@ fun SearchScreen(
                                 itemName = result.streamName,
                                 categoryId = result.categoryId,
                                 contentType = result.contentType,
-                                isFavorite = mediaRepository.isFavorite(result.itemId, result.contentType)
+                                isFavorite = viewModel.isFavorite(result.itemId, result.contentType)
                             )
                         },
                         onCategoryClick = { catResult ->
@@ -207,7 +177,7 @@ fun SearchScreen(
                                 categoryId = catResult.categoryId,
                                 categoryName = catResult.categoryName,
                                 contentType = catResult.contentType,
-                                isFavorite = mediaRepository.isFavoriteCategory(catResult.categoryId, catResult.contentType)
+                                isFavorite = viewModel.isFavoriteCategory(catResult.categoryId, catResult.contentType)
                             )
                         }
                     )

@@ -5,19 +5,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 
-class CategoryViewModelFactory(
+class MovieDetailsViewModelFactory(
     private val context: Context,
-    private val contentType: String,
-    private val providerId: Long = 0L,
-    private val initialCategoryId: String? = null
+    private val movieId: String
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(CategoryViewModel::class.java)) {
+        if (modelClass.isAssignableFrom(MovieDetailsViewModel::class.java)) {
             val appContext = context.applicationContext
             val providerRepo = ProviderRepository(appContext)
-            return CategoryViewModel(appContext, providerRepo, contentType, providerId, initialCategoryId) as T
+            return MovieDetailsViewModel(appContext, providerRepo, movieId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
