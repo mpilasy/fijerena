@@ -210,14 +210,15 @@ class SearchViewModel(
             if (serverSearchSuccess) {
                 val elapsed = System.currentTimeMillis() - startTime
                 val normalizedQuery = query.trim().lowercase()
-                val sortedResults = sortResults(serverResults, normalizedQuery)
+                val queryWords = SearchUtils.getQueryWords(normalizedQuery)
+                val sortedResults = sortResults(serverResults, normalizedQuery, queryWords)
 
                 val matchingCategories = mutableListOf<CategorySearchResult>()
                 for (type in targetContentTypes) {
                     val serverCategories = repository.getFilteredCategories(type)
                     serverCategories.getOrDefault(emptyList())
                         .filter { !it.isVirtual }
-                        .filter { matchesQuery(it.name, normalizedQuery) }
+                        .filter { SearchUtils.matchesQuery(it.name, queryWords) }
                         .forEach {
                             matchingCategories.add(CategorySearchResult(it.id, it.name, type))
                         }
@@ -261,9 +262,10 @@ class SearchViewModel(
 
             val results = mutableListOf<SearchResult>()
             val normalizedQuery = query.trim().lowercase()
+            val queryWords = SearchUtils.getQueryWords(normalizedQuery)
 
             val matchingCategories = realCategories
-                .filter { matchesQuery(it.category.name, normalizedQuery) }
+                .filter { SearchUtils.matchesQuery(it.category.name, queryWords) }
                 .map { CategorySearchResult(it.category.id, it.category.name, it.contentType) }
 
             _uiState.value = UiState.Success(
@@ -285,7 +287,7 @@ class SearchViewModel(
                 if (cached != null) {
                     categoriesSearched++
                     val matchingItems = cached
-                        .filter { matchesQuery(it.name, normalizedQuery) }
+                        .filter { SearchUtils.matchesQuery(it.name, queryWords) }
                         .map { item ->
                             SearchResult(
                                 itemId = item.id,
@@ -305,7 +307,7 @@ class SearchViewModel(
 
             // Show cached results immediately
             if (categoriesSearched > 0) {
-                val sortedCached = sortResults(results, normalizedQuery)
+                val sortedCached = sortResults(results, normalizedQuery, queryWords)
                 val displayCached = sortedCached.take(TARGET_RESULTS)
                 val elapsed = System.currentTimeMillis() - startTime
                 _uiState.value = UiState.Success(
@@ -380,7 +382,7 @@ class SearchViewModel(
                     if (items != null) {
                         networkBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
                         val matchingItems = items
-                            .filter { matchesQuery(it.name, normalizedQuery) }
+                            .filter { SearchUtils.matchesQuery(it.name, queryWords) }
                             .map { item ->
                                 SearchResult(
                                     itemId = item.id,
@@ -403,7 +405,7 @@ class SearchViewModel(
                     val now = System.currentTimeMillis()
                     if (now - lastUiUpdateTime > 100 || categoriesSearched == realCategories.size) {
                         lastUiUpdateTime = now
-                        val sorted = sortResults(results, normalizedQuery)
+                        val sorted = sortResults(results, normalizedQuery, queryWords)
                         val display = sorted.take(TARGET_RESULTS)
                         val now2 = System.currentTimeMillis()
                         _uiState.value = UiState.Success(
@@ -426,7 +428,7 @@ class SearchViewModel(
                 fetchChannel.close()
             }
 
-            val finalResults = sortResults(results, normalizedQuery).take(TARGET_RESULTS)
+            val finalResults = sortResults(results, normalizedQuery, queryWords).take(TARGET_RESULTS)
             val endTime = System.currentTimeMillis()
             val networkEndTime = if (uncachedCategories.isNotEmpty()) endTime else startTime
             _uiState.value = UiState.Success(
@@ -450,15 +452,7 @@ class SearchViewModel(
         }
     }
 
-    private fun matchesQuery(text: String, query: String): Boolean {
-        if (query.isBlank()) return true
-        val words = query.lowercase().split(" ").filter { it.isNotBlank() }
-        if (words.isEmpty()) return true
-        val lowerText = text.lowercase()
-        return words.all { lowerText.contains(it) }
-    }
-
-    private fun sortResults(results: List<SearchResult>, normalizedQuery: String): List<SearchResult> {
+    private fun sortResults(results: List<SearchResult>, normalizedQuery: String, queryWords: List<String>): List<SearchResult> {
         return results.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
             .thenBy {
                 val lowerName = it.streamName.lowercase()
@@ -466,9 +460,8 @@ class SearchViewModel(
                     lowerName == normalizedQuery -> 0
                     lowerName.startsWith(normalizedQuery) -> 1
                     else -> {
-                        val words = normalizedQuery.split(" ").filter { it.isNotBlank() }
-                        if (words.isNotEmpty() && words.all { w -> lowerName.contains(w) }) {
-                            if (lowerName.startsWith(words[0])) 2 else 3
+                        if (queryWords.isNotEmpty() && queryWords.all { w -> lowerName.contains(w) }) {
+                            if (lowerName.startsWith(queryWords[0])) 2 else 3
                         } else 4
                     }
                 }
