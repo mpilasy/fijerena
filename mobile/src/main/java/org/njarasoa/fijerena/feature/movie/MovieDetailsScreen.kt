@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -58,7 +59,7 @@ fun MobileMovieDetailsScreen(
     var resumeDurationMs by remember { mutableStateOf(0L) }
 
     // Favorite state
-    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, "MOVIES")) }
+    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, ContentType.MOVIES)) }
 
     android.util.Log.d("MovieDetailsScreen", "State: isLoading=$isLoading, error=$error, movieDetail=${movieDetail != null}")
 
@@ -79,7 +80,7 @@ fun MobileMovieDetailsScreen(
         )
 
         // Load resume position
-        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, "MOVIES")
+        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, ContentType.MOVIES)
         if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
             val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
             if (progress in 2.0..95.0) {
@@ -101,9 +102,9 @@ fun MobileMovieDetailsScreen(
                 actions = {
                     IconButton(onClick = {
                         if (isFavorite) {
-                            mediaRepository.removeFavorite(movieId, "MOVIES")
+                            mediaRepository.removeFavorite(movieId, ContentType.MOVIES)
                         } else {
-                            mediaRepository.addFavorite(movieId, movieName, categoryId, "MOVIES")
+                            mediaRepository.addFavorite(movieId, movieName, categoryId, ContentType.MOVIES)
                         }
                         isFavorite = !isFavorite
                     }) {

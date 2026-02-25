@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.local
 
 import android.content.Context
 import android.net.Uri
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -24,8 +25,8 @@ class LocalMediaProvider(
 
     override val capabilities = ProviderCapabilities(
         supportedContentTypes = buildSet {
-            add("MOVIES")
-            if (config.m3uPath != null) add("LIVE_TV")
+            add(ContentType.MOVIES)
+            if (config.m3uPath != null) add(ContentType.LIVE_TV)
         },
         supportsEpg = false,
         supportsSearch = true,
@@ -86,7 +87,7 @@ class LocalMediaProvider(
         }
 
         val filteredCategories = when (contentType) {
-            "LIVE_TV" -> {
+            ContentType.LIVE_TV -> {
                 // Only categories containing live channels
                 val liveCategoryIds = items.filter { it.mediaType == MediaType.LIVE_CHANNEL }
                     .map { it.categoryId }.toSet()

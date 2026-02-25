@@ -61,6 +61,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -1038,7 +1039,7 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                providerRepo.clearCacheForProviderContentType(editId, "LIVE_TV")
+                                providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
                                 cacheRefreshTrigger++
                                 showClearLiveTvCacheDialog = false
                             },
@@ -1059,7 +1060,7 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                providerRepo.clearCacheForProviderContentType(editId, "MOVIES")
+                                providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
                                 cacheRefreshTrigger++
                                 showClearMoviesCacheDialog = false
                             },
@@ -1080,7 +1081,7 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                providerRepo.clearCacheForProviderContentType(editId, "TV_SHOWS")
+                                providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
                                 cacheRefreshTrigger++
                                 showClearTvShowsCacheDialog = false
                             },

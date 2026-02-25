@@ -50,6 +50,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -194,7 +195,7 @@ fun MobilePlayerScreen(
 
     // Save playback position periodically for VOD content
     LaunchedEffect(Unit) {
-        if (contentType != "LIVE_TV") {
+        if (contentType != ContentType.LIVE_TV) {
             while (true) {
                 delay(5000L)
                 val ps = viewModel.playbackState.value
@@ -226,8 +227,8 @@ fun MobilePlayerScreen(
     // Configure player buffer profile based on content type
     LaunchedEffect(contentType) {
         val playerContentType = when (contentType) {
-            "LIVE_TV" -> org.njarasoa.fijerena.core.player.config.PlayerConfigFactory.ContentType.LIVE_TV
-            "MOVIES", "TV_SHOWS" -> org.njarasoa.fijerena.core.player.config.PlayerConfigFactory.ContentType.VOD
+            ContentType.LIVE_TV -> org.njarasoa.fijerena.core.player.config.PlayerConfigFactory.ContentType.LIVE_TV
+            ContentType.MOVIES, ContentType.TV_SHOWS -> org.njarasoa.fijerena.core.player.config.PlayerConfigFactory.ContentType.VOD
             else -> org.njarasoa.fijerena.core.player.config.PlayerConfigFactory.ContentType.VOD
         }
         StreamingPlaybackService.getInstance()?.setContentType(playerContentType)

@@ -54,7 +54,8 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.njarasoa.fijerena.core.navigation.ContentType
+import org.njarasoa.fijerena.core.navigation.ContentType as NavContentType
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -85,7 +86,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
  */
 @Composable
 fun ContentTypeSelectionScreen(
-    onContentTypeSelected: (ContentType) -> Unit,
+    onContentTypeSelected: (NavContentType) -> Unit,
     onSettings: () -> Unit,
     onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {}
@@ -94,7 +95,7 @@ fun ContentTypeSelectionScreen(
     val appSettings = remember { AppSettings(context.applicationContext) }
     var providerName by remember { mutableStateOf("") }
     var providerType by remember { mutableStateOf("") }
-    var supportedContentTypes by remember { mutableStateOf<Set<String>>(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
+    var supportedContentTypes by remember { mutableStateOf<Set<String>>(setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS)) }
     var showProviderPicker by remember { mutableStateOf(false) }
     var allProviders by remember { mutableStateOf<List<org.njarasoa.fijerena.core.network.provider.ProviderEntity>>(emptyList()) }
     var activeProviderId by remember { mutableStateOf(0L) }
@@ -149,20 +150,20 @@ fun ContentTypeSelectionScreen(
         val filters = categoryFilters
         val hasFilters = filters.prefixes.isNotEmpty() || filters.allowedScripts.isNotEmpty()
         withContext(Dispatchers.IO) {
-            if ("LIVE_TV" in mp.capabilities.supportedContentTypes) {
-                mp.getCategories("LIVE_TV").onSuccess { cats ->
+            if (ContentType.LIVE_TV in mp.capabilities.supportedContentTypes) {
+                mp.getCategories(ContentType.LIVE_TV).onSuccess { cats ->
                     val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
                     liveTvCounts = Pair(filtered, cats.size)
                 }
             }
-            if ("MOVIES" in mp.capabilities.supportedContentTypes) {
-                mp.getCategories("MOVIES").onSuccess { cats ->
+            if (ContentType.MOVIES in mp.capabilities.supportedContentTypes) {
+                mp.getCategories(ContentType.MOVIES).onSuccess { cats ->
                     val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
                     moviesCounts = Pair(filtered, cats.size)
                 }
             }
-            if ("TV_SHOWS" in mp.capabilities.supportedContentTypes) {
-                mp.getCategories("TV_SHOWS").onSuccess { cats ->
+            if (ContentType.TV_SHOWS in mp.capabilities.supportedContentTypes) {
+                mp.getCategories(ContentType.TV_SHOWS).onSuccess { cats ->
                     val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
                     tvShowsCounts = Pair(filtered, cats.size)
                 }
@@ -283,7 +284,7 @@ fun ContentTypeSelectionScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     val isDevMode = appSettings.isDevMode
-                    if ("LIVE_TV" in supportedContentTypes) {
+                    if (ContentType.LIVE_TV in supportedContentTypes) {
                         ContentTypeHeroCard(
                             title = "Live TV",
                             subtitle = "Watch live channels",
@@ -291,12 +292,12 @@ fun ContentTypeSelectionScreen(
                             categoryCounts = liveTvCounts,
                             showTotal = isDevMode,
                             gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                            onClick = { onContentTypeSelected(ContentType.LIVE_TV) },
+                            onClick = { onContentTypeSelected(NavContentType.LIVE_TV) },
                             modifier = Modifier.weight(1f)
                         )
                     }
 
-                    if ("MOVIES" in supportedContentTypes) {
+                    if (ContentType.MOVIES in supportedContentTypes) {
                         ContentTypeHeroCard(
                             title = "Movies",
                             subtitle = "Browse on-demand",
@@ -304,12 +305,12 @@ fun ContentTypeSelectionScreen(
                             categoryCounts = moviesCounts,
                             showTotal = isDevMode,
                             gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                            onClick = { onContentTypeSelected(ContentType.MOVIES) },
+                            onClick = { onContentTypeSelected(NavContentType.MOVIES) },
                             modifier = Modifier.weight(1f)
                         )
                     }
 
-                    if ("TV_SHOWS" in supportedContentTypes) {
+                    if (ContentType.TV_SHOWS in supportedContentTypes) {
                         ContentTypeHeroCard(
                             title = "TV Shows",
                             subtitle = "Series & episodes",
@@ -317,7 +318,7 @@ fun ContentTypeSelectionScreen(
                             categoryCounts = tvShowsCounts,
                             showTotal = isDevMode,
                             gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                            onClick = { onContentTypeSelected(ContentType.TV_SHOWS) },
+                            onClick = { onContentTypeSelected(NavContentType.TV_SHOWS) },
                             modifier = Modifier.weight(1f)
                         )
                     }

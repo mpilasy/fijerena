@@ -60,6 +60,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.FilterMode
@@ -1152,7 +1153,7 @@ fun TvAddProviderScreen(
                         confirmButton = {
                             Button(
                                 onClick = {
-                                    providerRepo.clearCacheForProviderContentType(editId, "LIVE_TV")
+                                    providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
                                     cacheRefreshTrigger++
                                     showClearLiveTvCacheDialog = false
                                 },
@@ -1177,7 +1178,7 @@ fun TvAddProviderScreen(
                         confirmButton = {
                             Button(
                                 onClick = {
-                                    providerRepo.clearCacheForProviderContentType(editId, "MOVIES")
+                                    providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
                                     cacheRefreshTrigger++
                                     showClearMoviesCacheDialog = false
                                 },
@@ -1202,7 +1203,7 @@ fun TvAddProviderScreen(
                         confirmButton = {
                             Button(
                                 onClick = {
-                                    providerRepo.clearCacheForProviderContentType(editId, "TV_SHOWS")
+                                    providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
                                     cacheRefreshTrigger++
                                     showClearTvShowsCacheDialog = false
                                 },

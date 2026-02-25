@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
@@ -73,7 +74,7 @@ class EpgViewModel(
             }
 
             // Get items for category
-            val itemsResult = repository.getItems(categoryId, "LIVE_TV")
+            val itemsResult = repository.getItems(categoryId, ContentType.LIVE_TV)
             val items = itemsResult.getOrElse {
                 _uiState.value = UiState.Error("Failed to load channels: ${it.message}")
                 return@launch

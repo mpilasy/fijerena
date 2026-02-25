@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -130,7 +131,7 @@ fun MovieDetailsScreen(
         )
 
         // Load resume position
-        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, "MOVIES")
+        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, ContentType.MOVIES)
         if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
             val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
             if (progress in 2.0..95.0) {
@@ -190,7 +191,7 @@ private fun MovieDetailsContent(
     val scale = LocalUiScale.current
 
     // Favorite state
-    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, "MOVIES")) }
+    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, ContentType.MOVIES)) }
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
@@ -248,9 +249,9 @@ private fun MovieDetailsContent(
                     IconButton(
                         onClick = {
                             if (isFavorite) {
-                                mediaRepository.removeFavorite(movieId, "MOVIES")
+                                mediaRepository.removeFavorite(movieId, ContentType.MOVIES)
                             } else {
-                                mediaRepository.addFavorite(movieId, movieDetail.name.ifEmpty { movieName }, categoryId, "MOVIES")
+                                mediaRepository.addFavorite(movieId, movieDetail.name.ifEmpty { movieName }, categoryId, ContentType.MOVIES)
                             }
                             isFavorite = !isFavorite
                         },

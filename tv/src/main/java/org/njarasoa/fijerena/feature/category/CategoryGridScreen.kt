@@ -69,6 +69,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -249,7 +250,7 @@ private fun CategoryGridContent(
                     put("Categories", "${state.categories.size}")
                     state.streams?.let { put("Streams", "${it.size}") }
                     // EPG index info (Live TV only)
-                    if (contentType == "LIVE_TV") {
+                    if (contentType == ContentType.LIVE_TV) {
                         when (val epg = epgIndexState) {
                             is EpgIndexState.Indexed -> {
                                 put("EPG Index", "${epg.programmeCount} progs, ${epg.channelCount} ch")
@@ -360,7 +361,7 @@ private fun TwoColumnLayout(
                 // EPG button - show for Live TV when native EPG or XMLTV index is available
                 val hasEpgData = supportsNativeEpg ||
                     epgIndexState is EpgIndexState.Indexed
-                if (contentType == "LIVE_TV" && selectedCategoryId != null && hasEpgData) {
+                if (contentType == ContentType.LIVE_TV && selectedCategoryId != null && hasEpgData) {
                     val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name
                     if (selectedCategoryName != null) {
                         CinemaSecondaryButton(
@@ -403,7 +404,7 @@ private fun TwoColumnLayout(
         }
 
         // EPG error/status banner (Live TV only)
-        if (contentType == "LIVE_TV") {
+        if (contentType == ContentType.LIVE_TV) {
             val epgErrorMessage = when (epgIndexState) {
                 is EpgIndexState.Failed -> "EPG indexing failed"
                 is EpgIndexState.Indexing -> "EPG indexing ${epgIndexState.progressPercent}%..."

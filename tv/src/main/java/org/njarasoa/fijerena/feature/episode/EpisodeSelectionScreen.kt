@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -242,7 +243,7 @@ private fun EpisodeListContent(
                 ?.sortedBy { it.episodeNumber }
                 ?: continue
             for (episode in episodes) {
-                val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, "TV_SHOWS")
+                val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
                 if (watched == null || !watched.isCompleted) {
                     expandedSeasons = setOf(season.seasonNumber)
                     return@LaunchedEffect
@@ -432,7 +433,7 @@ private fun EpisodeDetailPanel(
     var resumePositionMs by remember { mutableStateOf(0L) }
 
     LaunchedEffect(episode.id) {
-        val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, "TV_SHOWS")
+        val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
         if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
             val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
             if (progress in 2.0..95.0) {

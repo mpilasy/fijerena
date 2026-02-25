@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.WatchedItem
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 
@@ -95,7 +96,7 @@ class StreamLoaderViewModel(
                 var currentStreams: List<MediaItem> = emptyList()
                 var lastWatched: List<MediaItem> = emptyList()
 
-                if (contentType == "LIVE_TV") {
+                if (contentType == ContentType.LIVE_TV) {
                     val result = repo.getItems(categoryId, contentType)
                     result.fold(
                         onSuccess = { items ->
@@ -146,7 +147,7 @@ class StreamLoaderViewModel(
                 onSuccess = { playable ->
                     // Determine Resume Position
                     var resumePos = 0L
-                    if (!startFromBeginning && contentType != "LIVE_TV" && appSettings.autoResumeEnabled) {
+                    if (!startFromBeginning && contentType != ContentType.LIVE_TV && appSettings.autoResumeEnabled) {
                         val saved = repo.getPlaybackPositionSuspend(streamId, contentType)
                         if (saved != null) {
                             val progressPercent = if (saved.duration > 0) {
@@ -165,7 +166,7 @@ class StreamLoaderViewModel(
                     var currentProgram: EpgProgram? = null
                     var nextProgram: EpgProgram? = null
 
-                    if (contentType == "LIVE_TV") {
+                    if (contentType == ContentType.LIVE_TV) {
                         val currentItem = currentStreams.find { it.id == streamId }
                             ?: MediaItem(streamId, streamName, org.njarasoa.fijerena.core.player.domain.MediaType.LIVE_CHANNEL, categoryId)
 
@@ -184,7 +185,7 @@ class StreamLoaderViewModel(
                         streamName = streamName,
                         streamId = streamId,
                         resumePosition = resumePos,
-                        isLive = contentType == "LIVE_TV",
+                        isLive = contentType == ContentType.LIVE_TV,
                         categoryStreams = currentStreams,
                         lastWatchedStreams = lastWatched,
                         currentEpgProgram = currentProgram,
@@ -196,8 +197,8 @@ class StreamLoaderViewModel(
                     historyJob?.cancel()
                     historyJob = viewModelScope.launch(Dispatchers.IO) {
                         delay(5000)
-                        val watchHistoryStreamId = if (contentType == "TV_SHOWS" && seriesId != null) seriesId else streamId
-                        val watchHistoryStreamName = if (contentType == "TV_SHOWS" && seriesName != null) seriesName else streamName
+                        val watchHistoryStreamId = if (contentType == ContentType.TV_SHOWS && seriesId != null) seriesId else streamId
+                        val watchHistoryStreamName = if (contentType == ContentType.TV_SHOWS && seriesName != null) seriesName else streamName
                         repo.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
                     }
                 },
@@ -262,7 +263,7 @@ class StreamLoaderViewModel(
             val repo = mediaRepository ?: return@launch
 
             // Save playback position (Resume Point)
-            if (contentType != "LIVE_TV") {
+            if (contentType != ContentType.LIVE_TV) {
                 repo.savePlaybackPosition(
                     currentState.streamId,
                     currentState.streamName,

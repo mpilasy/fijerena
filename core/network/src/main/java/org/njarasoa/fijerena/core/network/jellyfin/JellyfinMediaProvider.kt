@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network.jellyfin
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -40,7 +41,7 @@ class JellyfinMediaProvider(
     private val mediaSourceIds = mutableMapOf<String, String>()
 
     override val capabilities = ProviderCapabilities(
-        supportedContentTypes = setOf("MOVIES", "TV_SHOWS"),
+        supportedContentTypes = setOf(ContentType.MOVIES, ContentType.TV_SHOWS),
         supportsEpg = false,
         supportsSearch = true,
         supportsAuthentication = true,
@@ -73,8 +74,8 @@ class JellyfinMediaProvider(
             api.getLibraries().map { libraries ->
                 libraries.filter { library ->
                     when (contentType) {
-                        "MOVIES" -> library.collectionType == "movies"
-                        "TV_SHOWS" -> library.collectionType == "tvshows"
+                        ContentType.MOVIES -> library.collectionType == "movies"
+                        ContentType.TV_SHOWS -> library.collectionType == "tvshows"
                         else -> true
                     }
                 }.map { library ->
@@ -91,8 +92,8 @@ class JellyfinMediaProvider(
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
         val includeTypes = when (contentType) {
-            "MOVIES" -> "Movie"
-            "TV_SHOWS" -> "Series"
+            ContentType.MOVIES -> "Movie"
+            ContentType.TV_SHOWS -> "Series"
             else -> null
         }
 
@@ -107,8 +108,8 @@ class JellyfinMediaProvider(
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
         val includeTypes = when (contentType) {
-            "MOVIES" -> "Movie"
-            "TV_SHOWS" -> "Series"
+            ContentType.MOVIES -> "Movie"
+            ContentType.TV_SHOWS -> "Series"
             else -> null
         }
 
@@ -367,8 +368,8 @@ class JellyfinMediaProvider(
 
     private fun contentTypeToJellyfinType(contentType: String): String? {
         return when (contentType) {
-            "MOVIES" -> "Movie"
-            "TV_SHOWS" -> "Series"
+            ContentType.MOVIES -> "Movie"
+            ContentType.TV_SHOWS -> "Series"
             else -> null
         }
     }
@@ -378,7 +379,7 @@ class JellyfinMediaProvider(
             "Movie" -> MediaType.MOVIE
             "Series" -> MediaType.SERIES
             "Episode" -> MediaType.EPISODE
-            else -> if (contentType == "TV_SHOWS") MediaType.SERIES else MediaType.MOVIE
+            else -> if (contentType == ContentType.TV_SHOWS) MediaType.SERIES else MediaType.MOVIE
         }
 
         val provData = buildMap {

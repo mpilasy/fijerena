@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesEntity
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
+import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
  * Represents a watched stream in the history
@@ -53,7 +54,7 @@ data class FavoriteStream(
     val streamId: Int,           // streamId for Live/Movies, seriesId for TV Shows
     val streamName: String,       // Display name
     val categoryId: String,       // Original category reference
-    val contentType: String,      // "LIVE_TV", "MOVIES", or "TV_SHOWS"
+    val contentType: String,      // ContentType.LIVE_TV, ContentType.MOVIES, or ContentType.TV_SHOWS
     val timestamp: Long = System.currentTimeMillis()  // For ordering
 )
 
@@ -530,13 +531,13 @@ class XtreamRepository(
         } catch (e: Exception) { null }
     }
 
-    fun buildStreamUrl(streamId: Int, contentType: String = "LIVE_TV", extension: String? = null): Result<String> = resultOf {
+    fun buildStreamUrl(streamId: Int, contentType: String = ContentType.LIVE_TV, extension: String? = null): Result<String> = resultOf {
         val service = apiService
             ?: throw Exception("Not authenticated. Please login first.")
         when (contentType) {
-            "LIVE_TV" -> service.buildStreamUrl(streamId)
-            "MOVIES" -> service.buildVodStreamUrl(streamId, extension ?: "mp4")
-            "TV_SHOWS" -> service.buildSeriesStreamUrl(streamId, extension ?: "mp4")
+            ContentType.LIVE_TV -> service.buildStreamUrl(streamId)
+            ContentType.MOVIES -> service.buildVodStreamUrl(streamId, extension ?: "mp4")
+            ContentType.TV_SHOWS -> service.buildSeriesStreamUrl(streamId, extension ?: "mp4")
             else -> service.buildStreamUrl(streamId)
         }
     }
@@ -674,19 +675,19 @@ class XtreamRepository(
     fun clearCacheForContentType(contentType: String) {
         val editor = cache.edit()
         when (contentType) {
-            "LIVE_TV" -> {
+            ContentType.LIVE_TV -> {
                 editor.remove(KEY_CATEGORIES_TIMESTAMP)
                 fetchTimes.remove("live_categories")
                 categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
                 streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_LIVE)
             }
-            "MOVIES" -> {
+            ContentType.MOVIES -> {
                 editor.remove(KEY_VOD_CATEGORIES_TIMESTAMP)
                 fetchTimes.remove("vod_categories")
                 categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
                 streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_VOD)
             }
-            "TV_SHOWS" -> {
+            ContentType.TV_SHOWS -> {
                 editor.remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
                 fetchTimes.remove("series_categories")
                 categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_SERIES)
@@ -716,15 +717,15 @@ class XtreamRepository(
 
         // Save content-type specific last played
         when (contentType) {
-            "LIVE_TV" -> {
+            ContentType.LIVE_TV -> {
                 editor.putString(KEY_LAST_LIVE_CATEGORY, categoryId)
                 editor.putInt(KEY_LAST_LIVE_STREAM, streamId)
             }
-            "MOVIES" -> {
+            ContentType.MOVIES -> {
                 editor.putString(KEY_LAST_MOVIES_CATEGORY, categoryId)
                 editor.putInt(KEY_LAST_MOVIES_STREAM, streamId)
             }
-            "TV_SHOWS" -> {
+            ContentType.TV_SHOWS -> {
                 editor.putString(KEY_LAST_TVSHOWS_CATEGORY, categoryId)
                 editor.putInt(KEY_LAST_TVSHOWS_STREAM, streamId)
             }
@@ -744,9 +745,9 @@ class XtreamRepository(
      */
     fun getLastCategoryId(contentType: String): String? {
         return when (contentType) {
-            "LIVE_TV" -> cache.getString(KEY_LAST_LIVE_CATEGORY, null)
-            "MOVIES" -> cache.getString(KEY_LAST_MOVIES_CATEGORY, null)
-            "TV_SHOWS" -> cache.getString(KEY_LAST_TVSHOWS_CATEGORY, null)
+            ContentType.LIVE_TV -> cache.getString(KEY_LAST_LIVE_CATEGORY, null)
+            ContentType.MOVIES -> cache.getString(KEY_LAST_MOVIES_CATEGORY, null)
+            ContentType.TV_SHOWS -> cache.getString(KEY_LAST_TVSHOWS_CATEGORY, null)
             else -> null
         }
     }
@@ -756,9 +757,9 @@ class XtreamRepository(
      */
     fun getLastStreamId(contentType: String): Int? {
         val streamId = when (contentType) {
-            "LIVE_TV" -> cache.getInt(KEY_LAST_LIVE_STREAM, -1)
-            "MOVIES" -> cache.getInt(KEY_LAST_MOVIES_STREAM, -1)
-            "TV_SHOWS" -> cache.getInt(KEY_LAST_TVSHOWS_STREAM, -1)
+            ContentType.LIVE_TV -> cache.getInt(KEY_LAST_LIVE_STREAM, -1)
+            ContentType.MOVIES -> cache.getInt(KEY_LAST_MOVIES_STREAM, -1)
+            ContentType.TV_SHOWS -> cache.getInt(KEY_LAST_TVSHOWS_STREAM, -1)
             else -> -1
         }
         return if (streamId != -1) streamId else null
@@ -915,21 +916,21 @@ class XtreamRepository(
      */
     fun clearCategoriesCache(contentType: String) {
         when (contentType) {
-            "LIVE_TV" -> {
+            ContentType.LIVE_TV -> {
                 cache.edit()
                     .remove(KEY_CATEGORIES_TIMESTAMP)
                     .apply()
                 fetchTimes.remove("live_categories")
                 categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
             }
-            "MOVIES" -> {
+            ContentType.MOVIES -> {
                 cache.edit()
                     .remove(KEY_VOD_CATEGORIES_TIMESTAMP)
                     .apply()
                 fetchTimes.remove("vod_categories")
                 categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
             }
-            "TV_SHOWS" -> {
+            ContentType.TV_SHOWS -> {
                 cache.edit()
                     .remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
                     .apply()
@@ -982,7 +983,7 @@ class XtreamRepository(
         duration: Long
     ) {
         // Skip for Live TV
-        if (contentType == "LIVE_TV") return
+        if (contentType == ContentType.LIVE_TV) return
 
         // Calculate completion
         val progressPercent = if (duration > 0) {
