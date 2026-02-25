@@ -87,8 +87,15 @@ object M3uParser {
     }
 
     private fun extractAttribute(infoLine: String, attribute: String): String? {
-        val regex = Regex("""$attribute="([^"]*)"""")
-        return regex.find(infoLine)?.groupValues?.getOrNull(1)
+        val search = "$attribute=\""
+        val startIndex = infoLine.indexOf(search)
+        if (startIndex == -1) return null
+
+        val valueStartIndex = startIndex + search.length
+        val valueEndIndex = infoLine.indexOf('"', valueStartIndex)
+        if (valueEndIndex == -1) return null
+
+        return infoLine.substring(valueStartIndex, valueEndIndex)
     }
 
     private fun isLiveUrl(url: String): Boolean {
