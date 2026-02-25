@@ -532,7 +532,7 @@ class JellyfinApiService(
             postCapabilities()
             Result.success(response)
         } catch (e: Exception) {
-            Log.e(TAG, "Quick Connect auth failed", e)
+            Log.e(TAG, "Quick Connect auth failed")
             Result.failure(e)
         }
     }
