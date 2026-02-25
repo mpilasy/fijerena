@@ -472,6 +472,35 @@ class XtreamRepository(
         }
     }
 
+    suspend fun getAllStreams(contentType: String): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
+        suspendResultOf {
+            val type = when(contentType) {
+                "LIVE_TV" -> XtreamStreamEntity.TYPE_LIVE
+                "MOVIES" -> XtreamStreamEntity.TYPE_VOD
+                "TV_SHOWS" -> "TV_SHOWS"
+                else -> XtreamStreamEntity.TYPE_LIVE
+            }
+
+            if (type == "TV_SHOWS") {
+                val key = KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES_ALL"
+                if (!isCacheFresh(key)) {
+                    syncSeries().await()
+                }
+                return@suspendResultOf seriesDao.getAllSeries(providerId).map { mapSeriesEntityToStream(it) }
+            }
+
+            val key = KEY_STREAMS_TIMESTAMP_PREFIX + (if (type == XtreamStreamEntity.TYPE_LIVE) "LIVE_ALL" else "VOD_ALL")
+            val threshold = if (type == XtreamStreamEntity.TYPE_LIVE) liveStreamRefreshThresholdMs else cacheExpiryMs
+
+            if (!isCacheFresh(key, threshold)) {
+                syncStreams(type).await()
+            }
+
+            val dbEntities = streamDao.getAllStreams(providerId, type)
+            dbEntities.map { mapStreamEntityToModel(it) }
+        }
+    }
+
     private fun mapStreamEntityToModel(entity: XtreamStreamEntity): XtreamStream {
         return XtreamStream(
             num = entity.num,

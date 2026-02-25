@@ -341,23 +341,46 @@ class SearchViewModel(
                 val fetchChannel = Channel<FetchResult>(Channel.UNLIMITED)
 
                 val producerJob = scope.launch(Dispatchers.IO) {
-                    for (sc in uncachedCategories) {
-                        launch {
-                            semaphore.withPermit {
-                                val t0 = System.currentTimeMillis()
-                                var items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>? = null
-                                var error: String? = null
-                                try {
-                                    val result = repository.getItemsForSearch(sc.category.id, sc.contentType)
-                                    items = result.getOrNull()
-                                    if (items == null) {
-                                        error = result.exceptionOrNull()?.message ?: "Unknown failure"
+                    val uncachedByContentType = uncachedCategories.groupBy { it.contentType }
+
+                    for ((type, categories) in uncachedByContentType) {
+                        // Try batch fetch first to avoid N+1 queries
+                        val tBatch = System.currentTimeMillis()
+                        val batchResult = repository.getAllItems(type)
+
+                        if (batchResult.isSuccess) {
+                            val allItems = batchResult.getOrNull() ?: emptyList()
+                            val itemsByCategory = allItems.groupBy { it.categoryId }
+                            val duration = System.currentTimeMillis() - tBatch
+                            // Distribute duration roughly among categories to keep stats somewhat meaningful,
+                            // though networkCalls will appear higher than reality.
+                            val durationPerCat = if (categories.isNotEmpty()) duration / categories.size else 0L
+
+                            categories.forEach { sc ->
+                                val catItems = itemsByCategory[sc.category.id] ?: emptyList()
+                                fetchChannel.send(FetchResult(sc.category, sc.contentType, catItems, durationPerCat))
+                            }
+                        } else {
+                            // Fallback to individual parallel fetching if batch not supported/failed
+                            for (sc in categories) {
+                                launch {
+                                    semaphore.withPermit {
+                                        val t0 = System.currentTimeMillis()
+                                        var items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>? = null
+                                        var error: String? = null
+                                        try {
+                                            val result = repository.getItemsForSearch(sc.category.id, sc.contentType)
+                                            items = result.getOrNull()
+                                            if (items == null) {
+                                                error = result.exceptionOrNull()?.message ?: "Unknown failure"
+                                            }
+                                        } catch (e: Exception) {
+                                            error = e.message ?: e.javaClass.simpleName
+                                        }
+                                        val dt = System.currentTimeMillis() - t0
+                                        fetchChannel.send(FetchResult(sc.category, sc.contentType, items, dt, error))
                                     }
-                                } catch (e: Exception) {
-                                    error = e.message ?: e.javaClass.simpleName
                                 }
-                                val dt = System.currentTimeMillis() - t0
-                                fetchChannel.send(FetchResult(sc.category, sc.contentType, items, dt, error))
                             }
                         }
                     }

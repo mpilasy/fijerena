@@ -175,6 +175,11 @@ class MediaRepository(
             ?: kotlin.Result.failure(Exception("No provider set"))
     }
 
+    suspend fun getAllItems(contentType: String): kotlin.Result<List<MediaItem>> {
+        return provider?.getAllItems(contentType)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+    }
+
     suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> {
         return provider?.getSeriesDetail(seriesId)
             ?: kotlin.Result.failure(Exception("No provider set"))
