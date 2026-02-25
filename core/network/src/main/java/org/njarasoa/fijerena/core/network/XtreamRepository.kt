@@ -64,9 +64,11 @@ class XtreamRepository(
     private val accountManager: AccountManager,
     context: Context,
     private val providerId: Long = 0L,
-    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT
+    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
+    database: XtreamDatabase? = null,
+    apiService: XtreamApiService? = null
 ) {
-    private var apiService: XtreamApiService? = null
+    private var apiService: XtreamApiService? = apiService
     private val cacheName = if (providerId > 0L) "xtream_cache_$providerId" else "xtream_cache"
     private val cache: SharedPreferences = context.getSharedPreferences(
         cacheName,
@@ -78,7 +80,7 @@ class XtreamRepository(
         encodeDefaults = true
     }
 
-    private val database = XtreamDatabase.getInstance(context)
+    private val database = database ?: XtreamDatabase.getInstance(context)
     private val categoryDao = database.categoryDao()
     private val streamDao = database.streamDao()
     private val seriesDao = database.seriesDao()
@@ -1242,7 +1244,7 @@ class XtreamRepository(
                  try {
                      coroutineScope {
                          val batch = mutableListOf<XtreamStreamEntity>()
-                         val BATCH_SIZE = 500
+                         val BATCH_SIZE = 2000
                          
                          val currentHashes = streamDao.getStreamHashes(providerId, type)
                          val seenIds = mutableSetOf<Int>()
@@ -1279,7 +1281,6 @@ class XtreamRepository(
                                  database.runInTransaction {
                                      streamDao.insertAll(toInsert)
                                  }
-                                 delay(50) // Give GC time to breathe between massive batches
                              }
                          }
 
@@ -1320,7 +1321,7 @@ class XtreamRepository(
                  try {
                      coroutineScope {
                          val batch = mutableListOf<XtreamSeriesEntity>()
-                         val BATCH_SIZE = 500
+                         val BATCH_SIZE = 2000
                          
                          val currentHashes = seriesDao.getSeriesHashes(providerId)
                          val seenIds = mutableSetOf<Int>()
@@ -1360,7 +1361,6 @@ class XtreamRepository(
                                  database.runInTransaction {
                                      seriesDao.insertAll(toInsert)
                                  }
-                                 delay(50) // Give GC time to breathe
                              }
                          }
 
