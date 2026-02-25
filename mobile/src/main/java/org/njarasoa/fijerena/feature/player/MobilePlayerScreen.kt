@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
@@ -59,6 +58,8 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.SelectorDialog
+import org.njarasoa.fijerena.core.ui.components.SelectorItem
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -1057,64 +1058,25 @@ private fun AudioTrackSelectorDialog(
     onDismiss: () -> Unit
 ) {
     val audioTracks = remember { viewModel.getAudioTracks() }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Audio Track") },
-        text = {
-            if (audioTracks.isEmpty()) {
-                Text("No audio tracks available")
-            } else {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    audioTracks.forEachIndexed { _, track ->
-                        Surface(
-                            onClick = {
-                                viewModel.selectAudioTrack(track.groupIndex, track.trackIndex)
-                                onDismiss()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = if (track.isSelected)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(CinemaCornerRadius.small)
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = track.label,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                    if (track.isSelected) {
-                                        Text(
-                                            text = "Active",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = "${track.channelCount}ch - ${track.sampleRate / 1000}kHz",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+    val items = remember(audioTracks) {
+        audioTracks.map { track ->
+            SelectorItem(
+                title = track.label,
+                subtitle = "${track.channelCount}ch - ${track.sampleRate / 1000}kHz",
+                isSelected = track.isSelected,
+                onClick = {
+                    viewModel.selectAudioTrack(track.groupIndex, track.trackIndex)
+                    onDismiss()
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            )
         }
+    }
+
+    SelectorDialog(
+        title = "Select Audio Track",
+        onDismissRequest = onDismiss,
+        items = items,
+        emptyText = "No audio tracks available"
     )
 }
 
@@ -1128,94 +1090,38 @@ private fun SubtitleSelectorDialog(
     val subtitleTracks = remember { viewModel.getSubtitleTracks() }
     val hasActiveSubtitle = subtitleTracks.any { it.isSelected }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Subtitles") },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // "Off" option
-                Surface(
+    val items = remember(subtitleTracks, hasActiveSubtitle) {
+        buildList {
+            add(
+                SelectorItem(
+                    title = "Off",
+                    isSelected = !hasActiveSubtitle,
                     onClick = {
                         viewModel.disableSubtitles()
                         onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = if (!hasActiveSubtitle)
-                        MaterialTheme.colorScheme.primaryContainer
-                    else
-                        MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(CinemaCornerRadius.small)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Off",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = if (!hasActiveSubtitle) FontWeight.Bold else FontWeight.Normal
-                        )
-                        if (!hasActiveSubtitle) {
-                            Text(
-                                text = "Active",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
                     }
-                }
-
-                subtitleTracks.forEachIndexed { _, track ->
-                    Surface(
+                )
+            )
+            subtitleTracks.forEach { track ->
+                add(
+                    SelectorItem(
+                        title = track.label,
+                        subtitle = track.mimeType.substringAfterLast("/").uppercase(),
+                        isSelected = track.isSelected,
                         onClick = {
                             viewModel.selectSubtitleTrack(track.groupIndex, track.trackIndex)
                             onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = if (track.isSelected)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(CinemaCornerRadius.small)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = track.label,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                                if (track.isSelected) {
-                                    Text(
-                                        text = "Active",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                            Text(
-                                text = track.mimeType.substringAfterLast("/").uppercase(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
-                    }
-                }
+                    )
+                )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
         }
+    }
+
+    SelectorDialog(
+        title = "Select Subtitles",
+        onDismissRequest = onDismiss,
+        items = items
     )
 }
 
@@ -1229,99 +1135,39 @@ private fun QualitySelectorDialog(
     val videoQualities = remember { viewModel.getVideoQualities() }
     val hasManualSelection = videoQualities.any { it.isSelected }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Quality") },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // "Auto" option
-                Surface(
+    val items = remember(videoQualities, hasManualSelection) {
+        buildList {
+            add(
+                SelectorItem(
+                    title = "Auto (Adaptive)",
+                    subtitle = "Adjust quality based on network",
+                    isSelected = !hasManualSelection,
                     onClick = {
                         viewModel.enableAutoQuality()
                         onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = if (!hasManualSelection)
-                        MaterialTheme.colorScheme.primaryContainer
-                    else
-                        MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(CinemaCornerRadius.small)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Auto (Adaptive)",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (!hasManualSelection) FontWeight.Bold else FontWeight.Normal
-                            )
-                            if (!hasManualSelection) {
-                                Text(
-                                    text = "Active",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                        Text(
-                            text = "Adjust quality based on network",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
-                }
-
-                videoQualities.forEachIndexed { _, quality ->
-                    Surface(
+                )
+            )
+            videoQualities.forEach { quality ->
+                add(
+                    SelectorItem(
+                        title = quality.label,
+                        subtitle = "${quality.width}x${quality.height} - ${quality.frameRate.toInt()}fps",
+                        isSelected = quality.isSelected,
                         onClick = {
                             viewModel.selectVideoQuality(quality.groupIndex, quality.trackIndex)
                             onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = if (quality.isSelected)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(CinemaCornerRadius.small)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = quality.label,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (quality.isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                                if (quality.isSelected) {
-                                    Text(
-                                        text = "Active",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                            Text(
-                                text = "${quality.width}x${quality.height} - ${quality.frameRate.toInt()}fps",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
-                    }
-                }
+                    )
+                )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
         }
+    }
+
+    SelectorDialog(
+        title = "Select Quality",
+        onDismissRequest = onDismiss,
+        items = items
     )
 }
 
