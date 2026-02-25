@@ -72,6 +72,9 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+private const val REBUFFER_WINDOW_MS = 30_000L
+private const val REBUFFER_COUNT_THRESHOLD = 3
+
 /**
  * Mobile player screen with touch controls, audio/subtitle/quality selectors,
  * favorites, playback resume, and Stats for Nerds overlay.
@@ -141,8 +144,8 @@ fun MobilePlayerScreen(
                     rebufferTimestamps.add(now)
                 }
                 lastSeenCount = currentCount
-                rebufferTimestamps.removeAll { now - it > 30_000L }
-                if (rebufferTimestamps.size >= 3 && !showStats) {
+                rebufferTimestamps.removeAll { now - it > REBUFFER_WINDOW_MS }
+                if (rebufferTimestamps.size >= REBUFFER_COUNT_THRESHOLD && !showStats) {
                     showStats = true
                 }
             }
