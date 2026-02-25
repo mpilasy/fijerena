@@ -11,6 +11,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -80,10 +82,10 @@ class XtreamRepository(
         encodeDefaults = true
     }
 
-    private val database = database ?: XtreamDatabase.getInstance(context)
-    private val categoryDao = database.categoryDao()
-    private val streamDao = database.streamDao()
-    private val seriesDao = database.seriesDao()
+    private val db = database ?: XtreamDatabase.getInstance(context)
+    private val categoryDao = db.categoryDao()
+    private val streamDao = db.streamDao()
+    private val seriesDao = db.seriesDao()
 
     /** Whether caching is enabled for this provider */
     private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
@@ -1127,20 +1129,19 @@ class XtreamRepository(
         withContext(Dispatchers.IO) {
             suspendResultOf {
                 coroutineScope {
-                    val results = mutableMapOf<Int, EpgResponse>()
-                    // Batch requests to prevent OOM from too many concurrent network tasks/buffers
-                    val batchSize = 5
-                    streamIds.chunked(batchSize).forEach { batch ->
-                        val deferreds = batch.map { streamId ->
-                            async {
+                    val semaphore = Semaphore(10)
+                    val deferreds = streamIds.map { streamId ->
+                        async {
+                            semaphore.withPermit {
                                 streamId to getEpgForStream(streamId)
                             }
                         }
+                    }
 
-                        deferreds.awaitAll().forEach { (streamId, result) ->
-                            if (result is Result.Success) {
-                                results[streamId] = result.data
-                            }
+                    val results = mutableMapOf<Int, EpgResponse>()
+                    deferreds.awaitAll().forEach { (streamId, result) ->
+                        if (result is Result.Success) {
+                            results[streamId] = result.data
                         }
                     }
                     results
@@ -1300,7 +1301,7 @@ class XtreamRepository(
                              if (batch.size >= BATCH_SIZE) {
                                  val toInsert = batch.toList()
                                  batch.clear()
-                                 database.runInTransaction {
+                                 db.runInTransaction {
                                      streamDao.insertAll(toInsert)
                                  }
                              }
@@ -1380,7 +1381,7 @@ class XtreamRepository(
                              if (batch.size >= BATCH_SIZE) {
                                  val toInsert = batch.toList()
                                  batch.clear()
-                                 database.runInTransaction {
+                                 db.runInTransaction {
                                      seriesDao.insertAll(toInsert)
                                  }
                              }
