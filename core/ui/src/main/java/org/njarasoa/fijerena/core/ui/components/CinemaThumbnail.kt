@@ -26,9 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
+import coil3.request.ImageRequest
 import coil3.request.crossfade
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -72,17 +72,17 @@ fun CinemaThumbnail(
             var showShimmer by remember { mutableStateOf(true) }
             var showFallback by remember { mutableStateOf(false) }
 
-            val imageLoader = remember(context) {
-                ImageLoader.Builder(context)
+            val model = remember(context, url) {
+                ImageRequest.Builder(context)
+                    .data(url)
                     .crossfade(CinemaAnimation.imageLoadCrossfadeMs)
                     .build()
             }
 
             if (!showFallback) {
                 AsyncImage(
-                    model = url,
+                    model = model,
                     contentDescription = contentDescription,
-                    imageLoader = imageLoader,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                     onSuccess = { showShimmer = false },

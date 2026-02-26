@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.smb
 
+import android.util.Log
 import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.msfscc.fileinformation.FileIdBothDirectoryInformation
 import com.hierynomus.mssmb2.SMB2CreateDisposition
@@ -21,6 +22,8 @@ class SmbClient(
     private val username: String? = null,
     private val password: String? = null
 ) {
+    private val TAG = "SmbClient"
+
     private var client: SMBClient? = null
     private var connection: Connection? = null
     private var session: Session? = null
@@ -45,10 +48,26 @@ class SmbClient(
     }
 
     fun disconnect() {
-        try { share?.close() } catch (_: Exception) {}
-        try { session?.close() } catch (_: Exception) {}
-        try { connection?.close() } catch (_: Exception) {}
-        try { client?.close() } catch (_: Exception) {}
+        try {
+            share?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close share", e)
+        }
+        try {
+            session?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close session", e)
+        }
+        try {
+            connection?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close connection", e)
+        }
+        try {
+            client?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close client", e)
+        }
         share = null
         session = null
         connection = null
@@ -70,7 +89,8 @@ class SmbClient(
             val info = diskShare.getFileInformation(path)
             val attrs = info.basicInformation.fileAttributes
             attrs and 0x10L != 0L // FILE_ATTRIBUTE_DIRECTORY
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to check if directory: $path", e)
             false
         }
     }

@@ -98,6 +98,19 @@ Settings → Export Settings / Import Settings.
 
 **Not exported:** passwords (EncryptedSharedPreferences), cache, EPG programme data.
 
+---
+
+## Architecture & Performance
+
+### Dependency Injection (AppContainer)
+A custom, manual dependency injection container (`AppContainer`) provides singletons for the app's core repositories (`ProviderRepository` and `MediaRepository`). This ensures:
+- Single source of truth for the database and network layers across both mobile and TV apps.
+- Prevention of redundant repository instantiations, reducing memory overhead and database lock contention.
+- Thread-safe, Mutex-protected asynchronous repository resolution.
+
+### Asynchronous UI State
+All ViewModels (e.g., `CategoryViewModel`, `SearchViewModel`, `EpgViewModel`) initialize their repository dependencies asynchronously. This completely eliminates UI thread blocking (`runBlocking`) during the crucial composition phase, ensuring the app remains perfectly smooth and responsive on constrained TV hardware (like older Fire TV sticks or Sony Bravia TVs) during startup or intensive search operations.
+
 **Selective import:** On import, a "Select What to Import" dialog presents checkboxes for each section — General Settings, Providers, EPG Sources, Favorites. Only checked sections are imported.
 
 **Import conflict resolution:** when an imported provider name matches an existing one, a dialog offers:

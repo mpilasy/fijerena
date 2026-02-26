@@ -77,8 +77,8 @@ fun PlayerScreen(
     onToggleFavorite: (() -> Unit)? = null,
     currentEpgProgram: EpgProgram? = null,
     nextEpgProgram: EpgProgram? = null,
-    categoryStreams: List<MediaItem> = emptyList(),
-    lastWatchedStreams: List<MediaItem> = emptyList(),
+    categoryStreams: ImmutableMediaList = ImmutableMediaList(),
+    lastWatchedStreams: ImmutableMediaList = ImmutableMediaList(),
     onStreamSelected: ((MediaItem) -> Unit)? = null
 ) {
     val playbackState = viewModel.playbackState.collectAsState().value

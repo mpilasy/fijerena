@@ -31,13 +31,14 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
 fun ChannelListOverlay(
     title: String,
-    streams: List<MediaItem>,
+    streams: ImmutableMediaList,
     onSelect: (MediaItem) -> Unit,
     onDismiss: () -> Unit,
     panelAlignment: Alignment = Alignment.CenterStart,
