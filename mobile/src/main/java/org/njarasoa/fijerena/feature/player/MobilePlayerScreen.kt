@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -137,8 +138,7 @@ fun MobilePlayerScreen(
         if (!appSettings.isDevMode) return@LaunchedEffect
         val rebufferTimestamps = mutableListOf<Long>()
         var lastSeenCount = 0
-        while (true) {
-            val currentCount = StreamingPlaybackService.getInstance()?.rebufferCount?.value ?: 0
+        viewModel.rebufferCount.collect { currentCount ->
             if (currentCount > lastSeenCount) {
                 val now = System.currentTimeMillis()
                 repeat(currentCount - lastSeenCount) {
@@ -149,8 +149,10 @@ fun MobilePlayerScreen(
                 if (rebufferTimestamps.size >= REBUFFER_COUNT_THRESHOLD && !showStats) {
                     showStats = true
                 }
+            } else if (currentCount < lastSeenCount) {
+                lastSeenCount = currentCount
+                rebufferTimestamps.clear()
             }
-            kotlinx.coroutines.delay(1000L)
         }
     }
 
