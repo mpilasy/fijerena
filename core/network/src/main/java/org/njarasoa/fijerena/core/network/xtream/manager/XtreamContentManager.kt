@@ -26,6 +26,7 @@ import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.player.domain.ContentType
 
 class XtreamContentManager(
     private val sessionManager: XtreamSessionManager,
@@ -124,6 +125,20 @@ class XtreamContentManager(
             sharedPreferences.edit().putLong(KEY_SERIES_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
 
             categories
+        }
+    }
+
+    suspend fun getAllStreams(contentType: String): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
+        try {
+            val entities = when (contentType) {
+                ContentType.LIVE_TV -> streamDao.getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE).map { mapStreamEntityToModel(it) }
+                ContentType.MOVIES -> streamDao.getAllStreams(providerId, XtreamStreamEntity.TYPE_VOD).map { mapStreamEntityToModel(it) }
+                ContentType.TV_SHOWS -> seriesDao.getAllSeries(providerId).map { mapSeriesEntityToStream(it) }
+                else -> streamDao.getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE).map { mapStreamEntityToModel(it) }
+            }
+            Result.Success(entities)
+        } catch (e: Exception) {
+            Result.Error(e)
         }
     }
 
