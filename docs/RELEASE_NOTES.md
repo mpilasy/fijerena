@@ -1,5 +1,28 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Architectural Stability Update (DI & Threading)
+**Release Date:** 2026-02-25
+
+### 🚀 Critical Fixes
+
+#### UI Thread Blocking Resolved
+**Impact: Eliminates application freezes and ANRs during startup and search**
+- Introduced `AppContainer` as a Dependency Injection (DI) container for repository singletons.
+- Refactored `CategoryViewModel`, `SearchViewModel`, `EpgViewModel`, `MovieDetailsViewModel`, and `SeriesDetailsViewModel` to initialize `MediaRepository` asynchronously.
+- Removed synchronous `runBlocking` calls from all ViewModel factories (`CategoryViewModelFactory`, `SearchViewModelFactory`, etc.).
+
+#### Search Subcategory Hanging Fix
+**Impact: Global and subcategory searches return results reliably**
+- Addressed infinite spinning in search by ensuring `MediaRepository` is fully configured with the provider prior to executing searches.
+- Marked the `provider` field in `MediaRepository` as `@Volatile` for safe cross-thread visibility after asynchronous initialization.
+
+#### Build & Deployment Alignment
+**Impact: Resolves downgrade installation errors**
+- Synchronized `versionCode` (4) between the `:mobile` and `:tv` modules to prevent `INSTALL_FAILED_VERSION_DOWNGRADE` when deploying to physical and virtual devices sharing the same `applicationId`.
+- Configured Room Database (`XtreamDatabase`) with `fallbackToDestructiveMigration()` to automatically resolve schema mismatches during development.
+
+---
+
 ## Version: Post-Phase 5 (Themes + Multi-Provider + UX)
 **Release Date:** 2026-02-04
 
@@ -807,6 +830,51 @@ When a user edited a Jellyfin provider's username or password, the app continued
 
 - **Restored Rounded Corners:** Re-enabled rounded edges (8dp to 20dp) for all UI elements (buttons, cards, dialogs) to maintain the "Cinema" design language.
 - **Sharp App Border:** The root app container now uses `RectangleShape`, ensuring that the background fills the entire screen with sharp edges at the display borders, avoiding redundant rounded corners on the whole app.
+
+---
+
+## Phase 9: Search Enhancements
+
+**Release Date:** 2026-02-24
+
+### Collapsible Search Results Grouping
+**Impact: Improved organization and navigation of global search results**
+
+- **Unified Grouping:** Search results for "ALL" content types are now categorized into Live TV, Movies, and TV Shows groups.
+- **Combined View:** Both matching categories and individual streams are displayed together under their respective content type headers.
+- **Interactive Headers:** Expandable/collapsible headers with visual indicators (`KeyboardArrowDown`/`KeyboardArrowUp`) allow users to toggle the visibility of each group.
+- **State Persistence:** Expanded/collapsed states are preserved during navigation and screen rotations using `rememberSaveable`.
+- **Platform Parity:** Implemented consistently across both TV (D-pad optimized) and Mobile (touch optimized) interfaces.
+
+### Files Modified
+- `tv/.../feature/search/SearchScreen.kt` — Added collapsible grouping logic and `CollapsibleHeader` composable.
+- `mobile/.../feature/search/SearchScreen.kt` — Added collapsible grouping logic and `MobileCollapsibleHeader` composable.
+- `core/ui/.../viewmodels/SearchViewModel.kt` — Refined search result data structures.
+
+---
+
+## Phase 10: Architectural Refactoring
+
+**Release Date:** 2026-02-24
+
+### Unified Business Logic & Performance
+**Impact: Improved maintainability, testability, and UI responsiveness**
+
+- **ViewModel Extraction:** Consolidated all complex business logic (stream resolution, EPG management, channel navigation, history) from Composable screens into shared ViewModels in `core:ui`.
+- **Async Initialization:** Eliminated all `runBlocking` calls from the UI thread. Repository initialization and data loading now happen asynchronously on background dispatchers.
+- **Unified Feature ViewModels:**
+  - `StreamLoaderViewModel`: Manages playback lifecycle and channel navigation.
+  - `MovieDetailsViewModel`: Handles metadata and resume state for movies.
+  - `SeriesDetailsViewModel`: Manages series info, seasons, and episodes.
+- **Repository Singletons:** Introduced `AppContainer` to provide singletons for critical repositories (e.g., `ProviderRepository`), ensuring consistent state and reducing memory overhead.
+- **Platform Alignment:** Unified the logic between TV and Mobile versions of the Player, Movie Details, and Episode Selection screens.
+
+### Files Created/Modified
+- `core/ui/.../viewmodels/StreamLoaderViewModel.kt` — Consolidated player logic.
+- `core/ui/.../viewmodels/MovieDetailsViewModel.kt` — New movie detail logic.
+- `core/ui/.../viewmodels/SeriesDetailsViewModel.kt` — New series detail logic.
+- `core/ui/.../di/AppContainer.kt` — Repository singleton management.
+- `tv/` and `mobile/` Screens — Refactored to delegate to respective ViewModels.
 
 ---
 

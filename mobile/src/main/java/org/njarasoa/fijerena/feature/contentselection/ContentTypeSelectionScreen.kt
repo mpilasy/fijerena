@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,7 +45,8 @@ fun MobileContentTypeSelectionScreen(
     onContentTypeSelected: (contentType: String) -> Unit,
     onSettings: () -> Unit = {},
     onEpgBrowser: () -> Unit = {},
-    onProviderChanged: () -> Unit = {}
+    onProviderChanged: () -> Unit = {},
+    onSearch: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -145,6 +147,9 @@ fun MobileContentTypeSelectionScreen(
                         IconButton(onClick = onEpgBrowser) {
                             Icon(Icons.AutoMirrored.Filled.MenuBook, "EPG Browser")
                         }
+                    }
+                    IconButton(onClick = onSearch) {
+                        Icon(Icons.Default.Search, "Search")
                     }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, "Settings")

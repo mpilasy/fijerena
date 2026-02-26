@@ -49,6 +49,19 @@ Prefer real hardware for validation:
 
 ## Recently Completed
 
+- **Subcategory Search Fix**: Resolved the infinite spinning issue during subcategory searches by ensuring asynchronous repository initialization.
+- **Dependency Injection**: Refactored all ViewModel factories (`CategoryViewModelFactory`, `SearchViewModelFactory`, `EpgViewModelFactory`, etc.) to use `AppContainer` for providing the `MediaRepository` singleton.
+- **Thread Safety**: Marked the `provider` field in `MediaRepository` as `@Volatile` and added Mutex synchronization in `AppContainer` to prevent race conditions during initialization.
+- **Module Synchronization**: Aligned `versionCode` (4) between the TV and Mobile modules to prevent deployment conflicts.
+- **Database Resilience**: Enabled `fallbackToDestructiveMigration()` in `XtreamDatabase` to prevent schema mismatch crashes during active development.
+- **Architectural Refactoring**: Extracted all business logic from Composable layers into unified ViewModels (`StreamLoaderViewModel`, `MovieDetailsViewModel`, `SeriesDetailsViewModel`).
+- **UI Performance**: Eliminated `runBlocking` from UI thread; all repository initializations now happen asynchronously in background dispatchers.
+- **Repository Singletons**: Introduced `AppContainer` to manage repository instances, reducing redundant instantiations and ensuring consistent state.
+- **Global Search**: Unified "ALL" content type search across Live TV, Movies, and TV Shows.
+- **Collapsible Grouping**: Search results grouped by source with interactive expand/collapse headers.
+- **Lint & Build Warning Fixes**: Resolved all "Unnecessary safe call", deprecated icon, and manifest warning issues.
+- **Missing Permissions**: Declared required network state and internet permissions in library modules.
+- **Progress Indicator Migration**: Updated to modern lambda-based LinearProgressIndicator.
 - Player overlays: category (left) + last-watched (right) with slide animations, semi-transparent GlassPanel
 - OK/tap never pauses — pause is explicit (button, media key, double-tap)
 - Mobile: double-tap to pause/resume VOD; swipe left/right for Live TV overlays

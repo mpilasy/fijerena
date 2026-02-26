@@ -386,7 +386,7 @@ private fun CategoryChipRow(
                 val isFavCat = categoryViewModel.isFavoriteCategory(category.id, contentType)
                 FilterChip(
                     selected = category.id == selectedCategoryId,
-                    onClick = {},
+                    onClick = { onCategorySelected(category.id) },
                     label = {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),

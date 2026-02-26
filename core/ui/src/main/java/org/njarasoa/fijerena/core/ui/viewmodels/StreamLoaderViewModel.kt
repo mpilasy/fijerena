@@ -77,19 +77,8 @@ class StreamLoaderViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // 1. Initialize Repository
-                val providerRepo = ProviderRepository(context)
-                val entity = providerRepo.getActiveProvider()
-
-                val repo = if (entity != null) {
-                    val settings = providerRepo.getProviderSettings(entity.id)
-                    val resolvedRepo = MediaRepository(context, entity.id, settings)
-                    val password = providerRepo.getPassword(entity.id) ?: ""
-                    val provider = MediaProviderFactory.create(entity, context, password)
-                    resolvedRepo.setProvider(provider)
-                    resolvedRepo
-                } else {
-                    MediaRepository(context, 0L)
-                }
+                val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+                val repo = container.getMediaRepository()
                 mediaRepository = repo
 
                 // 2. Load Channel List (if Live TV) & Last Watched
@@ -175,7 +164,7 @@ class StreamLoaderViewModel(
                         val now = System.currentTimeMillis() / 1000
                         currentProgram = listings.firstOrNull { now in it.startTime..it.endTime }
                         nextProgram = if (currentProgram != null) {
-                            listings.firstOrNull { it.startTime >= currentProgram!!.endTime }
+                            listings.firstOrNull { it.startTime >= currentProgram.endTime }
                         } else null
                     }
 

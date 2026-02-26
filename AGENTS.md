@@ -16,6 +16,7 @@ Fijerena is a premium, native Android media player built with Kotlin and Jetpack
 ## 🛠️ Tech Stack & Dependencies
 Refer to `gradle/libs.versions.toml` for the authoritative versions.
 - **Language:** Kotlin 2.3.0
+- **Build System:** Gradle 9.0.1
 - **UI:** 100% Jetpack Compose (2024.12.01 BOM). `androidx.tv.material3` for TV screens.
 - **Media Player:** Media3 ExoPlayer (1.9.1). Optimized for 4K/HDR hardware acceleration.
 - **Networking:** Ktor (3.4.0) with OkHttp engine & kotlinx.serialization (JSON).
@@ -116,7 +117,11 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 3. **Navigation IDs:** Always use `String` for IDs.
 
 ### Features
-- **Search:** Two-phase parallel search for Xtream with multi-word matching; server-side for Jellyfin.
+- **Search:** 
+  - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows.
+  - **Collapsible Groups:** Results grouped by source with collapsible headers (saved via `rememberSaveable`).
+  - **Xtream:** Two-phase parallel search with multi-word matching.
+  - **Jellyfin:** Server-side search.
 - **Virtual Categories:** Favorites (configurable 10-500), Last Watched (1-100), Continue Watching (VOD), Recent Categories.
 - **Jellyfin Quick Connect:** Supported for easy auth.
 - **Settings:** Provider management, theme selection, EPG management, cache management, UI scale, export/import (JSON).
@@ -134,8 +139,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ### Quality Control
 ```bash
-./gradlew ktlintCheck                 # Check code style
-./gradlew ktlintFormat                # Auto-fix code style
+./gradlew lintDebug                   # Run Android Lint
 ./gradlew check                       # Run all tests and lint
 ```
 
@@ -150,8 +154,9 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 1. **Start** every session by reading project documentation and this file.
 2. **Verify** every UI change: "Is this D-pad friendly?"
 3. **Never** hardcode dimensions or colors.
-4. **Use design tokens** for all visual attributes.
+4. **Use design tokens** for visual attributes.
 5. **Fulfill the Directive:** Only perform modifications when explicitly instructed.
+6. **Lint Check:** Run `./gradlew lintDebug` after changes to verify no regressions.
 
 # Agent Instructions
 

@@ -15,8 +15,8 @@ android {
         applicationId = "org.njarasoa.fijerena"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -40,6 +40,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+    }
+    lint {
+        disable.add("UnsafeOptInUsageError")
     }
     buildFeatures {
         compose = true
