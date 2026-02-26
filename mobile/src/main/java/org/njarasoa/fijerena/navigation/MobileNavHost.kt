@@ -185,6 +185,9 @@ fun MobileNavHost(
                     onSettings = {
                         navController.navigate(Screen.Settings)
                     },
+                    onSearch = {
+                        navController.navigate(Screen.Search("ALL"))
+                    },
                     onEpgBrowser = {
                         navController.navigate(Screen.EpgBrowser)
                     }

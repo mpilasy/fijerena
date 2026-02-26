@@ -204,6 +204,9 @@ fun TvNavHost(
                     onSettings = {
                         navController.navigate(Screen.Settings)
                     },
+                    onSearch = {
+                        navController.navigate(Screen.Search("ALL"))
+                    },
                     onEpgBrowser = {
                         navController.navigate(Screen.EpgBrowser)
                     }
@@ -297,9 +300,9 @@ fun TvNavHost(
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
                 SearchScreen(
                     contentType = searchScreen.contentType,
-                    onStreamSelected = { itemId, streamName, categoryId ->
+                    onStreamSelected = { itemId, streamName, categoryId, streamContentType ->
                         // Navigate based on content type
-                        when (searchScreen.contentType) {
+                        when (streamContentType) {
                             ContentType.TV_SHOWS -> navController.navigate(
                                 Screen.EpisodeSelection(
                                     seriesId = itemId,
@@ -319,7 +322,7 @@ fun TvNavHost(
                                     streamId = itemId,
                                     streamName = streamName,
                                     categoryId = categoryId,
-                                    contentType = searchScreen.contentType
+                                    contentType = streamContentType
                                 )
                             )
                         }

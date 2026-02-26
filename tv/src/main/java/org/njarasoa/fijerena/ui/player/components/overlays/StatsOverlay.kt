@@ -1,3 +1,5 @@
+@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+
 package org.njarasoa.fijerena.ui.player.components.overlays
 
 import androidx.compose.foundation.background
@@ -47,12 +49,12 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.ui.player.utils.formatBitrate
 import org.njarasoa.fijerena.ui.player.utils.formatTime
-import org.njarasoa.fijerena.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.ui.theme.CinemaCornerRadius
-import org.njarasoa.fijerena.ui.theme.CinemaError
-import org.njarasoa.fijerena.ui.theme.CinemaSuccess
-import org.njarasoa.fijerena.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 enum class QuadrantPosition {
