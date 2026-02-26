@@ -340,84 +340,70 @@ class XtreamRepository(
 
 
 
-    suspend fun getStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
-        suspendResultOf {
-            if (forSearch) {
-                return@suspendResultOf streamDao.searchStreams(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId).map { mapStreamEntityToModel(it) }
-            }
-
-            val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
-
-            if (dbEntities.isNotEmpty()) {
-                val key = KEY_STREAMS_TIMESTAMP_PREFIX + "LIVE_ALL"
-                if (!isCacheFresh(key, liveStreamRefreshThresholdMs)) {
-                    syncStreams(XtreamStreamEntity.TYPE_LIVE)
-                }
-                return@suspendResultOf dbEntities.map { mapStreamEntityToModel(it) }
-            }
-
-            val service = apiService ?: throw Exception("Not authenticated. Please login first.")
-            val streams = service.getStreams(categoryId)
-
-            streamDao.insertAll(streams.map {
-                 XtreamStreamEntity(
-                     streamId = it.streamId,
-                     providerId = providerId,
-                     type = XtreamStreamEntity.TYPE_LIVE,
-                     num = it.num,
-                     name = it.name,
-                     streamType = it.streamType,
-                     streamIcon = it.streamIcon,
-                     epgChannelId = it.epgChannelId,
-                     added = it.added,
-                     categoryId = it.categoryId,
-                     customSid = it.customSid,
-                     tvArchive = it.tvArchive,
-                     directSource = it.directSource,
-                     tvArchiveDuration = it.tvArchiveDuration
-                 )
-            })
-
-            streams
-        }
+    suspend fun getStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> {
+        return fetchStreams(
+            type = XtreamStreamEntity.TYPE_LIVE,
+            categoryId = categoryId,
+            forSearch = forSearch,
+            cacheKeySuffix = "LIVE_ALL",
+            refreshThresholdMs = liveStreamRefreshThresholdMs,
+            apiCall = { service, id -> service.getStreams(id) }
+        )
     }
 
-    suspend fun getVodStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
+    suspend fun getVodStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> {
+        return fetchStreams(
+            type = XtreamStreamEntity.TYPE_VOD,
+            categoryId = categoryId,
+            forSearch = forSearch,
+            cacheKeySuffix = "VOD_ALL",
+            apiCall = { service, id -> service.getVodStreams(id) }
+        )
+    }
+
+    private suspend fun fetchStreams(
+        type: String,
+        categoryId: String,
+        forSearch: Boolean,
+        cacheKeySuffix: String,
+        refreshThresholdMs: Long = cacheExpiryMs,
+        apiCall: suspend (XtreamApiService, String) -> List<XtreamStream>
+    ): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {
             if (forSearch) {
-                return@suspendResultOf streamDao.searchStreams(providerId, XtreamStreamEntity.TYPE_VOD, categoryId).map { mapStreamEntityToModel(it) }
+                return@suspendResultOf streamDao.searchStreams(providerId, type, categoryId).map { mapStreamEntityToModel(it) }
             }
 
-            val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
+            val dbEntities = streamDao.getStreamsByCategory(providerId, type, categoryId)
 
             if (dbEntities.isNotEmpty()) {
-                val key = KEY_STREAMS_TIMESTAMP_PREFIX + "VOD_ALL"
-                if (!isCacheFresh(key)) {
-                    syncStreams(XtreamStreamEntity.TYPE_VOD)
+                val key = KEY_STREAMS_TIMESTAMP_PREFIX + cacheKeySuffix
+                if (!isCacheFresh(key, refreshThresholdMs)) {
+                    syncStreams(type)
                 }
                 return@suspendResultOf dbEntities.map { mapStreamEntityToModel(it) }
             }
 
             val service = apiService ?: throw Exception("Not authenticated. Please login first.")
-            val streams = service.getVodStreams(categoryId)
+            val streams = apiCall(service, categoryId)
 
             streamDao.insertAll(streams.map {
-                 XtreamStreamEntity(
-                     streamId = it.streamId,
-                     providerId = providerId,
-                     type = XtreamStreamEntity.TYPE_VOD,
-                     num = it.num,
-                     name = it.name,
-                     streamType = it.streamType,
-                     streamIcon = it.streamIcon,
-                     epgChannelId = it.epgChannelId,
-                     added = it.added,
-                     categoryId = it.categoryId,
-                     customSid = it.customSid,
-                     tvArchive = it.tvArchive,
-                     directSource = it.directSource,
-                     tvArchiveDuration = it.tvArchiveDuration
-                 )
+                XtreamStreamEntity(
+                    streamId = it.streamId,
+                    providerId = providerId,
+                    type = type,
+                    num = it.num,
+                    name = it.name,
+                    streamType = it.streamType,
+                    streamIcon = it.streamIcon,
+                    epgChannelId = it.epgChannelId,
+                    added = it.added,
+                    categoryId = it.categoryId,
+                    customSid = it.customSid,
+                    tvArchive = it.tvArchive,
+                    directSource = it.directSource,
+                    tvArchiveDuration = it.tvArchiveDuration
+                )
             })
 
             streams
