@@ -1,3 +1,5 @@
+@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+
 package org.njarasoa.fijerena.ui.player.components.overlays
 
 import androidx.compose.foundation.background
@@ -24,8 +26,8 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
-import org.njarasoa.fijerena.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 

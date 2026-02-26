@@ -327,7 +327,19 @@ class XtreamRepository(
         return System.currentTimeMillis() - timestamp < thresholdMs
     }
 
-
+    suspend fun getAllStreams(contentType: String): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
+        try {
+            val entities = when (contentType) {
+                ContentType.LIVE_TV -> streamDao.getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE).map { mapStreamEntityToModel(it) }
+                ContentType.MOVIES -> streamDao.getAllStreams(providerId, XtreamStreamEntity.TYPE_VOD).map { mapStreamEntityToModel(it) }
+                ContentType.TV_SHOWS -> seriesDao.getAllSeries(providerId).map { mapSeriesEntityToStream(it) }
+                else -> streamDao.getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE).map { mapStreamEntityToModel(it) }
+            }
+            Result.Success(entities)
+        } catch (e: Exception) {
+            Result.Error(e)
+        }
+    }
 
     suspend fun getStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {

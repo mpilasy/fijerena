@@ -36,10 +36,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
-import org.njarasoa.fijerena.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
-import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**

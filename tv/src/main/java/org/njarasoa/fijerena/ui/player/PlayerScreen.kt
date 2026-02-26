@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -62,7 +63,7 @@ import org.njarasoa.fijerena.ui.player.components.overlays.ChannelListOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.ControlHintsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.PlayerControlsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.StatsOverlay
-import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.Spacing
 import java.util.Calendar
 import java.util.Date

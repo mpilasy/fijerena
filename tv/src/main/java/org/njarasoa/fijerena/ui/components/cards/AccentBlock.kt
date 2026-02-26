@@ -14,14 +14,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
-import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
-import org.njarasoa.fijerena.ui.theme.CinemaOrange
-import org.njarasoa.fijerena.ui.theme.CinemaOrangeDark
-import org.njarasoa.fijerena.ui.theme.CinemaSurface
-import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
-import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
+import org.njarasoa.fijerena.core.ui.theme.CinemaOrangeDark
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 
 /**

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+
 package org.njarasoa.fijerena.ui.player.components.dialogs
 
 import androidx.activity.compose.BackHandler
@@ -41,15 +43,15 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
-import org.njarasoa.fijerena.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.ui.theme.CinemaBackground
-import org.njarasoa.fijerena.ui.theme.CinemaCornerRadius
-import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
-import org.njarasoa.fijerena.ui.theme.CinemaTextDisabled
-import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.theme.CinemaTextTertiary
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
