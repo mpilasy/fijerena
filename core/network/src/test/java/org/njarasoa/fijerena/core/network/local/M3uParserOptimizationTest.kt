@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.system.measureTimeMillis
 
-class M3uParserTest {
+class M3uParserOptimizationTest {
 
     @Test
     fun `parse correctly parses valid m3u content`() {
