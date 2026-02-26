@@ -2,11 +2,7 @@ package org.njarasoa.fijerena.core.network.jellyfin
 
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -32,10 +28,11 @@ class JellyfinMediaProvider(
     savedToken: String? = null,
     savedUserId: String? = null,
     private val onSessionSaved: ((token: String, userId: String) -> Unit)? = null,
-    private val onSessionCleared: (() -> Unit)? = null
+    private val onSessionCleared: (() -> Unit)? = null,
+    injectedApi: JellyfinApiService? = null
 ) : MediaProvider {
 
-    private val api = JellyfinApiService(serverUrl, deviceId).also {
+    private val api = injectedApi ?: JellyfinApiService(serverUrl, deviceId).also {
         if (savedToken != null && savedUserId != null) {
             it.restoreSession(savedToken, savedUserId)
         }
@@ -198,37 +195,39 @@ class JellyfinMediaProvider(
 
         val seasons = seasonsResult.getOrThrow()
         val episodesMap = mutableMapOf<String, List<EpisodeItem>>()
-        val semaphore = Semaphore(10)
 
-        val episodeRequests = seasons.map { season ->
-            async {
-                semaphore.withPermit {
-                    val episodesResult = api.getEpisodes(seriesId, season.id)
-                    if (episodesResult.isSuccess) {
-                        val seasonKey = (season.indexNumber ?: 0).toString()
-                        val episodes = episodesResult.getOrThrow().map { ep ->
-                            EpisodeItem(
-                                id = ep.id,
-                                episodeNumber = ep.indexNumber ?: 0,
-                                title = ep.name,
-                                seasonNumber = ep.parentIndexNumber,
-                                metadata = MediaMetadata(
-                                    plot = ep.overview,
-                                    duration = ep.runTimeTicks?.let { formatTicks(it) }
-                                ),
-                                thumbnailUrl = if (ep.imageTags.containsKey("Primary")) {
-                                    api.buildImageUrl(ep.id, "Primary")
-                                } else null
-                            )
-                        }
-                        seasonKey to episodes
-                    } else null
+        // Optimization: Fetch all episodes for the series in a single call instead of N parallel calls per season.
+        val allEpisodesResult = api.getItems(
+            parentId = seriesId,
+            includeItemTypes = "Episode",
+            sortBy = "SortName",
+            sortOrder = "Ascending"
+        )
+
+        if (allEpisodesResult.isSuccess) {
+            val allEpisodes = allEpisodesResult.getOrThrow()
+            val episodesBySeasonId = allEpisodes.groupBy { it.seasonId }
+
+            seasons.forEach { season ->
+                val seasonEpisodes = episodesBySeasonId[season.id] ?: emptyList()
+                val seasonKey = (season.indexNumber ?: 0).toString()
+                val episodes = seasonEpisodes.map { ep ->
+                    EpisodeItem(
+                        id = ep.id,
+                        episodeNumber = ep.indexNumber ?: 0,
+                        title = ep.name,
+                        seasonNumber = ep.parentIndexNumber,
+                        metadata = MediaMetadata(
+                            plot = ep.overview,
+                            duration = ep.runTimeTicks?.let { formatTicks(it) }
+                        ),
+                        thumbnailUrl = if (ep.imageTags.containsKey("Primary")) {
+                            api.buildImageUrl(ep.id, "Primary")
+                        } else null
+                    )
                 }
+                episodesMap[seasonKey] = episodes
             }
-        }
-
-        episodeRequests.awaitAll().filterNotNull().forEach { (key, episodes) ->
-            episodesMap[key] = episodes
         }
 
         Result.success(
