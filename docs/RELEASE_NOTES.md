@@ -1,5 +1,19 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Cross-Type Search & Documentation Update
+**Release Date:** 2026-02-25
+
+### Search Enhancements
+- **Search from Content Type Screen:** Wired up the search button on the Content Type Selection screen to launch cross-type "ALL" search directly.
+- **ExperimentalTvMaterial3Api Opt-ins:** Added required opt-in annotations for TV Material3 experimental APIs.
+
+### Documentation
+- Updated all documentation to reflect current dependency versions (Media3 1.7.1, Gradle 9.2.1, AGP 9.0.1, SDK 36/30).
+- Removed outdated docs: NAVIGATION_SETUP_COMPLETE, DEPENDENCY_UPGRADE_SUMMARY, STREAMING_SERVICE_IMPLEMENTATION, login README, EPG indexing plan.
+- Updated navigation guide with complete Screen inventory.
+
+---
+
 ## Version: Architectural Stability Update (DI & Threading)
 **Release Date:** 2026-02-25
 
