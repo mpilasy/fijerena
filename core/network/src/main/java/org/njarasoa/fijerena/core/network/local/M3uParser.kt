@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network.local
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import java.io.BufferedReader
 
 data class M3uEntry(
     val name: String,
@@ -15,17 +16,34 @@ data class M3uEntry(
 
 object M3uParser {
 
-    fun parse(content: String): List<M3uEntry> {
-        val entries = mutableListOf<M3uEntry>()
-        val lines = content.lines()
+    private data class PendingEntry(
+        val name: String,
+        val groupTitle: String,
+        val logo: String?,
+        val tvgId: String?
+    )
 
-        if (lines.isEmpty() || !lines[0].trim().startsWith("#EXTM3U")) {
+    fun parse(content: String): List<M3uEntry> {
+        return parse(content.reader().buffered())
+    }
+
+    fun parse(reader: BufferedReader): List<M3uEntry> {
+        val entries = mutableListOf<M3uEntry>()
+        val iterator = reader.lineSequence().iterator()
+
+        if (!iterator.hasNext()) return emptyList()
+
+        val firstLine = iterator.next()
+        if (!firstLine.trim().startsWith("#EXTM3U")) {
             return emptyList()
         }
 
-        var i = 1
-        while (i < lines.size) {
-            val line = lines[i].trim()
+        var pendingEntry: PendingEntry? = null
+
+        while (iterator.hasNext()) {
+            val line = iterator.next().trim()
+            if (line.isEmpty()) continue
+
             if (line.startsWith("#EXTINF:")) {
                 val infoLine = line.removePrefix("#EXTINF:")
                 val name = extractName(infoLine)
@@ -33,20 +51,26 @@ object M3uParser {
                 val logo = extractAttribute(infoLine, "tvg-logo")
                 val tvgId = extractAttribute(infoLine, "tvg-id")
 
-                // Next non-empty, non-comment line should be the URL
-                i++
-                while (i < lines.size && (lines[i].isBlank() || lines[i].trim().startsWith("#"))) {
-                    i++
-                }
-                if (i < lines.size) {
-                    val url = lines[i].trim()
+                pendingEntry = PendingEntry(name, groupTitle, logo, tvgId)
+            } else if (!line.startsWith("#")) {
+                if (pendingEntry != null) {
+                    val url = line
                     if (url.isNotBlank()) {
                         val isLive = isLiveUrl(url)
-                        entries.add(M3uEntry(name, groupTitle, logo, tvgId, url, isLive))
+                        entries.add(
+                            M3uEntry(
+                                pendingEntry.name,
+                                pendingEntry.groupTitle,
+                                pendingEntry.logo,
+                                pendingEntry.tvgId,
+                                url,
+                                isLive
+                            )
+                        )
                     }
+                    pendingEntry = null
                 }
             }
-            i++
         }
         return entries
     }
@@ -87,8 +111,15 @@ object M3uParser {
     }
 
     private fun extractAttribute(infoLine: String, attribute: String): String? {
-        val regex = Regex("""$attribute="([^"]*)"""")
-        return regex.find(infoLine)?.groupValues?.getOrNull(1)
+        val search = "$attribute=\""
+        val startIndex = infoLine.indexOf(search)
+        if (startIndex == -1) return null
+
+        val valueStartIndex = startIndex + search.length
+        val valueEndIndex = infoLine.indexOf('"', valueStartIndex)
+        if (valueEndIndex == -1) return null
+
+        return infoLine.substring(valueStartIndex, valueEndIndex)
     }
 
     private fun isLiveUrl(url: String): Boolean {

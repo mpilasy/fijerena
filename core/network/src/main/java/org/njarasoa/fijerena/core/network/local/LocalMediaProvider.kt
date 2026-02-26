@@ -46,10 +46,10 @@ class LocalMediaProvider(
             // Parse M3U if configured
             if (config.m3uPath != null) {
                 val m3uUri = Uri.parse(config.m3uPath)
-                val m3uContent = context.contentResolver.openInputStream(m3uUri)
-                    ?.bufferedReader()?.use { it.readText() }
-                if (m3uContent != null) {
-                    val entries = M3uParser.parse(m3uContent)
+                val entries = context.contentResolver.openInputStream(m3uUri)
+                    ?.bufferedReader()?.use { M3uParser.parse(it) }
+
+                if (entries != null) {
                     val m3uCategories = M3uParser.entriesToCategories(entries)
                     val m3uItems = M3uParser.entriesToItems(entries, m3uCategories)
                     categories = categories + m3uCategories

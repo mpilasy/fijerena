@@ -23,6 +23,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 /**
@@ -288,7 +289,7 @@ class XtreamApiService(
      */
     fun buildStreamUrl(streamId: Int): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
-        return "$normalizedUrl/live/$username/$password/$streamId.m3u8"
+        return "$normalizedUrl/live/${encode(username)}/${encode(password)}/$streamId.m3u8"
     }
 
     /**
@@ -302,7 +303,7 @@ class XtreamApiService(
      */
     fun buildVodStreamUrl(streamId: Int, extension: String = "mp4"): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
-        return "$normalizedUrl/movie/$username/$password/$streamId.$extension"
+        return "$normalizedUrl/movie/${encode(username)}/${encode(password)}/$streamId.${encode(extension)}"
     }
 
     /**
@@ -316,7 +317,7 @@ class XtreamApiService(
      */
     fun buildSeriesStreamUrl(streamId: Int, extension: String = "mp4"): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
-        return "$normalizedUrl/series/$username/$password/$streamId.$extension"
+        return "$normalizedUrl/series/${encode(username)}/${encode(password)}/$streamId.${encode(extension)}"
     }
 
     /**
@@ -330,7 +331,11 @@ class XtreamApiService(
      */
     fun buildEpisodeStreamUrl(episodeId: String, extension: String): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
-        return "$normalizedUrl/series/$username/$password/$episodeId.$extension"
+        return "$normalizedUrl/series/${encode(username)}/${encode(password)}/${encode(episodeId)}.${encode(extension)}"
+    }
+
+    private fun encode(value: String): String {
+        return URLEncoder.encode(value, "UTF-8")
     }
 
     /**

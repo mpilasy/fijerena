@@ -39,11 +39,17 @@ Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute 
 
 ## Search
 
+### Global Search ("ALL")
+Unified search across all content types (Live TV, Movies, TV Shows) and categories.
+- **Grouped Results:** Results are organized by content type headers.
+- **Collapsible Headers:** Each group (Live TV, Movies, TV Shows) can be expanded or collapsed to manage long result lists.
+- **Combined View:** Matches for both categories and individual streams are shown within their respective content type groups.
+
 ### Xtream (two-phase client-side)
 1. **Phase 1 (instant):** Sweeps cached categories for matches
-2. **Phase 2 (network):** Fetches uncached categories in parallel (semaphore = 20, up to 200 results)
+2. **Phase 2 (network):** Fetches uncached categories in background
 
-Minimum 2 characters, explicit trigger. Background pre-fetch warms cache on category screen load.
+Minimum 2 characters to trigger. Background pre-fetch warms cache on category screen load.
 
 ### Jellyfin (server-side)
 Native Jellyfin REST search. Returns movies and series matching the query.
@@ -91,6 +97,19 @@ Settings → Export Settings / Import Settings.
 **Exported:** all provider configs (name, URL, username, type, config JSON, per-provider settings), all EPG source URLs, per-provider favorites (item ID, name, category, content type), and global AppSettings (theme, UI scale, dev mode, EPG auto-refresh, cellular buffer multipliers).
 
 **Not exported:** passwords (EncryptedSharedPreferences), cache, EPG programme data.
+
+---
+
+## Architecture & Performance
+
+### Dependency Injection (AppContainer)
+A custom, manual dependency injection container (`AppContainer`) provides singletons for the app's core repositories (`ProviderRepository` and `MediaRepository`). This ensures:
+- Single source of truth for the database and network layers across both mobile and TV apps.
+- Prevention of redundant repository instantiations, reducing memory overhead and database lock contention.
+- Thread-safe, Mutex-protected asynchronous repository resolution.
+
+### Asynchronous UI State
+All ViewModels (e.g., `CategoryViewModel`, `SearchViewModel`, `EpgViewModel`) initialize their repository dependencies asynchronously. This completely eliminates UI thread blocking (`runBlocking`) during the crucial composition phase, ensuring the app remains perfectly smooth and responsive on constrained TV hardware (like older Fire TV sticks or Sony Bravia TVs) during startup or intensive search operations.
 
 **Selective import:** On import, a "Select What to Import" dialog presents checkboxes for each section — General Settings, Providers, EPG Sources, Favorites. Only checked sections are imported.
 

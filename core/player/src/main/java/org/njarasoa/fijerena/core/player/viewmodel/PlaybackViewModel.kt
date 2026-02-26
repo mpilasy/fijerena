@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
+import org.njarasoa.fijerena.core.player.model.ChapterInfo
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
@@ -28,6 +29,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private val _currentMetadata = MutableStateFlow(PlayerMetadata())
     val currentMetadata: StateFlow<PlayerMetadata> = _currentMetadata.asStateFlow()
+
+    private val _rebufferCount = MutableStateFlow(0)
+    val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
 
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
@@ -144,16 +148,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance()
-            if (service != null) {
-                // Use service's playStream method which uses StreamingMediaSourceFactory
-                service.playStream(metadata)
-
-                // Seek to resume position after playback starts
-                if (resumeFromPosition > 0L) {
-                    kotlinx.coroutines.delay(500) // Small delay to ensure player is ready
-                    seekTo(resumeFromPosition)
-                }
-            }
+            service?.playStream(metadata, resumeFromPosition)
         }
     }
 
@@ -188,12 +183,18 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         val currentPos = when (state) {
             is PlaybackState.Playing -> state.position
             is PlaybackState.Paused -> state.position
-            else -> return
+            PlaybackState.Idle,
+            PlaybackState.Buffering,
+            PlaybackState.Ended,
+            is PlaybackState.Error -> return
         }
         val duration = when (state) {
             is PlaybackState.Playing -> state.duration
             is PlaybackState.Paused -> state.duration
-            else -> return
+            PlaybackState.Idle,
+            PlaybackState.Buffering,
+            PlaybackState.Ended,
+            is PlaybackState.Error -> return
         }
         seekTo((currentPos + offsetMs).coerceIn(0L, duration))
     }
@@ -345,6 +346,31 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
         // Sort by resolution (highest first)
         return qualities.sortedByDescending { it.height }
+    }
+
+    /**
+     * Get chapter markers from the current media item's metadata.
+     * Jellyfin stores chapters in mediaMetadata.extras as parallel arrays.
+     */
+    fun getChapters(): List<ChapterInfo> {
+        val controller = _controller.value ?: return emptyList()
+        val extras = controller.mediaMetadata.extras ?: return emptyList()
+
+        val titles = extras.getStringArrayList("chapterTitles") ?: return emptyList()
+        val startTimesMs = extras.getLongArray("chapterStartTimesMs") ?: return emptyList()
+
+        if (titles.size != startTimesMs.size) return emptyList()
+
+        val duration = controller.duration.coerceAtLeast(0L)
+        return titles.mapIndexed { index, title ->
+            val startMs = startTimesMs[index]
+            val endMs = if (index + 1 < startTimesMs.size) startTimesMs[index + 1] else duration
+            ChapterInfo(
+                title = title.ifEmpty { "Chapter ${index + 1}" },
+                startTimeMs = startMs,
+                endTimeMs = endMs
+            )
+        }
     }
 
     /**
