@@ -100,20 +100,16 @@ class AuthViewModel : ViewModel() {
     /**
      * Checks if the session is expired.
      *
-     * TODO: Implement actual date comparison with current time
-     *
-     * @return true if session is expired (placeholder - always returns false)
+     * @return true if session is expired
      */
     fun isSessionExpired(): Boolean {
-        val expDate = _authResponse.value?.userInfo?.expDate ?: return true
+        val expDate = _authResponse.value?.userInfo?.expDate
+        if (expDate.isNullOrEmpty()) return true
+        if (expDate.equals("Unlimited", ignoreCase = true)) return false
 
-        // TODO: Parse expDate and compare with current timestamp
-        // Example:
-        // val expirationTimestamp = expDate.toLongOrNull() ?: return true
-        // val currentTimestamp = System.currentTimeMillis() / 1000
-        // return currentTimestamp > expirationTimestamp
-
-        return false
+        val expirationTimestamp = expDate.toLongOrNull() ?: return true
+        val currentTimestamp = System.currentTimeMillis() / 1000
+        return currentTimestamp > expirationTimestamp
     }
 
     override fun onCleared() {

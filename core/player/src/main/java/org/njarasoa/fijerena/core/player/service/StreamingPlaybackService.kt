@@ -210,7 +210,7 @@ class StreamingPlaybackService : MediaSessionService() {
         onPositionSaveListener = listener
     }
 
-    fun playStream(metadata: PlayerMetadata) {
+    fun playStream(metadata: PlayerMetadata, startPositionMs: Long = 0L) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         cancelPendingRetry()
         playerListener?.resetErrorState()
@@ -232,6 +232,9 @@ class StreamingPlaybackService : MediaSessionService() {
         )
 
         player.setMediaSource(mediaSource)
+        if (startPositionMs > 0) {
+            player.seekTo(startPositionMs)
+        }
         player.playWhenReady = true
         player.prepare()
         _playbackState.value = PlaybackState.Buffering
