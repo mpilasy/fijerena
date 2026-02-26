@@ -3,7 +3,12 @@ package org.njarasoa.fijerena.core.network.xtream.manager
 import android.content.SharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -62,20 +67,24 @@ class XtreamEpgManager(
     suspend fun getEpgForStreams(streamIds: List<Int>): Result<Map<Int, EpgResponse>> =
         withContext(Dispatchers.IO) {
             suspendResultOf {
-                val results = mutableMapOf<Int, EpgResponse>()
-                // Batch requests to prevent OOM from too many concurrent network tasks/buffers
-                val batchSize = 5
-                streamIds.chunked(batchSize).forEach { batch ->
-                    batch.forEach { streamId ->
-                        when (val result = getEpgForStream(streamId)) {
-                            is Result.Success -> results[streamId] = result.data
-                            is Result.Error -> {
-                                // Continue on failure - EPG may not be available for all channels
+                coroutineScope {
+                    val semaphore = Semaphore(10)
+                    val deferreds = streamIds.map { streamId ->
+                        async {
+                            semaphore.withPermit {
+                                streamId to getEpgForStream(streamId)
                             }
                         }
                     }
+
+                    val results = mutableMapOf<Int, EpgResponse>()
+                    deferreds.awaitAll().forEach { (streamId, result) ->
+                        if (result is Result.Success) {
+                            results[streamId] = result.data
+                        }
+                    }
+                    results
                 }
-                results
             }
         }
 

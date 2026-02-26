@@ -79,6 +79,23 @@ class XtreamMediaProvider(
         }
     }
 
+    override suspend fun getAllItems(contentType: String): kotlin.Result<List<MediaItem>> {
+        val mediaType = when (contentType) {
+            "LIVE_TV" -> MediaType.LIVE_CHANNEL
+            "MOVIES" -> MediaType.MOVIE
+            "TV_SHOWS" -> MediaType.SERIES
+            else -> MediaType.LIVE_CHANNEL
+        }
+        // Use repository.getAllStreams which handles caching and fetching all streams
+        val result = repository.getAllStreams(contentType)
+        return when (result) {
+            is Result.Success ->
+                kotlin.Result.success(result.data.map { it.toDomain(mediaType) })
+            is Result.Error ->
+                kotlin.Result.failure(result.exception)
+        }
+    }
+
     override suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> {
         val id = seriesId.toIntOrNull() ?: return kotlin.Result.failure(
             Exception("Invalid series ID: $seriesId")

@@ -2,6 +2,11 @@ package org.njarasoa.fijerena.core.network.jellyfin
 
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
@@ -103,6 +108,62 @@ class JellyfinMediaProvider(
         }
     }
 
+    override suspend fun getAllItems(contentType: String): Result<List<MediaItem>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+
+        // 1. Fetch categories (Libraries) to know the valid roots
+        val categoriesResult = getCategories(contentType)
+        if (categoriesResult.isFailure) return Result.failure(categoriesResult.exceptionOrNull()!!)
+        val categories = categoriesResult.getOrThrow()
+        val categoryIds = categories.map { it.id }.toSet()
+
+        // 2. Fetch all items recursively from root, including Folders/BoxSets for tree traversal
+        val includeTypes = when (contentType) {
+            "MOVIES" -> "Movie,Folder,BoxSet"
+            "TV_SHOWS" -> "Series,Folder,BoxSet"
+            else -> null
+        }
+
+        return withAutoReconnect {
+            api.getItems(parentId = null, includeItemTypes = includeTypes).map { items ->
+                // 3. Build parent map: ItemId -> ParentId
+                val parentMap = items.associate { it.id to it.parentId }
+
+                // 4. Filter for actual content items (Movie, Series)
+                val targetType = when (contentType) {
+                    "MOVIES" -> "Movie"
+                    "TV_SHOWS" -> "Series"
+                    else -> ""
+                }
+                val contentItems = items.filter { it.type == targetType }
+
+                // 5. Map items to their Library ID
+                val resultItems = mutableListOf<MediaItem>()
+
+                for (item in contentItems) {
+                    var currentParentId = item.parentId
+                    var libraryId: String? = null
+
+                    // Traverse up until we find a category ID or hit root (null)
+                    var depth = 0
+                    while (currentParentId != null && depth < 10) {
+                        if (categoryIds.contains(currentParentId)) {
+                            libraryId = currentParentId
+                            break
+                        }
+                        currentParentId = parentMap[currentParentId]
+                        depth++
+                    }
+
+                    if (libraryId != null) {
+                        resultItems.add(item.toDomainItem(categoryId = libraryId, contentType = contentType))
+                    }
+                }
+                resultItems
+            }
+        }
+    }
+
     override suspend fun search(query: String, contentType: String): Result<List<MediaItem>> {
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
@@ -125,41 +186,51 @@ class JellyfinMediaProvider(
         return withAutoReconnect { fetchSeriesDetail(seriesId) }
     }
 
-    private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> {
+    private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> = coroutineScope {
         // Fetch the series item itself for its name and metadata
         val seriesResult = api.getItemById(seriesId)
-        if (seriesResult.isFailure) return Result.failure(seriesResult.exceptionOrNull()!!)
+        if (seriesResult.isFailure) return@coroutineScope Result.failure(seriesResult.exceptionOrNull()!!)
         val seriesItem = seriesResult.getOrThrow()
 
         val seasonsResult = api.getSeasons(seriesId)
-        if (seasonsResult.isFailure) return Result.failure(seasonsResult.exceptionOrNull()!!)
+        if (seasonsResult.isFailure) return@coroutineScope Result.failure(seasonsResult.exceptionOrNull()!!)
 
         val seasons = seasonsResult.getOrThrow()
         val episodesMap = mutableMapOf<String, List<EpisodeItem>>()
+        val semaphore = Semaphore(10)
 
-        for (season in seasons) {
-            val episodesResult = api.getEpisodes(seriesId, season.id)
-            if (episodesResult.isSuccess) {
-                val seasonKey = (season.indexNumber ?: 0).toString()
-                episodesMap[seasonKey] = episodesResult.getOrThrow().map { ep ->
-                    EpisodeItem(
-                        id = ep.id,
-                        episodeNumber = ep.indexNumber ?: 0,
-                        title = ep.name,
-                        seasonNumber = ep.parentIndexNumber,
-                        metadata = MediaMetadata(
-                            plot = ep.overview,
-                            duration = ep.runTimeTicks?.let { formatTicks(it) }
-                        ),
-                        thumbnailUrl = if (ep.imageTags.containsKey("Primary")) {
-                            api.buildImageUrl(ep.id, "Primary")
-                        } else null
-                    )
+        val episodeRequests = seasons.map { season ->
+            async {
+                semaphore.withPermit {
+                    val episodesResult = api.getEpisodes(seriesId, season.id)
+                    if (episodesResult.isSuccess) {
+                        val seasonKey = (season.indexNumber ?: 0).toString()
+                        val episodes = episodesResult.getOrThrow().map { ep ->
+                            EpisodeItem(
+                                id = ep.id,
+                                episodeNumber = ep.indexNumber ?: 0,
+                                title = ep.name,
+                                seasonNumber = ep.parentIndexNumber,
+                                metadata = MediaMetadata(
+                                    plot = ep.overview,
+                                    duration = ep.runTimeTicks?.let { formatTicks(it) }
+                                ),
+                                thumbnailUrl = if (ep.imageTags.containsKey("Primary")) {
+                                    api.buildImageUrl(ep.id, "Primary")
+                                } else null
+                            )
+                        }
+                        seasonKey to episodes
+                    } else null
                 }
             }
         }
 
-        return Result.success(
+        episodeRequests.awaitAll().filterNotNull().forEach { (key, episodes) ->
+            episodesMap[key] = episodes
+        }
+
+        Result.success(
             SeriesDetail(
                 id = seriesId,
                 name = seriesItem.name,
