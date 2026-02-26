@@ -91,7 +91,7 @@ class JellyfinApiService(
 
     suspend fun authenticate(username: String, password: String): Result<JellyfinAuthResponse> {
         return try {
-            Log.d(TAG, "Authenticating to $serverUrl as $username")
+            Log.d(TAG, "Authenticating to $serverUrl")
             val response = client.post("$serverUrl/Users/AuthenticateByName") {
                 contentType(ContentType.Application.Json)
                 setBody(JellyfinAuthBody(username = username, password = password))
@@ -99,12 +99,12 @@ class JellyfinApiService(
             accessToken = response.accessToken
             userId = response.user.id
             serverId = response.serverId
-            Log.d(TAG, "Authentication successful for user ${response.user.name}")
+            Log.d(TAG, "Authentication successful")
             // Register client capabilities so Jellyfin knows what we can play
             postCapabilities()
             Result.success(response)
         } catch (e: io.ktor.client.plugins.ClientRequestException) {
-            Log.e(TAG, "Auth client error: ${e.response.status}", e)
+            Log.e(TAG, "Auth client error: ${e.response.status}")
             val message = when (e.response.status.value) {
                 401 -> "Invalid username or password"
                 403 -> "Access denied. Account may be disabled."
@@ -112,7 +112,7 @@ class JellyfinApiService(
             }
             Result.failure(Exception(message, e))
         } catch (e: io.ktor.client.plugins.ServerResponseException) {
-            Log.e(TAG, "Auth server error: ${e.response.status}", e)
+            Log.e(TAG, "Auth server error: ${e.response.status}")
             if (e.response.status.value == 500 && password.isNotBlank()) {
                 // AuthenticateByName endpoint is broken on this server — try the password
                 // as a direct API key (user can generate one from Jellyfin Dashboard → API Keys)
@@ -126,7 +126,7 @@ class JellyfinApiService(
             }
             Result.failure(Exception(message, e))
         } catch (e: Exception) {
-            Log.e(TAG, "Auth failed", e)
+            Log.e(TAG, "Auth failed")
             Result.failure(e)
         }
     }
@@ -137,14 +137,14 @@ class JellyfinApiService(
             accessToken = apiKey
             val user = client.get("$serverUrl/Users/Me").body<JellyfinUser>()
             userId = user.id
-            Log.d(TAG, "API key auth successful for user ${user.name}")
+            Log.d(TAG, "API key auth successful")
             postCapabilities()
             // Return a synthetic auth response so callers don't need to change
             Result.success(JellyfinAuthResponse(user = user, accessToken = apiKey))
         } catch (e: Exception) {
             accessToken = null
             userId = null
-            Log.e(TAG, "API key auth failed", e)
+            Log.e(TAG, "API key auth failed")
             Result.failure(Exception("Authentication failed. Check credentials or provide a Dashboard API key as the password.", e))
         }
     }
@@ -494,7 +494,7 @@ class JellyfinApiService(
             Log.d(TAG, "Quick Connect initiated: code=${result.code}")
             Result.success(result)
         } catch (e: Exception) {
-            Log.e(TAG, "Quick Connect initiate failed", e)
+            Log.e(TAG, "Quick Connect initiate failed")
             Result.failure(e)
         }
     }
@@ -510,7 +510,7 @@ class JellyfinApiService(
             }.body<JellyfinQuickConnectResult>()
             Result.success(result)
         } catch (e: Exception) {
-            Log.e(TAG, "Quick Connect poll failed", e)
+            Log.e(TAG, "Quick Connect poll failed")
             Result.failure(e)
         }
     }
@@ -528,7 +528,7 @@ class JellyfinApiService(
             accessToken = response.accessToken
             userId = response.user.id
             serverId = response.serverId
-            Log.d(TAG, "Quick Connect auth successful for user ${response.user.name}")
+            Log.d(TAG, "Quick Connect auth successful")
             postCapabilities()
             Result.success(response)
         } catch (e: Exception) {
