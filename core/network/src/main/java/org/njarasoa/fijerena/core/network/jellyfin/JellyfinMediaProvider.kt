@@ -2,11 +2,6 @@ package org.njarasoa.fijerena.core.network.jellyfin
 
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -32,10 +27,11 @@ class JellyfinMediaProvider(
     savedToken: String? = null,
     savedUserId: String? = null,
     private val onSessionSaved: ((token: String, userId: String) -> Unit)? = null,
-    private val onSessionCleared: (() -> Unit)? = null
+    private val onSessionCleared: (() -> Unit)? = null,
+    injectedApi: JellyfinApiService? = null
 ) : MediaProvider {
 
-    private val api = JellyfinApiService(serverUrl, deviceId).also {
+    private val api = injectedApi ?: JellyfinApiService(serverUrl, deviceId).also {
         if (savedToken != null && savedUserId != null) {
             it.restoreSession(savedToken, savedUserId)
         }
@@ -187,51 +183,51 @@ class JellyfinMediaProvider(
         return withAutoReconnect { fetchSeriesDetail(seriesId) }
     }
 
-    private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> = coroutineScope {
+    private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> {
         // Fetch the series item itself for its name and metadata
         val seriesResult = api.getItemById(seriesId)
-        if (seriesResult.isFailure) return@coroutineScope Result.failure(seriesResult.exceptionOrNull()!!)
+        if (seriesResult.isFailure) return Result.failure(seriesResult.exceptionOrNull()!!)
         val seriesItem = seriesResult.getOrThrow()
 
         val seasonsResult = api.getSeasons(seriesId)
-        if (seasonsResult.isFailure) return@coroutineScope Result.failure(seasonsResult.exceptionOrNull()!!)
+        if (seasonsResult.isFailure) return Result.failure(seasonsResult.exceptionOrNull()!!)
 
         val seasons = seasonsResult.getOrThrow()
         val episodesMap = mutableMapOf<String, List<EpisodeItem>>()
-        val semaphore = Semaphore(10)
 
-        val episodeRequests = seasons.map { season ->
-            async {
-                semaphore.withPermit {
-                    val episodesResult = api.getEpisodes(seriesId, season.id)
-                    if (episodesResult.isSuccess) {
-                        val seasonKey = (season.indexNumber ?: 0).toString()
-                        val episodes = episodesResult.getOrThrow().map { ep ->
-                            EpisodeItem(
-                                id = ep.id,
-                                episodeNumber = ep.indexNumber ?: 0,
-                                title = ep.name,
-                                seasonNumber = ep.parentIndexNumber,
-                                metadata = MediaMetadata(
-                                    plot = ep.overview,
-                                    duration = ep.runTimeTicks?.let { formatTicks(it) }
-                                ),
-                                thumbnailUrl = if (ep.imageTags.containsKey("Primary")) {
-                                    api.buildImageUrl(ep.id, "Primary")
-                                } else null
-                            )
-                        }
-                        seasonKey to episodes
-                    } else null
-                }
+        // Optimize: Fetch all episodes in one call instead of per-season
+        // Use ParentId = seriesId and Recursive = true (implied by getItems)
+        val allEpisodesResult = api.getItems(
+            parentId = seriesId,
+            includeItemTypes = "Episode"
+        )
+
+        if (allEpisodesResult.isSuccess) {
+            val allEpisodes = allEpisodesResult.getOrThrow()
+            val grouped = allEpisodes.groupBy { it.parentIndexNumber ?: 0 }
+
+            grouped.forEach { (seasonNum, episodes) ->
+                val mappedEpisodes = episodes.map { ep ->
+                    EpisodeItem(
+                        id = ep.id,
+                        episodeNumber = ep.indexNumber ?: 0,
+                        title = ep.name,
+                        seasonNumber = ep.parentIndexNumber,
+                        metadata = MediaMetadata(
+                            plot = ep.overview,
+                            duration = ep.runTimeTicks?.let { formatTicks(it) }
+                        ),
+                        thumbnailUrl = if (ep.imageTags.containsKey("Primary")) {
+                            api.buildImageUrl(ep.id, "Primary")
+                        } else null
+                    )
+                }.sortedBy { it.episodeNumber }
+
+                episodesMap[seasonNum.toString()] = mappedEpisodes
             }
         }
 
-        episodeRequests.awaitAll().filterNotNull().forEach { (key, episodes) ->
-            episodesMap[key] = episodes
-        }
-
-        Result.success(
+        return Result.success(
             SeriesDetail(
                 id = seriesId,
                 name = seriesItem.name,
