@@ -82,10 +82,10 @@ class ProviderRepository(private val context: Context) {
         // provider re-authenticates with the new username/password on next use.
         val effectiveType = type ?: existing.type
         if (effectiveType == "JELLYFIN") {
-            getProviderPrefs(id)?.edit()
-                ?.remove("jellyfin_token")
-                ?.remove("jellyfin_user_id")
-                ?.apply()
+            getProviderPrefs(id).edit()
+                .remove("jellyfin_token")
+                .remove("jellyfin_user_id")
+                .apply()
         }
         // Clear cached provider instance since credentials may have changed
         MediaProviderFactory.clearCache(id)
@@ -117,7 +117,7 @@ class ProviderRepository(private val context: Context) {
      * Get the stored password for a provider.
      */
     fun getPassword(providerId: Long): String? {
-        return getProviderPrefs(providerId)?.getString("password", null)
+        return getProviderPrefs(providerId).getString("password", null)
     }
 
     /**
@@ -125,10 +125,10 @@ class ProviderRepository(private val context: Context) {
      * provider can restore it on next launch without re-authenticating.
      */
     fun saveJellyfinSession(providerId: Long, token: String, userId: String) {
-        getProviderPrefs(providerId)?.edit()
-            ?.putString("jellyfin_token", token)
-            ?.putString("jellyfin_user_id", userId)
-            ?.apply()
+        getProviderPrefs(providerId).edit()
+            .putString("jellyfin_token", token)
+            .putString("jellyfin_user_id", userId)
+            .apply()
     }
 
     // --- Provider Settings ---
@@ -204,14 +204,14 @@ class ProviderRepository(private val context: Context) {
     // --- Private helpers ---
 
     private fun savePassword(providerId: Long, password: String) {
-        getProviderPrefs(providerId)?.edit()
-            ?.putString("password", password)
-            ?.apply()
+        getProviderPrefs(providerId).edit()
+            .putString("password", password)
+            .apply()
     }
 
     private fun clearProviderPassword(providerId: Long) {
         try {
-            getProviderPrefs(providerId)?.edit()?.clear()?.apply()
+            getProviderPrefs(providerId).edit().clear().apply()
         } catch (_: Exception) {
             // Ignore errors clearing prefs for deleted provider
         }
@@ -227,20 +227,16 @@ class ProviderRepository(private val context: Context) {
         }
     }
 
-    private fun getProviderPrefs(providerId: Long): android.content.SharedPreferences? {
-        return try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            EncryptedSharedPreferences.create(
-                context,
-                "provider_creds_$providerId",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (_: Exception) {
-            null
-        }
+    private fun getProviderPrefs(providerId: Long): android.content.SharedPreferences {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        return EncryptedSharedPreferences.create(
+            context,
+            "provider_creds_$providerId",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
     }
 }

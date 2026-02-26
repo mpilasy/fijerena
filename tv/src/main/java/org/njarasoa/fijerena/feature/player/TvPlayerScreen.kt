@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 
 /**
@@ -172,8 +173,8 @@ fun TvPlayerScreen(
                 isFavorite = state.isFavorite,
                 currentEpgProgram = state.currentEpgProgram,
                 nextEpgProgram = state.nextEpgProgram,
-                categoryStreams = state.categoryStreams,
-                lastWatchedStreams = state.lastWatchedStreams.filter { it.id != state.streamId },
+                categoryStreams = ImmutableMediaList(state.categoryStreams),
+                lastWatchedStreams = ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId }),
                 onStreamSelected = { item ->
                     loaderViewModel.loadStream(item)
                 },

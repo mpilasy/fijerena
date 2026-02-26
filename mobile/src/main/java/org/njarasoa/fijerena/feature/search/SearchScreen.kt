@@ -29,9 +29,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -59,22 +56,6 @@ fun MobileSearchScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
 
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        val providerRepo = ProviderRepository(appContext)
-        kotlinx.coroutines.runBlocking {
-            val entity = providerRepo.getActiveProvider()
-            if (entity != null) {
-                val resolvedRepo = MediaRepository(appContext, entity.id)
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect()
-                resolvedRepo.setProvider(provider)
-                resolvedRepo
-            } else MediaRepository(appContext, 0L)
-        }
-    }
-
     // Favorite long-press state
     var favoriteMenuTarget by remember { mutableStateOf<MobileSearchFavoriteTarget?>(null) }
 
@@ -84,12 +65,21 @@ fun MobileSearchScreen(
             onConfirm = {
                 when (target) {
                     is MobileSearchFavoriteTarget.Category -> {
-                        if (target.isFavorite) mediaRepository.removeFavoriteCategory(target.categoryId, target.contentType)
-                        else mediaRepository.addFavoriteCategory(target.categoryId, target.categoryName, target.contentType)
+                        viewModel.toggleFavoriteCategory(
+                            target.categoryId,
+                            target.categoryName,
+                            target.contentType,
+                            target.isFavorite
+                        )
                     }
                     is MobileSearchFavoriteTarget.Stream -> {
-                        if (target.isFavorite) mediaRepository.removeFavorite(target.itemId, target.contentType)
-                        else mediaRepository.addFavorite(target.itemId, target.itemName, target.categoryId, target.contentType)
+                        viewModel.toggleFavorite(
+                            target.itemId,
+                            target.itemName,
+                            target.categoryId,
+                            target.contentType,
+                            target.isFavorite
+                        )
                     }
                 }
             },
@@ -204,7 +194,7 @@ fun MobileSearchScreen(
                                     itemName = result.streamName,
                                     categoryId = result.categoryId,
                                     contentType = result.contentType,
-                                    isFavorite = mediaRepository.isFavorite(result.itemId, result.contentType)
+                                    isFavorite = viewModel.isFavorite(result.itemId, result.contentType)
                                 )
                             },
                             onCategoryClick = { catResult ->
@@ -215,7 +205,7 @@ fun MobileSearchScreen(
                                     categoryId = catResult.categoryId,
                                     categoryName = catResult.categoryName,
                                     contentType = catResult.contentType,
-                                    isFavorite = mediaRepository.isFavoriteCategory(catResult.categoryId, catResult.contentType)
+                                    isFavorite = viewModel.isFavoriteCategory(catResult.categoryId, catResult.contentType)
                                 )
                             }
                         )

@@ -63,9 +63,6 @@ import androidx.compose.ui.input.key.nativeKeyCode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -119,22 +116,6 @@ fun SearchScreen(
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        kotlinx.coroutines.runBlocking {
-            val providerRepo = ProviderRepository(appContext)
-            val entity = providerRepo.getActiveProvider()
-            val repo = MediaRepository(appContext, entity?.id ?: 0L)
-            if (entity != null) {
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect()
-                repo.setProvider(provider)
-            }
-            repo
-        }
-    }
-
     // Favorite long-press state
     var favoriteMenuTarget by remember { mutableStateOf<SearchFavoriteTarget?>(null) }
 
@@ -144,12 +125,21 @@ fun SearchScreen(
             onConfirm = {
                 when (target) {
                     is SearchFavoriteTarget.Category -> {
-                        if (target.isFavorite) mediaRepository.removeFavoriteCategory(target.categoryId, target.contentType)
-                        else mediaRepository.addFavoriteCategory(target.categoryId, target.categoryName, target.contentType)
+                        viewModel.toggleFavoriteCategory(
+                            target.categoryId,
+                            target.categoryName,
+                            target.contentType,
+                            target.isFavorite
+                        )
                     }
                     is SearchFavoriteTarget.Stream -> {
-                        if (target.isFavorite) mediaRepository.removeFavorite(target.itemId, target.contentType)
-                        else mediaRepository.addFavorite(target.itemId, target.itemName, target.categoryId, target.contentType)
+                        viewModel.toggleFavorite(
+                            target.itemId,
+                            target.itemName,
+                            target.categoryId,
+                            target.contentType,
+                            target.isFavorite
+                        )
                     }
                 }
             },
@@ -202,7 +192,7 @@ fun SearchScreen(
                                 itemName = result.streamName,
                                 categoryId = result.categoryId,
                                 contentType = result.contentType,
-                                isFavorite = mediaRepository.isFavorite(result.itemId, result.contentType)
+                                isFavorite = viewModel.isFavorite(result.itemId, result.contentType)
                             )
                         },
                         onCategoryClick = { catResult ->
@@ -213,7 +203,7 @@ fun SearchScreen(
                                 categoryId = catResult.categoryId,
                                 categoryName = catResult.categoryName,
                                 contentType = catResult.contentType,
-                                isFavorite = mediaRepository.isFavoriteCategory(catResult.categoryId, catResult.contentType)
+                                isFavorite = viewModel.isFavoriteCategory(catResult.categoryId, catResult.contentType)
                             )
                         }
                     )
