@@ -7,7 +7,7 @@ Welcome to the Fijerena project. This document serves as the master guide for AI
 ## 📖 Project Overview
 Fijerena is a premium, native Android media player built with Kotlin and Jetpack Compose. It supports multiple content providers (Xtream IPTV, Jellyfin, SMB, Local files, Remote M3U) and provides a unified, "10-foot UI" experience for TV devices and a touch-optimized UI for mobile.
 
-**Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android Mobile (5.0+).
+**Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android Mobile (Android 11+).
 
 **App Icon:** Blue Marble (Earth) with red/cyan 3D glasses. Adaptive icon (foreground PNGs in `mobile/src/main/res/drawable-*/ic_launcher_foreground.png`, black background XML) + legacy webp mipmaps.
 
@@ -16,9 +16,9 @@ Fijerena is a premium, native Android media player built with Kotlin and Jetpack
 ## 🛠️ Tech Stack & Dependencies
 Refer to `gradle/libs.versions.toml` for the authoritative versions.
 - **Language:** Kotlin 2.3.0
-- **Build System:** Gradle 9.0.1
+- **Build System:** Gradle 9.2.1
 - **UI:** 100% Jetpack Compose (2024.12.01 BOM). `androidx.tv.material3` for TV screens.
-- **Media Player:** Media3 ExoPlayer (1.9.1). Optimized for 4K/HDR hardware acceleration.
+- **Media Player:** Media3 ExoPlayer (1.7.1). Optimized for 4K/HDR hardware acceleration.
 - **Networking:** Ktor (3.4.0) with OkHttp engine & kotlinx.serialization (JSON).
 - **Navigation:** Adaptive Navigation Suite / Navigation Compose with `kotlinx.serialization`.
 - **Database:** Room (2.8.4) with FTS4 search.
@@ -117,8 +117,8 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 3. **Navigation IDs:** Always use `String` for IDs.
 
 ### Features
-- **Search:** 
-  - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows.
+- **Search:**
+  - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows. Accessible via search button on the Content Type Selection screen.
   - **Collapsible Groups:** Results grouped by source with collapsible headers (saved via `rememberSaveable`).
   - **Xtream:** Two-phase parallel search with multi-word matching.
   - **Jellyfin:** Server-side search.

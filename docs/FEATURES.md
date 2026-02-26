@@ -40,7 +40,7 @@ Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute 
 ## Search
 
 ### Global Search ("ALL")
-Unified search across all content types (Live TV, Movies, TV Shows) and categories.
+Unified search across all content types (Live TV, Movies, TV Shows) and categories. Accessible via the search button on the Content Type Selection screen.
 - **Grouped Results:** Results are organized by content type headers.
 - **Collapsible Headers:** Each group (Live TV, Movies, TV Shows) can be expanded or collapsed to manage long result lists.
 - **Combined View:** Matches for both categories and individual streams are shown within their respective content type groups.

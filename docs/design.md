@@ -210,10 +210,11 @@ App Start
 ContentTypeSelection -> CategoryList -> MovieDetails/EpisodeSelection -> Player
                                      -> Search
                                      -> EpgGuide (Live TV only)
+ContentTypeSelection -> Search("ALL") [cross-type global search]
+ContentTypeSelection -> EpgBrowser (when EPG indexed)
 Settings -> ProviderSelection -> AddProvider
          -> EpgManagement
          -> CellularBufferSettings (dev mode)
-ContentTypeSelection -> EpgBrowser (when EPG indexed)
 ```
 
 ### Platform-Specific Navigation
@@ -482,6 +483,10 @@ Two-phase parallel search:
 2. **Phase 2 (network):** Fetch uncached categories with semaphore=20, streaming results, 200 max
 
 Background pre-fetching warms cache on category screen init.
+
+### Cross-Type Search ("ALL")
+
+Global search accessible from the Content Type Selection screen via search button. Searches across Live TV, Movies, and TV Shows simultaneously. Results are grouped by content type with collapsible headers (state saved via `rememberSaveable`). Navigation from results is dynamically routed based on content type: Live TV → Player, Movies → MovieDetails, TV Shows → EpisodeSelection.
 
 ### Jellyfin (Server-Side)
 

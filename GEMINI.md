@@ -9,7 +9,7 @@ This file serves as the foundational mandate for Gemini CLI interactions within 
 - NVIDIA Shield (prioritizing AV1/HEVC)
 - Chromecast with Google TV
 - Sony Bravia (Android TV)
-- Android Mobile (API 21+)
+- Android Mobile (API 30+)
 
 ## 🏗️ Architecture & Modules
 The project follows a modular, Clean Architecture pattern with MVVM.
@@ -31,7 +31,7 @@ The project follows a modular, Clean Architecture pattern with MVVM.
 
 ## 🛠️ Tech Stack
 - **Language:** Kotlin 2.3.0
-- **Build System:** Gradle 9.0.1 (with Version Catalogs)
+- **Build System:** Gradle 9.2.1 (with Version Catalogs)
 - **UI Framework:** Jetpack Compose (BOM 2024.12.01)
 - **TV Material:** `androidx.tv.material3` (1.0.0-alpha10)
 - **Media Player:** Media3 ExoPlayer (1.7.1)

@@ -7,7 +7,7 @@
 **A feature-rich multi-provider media player for Android**
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
-[![Android](https://img.shields.io/badge/Android-5.0+-green.svg)](https://developer.android.com)
+[![Android](https://img.shields.io/badge/Android-11+-green.svg)](https://developer.android.com)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-100%25-brightgreen.svg)](https://developer.android.com/jetpack/compose)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)]()
 
@@ -74,9 +74,11 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **VOD Seek Controls** - Rewind −30s and Fast-forward +1min via buttons or remote media keys
 - **Pause via Double-Tap** - Mobile double-tap pauses/resumes VOD content
 - **VOD Time Display** - Current position, remaining time, estimated end time
+- **Cross-Type Search** - Unified "ALL" search across Live TV, Movies, and TV Shows from content type selection
 - **Developer Mode** - Payload size tracking and debug information
 - **Cache Management** - Per-content-type cache with statistics
 - **UI Scale Adjustment** - 70%-100% sizing options
+- **Cellular Buffer Tuning** - Adjustable cellular buffer multipliers (0.5x-3.0x) in dev mode
 
 ### 📱 Platform-Specific
 - **Mobile**:
@@ -93,14 +95,14 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ## 🖥️ Supported Devices
 
 ### ✅ Tested & Optimized
-- **Android Mobile** - Phones & tablets (Android 5.0+)
+- **Android Mobile** - Phones & tablets (Android 11+)
 - **NVIDIA Shield** - Shield TV & Shield TV Pro (prioritizes AV1/HEVC codecs)
 - **Chromecast with Google TV** - 4K & HD models
 - **Sony Bravia** - Android TV models (HEVC optimization)
 
 ### 🎯 Target Platform
-- **Minimum SDK**: 21 (Android 5.0 Lollipop)
-- **Target SDK**: 35 (Android 15)
+- **Minimum SDK**: 30 (Android 11)
+- **Target SDK**: 36 (Android 16)
 - **Architectures**: ARM64, ARMv7, x86_64, x86
 
 ## 🛠️ Tech Stack
@@ -109,11 +111,11 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | Language | Kotlin | 2.3.0 |
-| Build System | Gradle | 9.0.0 |
+| Build System | Gradle | 9.2.1 |
 | UI Framework | Jetpack Compose | 2024.12.01 BOM |
 | Material Design | Material 3 | 1.4.0 |
 | TV Components | androidx.tv.material3 | 1.0.0-alpha10 |
-| Video Player | Media3 (ExoPlayer) | 1.9.1 |
+| Video Player | Media3 (ExoPlayer) | 1.7.1 |
 | Networking | Ktor | 3.4.0 |
 | Serialization | kotlinx.serialization | 1.8.0 |
 | Database | Room | 2.8.4 |
@@ -148,7 +150,6 @@ fijerena/
 │   └── navigation/           # Type-safe navigation definitions
 ├── docs/                     # Additional documentation
 ├── CLAUDE.md                 # Technical specification & coding standards
-├── FEATURES.md               # Feature documentation
 └── README.md                 # This file
 ```
 
@@ -157,7 +158,7 @@ fijerena/
 ### Prerequisites
 - **Java Development Kit (JDK)** - Version 17 or higher
 - **Android Studio** - Ladybug (2024.2.1) or newer
-- **Android SDK** - API Level 35 (Android 15)
+- **Android SDK** - API Level 36 (Android 16)
 - **Git** - For version control
 
 ### Clone the Repository
@@ -299,11 +300,10 @@ All UI values (colors, spacing, dimensions, animations) **must** come from desig
 Comprehensive documentation is available in the following files:
 
 - **[CLAUDE.md](CLAUDE.md)** - Complete technical specification, coding standards, and architectural guidelines
-- **[FEATURES.md](FEATURES.md)** - Detailed feature documentation with API references
-- **[NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md)** - App navigation flow and screen hierarchy
-- **[MOBILE_RUN_GUIDE.md](MOBILE_RUN_GUIDE.md)** - Mobile-specific setup and testing guide
-- **[STREAMING_SERVICE_IMPLEMENTATION.md](STREAMING_SERVICE_IMPLEMENTATION.md)** - Media3 player implementation details
-- **[RELEASE_NOTES.md](RELEASE_NOTES.md)** - Version history and changelog
+- **[docs/FEATURES.md](docs/FEATURES.md)** - Detailed feature documentation with API references
+- **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - App navigation flow and screen hierarchy
+- **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Version history and changelog
+- **[docs/design.md](docs/design.md)** - System design and architecture
 - **[docs/ui-theme-options.md](docs/ui-theme-options.md)** - Theme system documentation
 
 ## 🎨 Theme System

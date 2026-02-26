@@ -166,7 +166,7 @@ adb shell dumpsys package org.njarasoa.fijerena
 ### Current Setup
 ```kotlin
 applicationId: org.njarasoa.fijerena
-minSdk: 21  (Android 5.0 Lollipop and above)
+minSdk: 30  (Android 11 and above)
 targetSdk: 36  (Latest Android)
 versionCode: 1
 versionName: 1.0
@@ -174,7 +174,7 @@ versionName: 1.0
 
 ### Features Included
 - ✅ StreamingService (shared :core:player library)
-- ✅ Media3 ExoPlayer 1.9.1
+- ✅ Media3 ExoPlayer 1.7.1
 - ✅ Device-aware codec selection
 - ✅ Network streaming (HTTP/HTTPS/HLS)
 - ✅ Wake lock management
