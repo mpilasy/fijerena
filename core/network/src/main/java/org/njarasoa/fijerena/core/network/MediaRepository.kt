@@ -70,6 +70,7 @@ class MediaRepository(
     private val providerId: Long,
     private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT
 ) {
+    @Volatile
     private var provider: MediaProvider? = null
 
     private val cacheName = "media_cache_$providerId"
@@ -172,6 +173,11 @@ class MediaRepository(
 
     suspend fun getItemsForSearch(categoryId: String, contentType: String): kotlin.Result<List<MediaItem>> {
         return provider?.getItems(categoryId, contentType)
+            ?: kotlin.Result.failure(Exception("No provider set"))
+    }
+
+    suspend fun getAllItems(contentType: String): kotlin.Result<List<MediaItem>> {
+        return provider?.getAllItems(contentType)
             ?: kotlin.Result.failure(Exception("No provider set"))
     }
 

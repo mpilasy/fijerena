@@ -85,20 +85,8 @@ class MovieDetailsViewModel(
     }
 
     private suspend fun getRepository(): MediaRepository {
-        val providerRepo = ProviderRepository(context)
-        val entity = providerRepo.getActiveProvider()
-        val repo = if (entity != null) {
-            val settings = providerRepo.getProviderSettings(entity.id)
-            val resolvedRepo = MediaRepository(context, entity.id, settings)
-            val password = providerRepo.getPassword(entity.id) ?: ""
-            val provider = MediaProviderFactory.create(entity, context, password)
-            provider.connect()
-            resolvedRepo.setProvider(provider)
-            resolvedRepo
-        } else {
-            MediaRepository(context, 0L)
-        }
-        return repo
+        val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+        return container.getMediaRepository()
     }
 
     fun toggleFavorite(movieName: String) {

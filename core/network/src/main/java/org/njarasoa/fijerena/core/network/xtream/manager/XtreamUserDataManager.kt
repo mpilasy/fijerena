@@ -24,6 +24,9 @@ class XtreamUserDataManager(
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
+    
+    private var cachedWatchHistory: List<WatchedStream>? = null
+    private var favoritesCache: List<FavoriteStream>? = null
 
     /**
      * Save last played stream with content-type specific tracking
@@ -118,18 +121,27 @@ class XtreamUserDataManager(
         // Save to cache
         val historyJson = json.encodeToString(trimmedHistory)
         sharedPreferences.edit().putString(KEY_WATCH_HISTORY, historyJson).apply()
+        cachedWatchHistory = trimmedHistory
     }
 
     /**
      * Get watch history (last 25 watched streams)
      */
     fun getWatchHistory(): List<WatchedStream> {
-        val historyJson = sharedPreferences.getString(KEY_WATCH_HISTORY, null) ?: return emptyList()
-        return try {
-            json.decodeFromString<List<WatchedStream>>(historyJson)
-        } catch (e: Exception) {
+        cachedWatchHistory?.let { return it }
+
+        val historyJson = sharedPreferences.getString(KEY_WATCH_HISTORY, null)
+        val history = if (historyJson == null) {
             emptyList()
+        } else {
+            try {
+                json.decodeFromString<List<WatchedStream>>(historyJson)
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
+        cachedWatchHistory = history
+        return history
     }
 
     /**
@@ -137,6 +149,7 @@ class XtreamUserDataManager(
      */
     fun clearWatchHistory() {
         sharedPreferences.edit().remove(KEY_WATCH_HISTORY).apply()
+        cachedWatchHistory = emptyList()
     }
 
     /**
@@ -155,6 +168,9 @@ class XtreamUserDataManager(
 
         // Trim to max size
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
+        
+        // Update cache
+        favoritesCache = trimmed
 
         // Save
         sharedPreferences.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
@@ -167,7 +183,12 @@ class XtreamUserDataManager(
     fun removeFavorite(streamId: Int, contentType: String): Boolean {
         val favorites = getFavorites().toMutableList()
         val removed = favorites.removeAll { it.streamId == streamId && it.contentType == contentType }
-        sharedPreferences.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
+        
+        if (removed) {
+            // Update cache
+            favoritesCache = favorites
+            sharedPreferences.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
+        }
         return removed
     }
 
@@ -175,12 +196,20 @@ class XtreamUserDataManager(
      * Get all favorites
      */
     fun getFavorites(): List<FavoriteStream> {
-        val jsonStr = sharedPreferences.getString(KEY_FAVORITES, null) ?: return emptyList()
-        return try {
-            json.decodeFromString<List<FavoriteStream>>(jsonStr)
-        } catch (e: Exception) {
+        favoritesCache?.let { return it }
+        
+        val jsonStr = sharedPreferences.getString(KEY_FAVORITES, null)
+        val favorites = if (jsonStr == null) {
             emptyList()
+        } else {
+            try {
+                json.decodeFromString<List<FavoriteStream>>(jsonStr)
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
+        favoritesCache = favorites
+        return favorites
     }
 
     /**
@@ -195,6 +224,7 @@ class XtreamUserDataManager(
      */
     fun clearFavorites() {
         sharedPreferences.edit().remove(KEY_FAVORITES).apply()
+        favoritesCache = emptyList()
     }
 
     /**
@@ -262,6 +292,7 @@ class XtreamUserDataManager(
             val item = history[index]
             history[index] = item.copy(playbackPosition = 0L, isCompleted = false)
             sharedPreferences.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
+            cachedWatchHistory = history
         }
     }
 }

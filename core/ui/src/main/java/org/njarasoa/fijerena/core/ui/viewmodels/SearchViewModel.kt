@@ -18,9 +18,19 @@ import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.network.MediaRepository
 
 class SearchViewModel(
-    private val repository: MediaRepository,
+    private val context: android.content.Context,
     private val contentType: String
 ) : ViewModel() {
+
+    private var repository: org.njarasoa.fijerena.core.network.MediaRepository? = null
+
+    private suspend fun ensureRepo(): org.njarasoa.fijerena.core.network.MediaRepository {
+        if (repository == null) {
+            val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+            repository = container.getMediaRepository()
+        }
+        return repository!!
+    }
 
     sealed class UiState {
         data object Loading : UiState()
@@ -86,12 +96,18 @@ class SearchViewModel(
         // Pre-fetch category list + all missing/stale category items in background.
         // This job runs independently — never cancelled by search.
         viewModelScope.launch(Dispatchers.IO) {
-            if (!repository.isConnected()) {
-                repository.connect()
+            val repo = try {
+                ensureRepo()
+            } catch (e: Exception) {
+                return@launch
+            }
+
+            if (!repo.isConnected()) {
+                repo.connect()
             }
 
             val targetContentTypes = if (contentType == CONTENT_TYPE_ALL) {
-                repository.getCapabilities()?.supportedContentTypes?.toList() ?: emptyList()
+                repo.getCapabilities()?.supportedContentTypes?.toList() ?: emptyList()
             } else {
                 listOf(contentType)
             }
@@ -100,7 +116,7 @@ class SearchViewModel(
             val semaphore = Semaphore(PARALLEL_BATCH_SIZE)
 
             targetContentTypes.forEach { type ->
-                val result = repository.getFilteredCategories(type)
+                val result = repo.getFilteredCategories(type)
                 result.onSuccess { categories ->
                     val realCategories = categories.filter { it.id != "last_watched" && !it.isVirtual }
                     realCategories.forEach { cat ->
@@ -110,10 +126,10 @@ class SearchViewModel(
                     // Launch prefetch for this batch
                     realCategories.map { category ->
                         launch {
-                            if (repository.getItemsIfCached(category.id, type) != null) return@launch
+                            if (repo.getItemsIfCached(category.id, type) != null) return@launch
                             semaphore.withPermit {
                                 try {
-                                    repository.getItemsForSearch(category.id, type)
+                                    repo.getItemsForSearch(category.id, type)
                                 } catch (_: Exception) { }
                             }
                         }
@@ -155,8 +171,10 @@ class SearchViewModel(
             var accumulatedNetworkMs = 0L
             var firstError: String? = null
 
-            if (!repository.isConnected()) {
-                val connectResult = repository.connect()
+            val repo = ensureRepo()
+
+            if (!repo.isConnected()) {
+                val connectResult = repo.connect()
                 if (connectResult.isFailure) {
                     _uiState.value = UiState.Error("Session expired. Please login again.")
                     return
@@ -164,7 +182,7 @@ class SearchViewModel(
             }
 
             val targetContentTypes = if (contentType == CONTENT_TYPE_ALL) {
-                repository.getCapabilities()?.supportedContentTypes?.toList() ?: emptyList()
+                repo.getCapabilities()?.supportedContentTypes?.toList() ?: emptyList()
             } else {
                 listOf(contentType)
             }
@@ -177,12 +195,12 @@ class SearchViewModel(
             var serverError: String? = null
 
             for (type in targetContentTypes) {
-                val serverResult = repository.search(query, type)
+                val serverResult = repo.search(query, type)
                 if (serverResult != null) {
                     serverResult.fold(
                         onSuccess = { items ->
                             serverSearchSuccess = true
-                            val bulkDataSize = repository.getLastSearchDataSize(type)
+                            val bulkDataSize = repo.getLastSearchDataSize(type)
                             networkBytes += bulkDataSize
                                 ?: items.sumOf { it.name.length.toLong() * 2 + 64 }
 
@@ -210,14 +228,15 @@ class SearchViewModel(
             if (serverSearchSuccess) {
                 val elapsed = System.currentTimeMillis() - startTime
                 val normalizedQuery = query.trim().lowercase()
-                val sortedResults = sortResults(serverResults, normalizedQuery)
+                val queryWords = SearchUtils.getQueryWords(normalizedQuery)
+                val sortedResults = sortResults(serverResults, normalizedQuery, queryWords)
 
                 val matchingCategories = mutableListOf<CategorySearchResult>()
                 for (type in targetContentTypes) {
-                    val serverCategories = repository.getFilteredCategories(type)
+                    val serverCategories = repo.getFilteredCategories(type)
                     serverCategories.getOrDefault(emptyList())
                         .filter { !it.isVirtual }
-                        .filter { matchesQuery(it.name, normalizedQuery) }
+                        .filter { SearchUtils.matchesQuery(it.name, queryWords) }
                         .forEach {
                             matchingCategories.add(CategorySearchResult(it.id, it.name, type))
                         }
@@ -243,7 +262,7 @@ class SearchViewModel(
             val realCategories = prefetchedCategories ?: run {
                 val allFetched = mutableListOf<SearchableCategory>()
                 for (type in targetContentTypes) {
-                    val categoriesResult = repository.getFilteredCategories(type)
+                    val categoriesResult = repo.getFilteredCategories(type)
                     val categories = categoriesResult.getOrElse {
                         // continue to next type on error
                         continue
@@ -261,9 +280,11 @@ class SearchViewModel(
 
             val results = mutableListOf<SearchResult>()
             val normalizedQuery = query.trim().lowercase()
+            val queryWords = SearchUtils.getQueryWords(normalizedQuery)
 
+            // Optimized query matching using pre-calculated query words
             val matchingCategories = realCategories
-                .filter { matchesQuery(it.category.name, normalizedQuery) }
+                .filter { SearchUtils.matchesQuery(it.category.name, queryWords) }
                 .map { CategorySearchResult(it.category.id, it.category.name, it.contentType) }
 
             _uiState.value = UiState.Success(
@@ -281,11 +302,11 @@ class SearchViewModel(
             val uncachedCategories = mutableListOf<SearchableCategory>()
             for (sc in realCategories) {
                 currentCoroutineContext().job.ensureActive() // respect cancellation
-                val cached = repository.getItemsIfCached(sc.category.id, sc.contentType)
+                val cached = repo.getItemsIfCached(sc.category.id, sc.contentType)
                 if (cached != null) {
                     categoriesSearched++
                     val matchingItems = cached
-                        .filter { matchesQuery(it.name, normalizedQuery) }
+                        .filter { SearchUtils.matchesQuery(it.name, queryWords) }
                         .map { item ->
                             SearchResult(
                                 itemId = item.id,
@@ -305,7 +326,7 @@ class SearchViewModel(
 
             // Show cached results immediately
             if (categoriesSearched > 0) {
-                val sortedCached = sortResults(results, normalizedQuery)
+                val sortedCached = sortResults(results, normalizedQuery, queryWords)
                 val displayCached = sortedCached.take(TARGET_RESULTS)
                 val elapsed = System.currentTimeMillis() - startTime
                 _uiState.value = UiState.Success(
@@ -341,23 +362,48 @@ class SearchViewModel(
                 val fetchChannel = Channel<FetchResult>(Channel.UNLIMITED)
 
                 val producerJob = scope.launch(Dispatchers.IO) {
-                    for (sc in uncachedCategories) {
+                    val uncachedByContentType = uncachedCategories.groupBy { it.contentType }
+
+                    uncachedByContentType.forEach { (type, categories) ->
                         launch {
-                            semaphore.withPermit {
-                                val t0 = System.currentTimeMillis()
-                                var items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>? = null
-                                var error: String? = null
-                                try {
-                                    val result = repository.getItemsForSearch(sc.category.id, sc.contentType)
-                                    items = result.getOrNull()
-                                    if (items == null) {
-                                        error = result.exceptionOrNull()?.message ?: "Unknown failure"
-                                    }
-                                } catch (e: Exception) {
-                                    error = e.message ?: e.javaClass.simpleName
+                            // Try batch fetch first to avoid N+1 queries
+                            val tBatch = System.currentTimeMillis()
+                            val batchResult = repo.getAllItems(type)
+
+                            if (batchResult.isSuccess) {
+                                val allItems = batchResult.getOrNull() ?: emptyList()
+                                val itemsByCategory = allItems.groupBy { it.categoryId }
+                                val duration = System.currentTimeMillis() - tBatch
+                                // Distribute duration roughly among categories to keep stats somewhat meaningful,
+                                // though networkCalls will appear higher than reality.
+                                val durationPerCat = if (categories.isNotEmpty()) duration / categories.size else 0L
+
+                                categories.forEach { sc ->
+                                    val catItems = itemsByCategory[sc.category.id] ?: emptyList()
+                                    fetchChannel.send(FetchResult(sc.category, sc.contentType, catItems, durationPerCat))
                                 }
-                                val dt = System.currentTimeMillis() - t0
-                                fetchChannel.send(FetchResult(sc.category, sc.contentType, items, dt, error))
+                            } else {
+                                // Fallback to individual parallel fetching if batch not supported/failed
+                                for (sc in categories) {
+                                    launch {
+                                        semaphore.withPermit {
+                                            val t0 = System.currentTimeMillis()
+                                            var items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>? = null
+                                            var error: String? = null
+                                            try {
+                                                val result = repo.getItemsForSearch(sc.category.id, sc.contentType)
+                                                items = result.getOrNull()
+                                                if (items == null) {
+                                                    error = result.exceptionOrNull()?.message ?: "Unknown failure"
+                                                }
+                                            } catch (e: Exception) {
+                                                error = e.message ?: e.javaClass.simpleName
+                                            }
+                                            val dt = System.currentTimeMillis() - t0
+                                            fetchChannel.send(FetchResult(sc.category, sc.contentType, items, dt, error))
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -380,7 +426,7 @@ class SearchViewModel(
                     if (items != null) {
                         networkBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
                         val matchingItems = items
-                            .filter { matchesQuery(it.name, normalizedQuery) }
+                            .filter { SearchUtils.matchesQuery(it.name, queryWords) }
                             .map { item ->
                                 SearchResult(
                                     itemId = item.id,
@@ -403,7 +449,7 @@ class SearchViewModel(
                     val now = System.currentTimeMillis()
                     if (now - lastUiUpdateTime > 100 || categoriesSearched == realCategories.size) {
                         lastUiUpdateTime = now
-                        val sorted = sortResults(results, normalizedQuery)
+                        val sorted = sortResults(results, normalizedQuery, queryWords)
                         val display = sorted.take(TARGET_RESULTS)
                         val now2 = System.currentTimeMillis()
                         _uiState.value = UiState.Success(
@@ -426,7 +472,7 @@ class SearchViewModel(
                 fetchChannel.close()
             }
 
-            val finalResults = sortResults(results, normalizedQuery).take(TARGET_RESULTS)
+            val finalResults = sortResults(results, normalizedQuery, queryWords).take(TARGET_RESULTS)
             val endTime = System.currentTimeMillis()
             val networkEndTime = if (uncachedCategories.isNotEmpty()) endTime else startTime
             _uiState.value = UiState.Success(
@@ -450,15 +496,7 @@ class SearchViewModel(
         }
     }
 
-    private fun matchesQuery(text: String, query: String): Boolean {
-        if (query.isBlank()) return true
-        val words = query.lowercase().split(" ").filter { it.isNotBlank() }
-        if (words.isEmpty()) return true
-        val lowerText = text.lowercase()
-        return words.all { lowerText.contains(it) }
-    }
-
-    private fun sortResults(results: List<SearchResult>, normalizedQuery: String): List<SearchResult> {
+    private fun sortResults(results: List<SearchResult>, normalizedQuery: String, queryWords: List<String>): List<SearchResult> {
         return results.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
             .thenBy {
                 val lowerName = it.streamName.lowercase()
@@ -466,13 +504,43 @@ class SearchViewModel(
                     lowerName == normalizedQuery -> 0
                     lowerName.startsWith(normalizedQuery) -> 1
                     else -> {
-                        val words = normalizedQuery.split(" ").filter { it.isNotBlank() }
-                        if (words.isNotEmpty() && words.all { w -> lowerName.contains(w) }) {
-                            if (lowerName.startsWith(words[0])) 2 else 3
+                        if (queryWords.isNotEmpty() && queryWords.all { w -> lowerName.contains(w) }) {
+                            if (lowerName.startsWith(queryWords[0])) 2 else 3
                         } else 4
                     }
                 }
             }
             .thenBy { it.streamName })
     }
+
+    fun isFavorite(itemId: String, contentType: String): Boolean {
+        return repository?.isFavorite(itemId, contentType) ?: false
+    }
+
+    fun isFavoriteCategory(categoryId: String, contentType: String): Boolean {
+        return repository?.isFavoriteCategory(categoryId, contentType) ?: false
+    }
+
+    fun toggleFavorite(itemId: String, itemName: String, categoryId: String, contentType: String, isFavorite: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val repo = ensureRepo()
+            if (isFavorite) {
+                repo.removeFavorite(itemId, contentType)
+            } else {
+                repo.addFavorite(itemId, itemName, categoryId, contentType)
+            }
+        }
+    }
+
+    fun toggleFavoriteCategory(categoryId: String, categoryName: String, contentType: String, isFavorite: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val repo = ensureRepo()
+            if (isFavorite) {
+                repo.removeFavoriteCategory(categoryId, contentType)
+            } else {
+                repo.addFavoriteCategory(categoryId, categoryName, contentType)
+            }
+        }
+    }
 }
+
