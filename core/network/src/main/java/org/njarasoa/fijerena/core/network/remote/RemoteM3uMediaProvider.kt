@@ -48,8 +48,8 @@ class RemoteM3uMediaProvider(
 
     override suspend fun connect(): Result<Unit> {
         return try {
-            val content = loadM3uContent()
-            val entries = M3uParser.parse(content)
+            val file = loadM3uContent()
+            val entries = file.bufferedReader().use { M3uParser.parse(it) }
             if (entries.isEmpty()) {
                 return Result.failure(IllegalStateException("No valid entries found in M3U playlist"))
             }
@@ -138,28 +138,23 @@ class RemoteM3uMediaProvider(
         )
     }
 
-    private fun loadM3uContent(): String {
+    private fun loadM3uContent(): File {
         // Check cache
         if (cacheFile.exists()) {
             val age = System.currentTimeMillis() - cacheFile.lastModified()
             if (age < CACHE_TTL_MS) {
                 Log.d(TAG, "Using cached M3U (${age / 60000}min old, ${cacheFile.length() / 1024}KB)")
-                return cacheFile.readText()
+                return cacheFile
             }
             Log.d(TAG, "Cache stale (${age / 3600000}h old), re-downloading")
         }
 
         // Download with retries
-        val content = downloadWithRetries()
-
-        // Persist to cache
-        cacheFile.writeText(content)
-        Log.d(TAG, "M3U cached: ${cacheFile.length() / 1024}KB")
-
-        return content
+        downloadWithRetries()
+        return cacheFile
     }
 
-    private fun downloadWithRetries(): String {
+    private fun downloadWithRetries() {
         var lastError: Exception? = null
 
         for (attempt in 1..MAX_RETRIES) {
@@ -202,15 +197,20 @@ class RemoteM3uMediaProvider(
                         if (read > 0) String(buf, 0, read) else ""
                     }
                     if (!header.trimStart().startsWith("#EXTM3U")) {
-                        tmpFile.delete()
                         throw Exception("Invalid M3U file: missing #EXTM3U header")
                     }
 
-                    val content = tmpFile.readText()
-                    tmpFile.delete()
-                    return content
+                    if (cacheFile.exists()) {
+                        cacheFile.delete()
+                    }
+                    if (!tmpFile.renameTo(cacheFile)) {
+                        tmpFile.copyTo(cacheFile, overwrite = true)
+                        tmpFile.delete()
+                    }
+                    Log.d(TAG, "M3U cached: ${cacheFile.length() / 1024}KB")
+                    return
                 } finally {
-                    tmpFile.delete()
+                    if (tmpFile.exists()) tmpFile.delete()
                 }
             } catch (e: Exception) {
                 lastError = e
@@ -226,7 +226,7 @@ class RemoteM3uMediaProvider(
         // All retries exhausted — fall back to stale cache if available
         if (cacheFile.exists()) {
             Log.w(TAG, "Download failed, using stale cache: ${lastError?.message}")
-            return cacheFile.readText()
+            return
         }
 
         throw lastError ?: Exception("Failed to download M3U playlist")

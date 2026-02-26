@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.smb
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -15,6 +16,8 @@ class SmbMediaProvider(
     override val providerId: Long,
     private val smbClient: SmbClient
 ) : MediaProvider {
+
+    private val TAG = "SmbMediaProvider"
 
     override val capabilities = ProviderCapabilities(
         supportedContentTypes = setOf("MOVIES"),
@@ -125,7 +128,8 @@ class SmbMediaProvider(
                     )
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during root share scan", e)
             // Partial scan is acceptable
         }
 
@@ -157,7 +161,8 @@ class SmbMediaProvider(
                     )
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Error scanning directory: $path", e)
             // Skip inaccessible directories
         }
     }
