@@ -83,13 +83,13 @@ class GoogleAuthManager(private val context: Context) {
 
             // Try silent sign-in
             val account = signInClient.silentSignIn().await()
-            Log.d(TAG, "Silent sign-in successful: ${account.email}")
+            Log.d(TAG, "Silent sign-in successful")
             true
         } catch (e: ApiException) {
             Log.d(TAG, "Silent sign-in failed: ${e.statusCode}")
             false
         } catch (e: Exception) {
-            Log.e(TAG, "Silent sign-in error", e)
+            Log.e(TAG, "Silent sign-in error")
             false
         }
     }
@@ -110,13 +110,13 @@ class GoogleAuthManager(private val context: Context) {
         try {
             val task = GoogleSignIn.getSignedInAccountFromIntent(data)
             val account = task.await()
-            Log.d(TAG, "Sign-in successful: ${account.email}")
+            Log.d(TAG, "Sign-in successful")
             account
         } catch (e: ApiException) {
-            Log.e(TAG, "Sign-in failed: ${e.statusCode}", e)
+            Log.e(TAG, "Sign-in failed: ${e.statusCode}")
             null
         } catch (e: Exception) {
-            Log.e(TAG, "Sign-in error", e)
+            Log.e(TAG, "Sign-in error")
             null
         }
     }

@@ -30,6 +30,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val _currentMetadata = MutableStateFlow(PlayerMetadata())
     val currentMetadata: StateFlow<PlayerMetadata> = _currentMetadata.asStateFlow()
 
+    private val _rebufferCount = MutableStateFlow(0)
+    val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
+
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
@@ -145,16 +148,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance()
-            if (service != null) {
-                // Use service's playStream method which uses StreamingMediaSourceFactory
-                service.playStream(metadata)
-
-                // Seek to resume position after playback starts
-                if (resumeFromPosition > 0L) {
-                    kotlinx.coroutines.delay(500) // Small delay to ensure player is ready
-                    seekTo(resumeFromPosition)
-                }
-            }
+            service?.playStream(metadata, resumeFromPosition)
         }
     }
 

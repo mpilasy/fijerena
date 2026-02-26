@@ -2,6 +2,11 @@ package org.njarasoa.fijerena.core.network.jellyfin
 
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
@@ -181,41 +186,51 @@ class JellyfinMediaProvider(
         return withAutoReconnect { fetchSeriesDetail(seriesId) }
     }
 
-    private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> {
+    private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> = coroutineScope {
         // Fetch the series item itself for its name and metadata
         val seriesResult = api.getItemById(seriesId)
-        if (seriesResult.isFailure) return Result.failure(seriesResult.exceptionOrNull()!!)
+        if (seriesResult.isFailure) return@coroutineScope Result.failure(seriesResult.exceptionOrNull()!!)
         val seriesItem = seriesResult.getOrThrow()
 
         val seasonsResult = api.getSeasons(seriesId)
-        if (seasonsResult.isFailure) return Result.failure(seasonsResult.exceptionOrNull()!!)
+        if (seasonsResult.isFailure) return@coroutineScope Result.failure(seasonsResult.exceptionOrNull()!!)
 
         val seasons = seasonsResult.getOrThrow()
         val episodesMap = mutableMapOf<String, List<EpisodeItem>>()
+        val semaphore = Semaphore(10)
 
-        for (season in seasons) {
-            val episodesResult = api.getEpisodes(seriesId, season.id)
-            if (episodesResult.isSuccess) {
-                val seasonKey = (season.indexNumber ?: 0).toString()
-                episodesMap[seasonKey] = episodesResult.getOrThrow().map { ep ->
-                    EpisodeItem(
-                        id = ep.id,
-                        episodeNumber = ep.indexNumber ?: 0,
-                        title = ep.name,
-                        seasonNumber = ep.parentIndexNumber,
-                        metadata = MediaMetadata(
-                            plot = ep.overview,
-                            duration = ep.runTimeTicks?.let { formatTicks(it) }
-                        ),
-                        thumbnailUrl = if (ep.imageTags.containsKey("Primary")) {
-                            api.buildImageUrl(ep.id, "Primary")
-                        } else null
-                    )
+        val episodeRequests = seasons.map { season ->
+            async {
+                semaphore.withPermit {
+                    val episodesResult = api.getEpisodes(seriesId, season.id)
+                    if (episodesResult.isSuccess) {
+                        val seasonKey = (season.indexNumber ?: 0).toString()
+                        val episodes = episodesResult.getOrThrow().map { ep ->
+                            EpisodeItem(
+                                id = ep.id,
+                                episodeNumber = ep.indexNumber ?: 0,
+                                title = ep.name,
+                                seasonNumber = ep.parentIndexNumber,
+                                metadata = MediaMetadata(
+                                    plot = ep.overview,
+                                    duration = ep.runTimeTicks?.let { formatTicks(it) }
+                                ),
+                                thumbnailUrl = if (ep.imageTags.containsKey("Primary")) {
+                                    api.buildImageUrl(ep.id, "Primary")
+                                } else null
+                            )
+                        }
+                        seasonKey to episodes
+                    } else null
                 }
             }
         }
 
-        return Result.success(
+        episodeRequests.awaitAll().filterNotNull().forEach { (key, episodes) ->
+            episodesMap[key] = episodes
+        }
+
+        Result.success(
             SeriesDetail(
                 id = seriesId,
                 name = seriesItem.name,

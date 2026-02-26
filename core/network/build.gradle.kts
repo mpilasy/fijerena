@@ -55,5 +55,6 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
-    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

@@ -6,9 +6,13 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -62,9 +66,11 @@ class XtreamRepository(
     private val accountManager: AccountManager,
     context: Context,
     private val providerId: Long = 0L,
-    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT
+    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
+    database: XtreamDatabase? = null,
+    apiService: XtreamApiService? = null
 ) {
-    private var apiService: XtreamApiService? = null
+    private var apiService: XtreamApiService? = apiService
     private val cacheName = if (providerId > 0L) "xtream_cache_$providerId" else "xtream_cache"
     private val cache: SharedPreferences = context.getSharedPreferences(
         cacheName,
@@ -76,10 +82,10 @@ class XtreamRepository(
         encodeDefaults = true
     }
 
-    private val database = XtreamDatabase.getInstance(context)
-    private val categoryDao = database.categoryDao()
-    private val streamDao = database.streamDao()
-    private val seriesDao = database.seriesDao()
+    private val db = database ?: XtreamDatabase.getInstance(context)
+    private val categoryDao = db.categoryDao()
+    private val streamDao = db.streamDao()
+    private val seriesDao = db.seriesDao()
 
     /** Whether caching is enabled for this provider */
     private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
@@ -94,6 +100,9 @@ class XtreamRepository(
      * refresh while the cache is valid.
      */
     private val liveStreamRefreshThresholdMs: Long = 5 * 60 * 1000L // 5 minutes
+
+    @Volatile
+    private var favoritesCache: List<FavoriteStream>? = null
 
     // Payload size tracking for dev mode (now tracks DB operation sizes/counts if needed, or removed)
     // Fetch time tracking (in milliseconds)
@@ -334,84 +343,70 @@ class XtreamRepository(
 
 
 
-    suspend fun getStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
-        suspendResultOf {
-            if (forSearch) {
-                return@suspendResultOf streamDao.searchStreams(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId).map { mapStreamEntityToModel(it) }
-            }
-
-            val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
-
-            if (dbEntities.isNotEmpty()) {
-                val key = KEY_STREAMS_TIMESTAMP_PREFIX + "LIVE_ALL"
-                if (!isCacheFresh(key, liveStreamRefreshThresholdMs)) {
-                    syncStreams(XtreamStreamEntity.TYPE_LIVE)
-                }
-                return@suspendResultOf dbEntities.map { mapStreamEntityToModel(it) }
-            }
-
-            val service = apiService ?: throw Exception("Not authenticated. Please login first.")
-            val streams = service.getStreams(categoryId)
-
-            streamDao.insertAll(streams.map {
-                 XtreamStreamEntity(
-                     streamId = it.streamId,
-                     providerId = providerId,
-                     type = XtreamStreamEntity.TYPE_LIVE,
-                     num = it.num,
-                     name = it.name,
-                     streamType = it.streamType,
-                     streamIcon = it.streamIcon,
-                     epgChannelId = it.epgChannelId,
-                     added = it.added,
-                     categoryId = it.categoryId,
-                     customSid = it.customSid,
-                     tvArchive = it.tvArchive,
-                     directSource = it.directSource,
-                     tvArchiveDuration = it.tvArchiveDuration
-                 )
-            })
-
-            streams
-        }
+    suspend fun getStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> {
+        return fetchStreams(
+            type = XtreamStreamEntity.TYPE_LIVE,
+            categoryId = categoryId,
+            forSearch = forSearch,
+            cacheKeySuffix = "LIVE_ALL",
+            refreshThresholdMs = liveStreamRefreshThresholdMs,
+            apiCall = { service, id -> service.getStreams(id) }
+        )
     }
 
-    suspend fun getVodStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
+    suspend fun getVodStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> {
+        return fetchStreams(
+            type = XtreamStreamEntity.TYPE_VOD,
+            categoryId = categoryId,
+            forSearch = forSearch,
+            cacheKeySuffix = "VOD_ALL",
+            apiCall = { service, id -> service.getVodStreams(id) }
+        )
+    }
+
+    private suspend fun fetchStreams(
+        type: String,
+        categoryId: String,
+        forSearch: Boolean,
+        cacheKeySuffix: String,
+        refreshThresholdMs: Long = cacheExpiryMs,
+        apiCall: suspend (XtreamApiService, String) -> List<XtreamStream>
+    ): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
         suspendResultOf {
             if (forSearch) {
-                return@suspendResultOf streamDao.searchStreams(providerId, XtreamStreamEntity.TYPE_VOD, categoryId).map { mapStreamEntityToModel(it) }
+                return@suspendResultOf streamDao.searchStreams(providerId, type, categoryId).map { mapStreamEntityToModel(it) }
             }
 
-            val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
+            val dbEntities = streamDao.getStreamsByCategory(providerId, type, categoryId)
 
             if (dbEntities.isNotEmpty()) {
-                val key = KEY_STREAMS_TIMESTAMP_PREFIX + "VOD_ALL"
-                if (!isCacheFresh(key)) {
-                    syncStreams(XtreamStreamEntity.TYPE_VOD)
+                val key = KEY_STREAMS_TIMESTAMP_PREFIX + cacheKeySuffix
+                if (!isCacheFresh(key, refreshThresholdMs)) {
+                    syncStreams(type)
                 }
                 return@suspendResultOf dbEntities.map { mapStreamEntityToModel(it) }
             }
 
             val service = apiService ?: throw Exception("Not authenticated. Please login first.")
-            val streams = service.getVodStreams(categoryId)
+            val streams = apiCall(service, categoryId)
 
             streamDao.insertAll(streams.map {
-                 XtreamStreamEntity(
-                     streamId = it.streamId,
-                     providerId = providerId,
-                     type = XtreamStreamEntity.TYPE_VOD,
-                     num = it.num,
-                     name = it.name,
-                     streamType = it.streamType,
-                     streamIcon = it.streamIcon,
-                     epgChannelId = it.epgChannelId,
-                     added = it.added,
-                     categoryId = it.categoryId,
-                     customSid = it.customSid,
-                     tvArchive = it.tvArchive,
-                     directSource = it.directSource,
-                     tvArchiveDuration = it.tvArchiveDuration
-                 )
+                XtreamStreamEntity(
+                    streamId = it.streamId,
+                    providerId = providerId,
+                    type = type,
+                    num = it.num,
+                    name = it.name,
+                    streamType = it.streamType,
+                    streamIcon = it.streamIcon,
+                    epgChannelId = it.epgChannelId,
+                    added = it.added,
+                    categoryId = it.categoryId,
+                    customSid = it.customSid,
+                    tvArchive = it.tvArchive,
+                    directSource = it.directSource,
+                    tvArchiveDuration = it.tvArchiveDuration
+                )
             })
 
             streams
@@ -646,6 +641,7 @@ class XtreamRepository(
     fun clearCache() {
         // Clear SharedPreferences timestamps and legacy keys
         cache.edit().clear().apply()
+        favoritesCache = null
         fetchTimes.clear()
 
         // Clear DB
@@ -882,6 +878,9 @@ class XtreamRepository(
         // Trim to max size
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
 
+        // Update cache
+        favoritesCache = trimmed
+
         // Save
         cache.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
         return true
@@ -893,7 +892,12 @@ class XtreamRepository(
     fun removeFavorite(streamId: Int, contentType: String): Boolean {
         val favorites = getFavorites().toMutableList()
         val removed = favorites.removeAll { it.streamId == streamId && it.contentType == contentType }
-        cache.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
+
+        if (removed) {
+            // Update cache
+            favoritesCache = favorites
+            cache.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
+        }
         return removed
     }
 
@@ -901,9 +905,18 @@ class XtreamRepository(
      * Get all favorites
      */
     fun getFavorites(): List<FavoriteStream> {
-        val json = cache.getString(KEY_FAVORITES, null) ?: return emptyList()
+        favoritesCache?.let { return it }
+
+        val json = cache.getString(KEY_FAVORITES, null)
+        if (json == null) {
+            favoritesCache = emptyList()
+            return emptyList()
+        }
+
         return try {
-            this.json.decodeFromString<List<FavoriteStream>>(json)
+            val list = this.json.decodeFromString<List<FavoriteStream>>(json)
+            favoritesCache = list
+            list
         } catch (e: Exception) {
             emptyList()
         }
@@ -920,6 +933,7 @@ class XtreamRepository(
      * Clear all favorites
      */
     fun clearFavorites() {
+        favoritesCache = emptyList()
         cache.edit().remove(KEY_FAVORITES).apply()
     }
 
@@ -1114,20 +1128,24 @@ class XtreamRepository(
     suspend fun getEpgForStreams(streamIds: List<Int>): Result<Map<Int, EpgResponse>> =
         withContext(Dispatchers.IO) {
             suspendResultOf {
-                val results = mutableMapOf<Int, EpgResponse>()
-                // Batch requests to prevent OOM from too many concurrent network tasks/buffers
-                val batchSize = 5
-                streamIds.chunked(batchSize).forEach { batch ->
-                    batch.forEach { streamId ->
-                        when (val result = getEpgForStream(streamId)) {
-                            is Result.Success -> results[streamId] = result.data
-                            is Result.Error -> {
-                                // Continue on failure - EPG may not be available for all channels
+                coroutineScope {
+                    val semaphore = Semaphore(10)
+                    val deferreds = streamIds.map { streamId ->
+                        async {
+                            semaphore.withPermit {
+                                streamId to getEpgForStream(streamId)
                             }
                         }
                     }
+
+                    val results = mutableMapOf<Int, EpgResponse>()
+                    deferreds.awaitAll().forEach { (streamId, result) ->
+                        if (result is Result.Success) {
+                            results[streamId] = result.data
+                        }
+                    }
+                    results
                 }
-                results
             }
         }
 
@@ -1249,7 +1267,7 @@ class XtreamRepository(
                  try {
                      coroutineScope {
                          val batch = mutableListOf<XtreamStreamEntity>()
-                         val BATCH_SIZE = 500
+                         val BATCH_SIZE = 2000
                          
                          val currentHashes = streamDao.getStreamHashes(providerId, type)
                          val seenIds = mutableSetOf<Int>()
@@ -1283,10 +1301,9 @@ class XtreamRepository(
                              if (batch.size >= BATCH_SIZE) {
                                  val toInsert = batch.toList()
                                  batch.clear()
-                                 database.runInTransaction {
+                                 db.runInTransaction {
                                      streamDao.insertAll(toInsert)
                                  }
-                                 delay(50) // Give GC time to breathe between massive batches
                              }
                          }
 
@@ -1327,7 +1344,7 @@ class XtreamRepository(
                  try {
                      coroutineScope {
                          val batch = mutableListOf<XtreamSeriesEntity>()
-                         val BATCH_SIZE = 500
+                         val BATCH_SIZE = 2000
                          
                          val currentHashes = seriesDao.getSeriesHashes(providerId)
                          val seenIds = mutableSetOf<Int>()
@@ -1364,10 +1381,9 @@ class XtreamRepository(
                              if (batch.size >= BATCH_SIZE) {
                                  val toInsert = batch.toList()
                                  batch.clear()
-                                 database.runInTransaction {
+                                 db.runInTransaction {
                                      seriesDao.insertAll(toInsert)
                                  }
-                                 delay(50) // Give GC time to breathe
                              }
                          }
 
