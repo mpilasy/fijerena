@@ -126,8 +126,8 @@ fun PlayerScreen(
     onToggleFavorite: (() -> Unit)? = null,
     currentEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null,
     nextEpgProgram: org.njarasoa.fijerena.core.player.model.EpgProgram? = null,
-    categoryStreams: List<MediaItem> = emptyList(),
-    lastWatchedStreams: List<MediaItem> = emptyList(),
+    categoryStreams: ImmutableMediaList = ImmutableMediaList(),
+    lastWatchedStreams: ImmutableMediaList = ImmutableMediaList(),
     onStreamSelected: ((MediaItem) -> Unit)? = null
 ) {
     val playbackState = viewModel.playbackState.collectAsState().value
@@ -1068,7 +1068,7 @@ private fun ControlHint(control: String, description: String) {
 @Composable
 private fun ChannelListOverlay(
     title: String,
-    streams: List<MediaItem>,
+    streams: ImmutableMediaList,
     onSelect: (MediaItem) -> Unit,
     onDismiss: () -> Unit,
     panelAlignment: Alignment = Alignment.CenterStart,

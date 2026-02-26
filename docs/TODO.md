@@ -49,6 +49,11 @@ Prefer real hardware for validation:
 
 ## Recently Completed
 
+- **Subcategory Search Fix**: Resolved the infinite spinning issue during subcategory searches by ensuring asynchronous repository initialization.
+- **Dependency Injection**: Refactored all ViewModel factories (`CategoryViewModelFactory`, `SearchViewModelFactory`, `EpgViewModelFactory`, etc.) to use `AppContainer` for providing the `MediaRepository` singleton.
+- **Thread Safety**: Marked the `provider` field in `MediaRepository` as `@Volatile` and added Mutex synchronization in `AppContainer` to prevent race conditions during initialization.
+- **Module Synchronization**: Aligned `versionCode` (4) between the TV and Mobile modules to prevent deployment conflicts.
+- **Database Resilience**: Enabled `fallbackToDestructiveMigration()` in `XtreamDatabase` to prevent schema mismatch crashes during active development.
 - **Architectural Refactoring**: Extracted all business logic from Composable layers into unified ViewModels (`StreamLoaderViewModel`, `MovieDetailsViewModel`, `SeriesDetailsViewModel`).
 - **UI Performance**: Eliminated `runBlocking` from UI thread; all repository initializations now happen asynchronously in background dispatchers.
 - **Repository Singletons**: Introduced `AppContainer` to manage repository instances, reducing redundant instantiations and ensuring consistent state.

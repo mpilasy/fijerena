@@ -15,10 +15,20 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 
 class SeriesDetailsViewModel(
-    private val context: Context,
+    private val context: android.content.Context,
     private val seriesId: String,
     private val categoryId: String
 ) : ViewModel() {
+
+    private var repository: org.njarasoa.fijerena.core.network.MediaRepository? = null
+
+    private suspend fun ensureRepo(): org.njarasoa.fijerena.core.network.MediaRepository {
+        if (repository == null) {
+            val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+            repository = container.getMediaRepository()
+        }
+        return repository!!
+    }
 
     sealed class UiState {
         data object Loading : UiState()
@@ -42,7 +52,7 @@ class SeriesDetailsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading
             try {
-                val repo = getRepository()
+                val repo = ensureRepo()
                 mediaRepository = repo
 
                 val result = repo.getSeriesDetail(seriesId)
@@ -64,27 +74,10 @@ class SeriesDetailsViewModel(
         }
     }
 
-    private suspend fun getRepository(): MediaRepository {
-        val providerRepo = ProviderRepository(context)
-        val entity = providerRepo.getActiveProvider()
-        val repo = if (entity != null) {
-            val settings = providerRepo.getProviderSettings(entity.id)
-            val resolvedRepo = MediaRepository(context, entity.id, settings)
-            val password = providerRepo.getPassword(entity.id) ?: ""
-            val provider = MediaProviderFactory.create(entity, context, password)
-            provider.connect()
-            resolvedRepo.setProvider(provider)
-            resolvedRepo
-        } else {
-            MediaRepository(context, 0L)
-        }
-        return repo
-    }
-
     fun toggleFavorite(seriesName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _uiState.value as? UiState.Success ?: return@launch
-            val repo = mediaRepository ?: return@launch
+            val repo = ensureRepo()
 
             if (currentState.isFavorite) {
                 repo.removeFavorite(seriesId, "TV_SHOWS")

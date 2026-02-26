@@ -1,5 +1,28 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Architectural Stability Update (DI & Threading)
+**Release Date:** 2026-02-25
+
+### 🚀 Critical Fixes
+
+#### UI Thread Blocking Resolved
+**Impact: Eliminates application freezes and ANRs during startup and search**
+- Introduced `AppContainer` as a Dependency Injection (DI) container for repository singletons.
+- Refactored `CategoryViewModel`, `SearchViewModel`, `EpgViewModel`, `MovieDetailsViewModel`, and `SeriesDetailsViewModel` to initialize `MediaRepository` asynchronously.
+- Removed synchronous `runBlocking` calls from all ViewModel factories (`CategoryViewModelFactory`, `SearchViewModelFactory`, etc.).
+
+#### Search Subcategory Hanging Fix
+**Impact: Global and subcategory searches return results reliably**
+- Addressed infinite spinning in search by ensuring `MediaRepository` is fully configured with the provider prior to executing searches.
+- Marked the `provider` field in `MediaRepository` as `@Volatile` for safe cross-thread visibility after asynchronous initialization.
+
+#### Build & Deployment Alignment
+**Impact: Resolves downgrade installation errors**
+- Synchronized `versionCode` (4) between the `:mobile` and `:tv` modules to prevent `INSTALL_FAILED_VERSION_DOWNGRADE` when deploying to physical and virtual devices sharing the same `applicationId`.
+- Configured Room Database (`XtreamDatabase`) with `fallbackToDestructiveMigration()` to automatically resolve schema mismatches during development.
+
+---
+
 ## Version: Post-Phase 5 (Themes + Multi-Provider + UX)
 **Release Date:** 2026-02-04
 
