@@ -64,12 +64,12 @@ Filename matching against scanned file list.
 Standalone programme title search across all indexed XMLTV data.
 
 - Access: Content Type Selection → book icon (visible when EPG index is ready)
-- Results grouped by programme title, sorted by airing count
+- Results grouped by start date (Today, Tomorrow, weekday name, or "EEEE, MMM d" for later dates), then by programme within each date
 - Time window: −1 to +6 days from now, max 500 results per query
 - SQLite FTS4 MATCH for fast search (<100ms); falls back to LIKE if FTS returns empty
 - Programme titles and channel names scroll with `basicMarquee` when they overflow
-- Mobile: expandable cards showing up to 3 airings (tap to expand all)
-- TV: GlassPanel cards with TvLazyColumn
+- Mobile: sticky date headers with expandable programme cards showing up to 3 airings (tap to expand all)
+- TV: date headers with GlassPanel programme cards in TvLazyColumn
 
 ---
 

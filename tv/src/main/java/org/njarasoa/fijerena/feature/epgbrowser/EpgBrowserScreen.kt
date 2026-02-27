@@ -52,6 +52,7 @@ import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -338,7 +339,7 @@ private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMo
         val truncatedSuffix = if (results.truncated) " (truncated)" else ""
         val sourceSuffix = if (results.searchedFromIndex) " [indexed]" else " [XML scan]"
         Text(
-            text = "${results.programs.size} programs (${results.totalAirings} airings) — ${timeStr}s$truncatedSuffix$sourceSuffix",
+            text = "${results.totalPrograms} programs (${results.totalAirings} airings) — ${timeStr}s$truncatedSuffix$sourceSuffix",
             style = MaterialTheme.typography.titleMedium.copy(
                 fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
             ),
@@ -346,7 +347,7 @@ private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMo
             modifier = Modifier.padding(bottom = Spacing.sm.scaled(scale))
         )
 
-        if (results.programs.isEmpty()) {
+        if (results.dateGroups.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -364,12 +365,35 @@ private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMo
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(results.programs, key = { "${it.title}::${it.description}" }) { program ->
-                    ProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                results.dateGroups.forEach { dateGroup ->
+                    item(key = "date::${dateGroup.dayStartEpoch}") {
+                        DateHeader(dateLabel = dateGroup.dateLabel)
+                    }
+                    items(
+                        dateGroup.programs,
+                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" }
+                    ) { program ->
+                        ProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun DateHeader(dateLabel: String) {
+    val scale = LocalUiScale.current
+    Text(
+        text = dateLabel,
+        style = MaterialTheme.typography.titleSmall.copy(
+            fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
+        ),
+        color = CinemaAccentLight,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = Spacing.xs.scaled(scale))
+    )
 }
 
 @Composable
@@ -528,36 +552,9 @@ private fun AiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sour
 private fun formatAiringTime(startEpoch: Long, endEpoch: Long): String {
     val timeOnlyFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
     timeOnlyFormat.timeZone = TimeZone.getDefault()
-
     val startDate = Date(startEpoch * 1000L)
     val endDate = Date(endEpoch * 1000L)
-    val now = Date()
-
-    val todayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-    todayFormat.timeZone = TimeZone.getDefault()
-    val today = todayFormat.format(now)
-    val startDay = todayFormat.format(startDate)
-
-    val cal = java.util.Calendar.getInstance()
-    cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
-    val tomorrow = todayFormat.format(cal.time)
-
-    val diffMs = startDate.time - now.time
-    val diffDays = diffMs / (24 * 60 * 60 * 1000L)
-
-    val timePart = "${timeOnlyFormat.format(startDate)} – ${timeOnlyFormat.format(endDate)}"
-    val dayPrefix = when {
-        startDay == today -> "Today"
-        startDay == tomorrow -> "Tomorrow"
-        diffDays <= 2 -> SimpleDateFormat("EEE", Locale.getDefault()).apply {
-            timeZone = TimeZone.getDefault()
-        }.format(startDate)
-        else -> SimpleDateFormat("EEE MMM d", Locale.getDefault()).apply {
-            timeZone = TimeZone.getDefault()
-        }.format(startDate)
-    }
-
-    return "$dayPrefix $timePart"
+    return "${timeOnlyFormat.format(startDate)} – ${timeOnlyFormat.format(endDate)}"
 }
 
 private fun formatFileSize(bytes: Long): String {

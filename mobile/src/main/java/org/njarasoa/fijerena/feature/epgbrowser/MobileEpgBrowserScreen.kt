@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -240,6 +242,7 @@ fun MobileEpgBrowserScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
     Column {
@@ -248,7 +251,7 @@ private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, i
         val truncatedSuffix = if (results.truncated) " (truncated)" else ""
         val sourceSuffix = if (results.searchedFromIndex) " [indexed]" else " [XML scan]"
         Text(
-            text = "${results.programs.size} programs (${results.totalAirings} airings) — ${timeStr}s$truncatedSuffix$sourceSuffix",
+            text = "${results.totalPrograms} programs (${results.totalAirings} airings) — ${timeStr}s$truncatedSuffix$sourceSuffix",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(
@@ -257,7 +260,7 @@ private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, i
             )
         )
 
-        if (results.programs.isEmpty()) {
+        if (results.dateGroups.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -275,12 +278,33 @@ private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, i
                     .fillMaxSize()
                     .padding(horizontal = Spacing.md)
             ) {
-                items(results.programs, key = { "${it.title}::${it.description}" }) { program ->
-                    MobileProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                results.dateGroups.forEach { dateGroup ->
+                    stickyHeader(key = "date::${dateGroup.dayStartEpoch}") {
+                        MobileDateHeader(dateLabel = dateGroup.dateLabel)
+                    }
+                    items(
+                        dateGroup.programs,
+                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" }
+                    ) { program ->
+                        MobileProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun MobileDateHeader(dateLabel: String) {
+    Text(
+        text = dateLabel,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(vertical = CinemaSpacing.sm)
+    )
 }
 
 @Composable
@@ -427,36 +451,9 @@ private fun MobileAiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false
 private fun formatAiringTime(startEpoch: Long, endEpoch: Long): String {
     val timeOnlyFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
     timeOnlyFormat.timeZone = TimeZone.getDefault()
-
     val startDate = Date(startEpoch * 1000L)
     val endDate = Date(endEpoch * 1000L)
-    val now = Date()
-
-    val todayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-    todayFormat.timeZone = TimeZone.getDefault()
-    val today = todayFormat.format(now)
-    val startDay = todayFormat.format(startDate)
-
-    val cal = java.util.Calendar.getInstance()
-    cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
-    val tomorrow = todayFormat.format(cal.time)
-
-    val diffMs = startDate.time - now.time
-    val diffDays = diffMs / (24 * 60 * 60 * 1000L)
-
-    val timePart = "${timeOnlyFormat.format(startDate)} – ${timeOnlyFormat.format(endDate)}"
-    val dayPrefix = when {
-        startDay == today -> "Today"
-        startDay == tomorrow -> "Tomorrow"
-        diffDays <= 2 -> SimpleDateFormat("EEE", Locale.getDefault()).apply {
-            timeZone = TimeZone.getDefault()
-        }.format(startDate)
-        else -> SimpleDateFormat("EEE MMM d", Locale.getDefault()).apply {
-            timeZone = TimeZone.getDefault()
-        }.format(startDate)
-    }
-
-    return "$dayPrefix $timePart"
+    return "${timeOnlyFormat.format(startDate)} – ${timeOnlyFormat.format(endDate)}"
 }
 
 private fun formatFileSize(bytes: Long): String {
