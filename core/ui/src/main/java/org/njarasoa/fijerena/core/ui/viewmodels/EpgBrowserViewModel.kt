@@ -17,10 +17,14 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.provider.ProviderDatabase
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
+import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -68,6 +72,7 @@ class EpgBrowserViewModel(
 
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
+    private var channelMatcher: EpgChannelMatcher? = null
 
     val isDevMode: Boolean get() = AppSettings(context).isDevMode
 
@@ -91,6 +96,23 @@ class EpgBrowserViewModel(
             _uiState.value = UiState.NoEpgFile
         }
         loadSourceLabels()
+        loadChannelMatcher()
+    }
+
+    private fun loadChannelMatcher() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    val provider = ProviderDatabase.getInstance(context)
+                        .providerDao().getActiveProvider() ?: return@withContext
+                    val liveStreams = XtreamDatabase.getInstance(context)
+                        .streamDao().getAllStreams(provider.id, XtreamStreamEntity.TYPE_LIVE)
+                    if (liveStreams.isNotEmpty()) {
+                        channelMatcher = EpgChannelMatcher(liveStreams)
+                    }
+                } catch (_: Exception) { }
+            }
+        }
     }
 
     private fun loadSourceLabels() {
@@ -160,7 +182,7 @@ class EpgBrowserViewModel(
                 }
 
                 // Group by date, then by programme within each date
-                val dateGroups = groupByDate(allAirings)
+                val dateGroups = applyChannelMatching(groupByDate(allAirings))
                 val totalAirings = allAirings.size
                 val totalPrograms = dateGroups.sumOf { it.programs.size }
 
@@ -231,6 +253,26 @@ class EpgBrowserViewModel(
         val category: String?,
         val airing: EpgBrowserAiring
     )
+
+    private fun applyChannelMatching(dateGroups: List<EpgBrowserDateGroup>): List<EpgBrowserDateGroup> {
+        val matcher = channelMatcher ?: return dateGroups
+        return dateGroups.map { group ->
+            group.copy(
+                programs = group.programs.map { program ->
+                    val annotatedAirings = program.airings.map { airing ->
+                        val matched = matcher.match(airing.channelId, airing.channelName)
+                        if (matched != null) airing.copy(matchedStream = matched) else airing
+                    }
+                    // Sort matched-first, preserving startEpoch order within each group
+                    val sorted = annotatedAirings.sortedWith(
+                        compareByDescending<EpgBrowserAiring> { it.matchedStream != null }
+                            .thenBy { it.startEpoch }
+                    )
+                    program.copy(airings = sorted)
+                }
+            )
+        }
+    }
 
     private fun groupByDate(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
         val tz = TimeZone.getDefault()

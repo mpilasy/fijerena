@@ -22,6 +22,9 @@ interface EpgSourceDao {
     @Query("SELECT * FROM epg_source WHERE id = :id")
     suspend fun getSourceById(id: Long): EpgSourceEntity?
 
+    @Query("SELECT * FROM epg_source WHERE url = :url LIMIT 1")
+    suspend fun getSourceByUrl(url: String): EpgSourceEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSource(source: EpgSourceEntity): Long
 

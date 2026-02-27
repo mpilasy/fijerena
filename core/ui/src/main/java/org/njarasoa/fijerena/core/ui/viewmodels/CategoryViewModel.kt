@@ -362,16 +362,34 @@ class CategoryViewModel(
     private fun loadNowPlaying(items: List<MediaItem>) {
         if (contentType != ContentType.LIVE_TV) return
         viewModelScope.launch {
+            // Phase 1: Fast SQLite query for indexed channels
+            val indexResult = repository.getNowPlayingFromIndex(items.take(50))
+            if (indexResult.isNotEmpty()) {
+                _nowPlaying.value = indexResult
+            }
+
+            // Phase 2: Xtream API fallback for unmatched items
             val caps = repository.getCapabilities()
-            val hasExternalEpg = repository.hasIndexedEpgData()
-            if (caps?.supportsEpg != true && !hasExternalEpg) return@launch
-            val epgData = repository.getEpgBulkForItems(
-                items.take(50)
-            ).getOrNull() ?: return@launch
+            if (caps?.supportsEpg != true) return@launch
+
+            val unmatchedItems = items.take(50).filter { it.id !in indexResult }
+            if (unmatchedItems.isEmpty()) return@launch
+
             val now = System.currentTimeMillis() / 1000
-            _nowPlaying.value = epgData.mapValues { (_, resp) ->
-                resp.listings.firstOrNull { now in it.startTime..it.endTime }
-            }.filterValues { it != null }.mapValues { it.value!! }
+            for (chunk in unmatchedItems.chunked(10)) {
+                val streamIds = chunk.map { it.id }
+                val epgResult = repository.getEpgBulk(streamIds)?.getOrNull() ?: continue
+                val batchNowPlaying = epgResult.mapValues { (_, resp) ->
+                    resp.listings.firstOrNull { now in it.startTime..it.endTime }
+                }.filterValues { it != null }.mapValues { it.value!! }
+
+                if (batchNowPlaying.isNotEmpty()) {
+                    _nowPlaying.value = _nowPlaying.value + batchNowPlaying
+                }
+            }
+
+            // Fire-and-forget: ingest Xtream EPG into index for next time
+            launch { repository.ingestXtreamEpgIfNeeded() }
         }
     }
 

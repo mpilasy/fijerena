@@ -163,6 +163,24 @@ interface EpgIndexDao {
         windowEnd: Long
     ): List<EpgSearchResultRow>
 
+    // --------------- Now Playing for specific channels ---------------
+
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM epg_programme p
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id
+        WHERE p.channel_id IN (:channelIds)
+          AND p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
+        """
+    )
+    suspend fun getNowPlayingForChannels(channelIds: List<String>, nowEpoch: Long): List<EpgSearchResultRow>
+
+    // --------------- Source-scoped cleanup ---------------
+
+    @Query("DELETE FROM epg_programme WHERE source_id = :sourceId")
+    suspend fun deleteBySourceId(sourceId: Long)
+
     // --------------- Metadata & cleanup ---------------
 
     @Query("SELECT * FROM epg_index_metadata WHERE id = 1")

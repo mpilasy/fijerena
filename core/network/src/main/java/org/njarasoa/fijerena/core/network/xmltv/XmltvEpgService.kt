@@ -22,12 +22,6 @@ class XmltvEpgService(
         private const val PARSED_CACHE_TTL_MS = 12L * 60 * 60 * 1000
         private const val KEY_CACHED_EPG = "xmltv_epg_data"
         private const val KEY_CACHE_TIMESTAMP = "xmltv_cache_timestamp"
-
-        private val LANGUAGE_PREFIX_REGEX = Regex("^[A-Za-z]{2,3}:\\s*")
-        private val QUALITY_SUFFIX_REGEX = Regex("\\b(fhd|uhd|hd|sd|4k|720p|1080p|1080i|hevc|h\\.?265|h\\.?264|avc|vp9|av1|mpeg[24]|hdr10?)\\b", RegexOption.IGNORE_CASE)
-        private val COUNTRY_CODE_REGEX = Regex("\\s*[\\[(][A-Za-z]{2,3}[])]")
-        private val UNICODE_SUPERSCRIPT_REGEX = Regex("[\u1D00-\u1DBF\u2070-\u209F\u2460-\u24FF]+")
-        private val NON_ALNUM_REGEX = Regex("[^a-z0-9]")
     }
 
     private val cache: SharedPreferences = context.getSharedPreferences(
@@ -43,6 +37,53 @@ class XmltvEpgService(
     // In-memory cache — avoid re-deserializing full EPG JSON from SharedPreferences on every call
     private var parsedEpgCache: Map<String, EpgResponse>? = null
     private var parsedEpgTimestamp: Long = 0L
+
+    private data class ChannelMatchMaps(
+        val byId: Map<String, String>,
+        val byIdLower: Map<String, String>,
+        val byName: Map<String, String>,
+        val byNormalized: Map<String, String>,
+        val normalizedEntries: List<Pair<String, String>>
+    )
+
+    private suspend fun buildChannelMatchMaps(): ChannelMatchMaps? {
+        val db = EpgIndexDatabase.getInstance(context)
+        val allXmltvChannels = db.epgIndexDao().getAllChannels()
+        if (allXmltvChannels.isEmpty()) return null
+
+        val byId = mutableMapOf<String, String>()
+        val byIdLower = mutableMapOf<String, String>()
+        val byName = mutableMapOf<String, String>()
+        val byNormalized = mutableMapOf<String, String>()
+        val normalizedEntries = mutableListOf<Pair<String, String>>()
+
+        for (ch in allXmltvChannels) {
+            byId[ch.xmltvId] = ch.xmltvId
+            byIdLower[ch.xmltvId.lowercase()] = ch.xmltvId
+            byName[ch.displayName] = ch.xmltvId
+            val norm = normalizeName(ch.displayName)
+            if (norm.isNotEmpty()) {
+                byNormalized[norm] = ch.xmltvId
+                normalizedEntries.add(norm to ch.xmltvId)
+            }
+        }
+
+        return ChannelMatchMaps(byId, byIdLower, byName, byNormalized, normalizedEntries)
+    }
+
+    private fun matchItems(
+        items: List<MediaItem>,
+        maps: ChannelMatchMaps
+    ): Map<String, String> {
+        val matchedIds = mutableMapOf<String, String>()
+        for (item in items) {
+            val matched = matchChannel(item, maps.byId, maps.byIdLower, maps.byName, maps.byNormalized, maps.normalizedEntries)
+            if (matched != null) {
+                matchedIds[item.id] = matched
+            }
+        }
+        return matchedIds
+    }
 
     /**
      * Get EPG data for channels from the SQLite index.
@@ -63,48 +104,15 @@ class XmltvEpgService(
         }
 
         try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
-
-            // Query all XMLTV channels directly (lightweight — just IDs and names)
-            val allXmltvChannels = dao.getAllChannels()
-            if (allXmltvChannels.isEmpty()) {
-                return@withContext emptyMap()
-            }
-
-            // Build lookup structures for matching
-            val byId = mutableMapOf<String, String>()           // xmltvId -> xmltvId
-            val byIdLower = mutableMapOf<String, String>()      // xmltvId.lowercase -> xmltvId
-            val byName = mutableMapOf<String, String>()          // displayName -> xmltvId
-            val byNormalized = mutableMapOf<String, String>()    // normalized displayName -> xmltvId
-            val normalizedEntries = mutableListOf<Pair<String, String>>() // (normalized displayName, xmltvId)
-
-            for (ch in allXmltvChannels) {
-                byId[ch.xmltvId] = ch.xmltvId
-                byIdLower[ch.xmltvId.lowercase()] = ch.xmltvId
-                byName[ch.displayName] = ch.xmltvId
-                val norm = normalizeName(ch.displayName)
-                if (norm.isNotEmpty()) {
-                    byNormalized[norm] = ch.xmltvId
-                    normalizedEntries.add(norm to ch.xmltvId)
-                }
-            }
-
-            // Match each media item to an XMLTV channel
-            val matchedIds = mutableMapOf<String, String>() // mediaItem.id -> xmltvChannelId
-            for (item in channels) {
-                val matched = matchChannel(item, byId, byIdLower, byName, byNormalized, normalizedEntries)
-                if (matched != null) {
-                    matchedIds[item.id] = matched
-                }
-            }
+            val maps = buildChannelMatchMaps() ?: return@withContext emptyMap()
+            val matchedIds = matchItems(channels, maps)
 
             if (matchedIds.isEmpty()) {
                 Log.d(TAG, "No XMLTV channel matches for ${channels.size} channels")
                 return@withContext emptyMap()
             }
 
-            // Fetch programmes only for matched channels
+            val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
             val nowSeconds = System.currentTimeMillis() / 1000
             val windowStart = nowSeconds - 24 * 3600
             val windowEnd = nowSeconds + 24 * 3600
@@ -115,7 +123,6 @@ class XmltvEpgService(
             }
             val programmesByChannel = allProgrammes.groupBy { it.channelId }
 
-            // Build result
             val result = mutableMapOf<String, EpgResponse>()
             for ((itemId, xmltvId) in matchedIds) {
                 val progs = programmesByChannel[xmltvId] ?: continue
@@ -140,6 +147,55 @@ class XmltvEpgService(
             result
         } catch (e: Exception) {
             Log.e(TAG, "Failed to query XMLTV EPG from index: ${e.message}", e)
+            emptyMap()
+        }
+    }
+
+    /**
+     * Lightweight now-playing query: returns only the currently airing programme per item.
+     * Uses the same 6-level channel matching but queries only current programmes.
+     */
+    suspend fun getNowPlayingForItems(
+        items: List<MediaItem>
+    ): Map<String, EpgProgram> = withContext(Dispatchers.IO) {
+        val indexer = EpgIndexer.getInstance(context)
+        if (indexer.state.value !is EpgIndexState.Indexed) {
+            return@withContext emptyMap()
+        }
+
+        try {
+            val maps = buildChannelMatchMaps() ?: return@withContext emptyMap()
+            val matchedIds = matchItems(items, maps)
+
+            if (matchedIds.isEmpty()) return@withContext emptyMap()
+
+            val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
+            val nowEpoch = System.currentTimeMillis() / 1000
+
+            val uniqueXmltvIds = matchedIds.values.toSet().toList()
+            val nowPlayingRows = uniqueXmltvIds.chunked(500).flatMap { chunk ->
+                dao.getNowPlayingForChannels(chunk, nowEpoch)
+            }
+            val nowPlayingByChannel = nowPlayingRows.associateBy { it.channelId }
+
+            val result = mutableMapOf<String, EpgProgram>()
+            for ((itemId, xmltvId) in matchedIds) {
+                val row = nowPlayingByChannel[xmltvId] ?: continue
+                result[itemId] = EpgProgram(
+                    id = "${row.channelId}_${row.startEpoch}",
+                    epgId = row.channelId,
+                    title = row.title,
+                    start = row.startEpoch.toString(),
+                    end = row.endEpoch.toString(),
+                    description = row.description,
+                    channelId = row.channelId
+                )
+            }
+
+            Log.d(TAG, "Now-playing from index: ${result.size} of ${items.size} items")
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to query now-playing from index: ${e.message}", e)
             emptyMap()
         }
     }
@@ -245,14 +301,6 @@ class XmltvEpgService(
         return null
     }
 
-    private fun normalizeName(name: String): String {
-        return name
-            .replace(LANGUAGE_PREFIX_REGEX, "")
-            .replace(QUALITY_SUFFIX_REGEX, "")
-            .replace(COUNTRY_CODE_REGEX, "")
-            .replace(UNICODE_SUPERSCRIPT_REGEX, "")
-            .lowercase()
-            .replace(NON_ALNUM_REGEX, "")
-    }
+    private fun normalizeName(name: String): String = ChannelNameNormalizer.normalize(name)
 
 }

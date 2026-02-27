@@ -17,6 +17,10 @@ import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import java.util.concurrent.ConcurrentHashMap
 
 @Serializable
@@ -122,6 +126,8 @@ class MediaRepository(
         private const val KEY_LAST_TVSHOWS_CATEGORY = "last_tvshows_category"
         private const val KEY_LAST_TVSHOWS_ITEM = "last_tvshows_item"
         private const val KEY_LAST_CONTENT_TYPE = "last_content_type"
+        private const val KEY_XTREAM_EPG_INGESTED_AT = "xtream_epg_ingested_at"
+        private const val XTREAM_EPG_TTL_MS = 6L * 60 * 60 * 1000 // 6 hours
     }
 
     private val usesServerUserData: Boolean
@@ -255,6 +261,66 @@ class MediaRepository(
 
     fun clearXmltvCache() {
         xmltvEpgService.clearCache()
+    }
+
+    /**
+     * Lightweight now-playing query from the EPG index.
+     * Returns map of itemId → currently-airing EpgProgram.
+     */
+    suspend fun getNowPlayingFromIndex(items: List<MediaItem>): Map<String, EpgProgram> {
+        return try {
+            xmltvEpgService.getNowPlayingForItems(items)
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    /**
+     * Ingest Xtream API EPG into the EPG index if not done recently.
+     * Fetches EPG for all live streams and stores in SQLite for search/now-playing.
+     */
+    suspend fun ingestXtreamEpgIfNeeded() {
+        val prefs = context.getSharedPreferences("epg_ingestion_$providerId", Context.MODE_PRIVATE)
+        val lastIngested = prefs.getLong(KEY_XTREAM_EPG_INGESTED_AT, 0L)
+        if (System.currentTimeMillis() - lastIngested < XTREAM_EPG_TTL_MS) return
+
+        try {
+            val streams = XtreamDatabase.getInstance(context)
+                .streamDao()
+                .getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE)
+            if (streams.isEmpty()) return
+
+            val streamIds = streams.map { it.streamId.toString() }
+            val epgResult = provider?.getEpgBulk(streamIds) ?: return
+            val epgMap = epgResult.getOrNull() ?: return
+            if (epgMap.isEmpty()) return
+
+            val intEpgMap = mutableMapOf<Int, org.njarasoa.fijerena.core.player.model.EpgResponse>()
+            for ((key, value) in epgMap) {
+                val intKey = key.toIntOrNull() ?: continue
+                intEpgMap[intKey] = value
+            }
+            if (intEpgMap.isEmpty()) return
+
+            val streamInfo = streams.associate { stream ->
+                stream.streamId to EpgIndexer.XtreamStreamInfo(
+                    streamId = stream.streamId,
+                    name = stream.name,
+                    epgChannelId = stream.epgChannelId,
+                    iconUrl = stream.streamIcon
+                )
+            }
+
+            EpgIndexer.getInstance(context).ingestFromXtreamEpg(
+                epgByStreamId = intEpgMap,
+                streamInfo = streamInfo,
+                providerId = providerId
+            )
+
+            prefs.edit().putLong(KEY_XTREAM_EPG_INGESTED_AT, System.currentTimeMillis()).apply()
+        } catch (_: Exception) {
+            // Non-critical — silently fail
+        }
     }
 
     /**

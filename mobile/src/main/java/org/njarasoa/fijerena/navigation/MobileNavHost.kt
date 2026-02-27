@@ -197,7 +197,10 @@ fun MobileNavHost(
             // EPG Browser Screen
             composable<Screen.EpgBrowser> {
                 MobileEpgBrowserScreen(
-                    onBack = { navController.navigateUp() }
+                    onBack = { navController.navigateUp() },
+                    onNavigateToPlayer = { streamId, streamName, categoryId ->
+                        navController.navigate(Screen.Player(streamId, streamName, categoryId, ContentType.LIVE_TV))
+                    }
                 )
             }
 

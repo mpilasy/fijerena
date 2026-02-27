@@ -25,8 +25,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,7 +52,9 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.draw.alpha
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -66,7 +71,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileEpgBrowserScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToPlayer: (streamId: String, streamName: String, categoryId: String) -> Unit = { _, _, _ -> }
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel = viewModel(
@@ -219,7 +225,7 @@ fun MobileEpgBrowserScreen(
                     }
                 }
                 is EpgBrowserViewModel.UiState.Results -> {
-                    MobileResultsContent(results = state, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                    MobileResultsContent(results = state, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
                 }
                 is EpgBrowserViewModel.UiState.Error -> {
                     Box(
@@ -240,7 +246,7 @@ fun MobileEpgBrowserScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
+private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap(), onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }) {
     Column {
         // Stats row
         val timeStr = "%.1f".format(results.searchTimeMs / 1000.0)
@@ -282,7 +288,7 @@ private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, i
                         dateGroup.programs,
                         key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" }
                     ) { program ->
-                        MobileProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                        MobileProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
                     }
                 }
             }
@@ -304,9 +310,10 @@ private fun MobileDateHeader(dateLabel: String) {
 }
 
 @Composable
-private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
+private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap(), onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }) {
     var expanded by remember { mutableStateOf(false) }
     val showExpander = program.airings.size > 3
+    var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
 
     Card(
         modifier = Modifier
@@ -363,7 +370,36 @@ private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = f
                 program.airings.take(3)
             }
             visibleAirings.forEach { airing ->
-                MobileAiringRow(airing = airing, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                MobileAiringRow(
+                    airing = airing,
+                    isDevMode = isDevMode,
+                    sourceLabels = sourceLabels,
+                    onNavigateToPlayer = onNavigateToPlayer,
+                    onRequestConfirmation = { pendingConfirmAiring = it }
+                )
+            }
+
+            // Confirmation dialog for non-ON-AIR matched airings
+            val pending = pendingConfirmAiring
+            if (pending != null) {
+                val matched = pending.matchedStream!!
+                val airingContext = LocalContext.current
+                AlertDialog(
+                    onDismissRequest = { pendingConfirmAiring = null },
+                    title = { Text("Watch now?") },
+                    text = {
+                        Text("This show airs at ${formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch)}.\nWatch ${pending.channelName} now?")
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            pendingConfirmAiring = null
+                            onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                        }) { Text("Watch now") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
+                    }
+                )
             }
 
             // Expand/collapse toggle
@@ -394,18 +430,44 @@ private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = f
 }
 
 @Composable
-private fun MobileAiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
+private fun MobileAiringRow(
+    airing: EpgBrowserAiring,
+    isDevMode: Boolean = false,
+    sourceLabels: Map<Long, String> = emptyMap(),
+    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    onRequestConfirmation: (EpgBrowserAiring) -> Unit = {}
+) {
     val nowEpoch = remember { System.currentTimeMillis() / 1000L }
     val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
     val isSoon = !isOnAir && airing.startEpoch > nowEpoch && (airing.startEpoch - nowEpoch) <= 7200L
+    val isMatched = airing.matchedStream != null
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (isMatched) Modifier.clickable {
+                    val matched = airing.matchedStream!!
+                    if (isOnAir) {
+                        onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                    } else {
+                        onRequestConfirmation(airing)
+                    }
+                } else Modifier
+            )
+            .alpha(if (isMatched) 1f else 0.5f)
             .padding(vertical = CinemaSpacing.xxs),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (isMatched) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Watch",
+                modifier = Modifier.size(CinemaSpacing.lg),
+                tint = if (isOnAir) CinemaSuccess else MaterialTheme.colorScheme.primary
+            )
+        }
         Text(
             text = airing.channelName,
             style = MaterialTheme.typography.bodySmall,
