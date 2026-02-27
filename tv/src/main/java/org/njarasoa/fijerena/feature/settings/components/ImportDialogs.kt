@@ -33,10 +33,9 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -138,7 +137,7 @@ fun ImportOptionsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
-                    CinemaPrimaryButton(
+                    androidx.compose.material3.Button(
                         onClick = {
                             val options = SettingsExportManager.ImportOptions(
                                 importProviders = optProviders,
@@ -148,16 +147,22 @@ fun ImportOptionsDialog(
                             )
                             onConfirm(options)
                         },
-                        text = "Import",
                         modifier = Modifier
                             .weight(1f)
-                            .focusRequester(importDialogFocusRequester)
-                    )
-                    CinemaSecondaryButton(
+                            .focusRequester(importDialogFocusRequester),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = CinemaAccent,
+                            contentColor = CinemaTextPrimary
+                        )
+                    ) { Text("Import") }
+                    androidx.compose.material3.Button(
                         onClick = onCancel,
-                        text = "Cancel",
-                        modifier = Modifier.weight(1f)
-                    )
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = CinemaSurfaceVariant,
+                            contentColor = CinemaTextPrimary
+                        )
+                    ) { Text("Cancel") }
                 }
             }
         }
@@ -228,29 +233,38 @@ fun ConflictResolutionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
-                    CinemaPrimaryButton(
+                    androidx.compose.material3.Button(
                         onClick = {
                             onResolve(SettingsExportManager.ConflictResolution.OVERWRITE)
                         },
-                        text = "Overwrite",
                         modifier = Modifier
                             .weight(1f)
-                            .focusRequester(conflictDialogFocusRequester)
-                    )
-                    CinemaSecondaryButton(
+                            .focusRequester(conflictDialogFocusRequester),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = CinemaAccent,
+                            contentColor = CinemaTextPrimary
+                        )
+                    ) { Text("Overwrite") }
+                    androidx.compose.material3.Button(
                         onClick = {
                             onResolve(SettingsExportManager.ConflictResolution.DUPLICATE)
                         },
-                        text = "Duplicate",
-                        modifier = Modifier.weight(1f)
-                    )
-                    CinemaSecondaryButton(
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = CinemaSurfaceVariant,
+                            contentColor = CinemaTextPrimary
+                        )
+                    ) { Text("Duplicate") }
+                    androidx.compose.material3.Button(
                         onClick = {
                             onResolve(SettingsExportManager.ConflictResolution.SKIP)
                         },
-                        text = "Skip",
-                        modifier = Modifier.weight(1f)
-                    )
+                        modifier = Modifier.weight(1f),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = CinemaSurfaceVariant,
+                            contentColor = CinemaTextPrimary
+                        )
+                    ) { Text("Skip") }
                 }
             }
         }
