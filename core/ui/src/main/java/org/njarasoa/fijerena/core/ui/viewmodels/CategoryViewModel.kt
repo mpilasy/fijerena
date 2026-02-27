@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
@@ -12,9 +13,10 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class CategoryViewModel(
-    private val repository: MediaRepository,
+    private val context: Context,
     private val contentType: String,
     private val initialCategoryId: String? = null
 ) : ViewModel() {
@@ -91,6 +93,9 @@ class CategoryViewModel(
     private val _supportsNativeEpg = MutableStateFlow(false)
     val supportsNativeEpg: StateFlow<Boolean> = _supportsNativeEpg.asStateFlow()
 
+    // Lazily initialized in init coroutine to avoid blocking the UI thread
+    private lateinit var repository: MediaRepository
+
     private var categories: List<MediaCategory> = emptyList()
     private var currentStreams: List<MediaItem> = emptyList()
     private var currentCategoryId: String? = null
@@ -99,46 +104,56 @@ class CategoryViewModel(
     private var categoriesRetried = false
 
     init {
-        loadCategories()
+        viewModelScope.launch {
+            repository = AppContainer.getInstance(context).getMediaRepository()
+            loadCategoriesInternal()
+        }
     }
 
     fun loadCategories() {
         viewModelScope.launch {
-            _uiState.value = UiState.Loading
-
-            if (!repository.isConnected()) {
-                val connectResult = repository.connect()
-                if (connectResult.isFailure) {
-                    val reason = connectResult.exceptionOrNull()?.message ?: "Unknown error"
-                    _uiState.value = UiState.Error("Connection failed: $reason")
-                    return@launch
-                }
+            if (!::repository.isInitialized) {
+                repository = AppContainer.getInstance(context).getMediaRepository()
             }
-
-            _supportsNativeEpg.value = repository.getCapabilities()?.supportsEpg == true
-
-            val result = repository.getFilteredCategories(contentType)
-
-            result.fold(
-                onSuccess = { fetchedCategories ->
-                    // Retry once if provider returned no categories (server session may not be ready)
-                    if (fetchedCategories.isEmpty() && !categoriesRetried) {
-                        categoriesRetried = true
-                        delay(1500)
-                        val retryResult = repository.getFilteredCategories(contentType)
-                        retryResult.fold(
-                            onSuccess = { buildAndShowCategories(it) },
-                            onFailure = { buildAndShowCategories(emptyList()) }
-                        )
-                        return@launch
-                    }
-                    buildAndShowCategories(fetchedCategories)
-                },
-                onFailure = { error ->
-                    _uiState.value = UiState.Error(error.message ?: "Failed to load categories")
-                }
-            )
+            loadCategoriesInternal()
         }
+    }
+
+    private suspend fun loadCategoriesInternal() {
+        _uiState.value = UiState.Loading
+
+        if (!repository.isConnected()) {
+            val connectResult = repository.connect()
+            if (connectResult.isFailure) {
+                val reason = connectResult.exceptionOrNull()?.message ?: "Unknown error"
+                _uiState.value = UiState.Error("Connection failed: $reason")
+                return
+            }
+        }
+
+        _supportsNativeEpg.value = repository.getCapabilities()?.supportsEpg == true
+
+        val result = repository.getFilteredCategories(contentType)
+
+        result.fold(
+            onSuccess = { fetchedCategories ->
+                // Retry once if provider returned no categories (server session may not be ready)
+                if (fetchedCategories.isEmpty() && !categoriesRetried) {
+                    categoriesRetried = true
+                    delay(1500)
+                    val retryResult = repository.getFilteredCategories(contentType)
+                    retryResult.fold(
+                        onSuccess = { buildAndShowCategories(it) },
+                        onFailure = { buildAndShowCategories(emptyList()) }
+                    )
+                    return
+                }
+                buildAndShowCategories(fetchedCategories)
+            },
+            onFailure = { error ->
+                _uiState.value = UiState.Error(error.message ?: "Failed to load categories")
+            }
+        )
     }
 
     private fun buildAndShowCategories(fetchedCategories: List<MediaCategory>) {

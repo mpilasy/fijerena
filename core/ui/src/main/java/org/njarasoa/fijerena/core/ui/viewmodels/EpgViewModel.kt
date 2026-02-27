@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,11 +15,12 @@ import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.EpgUtils
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import java.time.LocalDate
 import java.time.ZoneId
 
 class EpgViewModel(
-    private val repository: MediaRepository,
+    private val context: Context,
     private val categoryId: String
 ) : ViewModel() {
 
@@ -53,64 +55,81 @@ class EpgViewModel(
     private val _searchResults = MutableStateFlow<List<EpgSearchResult>>(emptyList())
     val searchResults: StateFlow<List<EpgSearchResult>> = _searchResults.asStateFlow()
 
+    // Lazily initialized in init coroutine to avoid blocking the UI thread
+    private lateinit var repository: MediaRepository
+
     private var currentDate = LocalDate.now()
 
     init {
-        loadEpgData()
+        viewModelScope.launch {
+            repository = AppContainer.getInstance(context).getMediaRepository()
+            loadEpgDataInternal(currentDate)
+        }
     }
 
     fun loadEpgData(date: LocalDate = currentDate) {
         viewModelScope.launch {
-            _uiState.value = UiState.Loading
-            currentDate = date
-            val startTime = System.currentTimeMillis()
-
-            // Check if provider supports EPG (allow if external XMLTV URL is configured)
-            val capabilities = repository.getCapabilities()
-            val hasExternalEpg = repository.hasIndexedEpgData()
-            if (capabilities != null && !capabilities.supportsEpg && !hasExternalEpg) {
-                _uiState.value = UiState.Error("EPG is not supported by this provider")
-                return@launch
+            if (!::repository.isInitialized) {
+                repository = AppContainer.getInstance(context).getMediaRepository()
             }
-
-            // Get items for category
-            val itemsResult = repository.getItems(categoryId, ContentType.LIVE_TV)
-            val items = itemsResult.getOrElse {
-                _uiState.value = UiState.Error("Failed to load channels: ${it.message}")
-                return@launch
-            }.take(50)
-
-            if (items.isEmpty()) {
-                _uiState.value = UiState.Error("No channels found in this category")
-                return@launch
-            }
-
-            // Get EPG for all items (uses XMLTV if configured, falls back to provider EPG)
-            val epgResult = repository.getEpgBulkForItems(items)
-            val epgData = epgResult.getOrElse {
-                _uiState.value = UiState.Error("Failed to load EPG data: ${it.message}")
-                return@launch
-            }
-
-            if (epgData.isEmpty()) {
-                _uiState.value = UiState.Error("No EPG data available for these channels")
-                return@launch
-            }
-
-            val channelRows = buildChannelRows(items, epgData, date)
-            val timeSlots = generateTimeSlots(date)
-            val currentSlot = calculateCurrentTimeSlot(timeSlots)
-            val elapsed = System.currentTimeMillis() - startTime
-
-            _uiState.value = UiState.Success(
-                channelRows = channelRows,
-                timeSlots = timeSlots,
-                currentTimeSlot = currentSlot,
-                selectedDate = date,
-                epgLoadTime = "${elapsed}ms",
-                epgMatchInfo = "${epgData.size}/${items.size} channels matched"
-            )
+            loadEpgDataInternal(date)
         }
+    }
+
+    private suspend fun loadEpgDataInternal(date: LocalDate) {
+        _uiState.value = UiState.Loading
+        currentDate = date
+        val startTime = System.currentTimeMillis()
+
+        // Check if provider supports EPG (allow if external XMLTV URL is configured)
+        val capabilities = repository.getCapabilities()
+        val hasExternalEpg = repository.hasIndexedEpgData()
+        if (capabilities != null && !capabilities.supportsEpg && !hasExternalEpg) {
+            _uiState.value = UiState.Error("EPG is not supported by this provider")
+            return
+        }
+
+        // Get items for category
+        val itemsResult = repository.getItems(categoryId, ContentType.LIVE_TV)
+        val items = itemsResult.getOrElse {
+            _uiState.value = UiState.Error("Failed to load channels: ${it.message}")
+            return
+        }.take(50)
+
+        if (items.isEmpty()) {
+            _uiState.value = UiState.Error("No channels found in this category")
+            return
+        }
+
+        // Get EPG for all items (uses XMLTV if configured, falls back to provider EPG)
+        val epgResult = repository.getEpgBulkForItems(items)
+        val epgData = epgResult.getOrElse {
+            _uiState.value = UiState.Error("Failed to load EPG data: ${it.message}")
+            return
+        }
+
+        if (epgData.isEmpty()) {
+            _uiState.value = UiState.Error("No EPG data available for these channels")
+            return
+        }
+
+        // Pre-sort listings once so buildChannelRows can use binary search
+        val sortedEpgData = epgData.mapValues { (_, response) ->
+            EpgResponse(response.listings.sortedBy { it.startTime })
+        }
+        val channelRows = buildChannelRows(items, sortedEpgData, date)
+        val timeSlots = generateTimeSlots(date)
+        val currentSlot = calculateCurrentTimeSlot(timeSlots)
+        val elapsed = System.currentTimeMillis() - startTime
+
+        _uiState.value = UiState.Success(
+            channelRows = channelRows,
+            timeSlots = timeSlots,
+            currentTimeSlot = currentSlot,
+            selectedDate = date,
+            epgLoadTime = "${elapsed}ms",
+            epgMatchInfo = "${epgData.size}/${items.size} channels matched"
+        )
     }
 
     fun forceRefresh() {
@@ -137,17 +156,18 @@ class EpgViewModel(
         }
         val state = _uiState.value
         if (state !is UiState.Success) return
-        val lowerQuery = query.lowercase()
-        _searchResults.value = state.channelRows.flatMap { row ->
-            row.programs
-                .filter { it.title.lowercase().contains(lowerQuery) }
-                .map { program ->
-                    EpgSearchResult(
-                        program = program,
-                        channel = row.channel,
-                        isCurrent = EpgUtils.isCurrentProgram(program)
-                    )
+        _searchResults.value = buildList {
+            for (row in state.channelRows) {
+                for (program in row.programs) {
+                    if (program.title.contains(query, ignoreCase = true)) {
+                        add(EpgSearchResult(
+                            program = program,
+                            channel = row.channel,
+                            isCurrent = EpgUtils.isCurrentProgram(program)
+                        ))
+                    }
                 }
+            }
         }.sortedByDescending { it.isCurrent }
     }
 
@@ -165,12 +185,23 @@ class EpgViewModel(
         val dayEnd = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
 
         return items.map { item ->
-            val programs = epgData[item.id]?.listings?.filter {
-                it.startTime in dayStart..dayEnd || it.endTime in dayStart..dayEnd ||
-                (it.startTime < dayStart && it.endTime > dayEnd)
-            }?.sortedBy { it.startTime } ?: emptyList()
-
-            EpgChannelRow(item, programs)
+            val listings = epgData[item.id]?.listings ?: emptyList()
+            // Listings are pre-sorted by startTime — use binary search to find day range
+            // Find first program that could overlap with the day (endTime > dayStart)
+            var lo = 0
+            var hi = listings.size
+            while (lo < hi) {
+                val mid = (lo + hi) / 2
+                if (listings[mid].endTime <= dayStart) lo = mid + 1 else hi = mid
+            }
+            val start = lo
+            // Find first program that starts after dayEnd (no overlap possible)
+            hi = listings.size
+            while (lo < hi) {
+                val mid = (lo + hi) / 2
+                if (listings[mid].startTime <= dayEnd) lo = mid + 1 else hi = mid
+            }
+            EpgChannelRow(item, listings.subList(start, lo))
         }
     }
 
