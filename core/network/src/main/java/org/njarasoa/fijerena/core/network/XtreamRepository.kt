@@ -75,7 +75,7 @@ class XtreamRepository(
         sessionManager, database, cache, providerSettings, metricsManager, providerId
     )
 
-    private val userDataManager = XtreamUserDataManager(cache, providerSettings)
+    private val userDataManager = XtreamUserDataManager(cache, providerSettings, providerId)
 
     private val epgManager = XtreamEpgManager(sessionManager, cache, providerSettings)
 
