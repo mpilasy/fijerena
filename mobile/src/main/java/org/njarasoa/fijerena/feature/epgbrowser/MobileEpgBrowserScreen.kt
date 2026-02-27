@@ -281,12 +281,13 @@ private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, i
                     .padding(horizontal = Spacing.md)
             ) {
                 results.dateGroups.forEach { dateGroup ->
-                    stickyHeader(key = "date::${dateGroup.dayStartEpoch}") {
+                    stickyHeader(key = "date::${dateGroup.dayStartEpoch}", contentType = "header") {
                         MobileDateHeader(dateLabel = dateGroup.dateLabel)
                     }
                     items(
                         dateGroup.programs,
-                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" }
+                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" },
+                        contentType = { "program" }
                     ) { program ->
                         MobileProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
                     }

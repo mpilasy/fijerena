@@ -81,6 +81,7 @@ class StreamingPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        instanceReady.complete(this)
         NetworkMonitor.init(this)
         StreamingMediaSourceFactory.initCronet(this)
         initializePlayer()
@@ -704,7 +705,11 @@ class StreamingPlaybackService : MediaSessionService() {
         @Volatile
         private var instance: StreamingPlaybackService? = null
 
+        private val instanceReady = kotlinx.coroutines.CompletableDeferred<StreamingPlaybackService>()
+
         fun getInstance(): StreamingPlaybackService? = instance
+
+        suspend fun awaitInstance(): StreamingPlaybackService = instanceReady.await()
 
         fun getPlaybackState(service: StreamingPlaybackService): StateFlow<PlaybackState> {
             return service.playbackState

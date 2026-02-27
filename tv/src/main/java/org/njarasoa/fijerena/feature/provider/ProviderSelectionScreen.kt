@@ -199,7 +199,7 @@ private fun ProviderList(
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(providers, key = { it.id }) { provider ->
+        items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

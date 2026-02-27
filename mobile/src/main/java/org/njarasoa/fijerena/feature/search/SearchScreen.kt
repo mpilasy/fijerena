@@ -323,7 +323,7 @@ private fun SearchResults(
         ) {
             // Progress / complete message
             if (isSearching && searchProgress != null) {
-                item(key = "search_progress") {
+                item(key = "search_progress", contentType = "status") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -343,7 +343,7 @@ private fun SearchResults(
                     }
                 }
             } else if (!isSearching && searchProgress != null) {
-                item(key = "search_complete") {
+                item(key = "search_complete", contentType = "status") {
                     Text(
                         text = searchProgress,
                         style = MaterialTheme.typography.bodyMedium,
@@ -355,7 +355,7 @@ private fun SearchResults(
 
             // Dev stats on separate line
             if (devStats != null) {
-                item(key = "dev_stats") {
+                item(key = "dev_stats", contentType = "status") {
                     Text(
                         text = devStats,
                         style = MaterialTheme.typography.labelSmall.copy(
@@ -370,7 +370,7 @@ private fun SearchResults(
 
             // Result count
             if (categoryResults.isNotEmpty() || results.isNotEmpty()) {
-                item(key = "result_count") {
+                item(key = "result_count", contentType = "status") {
                     Text(
                         text = "${categoryResults.size + results.size} results",
                         style = MaterialTheme.typography.titleSmall,
@@ -384,7 +384,7 @@ private fun SearchResults(
 
                     if (typeCats.isNotEmpty() || typeStreams.isNotEmpty()) {
                         val isExpanded = expandedGroups.contains(type)
-                        item(key = "header_$type") {
+                        item(key = "header_$type", contentType = "header") {
                             MobileCollapsibleHeader(
                                 title = getContentTypeLabel(type),
                                 isExpanded = isExpanded,
@@ -393,14 +393,14 @@ private fun SearchResults(
                         }
 
                         if (isExpanded) {
-                            items(typeCats, key = { "cat_${it.categoryId}_${it.contentType}" }) { catResult ->
+                            items(typeCats, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
                                 CategoryResultCard(
                                     result = catResult,
                                     onClick = { onCategoryClick(catResult) },
                                     onLongClick = { onCategoryLongPress(catResult) }
                                 )
                             }
-                            items(typeStreams, key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" }) { result ->
+                            items(typeStreams, key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" }, contentType = { "stream" }) { result ->
                                 SearchResultCard(
                                     result = result,
                                     onClick = { onResultClick(result) },
@@ -412,7 +412,7 @@ private fun SearchResults(
                 }
             } else {
                 if (categoryResults.isNotEmpty()) {
-                    item(key = "category_header") {
+                    item(key = "category_header", contentType = "header") {
                         Text(
                             text = "Categories",
                             style = MaterialTheme.typography.titleMedium,
@@ -420,7 +420,7 @@ private fun SearchResults(
                             modifier = Modifier.padding(vertical = Spacing.xxs)
                         )
                     }
-                    items(categoryResults, key = { "cat_${it.categoryId}_${it.contentType}" }) { catResult ->
+                    items(categoryResults, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
                         CategoryResultCard(
                             result = catResult,
                             onClick = { onCategoryClick(catResult) },
@@ -429,7 +429,7 @@ private fun SearchResults(
                     }
                 }
                 if (results.isNotEmpty()) {
-                    item(key = "stream_header") {
+                    item(key = "stream_header", contentType = "header") {
                         Text(
                             text = "Streams",
                             style = MaterialTheme.typography.titleMedium,
@@ -437,7 +437,7 @@ private fun SearchResults(
                             modifier = Modifier.padding(vertical = Spacing.xxs)
                         )
                     }
-                    items(results, key = { it.itemId }) { result ->
+                    items(results, key = { it.itemId }, contentType = { "stream" }) { result ->
                         SearchResultCard(
                             result = result,
                             onClick = { onResultClick(result) },

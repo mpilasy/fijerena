@@ -29,6 +29,9 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  * - 1.1x scale on focus with 200ms animated transition
  * - 2dp Electric Blue border when focused
  * - Rounded corners matching the design system
+ *
+ * Note: Uses composed {} because animateFloatAsState requires @Composable context.
+ * Animation state is stable per-element via remember {}.
  */
 fun Modifier.tvFocusable(
     focusScale: Float = TvFocusTokens.focusedScale,
@@ -94,8 +97,7 @@ fun Modifier.tvFocusableNoScale(
  * Content-First Focus Modifier (borderless)
  * For image-based cards where the content is the star:
  * - 1.05x scale on focus (gentler than standard)
- * - Shadow elevation glow (12dp accent)
- * - Subtle 1dp border at low opacity only when focused
+ * - Subtle border only when focused
  * - No bright border, no 1.1x scale
  */
 fun Modifier.tvFocusableContent(

@@ -133,7 +133,7 @@ fun TvEpgManagementScreen(
                 .focusRestorer { initialFocusRequester }
         ) {
             // Status section
-            item {
+            item(contentType = "status_section") {
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Text(
@@ -258,7 +258,7 @@ fun TvEpgManagementScreen(
             }
 
             // Sources section
-            item {
+            item(contentType = "sources_header") {
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Row(
@@ -284,7 +284,7 @@ fun TvEpgManagementScreen(
             }
 
             // Source rows
-            items(sources, key = { it.id }) { source ->
+            items(sources, key = { it.id }, contentType = { "source" }) { source ->
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Row(
@@ -401,7 +401,7 @@ fun TvEpgManagementScreen(
             }
 
             // Actions section
-            item {
+            item(contentType = "actions_section") {
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Text(

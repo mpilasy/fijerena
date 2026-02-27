@@ -370,12 +370,13 @@ private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMo
                 modifier = Modifier.fillMaxSize()
             ) {
                 results.dateGroups.forEach { dateGroup ->
-                    item(key = "date::${dateGroup.dayStartEpoch}") {
+                    item(key = "date::${dateGroup.dayStartEpoch}", contentType = "header") {
                         DateHeader(dateLabel = dateGroup.dateLabel)
                     }
                     items(
                         dateGroup.programs,
-                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" }
+                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" },
+                        contentType = { "program" }
                     ) { program ->
                         ProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
                     }

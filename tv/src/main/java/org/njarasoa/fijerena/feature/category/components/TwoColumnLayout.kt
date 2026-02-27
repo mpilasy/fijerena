@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -47,8 +48,11 @@ internal fun TwoColumnLayout(
     streamsLoading: Boolean,
     categoriesRefreshing: Boolean,
     lastPlayedItemId: String?,
-    nowPlaying: Map<String, EpgProgram>,
+    nowPlaying: ImmutableNowPlaying,
     contentType: String,
+    favoriteIds: Set<String> = emptySet(),
+    favoriteCategoryIds: Set<String> = emptySet(),
+    watchProgress: Map<String, Float> = emptyMap(),
     supportsNativeEpg: Boolean,
     epgIndexState: EpgIndexState,
     onCategorySelected: (String) -> Unit,
@@ -66,6 +70,16 @@ internal fun TwoColumnLayout(
     val isDevMode = remember { appSettings.isDevMode }
 
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledStyles = remember(scale, typography) {
+        object {
+            val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
+            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+            val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
+            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+        }
+    }
 
     // Long-press favorite menu state
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
@@ -134,32 +148,24 @@ internal fun TwoColumnLayout(
                 Column {
                     Text(
                         text = "IPTV.atr",
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
-                        ),
+                        style = scaledStyles.displaySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = contentType.replace("_", " "),
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                        ),
+                        style = scaledStyles.titleMedium,
                         color = CinemaAccent
                     )
                     Text(
                         text = "${categories.size} categories",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
-                        ),
+                        style = scaledStyles.labelSmall,
                         color = CinemaTextSecondary
                     )
                 }
             }
             Text(
                 text = providerName,
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
-                ),
+                style = scaledStyles.titleSmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
         }
@@ -174,9 +180,7 @@ internal fun TwoColumnLayout(
             if (epgErrorMessage != null) {
                 Text(
                     text = epgErrorMessage,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                    ),
+                    style = scaledStyles.bodySmall,
                     color = if (epgIndexState is EpgIndexState.Indexing) {
                         CinemaTextSecondary
                     } else {
@@ -199,6 +203,7 @@ internal fun TwoColumnLayout(
                 categoriesRefreshing = categoriesRefreshing,
                 contentType = contentType,
                 categoryViewModel = categoryViewModel,
+                favoriteCategoryIds = favoriteCategoryIds,
                 onCategorySelected = onCategorySelected,
                 onRefreshCategories = onRefreshCategories,
                 onCategoryLongPress = { category ->
@@ -228,6 +233,8 @@ internal fun TwoColumnLayout(
                 contentType = contentType,
                 categoryViewModel = categoryViewModel,
                 isDevMode = isDevMode,
+                favoriteIds = favoriteIds,
+                watchProgress = watchProgress,
                 onStreamSelected = { streamId, streamName, categoryId ->
                     // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
                     val item = streams?.firstOrNull { it.id == streamId }

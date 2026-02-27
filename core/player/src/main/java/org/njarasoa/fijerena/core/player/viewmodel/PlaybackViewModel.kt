@@ -98,28 +98,18 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     private suspend fun observeServiceState() {
-        // Wait for service to start
-        var attempts = 0
-        while (attempts < 10) {
-            val service = StreamingPlaybackService.getInstance()
-            if (service != null) {
-                // Observe service's playback state
-                viewModelScope.launch {
-                    service.playbackState.collect { state ->
-                        _playbackState.value = state
-                    }
-                }
+        val service = StreamingPlaybackService.awaitInstance()
 
-                // Observe service's current metadata
-                viewModelScope.launch {
-                    service.currentMetadata.collect { metadata ->
-                        _currentMetadata.value = metadata
-                    }
-                }
-                break
+        viewModelScope.launch {
+            service.playbackState.collect { state ->
+                _playbackState.value = state
             }
-            kotlinx.coroutines.delay(100)
-            attempts++
+        }
+
+        viewModelScope.launch {
+            service.currentMetadata.collect { metadata ->
+                _currentMetadata.value = metadata
+            }
         }
     }
 

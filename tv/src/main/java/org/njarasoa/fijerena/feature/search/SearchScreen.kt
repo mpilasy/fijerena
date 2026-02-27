@@ -543,7 +543,7 @@ private fun SearchResultsList(
 
                         if (typeCats.isNotEmpty() || typeStreams.isNotEmpty()) {
                             val isExpanded = expandedGroups.contains(type)
-                            item(key = "header_$type") {
+                            item(key = "header_$type", contentType = "header") {
                                 CollapsibleHeader(
                                     title = getContentTypeLabel(type),
                                     isExpanded = isExpanded,
@@ -553,7 +553,7 @@ private fun SearchResultsList(
 
                             if (isExpanded) {
                                 // Show categories for this type
-                                items(typeCats, key = { "cat_${it.categoryId}_${it.contentType}" }) { catResult ->
+                                items(typeCats, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
                                     CategoryResultItem(
                                         result = catResult,
                                         onClick = { onCategoryClick(catResult) },
@@ -561,7 +561,7 @@ private fun SearchResultsList(
                                     )
                                 }
                                 // Show streams for this type
-                                items(typeStreams, key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" }) { result ->
+                                items(typeStreams, key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" }, contentType = { "stream" }) { result ->
                                     SearchResultItem(
                                         result = result,
                                         onClick = { onResultClick(result) },
@@ -575,7 +575,7 @@ private fun SearchResultsList(
                 } else {
                     // Specific content type search - no need for collapsible groups
                     if (categoryResults.isNotEmpty()) {
-                        item(key = "category_header") {
+                        item(key = "category_header", contentType = "header") {
                             Text(
                                 text = "Categories",
                                 style = MaterialTheme.typography.titleMedium,
@@ -586,7 +586,7 @@ private fun SearchResultsList(
                                 )
                             )
                         }
-                        items(categoryResults, key = { "cat_${it.categoryId}_${it.contentType}" }) { catResult ->
+                        items(categoryResults, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
                             CategoryResultItem(
                                 result = catResult,
                                 onClick = { onCategoryClick(catResult) },
@@ -596,7 +596,7 @@ private fun SearchResultsList(
                     }
 
                     if (results.isNotEmpty()) {
-                        item(key = "stream_header") {
+                        item(key = "stream_header", contentType = "header") {
                             Text(
                                 text = "Streams",
                                 style = MaterialTheme.typography.titleMedium,
@@ -607,7 +607,7 @@ private fun SearchResultsList(
                                 )
                             )
                         }
-                        items(results, key = { "${it.itemId}_${it.categoryId}" }) { result ->
+                        items(results, key = { "${it.itemId}_${it.categoryId}" }, contentType = { "stream" }) { result ->
                             SearchResultItem(
                                 result = result,
                                 onClick = { onResultClick(result) },

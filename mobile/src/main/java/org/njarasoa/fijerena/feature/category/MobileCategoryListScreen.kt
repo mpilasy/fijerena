@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.category
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -86,7 +87,8 @@ fun MobileCategoryListScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val nowPlaying by viewModel.nowPlaying.collectAsState()
+    val nowPlayingMap by viewModel.nowPlaying.collectAsState()
+    val nowPlaying = remember(nowPlayingMap) { ImmutableNowPlaying(nowPlayingMap) }
     val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsState()
     val context = LocalContext.current
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
@@ -369,7 +371,7 @@ private fun CategoryChipRow(
                 contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
             ) {
-                items(virtualCategories, key = { it.id }) { category ->
+                items(virtualCategories, key = { it.id }, contentType = { "category" }) { category ->
                     FilterChip(
                         selected = category.id == selectedCategoryId,
                         onClick = { onCategorySelected(category.id) },
@@ -398,7 +400,7 @@ private fun CategoryChipRow(
             contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
         ) {
-            items(regularCategories, key = { it.id }) { category ->
+            items(regularCategories, key = { it.id }, contentType = { "category" }) { category ->
                 val isFavCat = categoryViewModel.isFavoriteCategory(category.id, contentType)
                 FilterChip(
                     selected = category.id == selectedCategoryId,
@@ -440,7 +442,7 @@ private fun StreamsList(
     items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
     streamsLoading: Boolean,
     selectedCategoryId: String?,
-    nowPlaying: Map<String, EpgProgram> = emptyMap(),
+    nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
     onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
     onItemLongPress: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {}
 ) {
@@ -491,7 +493,7 @@ private fun StreamsList(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                item {
+                item(contentType = "header") {
                     Text(
                         text = "${items.size} streams",
                         style = MaterialTheme.typography.labelMedium,
@@ -499,7 +501,7 @@ private fun StreamsList(
                         modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
                     )
                 }
-                items(items, key = { it.id }) { item ->
+                items(items, key = { it.id }, contentType = { "stream" }) { item ->
                     StreamCard(
                         item = item,
                         nowPlayingProgram = nowPlaying[item.id],

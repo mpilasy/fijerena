@@ -78,6 +78,7 @@ internal fun CategoryList(
     categoriesRefreshing: Boolean,
     contentType: String,
     categoryViewModel: CategoryViewModel,
+    favoriteCategoryIds: Set<String> = emptySet(),
     onCategorySelected: (String) -> Unit,
     onRefreshCategories: () -> Unit,
     onCategoryLongPress: (MediaCategory) -> Unit,
@@ -217,12 +218,13 @@ internal fun CategoryList(
                 ) {
                     items(
                         items = regularCategories,
-                        key = { it.id }
+                        key = { it.id },
+                        contentType = { "category" }
                     ) { category ->
                         CategoryItem(
                             category = category,
                             isSelected = category.id == selectedCategoryId,
-                            isFavorite = categoryViewModel.isFavoriteCategory(category.id, contentType),
+                            isFavorite = category.id in favoriteCategoryIds,
                             onClick = { onCategorySelected(category.id) },
                             onLongPress = { onCategoryLongPress(category) },
                             focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() }

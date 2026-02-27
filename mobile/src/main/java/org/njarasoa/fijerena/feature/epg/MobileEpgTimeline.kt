@@ -127,7 +127,7 @@ fun MobileEpgTimeline(
             contentPadding = PaddingValues(vertical = CinemaSpacing.sm),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
         ) {
-            items(channelRows, key = { it.channel.id }) { row ->
+            items(channelRows, key = { it.channel.id }, contentType = { "channel_row" }) { row ->
                 ChannelTimelineRow(
                     channelRow = row,
                     dayStart = dayStart,
@@ -206,7 +206,7 @@ private fun ChannelTimelineRow(
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
             contentPadding = PaddingValues(horizontal = CinemaSpacing.xs)
         ) {
-            items(filledPrograms, key = { it.id }) { program ->
+            items(filledPrograms, key = { it.id }, contentType = { "program" }) { program ->
                 val isCurrent = nowEpochSeconds in program.startTime..program.endTime
                 if (isGapEntry(program)) {
                     GapChip(program = program, isCurrent = isCurrent)

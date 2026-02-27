@@ -115,14 +115,8 @@ fun MobileControlsOverlay(
                     .padding(horizontal = CinemaSpacing.xs),
                 maxLines = 1
             )
-            // Clock
-            @Suppress("UNUSED_VARIABLE")
-            val tick = clockTick
-            Text(
-                text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date()),
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White
-            )
+            // Clock — isolated so only this leaf recomposes each second
+            ClockDisplay(clockTick = clockTick)
         }
 
         // Center row: Rewind | Play/Pause | FastForward (VOD only shows seek buttons)
@@ -362,4 +356,15 @@ fun MobileControlsOverlay(
         }
         }
     }
+}
+
+@Composable
+private fun ClockDisplay(clockTick: Long) {
+    @Suppress("UNUSED_VARIABLE")
+    val tick = clockTick
+    Text(
+        text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date()),
+        style = MaterialTheme.typography.titleMedium,
+        color = Color.White
+    )
 }
