@@ -101,7 +101,8 @@ internal fun StreamList(
         label = "refresh_rotation"
     )
     val listState = rememberTvLazyListState()
-    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    // FocusRequester for auto-scroll target — cleared on each category switch to avoid unbounded growth
+    val lastPlayedFocusRequester = remember { FocusRequester() }
 
     val scale = LocalUiScale.current
 
@@ -113,7 +114,7 @@ internal fun StreamList(
             val lastPlayedIndex = streams.indexOfFirst { it.id == lastPlayedItemId }
             if (lastPlayedIndex != -1) {
                 listState.animateScrollToItem(lastPlayedIndex)
-                focusRequesters.getOrPut(lastPlayedItemId) { FocusRequester() }.requestFocus()
+                lastPlayedFocusRequester.requestFocus()
                 lastFocusedItemId = lastPlayedItemId
             }
         }
@@ -227,7 +228,8 @@ internal fun StreamList(
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
                                 onLongPress = { onStreamLongPress(item) },
-                                focusRequester = focusRequesters.getOrPut(item.id) { FocusRequester() }
+                                // Only the last-played item gets a focus requester for auto-scroll
+                                focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null
                             )
                         }
                     }

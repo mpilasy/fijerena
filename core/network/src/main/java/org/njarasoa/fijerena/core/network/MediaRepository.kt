@@ -386,6 +386,9 @@ class MediaRepository(
 
     // --- Recent Categories ---
 
+    // In-memory cache for recent categories — avoids JSON deserialization from SharedPreferences on every call
+    private var cachedRecentCategories: MutableMap<String, List<RecentCategory>> = mutableMapOf()
+
     fun addToCategoryHistory(categoryId: String, categoryName: String, contentType: String) {
         val key = KEY_RECENT_CATEGORIES + "_" + contentType
         val existing = getRecentCategoryList(key)
@@ -395,11 +398,13 @@ class MediaRepository(
         // Keep max 20 entries
         val trimmed = updated.take(MAX_RECENT_CATEGORIES)
         cache.edit().putString(key, json.encodeToString(trimmed)).apply()
+        cachedRecentCategories[contentType] = trimmed
     }
 
     fun getRecentlyViewedCategories(contentType: String): List<RecentCategory> {
+        cachedRecentCategories[contentType]?.let { return it }
         val key = KEY_RECENT_CATEGORIES + "_" + contentType
-        return getRecentCategoryList(key)
+        return getRecentCategoryList(key).also { cachedRecentCategories[contentType] = it }
     }
 
     private fun getRecentCategoryList(key: String): List<RecentCategory> {
@@ -848,6 +853,7 @@ class MediaRepository(
         cachedFavorites = null
         cachedFavoriteCategories = null
         cachedFavoriteShows = null
+        cachedRecentCategories.clear()
         synchronized(watchHistoryLock) {
             cachedWatchHistory = null
         }

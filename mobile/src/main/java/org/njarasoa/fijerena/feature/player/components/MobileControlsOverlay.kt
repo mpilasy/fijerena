@@ -83,9 +83,10 @@ fun MobileControlsOverlay(
     onFastForward: (() -> Unit)? = null,
     onRewind: (() -> Unit)? = null
 ) {
-    val audioTrackCount = remember { viewModel.getAudioTracks().size }
-    val subtitleTrackCount = remember { viewModel.getSubtitleTracks().size }
-    val qualityCount = remember { viewModel.getVideoQualities().size }
+    // Key on metadata so track counts update when a new stream is loaded
+    val audioTrackCount = remember(metadata) { viewModel.getAudioTracks().size }
+    val subtitleTrackCount = remember(metadata) { viewModel.getSubtitleTracks().size }
+    val qualityCount = remember(metadata) { viewModel.getVideoQualities().size }
 
     Box(
         modifier = Modifier
