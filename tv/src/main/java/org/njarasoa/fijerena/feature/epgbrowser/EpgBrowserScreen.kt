@@ -76,10 +76,6 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 @Composable
 fun EpgBrowserScreen(
@@ -539,8 +535,9 @@ private fun AiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sour
                     .padding(horizontal = Spacing.xs.scaled(scale), vertical = Spacing.xxs.scaled(scale))
             )
         }
+        val airingContext = LocalContext.current
         Text(
-            text = formatAiringTime(airing.startEpoch, airing.endEpoch),
+            text = formatAiringTime(airingContext, airing.startEpoch, airing.endEpoch),
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
             ),
@@ -549,15 +546,10 @@ private fun AiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sour
     }
 }
 
-// Cached formatter — avoids allocating SimpleDateFormat on every call
-private val airingTimeFormat by lazy {
-    SimpleDateFormat("h:mm a", Locale.getDefault()).apply { timeZone = TimeZone.getDefault() }
-}
-
-private fun formatAiringTime(startEpoch: Long, endEpoch: Long): String {
-    val startDate = Date(startEpoch * 1000L)
-    val endDate = Date(endEpoch * 1000L)
-    return "${airingTimeFormat.format(startDate)} – ${airingTimeFormat.format(endDate)}"
+private fun formatAiringTime(context: android.content.Context, startEpoch: Long, endEpoch: Long): String {
+    val startText = org.njarasoa.fijerena.core.player.model.TimeFormat.formatTime(context, startEpoch)
+    val endText = org.njarasoa.fijerena.core.player.model.TimeFormat.formatTime(context, endEpoch)
+    return "$startText – $endText"
 }
 
 private fun formatFileSize(bytes: Long): String {

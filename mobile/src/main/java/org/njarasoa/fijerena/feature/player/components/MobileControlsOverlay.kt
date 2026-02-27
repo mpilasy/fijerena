@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.feature.player.utils.formatEpochTime
 import org.njarasoa.fijerena.feature.player.utils.formatTime
+import androidx.compose.ui.platform.LocalContext
 import java.util.Date
 
 @Composable
@@ -280,8 +281,9 @@ fun MobileControlsOverlay(
                         )
                     }
                     if (currentEpgProgram != null) {
-                        val nowStart = formatEpochTime(currentEpgProgram.startTime)
-                        val nowEnd = formatEpochTime(currentEpgProgram.endTime)
+                        val epgContext = LocalContext.current
+                        val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
+                        val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
                         Text(
                             text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
                             style = MaterialTheme.typography.bodySmall,
@@ -304,7 +306,7 @@ fun MobileControlsOverlay(
                         )
                         if (nextEpgProgram != null) {
                             Text(
-                                text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(nextEpgProgram.startTime)})",
+                                text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(epgContext, nextEpgProgram.startTime)})",
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                 color = Color.White.copy(alpha = CinemaAlpha.tint),
                                 modifier = Modifier.padding(top = 2.dp)

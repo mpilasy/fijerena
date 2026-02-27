@@ -246,7 +246,7 @@ fun MobileEpgManagementScreen(
                             }
                             Text(
                                 text = "TZ: $tzLabel" +
-                                    (if (source.lastIngestedAtMs > 0) " | ${formatTimestamp(source.lastIngestedAtMs)}" else "") +
+                                    (if (source.lastIngestedAtMs > 0) " | ${formatTimestamp(context, source.lastIngestedAtMs)}" else "") +
                                     (if (!source.enabled) " | DISABLED" else ""),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
@@ -276,7 +276,7 @@ fun MobileEpgManagementScreen(
                                 }
                                 latestTime?.let { epoch ->
                                     Text(
-                                        text = "Latest: ${formatEpochDate(epoch)}",
+                                        text = "Latest: ${formatEpochDate(context, epoch)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                                     )
@@ -598,14 +598,13 @@ private fun formatCount(count: Int): String {
     }
 }
 
-private fun formatTimestamp(millis: Long): String {
-    val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
-    format.timeZone = java.util.TimeZone.getDefault()
-    return format.format(java.util.Date(millis))
+private fun formatTimestamp(context: android.content.Context, millis: Long): String {
+    val dateFormat = android.text.format.DateFormat.getMediumDateFormat(context)
+    val timeFormat = android.text.format.DateFormat.getTimeFormat(context)
+    val date = java.util.Date(millis)
+    return "${dateFormat.format(date)}, ${timeFormat.format(date)}"
 }
 
-private fun formatEpochDate(epochSeconds: Long): String {
-    val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
-    format.timeZone = java.util.TimeZone.getDefault()
-    return format.format(java.util.Date(epochSeconds * 1000L))
+private fun formatEpochDate(context: android.content.Context, epochSeconds: Long): String {
+    return formatTimestamp(context, epochSeconds * 1000L)
 }

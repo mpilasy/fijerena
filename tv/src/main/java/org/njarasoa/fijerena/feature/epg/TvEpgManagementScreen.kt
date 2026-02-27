@@ -330,7 +330,7 @@ fun TvEpgManagementScreen(
                                 val infoLine = buildString {
                                     append("TZ: $tzLabel")
                                     if (source.lastIngestedAtMs > 0) {
-                                        append(" | Last: ${formatTimestamp(source.lastIngestedAtMs)}")
+                                        append(" | Last: ${formatTimestamp(context, source.lastIngestedAtMs)}")
                                     }
                                     if (!source.enabled) append(" | DISABLED")
                                 }
@@ -370,7 +370,7 @@ fun TvEpgManagementScreen(
                                     }
                                     latestTime?.let { epoch ->
                                         Text(
-                                            text = "Latest: ${formatEpochDate(epoch)}",
+                                            text = "Latest: ${formatEpochDate(context, epoch)}",
                                             style = MaterialTheme.typography.labelSmall.copy(
                                                 fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
                                             ),
@@ -800,14 +800,13 @@ private fun formatBytes(bytes: Long): String {
     }
 }
 
-private fun formatTimestamp(millis: Long): String {
-    val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
-    format.timeZone = java.util.TimeZone.getDefault()
-    return format.format(java.util.Date(millis))
+private fun formatTimestamp(context: android.content.Context, millis: Long): String {
+    val dateFormat = android.text.format.DateFormat.getMediumDateFormat(context)
+    val timeFormat = android.text.format.DateFormat.getTimeFormat(context)
+    val date = java.util.Date(millis)
+    return "${dateFormat.format(date)}, ${timeFormat.format(date)}"
 }
 
-private fun formatEpochDate(epochSeconds: Long): String {
-    val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
-    format.timeZone = java.util.TimeZone.getDefault()
-    return format.format(java.util.Date(epochSeconds * 1000L))
+private fun formatEpochDate(context: android.content.Context, epochSeconds: Long): String {
+    return formatTimestamp(context, epochSeconds * 1000L)
 }
