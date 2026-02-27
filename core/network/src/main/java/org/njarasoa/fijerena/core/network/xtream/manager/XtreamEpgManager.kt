@@ -62,31 +62,61 @@ class XtreamEpgManager(
     }
 
     /**
-     * Fetches EPG data for multiple streams in parallel with batching to prevent OOM.
+     * Fetches EPG data for multiple streams in parallel with concurrency limiting.
+     *
+     * Uses [fetchEpgDirect] to avoid per-call overhead from [getEpgForStream]
+     * (redundant dispatcher switches, Result wrapping, and unstructured background
+     * coroutines for cache refreshes). The API service is resolved once upfront.
      */
     suspend fun getEpgForStreams(streamIds: List<Int>): Result<Map<Int, EpgResponse>> =
         withContext(Dispatchers.IO) {
             suspendResultOf {
+                val service = sessionManager.apiService ?: throw Exception("Not authenticated")
                 coroutineScope {
                     val semaphore = Semaphore(10)
                     val deferreds = streamIds.map { streamId ->
                         async {
                             semaphore.withPermit {
-                                streamId to getEpgForStream(streamId)
+                                val epg = fetchEpgDirect(streamId, service)
+                                if (epg != null) streamId to epg else null
                             }
                         }
                     }
 
                     val results = mutableMapOf<Int, EpgResponse>()
-                    deferreds.awaitAll().forEach { (streamId, result) ->
-                        if (result is Result.Success) {
-                            results[streamId] = result.data
+                    deferreds.awaitAll().forEach { pair ->
+                        if (pair != null) {
+                            results[pair.first] = pair.second
                         }
                     }
                     results
                 }
             }
         }
+
+    /**
+     * Internal EPG fetch that bypasses [getEpgForStream] overhead for batch use.
+     *
+     * - No `withContext(Dispatchers.IO)` (caller already on IO)
+     * - No `suspendResultOf` wrapping (caller handles errors)
+     * - No background refresh coroutines for cache hits (avoids N fire-and-forget coroutines)
+     * - Returns null on failure instead of Result.Error
+     */
+    private suspend fun fetchEpgDirect(
+        streamId: Int,
+        service: org.njarasoa.fijerena.core.player.api.XtreamApiService
+    ): EpgResponse? {
+        return try {
+            val cached = getCachedEpg(streamId)
+            if (cached != null) return cached
+            val epg = service.getEpgForStream(streamId)
+            cacheEpg(streamId, epg)
+            epg
+        } catch (_: Exception) {
+            // Continue on failure - EPG may not be available for all channels
+            null
+        }
+    }
 
     /**
      * Get cached EPG data for a stream
