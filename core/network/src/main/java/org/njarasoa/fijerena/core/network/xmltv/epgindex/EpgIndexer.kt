@@ -194,15 +194,17 @@ class EpgIndexer private constructor(private val context: Context) {
 
         } catch (e: OutOfMemoryError) {
             System.gc()
-            val msg = "Out of memory during stream indexing"
+            val msg = "Out of memory during stream indexing ($channelCount ch, $programmeCount prg ingested before failure)"
             Log.e(TAG, msg, e)
-            lastIngestionStats = IngestionStats()
+            lastIngestionStats = IngestionStats(channelCount, programmeCount)
             if (!wasIndexed) _state.value = EpgIndexState.Failed(msg)
+            throw java.io.IOException(msg, e)
         } catch (e: Exception) {
-            val msg = e.message ?: "Stream indexing failed"
+            val msg = "Stream indexing failed: ${e.message} ($channelCount ch, $programmeCount prg ingested before failure)"
             Log.e(TAG, msg, e)
-            lastIngestionStats = IngestionStats()
+            lastIngestionStats = IngestionStats(channelCount, programmeCount)
             if (!wasIndexed) _state.value = EpgIndexState.Failed(msg)
+            throw e
         }
     }
 
@@ -449,7 +451,9 @@ class EpgIndexer private constructor(private val context: Context) {
     fun incrementalVacuum() {
         try {
             val db = EpgIndexDatabase.getInstance(context)
-            db.openHelper.writableDatabase.execSQL("PRAGMA incremental_vacuum")
+            // Use query() instead of execSQL() — Android's SQLite wrapper rejects
+            // execSQL for PRAGMAs that may return results.
+            db.openHelper.writableDatabase.query("PRAGMA incremental_vacuum").close()
             Log.d(TAG, "Incremental vacuum completed")
         } catch (e: Exception) {
             Log.w(TAG, "Incremental vacuum failed: ${e.message}", e)
