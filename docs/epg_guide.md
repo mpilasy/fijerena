@@ -223,15 +223,15 @@ All queries time-windowed: past 1 day to future 6 days. Max 500 results.
 
 **ViewModel** (`core/ui/.../viewmodels/EpgBrowserViewModel.kt`) orchestrating search and paging.
 
-**States:** `Idle` | `NoEpgFile` | `Searching` | `Indexing(progressPercent, programmesIndexed)` | `Results(query, programs, totalAirings, truncated, searchTimeMs, searchedFromIndex)` | `Error(message)`
+**States:** `Idle` | `NoEpgFile` | `Searching` | `Indexing(progressPercent, programmesIndexed)` | `Results(query, dateGroups, totalPrograms, totalAirings, truncated, searchTimeMs, searchedFromIndex)` | `Error(message)`
 
-Results are grouped by normalized title, sorted by airing count descending. Paging 3 integration for large datasets (2M+ programmes).
+Results are grouped by start date (Today, Tomorrow, weekday name, or full date for later days). Within each date group, programmes are grouped by normalized title+description and sorted by earliest airing time. Paging 3 integration for large datasets (2M+ programmes).
 
 ### Search UI
 
-**TV** (`tv/.../feature/epgbrowser/EpgBrowserScreen.kt`): GlassPanel search, TvLazyColumn, D-pad navigable, search source indicator, indexing progress banner.
+**TV** (`tv/.../feature/epgbrowser/EpgBrowserScreen.kt`): GlassPanel search, TvLazyColumn with date group headers, D-pad navigable, search source indicator, indexing progress banner.
 
-**Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with expandable cards, linear progress during indexing.
+**Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with sticky date headers and expandable programme cards, linear progress during indexing.
 
 ---
 
@@ -316,6 +316,8 @@ data class EpgBrowserProgram(val title: String, val description: String?,
                              val category: String?, val airings: List<EpgBrowserAiring>)
 data class EpgBrowserAiring(val channelId: String, val channelName: String,
                             val channelIconUrl: String?, val startEpoch: Long, val endEpoch: Long)
+data class EpgBrowserDateGroup(val dateLabel: String, val dayStartEpoch: Long,
+                               val programs: List<EpgBrowserProgram>)
 ```
 
 ### Room Entities (`core/network/.../xmltv/epgindex/`)

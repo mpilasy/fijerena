@@ -1,5 +1,24 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: EPG Browser Date Grouping
+**Release Date:** 2026-02-27
+
+### EPG Browser
+- **Date-grouped search results:** EPG Browser search results are now grouped by start date (Today, Tomorrow, weekday name, or full date for later days) with sticky headers on mobile and section headers on TV. Within each date group, programmes are grouped by title and sorted by earliest airing time.
+- **Simplified airing times:** Since the date context is provided by the group header, individual airing rows now show only the time range (e.g., "2:30 PM – 3:30 PM") instead of repeating the day prefix.
+
+### Data Model
+- Added `EpgBrowserDateGroup` model (`dateLabel`, `dayStartEpoch`, `programs`) to `EpgBrowserModels.kt`.
+- `EpgBrowserViewModel.UiState.Results` now contains `dateGroups: List<EpgBrowserDateGroup>` and `totalPrograms: Int` instead of a flat `programs` list.
+
+### Files Modified
+- `core/network/.../xmltv/EpgBrowserModels.kt` — Added `EpgBrowserDateGroup`
+- `core/ui/.../viewmodels/EpgBrowserViewModel.kt` — Date grouping logic, updated `UiState.Results`
+- `mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt` — Sticky date headers, simplified time format
+- `tv/.../feature/epgbrowser/EpgBrowserScreen.kt` — Date headers, simplified time format
+
+---
+
 ## Version: Cross-Type Search & Documentation Update
 **Release Date:** 2026-02-25
 

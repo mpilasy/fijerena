@@ -18,8 +18,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -39,7 +45,8 @@ class EpgBrowserViewModel(
         ) : UiState
         data class Results(
             val query: String,
-            val programs: List<EpgBrowserProgram>,
+            val dateGroups: List<EpgBrowserDateGroup>,
+            val totalPrograms: Int,
             val totalAirings: Int,
             val truncated: Boolean,
             val searchTimeMs: Long,
@@ -134,40 +141,33 @@ class EpgBrowserViewModel(
                     return@launch
                 }
 
-                // Group programmes by normalized title + description
-                // so shows with the same title but different descriptions appear separately
-                val grouped = result.programmes
-                    .groupBy {
-                        it.title.trim().lowercase() to (it.description?.trim()?.lowercase() ?: "")
-                    }
-                    .map { (_, programmes) ->
-                        val representative = programmes.first()
-                        EpgBrowserProgram(
-                            title = representative.title,
-                            description = representative.description
-                                ?: programmes.firstNotNullOfOrNull { it.description },
-                            category = representative.category
-                                ?: programmes.firstNotNullOfOrNull { it.category },
-                            airings = programmes.map { prog ->
-                                val channel = result.channels[prog.channelId]
-                                EpgBrowserAiring(
-                                    channelId = prog.channelId,
-                                    channelName = channel?.displayName ?: prog.channelId,
-                                    channelIconUrl = channel?.iconUrl,
-                                    startEpoch = prog.startEpoch,
-                                    endEpoch = prog.endEpoch,
-                                    sourceId = prog.sourceId
-                                )
-                            }.sortedBy { it.startEpoch }
+                // Convert all programmes to airings with programme info
+                val allAirings = result.programmes.map { prog ->
+                    val channel = result.channels[prog.channelId]
+                    AiringWithProgramme(
+                        title = prog.title,
+                        description = prog.description,
+                        category = prog.category,
+                        airing = EpgBrowserAiring(
+                            channelId = prog.channelId,
+                            channelName = channel?.displayName ?: prog.channelId,
+                            channelIconUrl = channel?.iconUrl,
+                            startEpoch = prog.startEpoch,
+                            endEpoch = prog.endEpoch,
+                            sourceId = prog.sourceId
                         )
-                    }
-                    .sortedBy { it.airings.minOfOrNull { a -> a.startEpoch } ?: Long.MAX_VALUE }
+                    )
+                }
 
-                val totalAirings = grouped.sumOf { it.airings.size }
+                // Group by date, then by programme within each date
+                val dateGroups = groupByDate(allAirings)
+                val totalAirings = allAirings.size
+                val totalPrograms = dateGroups.sumOf { it.programs.size }
 
                 _uiState.value = UiState.Results(
                     query = query,
-                    programs = grouped,
+                    dateGroups = dateGroups,
+                    totalPrograms = totalPrograms,
                     totalAirings = totalAirings,
                     truncated = result.truncated,
                     searchTimeMs = elapsed,
@@ -223,5 +223,67 @@ class EpgBrowserViewModel(
      */
     fun refreshNowPlaying() {
         initPagedNowPlaying()
+    }
+
+    private data class AiringWithProgramme(
+        val title: String,
+        val description: String?,
+        val category: String?,
+        val airing: EpgBrowserAiring
+    )
+
+    private fun groupByDate(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
+        val tz = TimeZone.getDefault()
+        val dayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).apply { timeZone = tz }
+        val now = Date()
+        val today = dayFormat.format(now)
+        val cal = Calendar.getInstance(tz)
+        cal.add(Calendar.DAY_OF_YEAR, 1)
+        val tomorrow = dayFormat.format(cal.time)
+
+        // Group airings by their start day
+        val byDay = airings.groupBy { dayFormat.format(Date(it.airing.startEpoch * 1000L)) }
+
+        return byDay.entries
+            .sortedBy { it.key }
+            .map { (dayKey, dayAirings) ->
+                // Compute date label
+                val sampleDate = Date(dayAirings.first().airing.startEpoch * 1000L)
+                val label = when (dayKey) {
+                    today -> "Today"
+                    tomorrow -> "Tomorrow"
+                    else -> SimpleDateFormat("EEEE, MMM d", Locale.getDefault())
+                        .apply { timeZone = tz }.format(sampleDate)
+                }
+
+                // Compute day start epoch for sorting
+                val dayCal = Calendar.getInstance(tz).apply {
+                    time = sampleDate
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                // Group by programme within this day
+                val programs = dayAirings
+                    .groupBy { it.title.trim().lowercase() to (it.description?.trim()?.lowercase() ?: "") }
+                    .map { (_, group) ->
+                        val rep = group.first()
+                        EpgBrowserProgram(
+                            title = rep.title,
+                            description = rep.description ?: group.firstNotNullOfOrNull { it.description },
+                            category = rep.category ?: group.firstNotNullOfOrNull { it.category },
+                            airings = group.map { it.airing }.sortedBy { it.startEpoch }
+                        )
+                    }
+                    .sortedBy { it.airings.first().startEpoch }
+
+                EpgBrowserDateGroup(
+                    dateLabel = label,
+                    dayStartEpoch = dayCal.timeInMillis / 1000L,
+                    programs = programs
+                )
+            }
     }
 }

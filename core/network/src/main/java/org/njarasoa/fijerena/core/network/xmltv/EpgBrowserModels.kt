@@ -15,3 +15,9 @@ data class EpgBrowserAiring(
     val endEpoch: Long,
     val sourceId: Long = 0
 )
+
+data class EpgBrowserDateGroup(
+    val dateLabel: String,
+    val dayStartEpoch: Long,
+    val programs: List<EpgBrowserProgram>
+)
