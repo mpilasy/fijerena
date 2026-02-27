@@ -182,10 +182,10 @@ class StreamLoaderViewModel(
                         isFavorite = isFav
                     )
 
-                    // Schedule history update (Recent Channels) after 5 seconds
+                    // Schedule history update (Recent Channels) after 30 seconds of watching
                     historyJob?.cancel()
                     historyJob = viewModelScope.launch(Dispatchers.IO) {
-                        delay(5000)
+                        delay(30_000)
                         val watchHistoryStreamId = if (contentType == ContentType.TV_SHOWS && seriesId != null) seriesId else streamId
                         val watchHistoryStreamName = if (contentType == ContentType.TV_SHOWS && seriesName != null) seriesName else streamName
                         repo.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
@@ -202,14 +202,15 @@ class StreamLoaderViewModel(
 
     fun loadStream(item: MediaItem) {
         viewModelScope.launch(Dispatchers.IO) {
+            // Capture current state before setting Loading, so we preserve categoryStreams/lastWatchedStreams
+            val previousState = _state.value
             _state.value = StreamState.Loading
 
             // Update index
             currentStreamIndex = streamList.indexOfFirst { it.id == item.id }
 
-            val currentState = _state.value
-            val currentStreams = if (currentState is StreamState.Success) currentState.categoryStreams else streamList
-            val lastWatched = if (currentState is StreamState.Success) currentState.lastWatchedStreams else emptyList()
+            val currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else streamList
+            val lastWatched = if (previousState is StreamState.Success) previousState.lastWatchedStreams else emptyList()
 
             loadStreamInternal(item.id, item.name, currentStreams, lastWatched)
         }
