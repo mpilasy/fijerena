@@ -118,11 +118,16 @@ class CategoryViewModel(
             repository = AppContainer.getInstance(context).getMediaRepository()
             loadCategoriesInternal()
         }
-        // Refresh pre-computed per-item data whenever UI state changes
+        // Refresh pre-computed per-item data only when the actual stream list changes
         viewModelScope.launch {
+            var lastStreams: List<MediaItem>? = null
             _uiState.collect { state ->
                 if (state is UiState.Success && ::repository.isInitialized) {
-                    refreshPerItemData()
+                    val streams = state.streams
+                    if (streams !== lastStreams) {
+                        lastStreams = streams
+                        refreshPerItemData()
+                    }
                 }
             }
         }

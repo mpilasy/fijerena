@@ -165,7 +165,8 @@ class EpgViewModel(
             val state = _uiState.value
             if (state !is UiState.Success) return@launch
             val now = System.currentTimeMillis() / 1000
-            _searchResults.value = buildList {
+            // Use partition instead of sortedByDescending on boolean — O(n) vs O(n log n)
+            val results = buildList {
                 for (row in state.channelRows) {
                     for (program in row.programs) {
                         if (program.title.contains(query, ignoreCase = true)) {
@@ -177,7 +178,9 @@ class EpgViewModel(
                         }
                     }
                 }
-            }.sortedByDescending { it.isCurrent }
+            }
+            val (current, others) = results.partition { it.isCurrent }
+            _searchResults.value = current + others
         }
     }
 

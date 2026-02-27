@@ -74,7 +74,9 @@ class EpgBrowserViewModel(
     private val searchService = XmltvSearchService(context)
     private var channelMatcher: EpgChannelMatcher? = null
 
-    val isDevMode: Boolean get() = AppSettings(context).isDevMode
+    // Cache AppSettings instance to avoid constructing a new object on every property read
+    private val appSettings = AppSettings(context)
+    val isDevMode: Boolean get() = appSettings.isDevMode
 
     private val _sourceLabels = MutableStateFlow<Map<Long, String>>(emptyMap())
     val sourceLabels: StateFlow<Map<Long, String>> = _sourceLabels.asStateFlow()
