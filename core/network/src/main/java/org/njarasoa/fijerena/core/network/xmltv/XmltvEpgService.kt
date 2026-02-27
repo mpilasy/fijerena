@@ -106,8 +106,15 @@ class XmltvEpgService(
 
         val cachedResult = getCachedEpg()
         if (cachedResult != null) {
-            Log.d(TAG, "Returning cached XMLTV EPG for ${cachedResult.size} channels")
-            return@withContext cachedResult
+            // Only use cache if ALL requested channels are present in it.
+            // The player calls this with a single channel; a stale cache from a
+            // previous single-channel call would otherwise hide the current one.
+            val allPresent = channels.all { cachedResult.containsKey(it.id) }
+            if (allPresent) {
+                Log.d(TAG, "Returning cached XMLTV EPG for ${cachedResult.size} channels")
+                return@withContext cachedResult
+            }
+            Log.d(TAG, "Cache miss: ${channels.size} requested, ${cachedResult.size} cached")
         }
 
         try {
@@ -149,9 +156,11 @@ class XmltvEpgService(
                 )
             }
 
-            cacheEpg(result)
-            Log.d(TAG, "Matched XMLTV EPG for ${result.size} of ${channels.size} channels")
-            result
+            // Merge fresh results into existing cache so previous channels aren't lost
+            val merged = (cachedResult ?: emptyMap()) + result
+            cacheEpg(merged)
+            Log.d(TAG, "Matched XMLTV EPG for ${result.size} of ${channels.size} channels (cache now ${merged.size})")
+            merged
         } catch (e: Exception) {
             Log.e(TAG, "Failed to query XMLTV EPG from index: ${e.message}", e)
             emptyMap()
