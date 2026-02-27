@@ -104,13 +104,9 @@ fun PlayerControlsOverlay(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = CinemaAlpha.focusedTint))
     ) {
-        // Clock in top-right corner
-        @Suppress("UNUSED_VARIABLE")
-        val tick = clockTick
-        Text(
-            text = TimeFormat.formatClockTime(Date()),
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
+        // Clock in top-right corner — isolated so only this leaf recomposes each second
+        ClockDisplay(
+            clockTick = clockTick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
@@ -419,4 +415,16 @@ fun PlayerControlsOverlay(
             }
         }
     }
+}
+
+@Composable
+private fun ClockDisplay(clockTick: Long, modifier: Modifier = Modifier) {
+    @Suppress("UNUSED_VARIABLE")
+    val tick = clockTick
+    Text(
+        text = TimeFormat.formatClockTime(Date()),
+        style = MaterialTheme.typography.titleMedium,
+        color = Color.White,
+        modifier = modifier
+    )
 }

@@ -44,6 +44,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -69,10 +70,12 @@ internal fun StreamList(
     selectedCategoryId: String?,
     selectedCategoryName: String?,
     lastPlayedItemId: String?,
-    nowPlaying: Map<String, EpgProgram>,
+    nowPlaying: ImmutableNowPlaying,
     contentType: String,
     categoryViewModel: CategoryViewModel,
     isDevMode: Boolean,
+    favoriteIds: Set<String> = emptySet(),
+    watchProgress: Map<String, Float> = emptyMap(),
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onStreamLongPress: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,
@@ -214,20 +217,13 @@ internal fun StreamList(
                     ) {
                         items(
                             items = streams,
-                            key = { it.id }
+                            key = { it.id },
+                            contentType = { "stream" }
                         ) { item ->
-                            // Get watch progress for this item
-                            val watchedItem = categoryViewModel.getPlaybackPosition(item.id, contentType)
-                            val progress = watchedItem?.let {
-                                if (it.duration > 0) {
-                                    (it.playbackPosition.toFloat() / it.duration.toFloat()).coerceIn(0f, 1f)
-                                } else 0f
-                            } ?: 0f
-
                             StreamItem(
                                 item = item,
-                                isFavorite = categoryViewModel.isFavorite(item.id, contentType),
-                                watchProgress = progress,
+                                isFavorite = item.id in favoriteIds,
+                                watchProgress = watchProgress[item.id] ?: 0f,
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
                                 onLongPress = { onStreamLongPress(item) },
@@ -253,6 +249,13 @@ private fun StreamItem(
     focusRequester: FocusRequester? = null
 ) {
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledStyles = remember(scale, typography) {
+        object {
+            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+        }
+    }
 
     Card(
         onClick = onClick,
@@ -315,18 +318,14 @@ private fun StreamItem(
                         if (isFavorite) {
                             Text(
                                 text = "\u2605",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                                ),
+                                style = scaledStyles.titleMedium,
                                 color = CinemaAccent
                             )
                         }
 
                         Text(
                             text = item.name,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                            ),
+                            style = scaledStyles.titleMedium,
                             color = CinemaTextPrimary,
                             maxLines = 1,
                             modifier = Modifier.bounceMarquee()
@@ -336,9 +335,7 @@ private fun StreamItem(
                     item.metadata.rating?.let { rating ->
                         Text(
                             text = "★ $rating",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                            ),
+                            style = scaledStyles.bodySmall,
                             color = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
                             maxLines = 1
                         )
@@ -347,9 +344,7 @@ private fun StreamItem(
                     nowPlayingProgram?.let { program ->
                         Text(
                             text = "Now: ${program.title}",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                            ),
+                            style = scaledStyles.bodySmall,
                             color = CinemaOrangeLight,
                             maxLines = 1,
                             modifier = Modifier.bounceMarquee()

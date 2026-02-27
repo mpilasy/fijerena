@@ -25,6 +25,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.ErrorScreen
 import org.njarasoa.fijerena.feature.category.components.LoadingScreen
@@ -61,8 +62,12 @@ fun CategoryGridScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val nowPlaying by viewModel.nowPlaying.collectAsState()
+    val nowPlayingMap by viewModel.nowPlaying.collectAsState()
+    val nowPlaying = remember(nowPlayingMap) { ImmutableNowPlaying(nowPlayingMap) }
     val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsState()
+    val favoriteIds by viewModel.favoriteIds.collectAsState()
+    val favoriteCategoryIds by viewModel.favoriteCategoryIds.collectAsState()
+    val watchProgress by viewModel.watchProgress.collectAsState()
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -84,6 +89,9 @@ fun CategoryGridScreen(
         uiState = uiState,
         nowPlaying = nowPlaying,
         supportsNativeEpg = supportsNativeEpg,
+        favoriteIds = favoriteIds,
+        favoriteCategoryIds = favoriteCategoryIds,
+        watchProgress = watchProgress,
         epgIndexState = epgIndexState,
         configuration = configuration,
         isDevMode = isDevMode,
@@ -99,8 +107,11 @@ fun CategoryGridScreen(
 @Composable
 private fun CategoryGridContent(
     uiState: CategoryViewModel.UiState,
-    nowPlaying: Map<String, EpgProgram>,
+    nowPlaying: ImmutableNowPlaying,
     supportsNativeEpg: Boolean,
+    favoriteIds: Set<String>,
+    favoriteCategoryIds: Set<String>,
+    watchProgress: Map<String, Float>,
     epgIndexState: EpgIndexState,
     configuration: android.content.res.Configuration,
     isDevMode: Boolean,
@@ -140,6 +151,9 @@ private fun CategoryGridContent(
                         lastPlayedItemId = state.lastPlayedItemId,
                         nowPlaying = nowPlaying,
                         contentType = contentType,
+                        favoriteIds = favoriteIds,
+                        favoriteCategoryIds = favoriteCategoryIds,
+                        watchProgress = watchProgress,
                         supportsNativeEpg = supportsNativeEpg,
                         epgIndexState = epgIndexState,
                         onCategorySelected = { categoryId ->

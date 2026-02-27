@@ -358,7 +358,7 @@ object XmltvParser {
         }
     }
 
-    private val timeZoneCache = mutableMapOf<String, TimeZone>()
+    private val timeZoneCache = java.util.concurrent.ConcurrentHashMap<String, TimeZone>()
 
     fun parseTimestamp(ts: String): Long {
         return try {

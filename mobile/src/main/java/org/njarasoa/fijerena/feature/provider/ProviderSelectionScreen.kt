@@ -155,7 +155,7 @@ private fun MobileProviderList(
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(providers, key = { it.id }) { provider ->
+        items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             GlassPanel(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

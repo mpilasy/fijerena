@@ -8,8 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -69,44 +71,43 @@ fun MobileNavHost(
     val accountManager = remember { AccountManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Migrate legacy AccountManager credentials to Room if needed, then check
-    val hasProvider = remember {
-        kotlinx.coroutines.runBlocking {
-            val providerRepo = ProviderRepository(context.applicationContext)
-            if (providerRepo.getProviderCount() == 0) {
-                // Run one-time migration from AccountManager to Room
-                val legacyCreds = accountManager.exportForMigration()
-                if (legacyCreds != null) {
-                    val (url, username, password) = legacyCreds
-                    val name = org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext).providerName
-                    providerRepo.addProvider(name, url, username, password)
-                }
+    // Async initialization: migrate legacy creds, determine start destination
+    var hasProvider by remember { mutableStateOf<Boolean?>(null) }
+    var lastContentType by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val providerRepo = ProviderRepository(context.applicationContext)
+        if (providerRepo.getProviderCount() == 0) {
+            // Run one-time migration from AccountManager to Room
+            val legacyCreds = accountManager.exportForMigration()
+            if (legacyCreds != null) {
+                val (url, username, password) = legacyCreds
+                val name = org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext).providerName
+                providerRepo.addProvider(name, url, username, password)
             }
-            providerRepo.getProviderCount() > 0
+        }
+        val hasProviderResult = providerRepo.getProviderCount() > 0
+        hasProvider = hasProviderResult
+
+        if (hasProviderResult) {
+            val activeProvider = providerRepo.getActiveProvider()
+            if (activeProvider != null) {
+                val prefs = context.applicationContext.getSharedPreferences(
+                    "media_cache_${activeProvider.id}",
+                    android.content.Context.MODE_PRIVATE
+                )
+                lastContentType = prefs.getString("last_content_type", null)
+            }
         }
     }
+
     val isAuthenticated by authViewModel.authResponse.collectAsState()
 
-    // Read last content type for direct-to-category startup
-    val lastContentType = remember {
-        if (!hasProvider) null
-        else {
-            kotlinx.coroutines.runBlocking {
-                val providerRepo = ProviderRepository(context.applicationContext)
-                val activeProvider = providerRepo.getActiveProvider()
-                if (activeProvider != null) {
-                    val prefs = context.applicationContext.getSharedPreferences(
-                        "media_cache_${activeProvider.id}",
-                        android.content.Context.MODE_PRIVATE
-                    )
-                    prefs.getString("last_content_type", null)
-                } else null
-            }
-        }
-    }
+    // Show nothing until initialization completes
+    if (hasProvider == null) return
 
     // Determine initial destination based on provider configuration
-    val startDestination = if (hasProvider) {
+    val startDestination = if (hasProvider == true) {
         Screen.ContentTypeSelection
     } else {
         Screen.Settings
@@ -116,9 +117,10 @@ fun MobileNavHost(
 
     // Auto-navigate to last content type on startup
     LaunchedEffect(lastContentType) {
-        if (lastContentType != null) {
-            android.util.Log.d("MobileNavHost", "Auto-navigating to last content type: $lastContentType")
-            navController.navigate(Screen.CategoryList(lastContentType)) {
+        val ct = lastContentType
+        if (ct != null) {
+            android.util.Log.d("MobileNavHost", "Auto-navigating to last content type: $ct")
+            navController.navigate(Screen.CategoryList(ct)) {
                 popUpTo(Screen.ContentTypeSelection) { inclusive = false }
             }
         }
@@ -126,7 +128,7 @@ fun MobileNavHost(
 
     // Auto-restore Xtream session if the active provider is Xtream
     LaunchedEffect(hasProvider, isAuthenticated) {
-        if (hasProvider && isAuthenticated == null) {
+        if (hasProvider == true && isAuthenticated == null) {
             val providerRepo = ProviderRepository(context.applicationContext)
             val activeProvider = providerRepo.getActiveProvider()
             if (activeProvider != null && activeProvider.type == "XTREAM") {

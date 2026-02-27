@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
@@ -19,7 +20,7 @@ class ProviderRepository(private val context: Context) {
     private val db = ProviderDatabase.getInstance(context)
     private val dao = db.providerDao()
 
-    fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders()
+    fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders().distinctUntilChanged()
 
     suspend fun getAllProvidersList(): List<ProviderEntity> = dao.getAllProvidersList()
 

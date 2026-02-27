@@ -7,7 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -31,6 +33,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import coil3.size.Size
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -65,18 +68,28 @@ fun CinemaThumbnail(
     val shape = RoundedCornerShape(CinemaCornerRadius.medium)
     val context = LocalContext.current
 
+    // Track measured size so Coil decodes at display resolution, not full source resolution
+    var measuredSize by remember { mutableStateOf(IntSize.Zero) }
+
     Box(
-        modifier = modifier.clip(shape),
+        modifier = modifier
+            .clip(shape)
+            .onSizeChanged { measuredSize = it },
         contentAlignment = Alignment.Center
     ) {
         if (!url.isNullOrBlank()) {
             var showShimmer by remember { mutableStateOf(true) }
             var showFallback by remember { mutableStateOf(false) }
 
-            val model = remember(context, url) {
+            val model = remember(context, url, measuredSize) {
                 ImageRequest.Builder(context)
                     .data(url)
                     .crossfade(CinemaAnimation.imageLoadCrossfadeMs)
+                    .apply {
+                        if (measuredSize.width > 0 && measuredSize.height > 0) {
+                            size(Size(measuredSize.width, measuredSize.height))
+                        }
+                    }
                     .build()
             }
 
@@ -166,6 +179,9 @@ fun TypographyFallback(
 
 /**
  * Shimmer placeholder effect while images load.
+ *
+ * Uses a static full-width gradient shifted via graphicsLayer.translationX,
+ * so no Brush allocation occurs per animation frame.
  */
 @Composable
 fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
@@ -184,24 +200,22 @@ fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
         label = "shimmer_translate"
     )
 
-    // Memoize colors list — only palette changes between themes, not every animation frame
-    val shimmerColors = remember(palette) {
-        listOf(
-            palette.surface,
-            palette.surfaceLight.copy(alpha = CinemaAlpha.imageOverlayLight),
-            palette.surface
+    // Memoize gradient brush — only palette changes between themes, not every animation frame
+    val shimmerBrush = remember(palette) {
+        Brush.linearGradient(
+            colors = listOf(
+                palette.surface,
+                palette.surfaceLight.copy(alpha = CinemaAlpha.imageOverlayLight),
+                palette.surface
+            ),
+            start = Offset(0f, 0f),
+            end = Offset(300f, 0f)
         )
     }
-    // Draw gradient in draw phase — avoids Brush allocation during composition (60fps × N items)
+
     Box(
-        modifier = modifier.drawBehind {
-            drawRect(
-                brush = Brush.linearGradient(
-                    colors = shimmerColors,
-                    start = Offset(translateX, 0f),
-                    end = Offset(translateX + 300f, 0f)
-                )
-            )
-        }
+        modifier = modifier
+            .background(shimmerBrush)
+            .graphicsLayer { translationX = translateX }
     )
 }

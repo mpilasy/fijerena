@@ -318,7 +318,8 @@ private fun ChannelListColumn(
         ) {
             items(
                 count = channelRows.size,
-                key = { channelRows[it].channel.id }
+                key = { channelRows[it].channel.id },
+                contentType = { "channel" }
             ) { index ->
                 val row = channelRows[index]
                 ChannelItem(
@@ -431,7 +432,8 @@ private fun TimeGridColumn(
         ) {
             items(
                 count = channelRows.size,
-                key = { channelRows[it].channel.id }
+                key = { channelRows[it].channel.id },
+                contentType = { "program_row" }
             ) { rowIndex ->
                 val row = channelRows[rowIndex]
                 ProgramRow(
@@ -463,7 +465,7 @@ private fun TimeHeaderRow(
             modifier = Modifier.fillMaxSize(),
             userScrollEnabled = false // Synchronized with program rows
         ) {
-            items(timeSlots.size) { index ->
+            items(timeSlots.size, contentType = { "time_slot" }) { index ->
                 val slot = timeSlots[index]
                 val isCurrent = index == currentTimeSlot
 
@@ -510,7 +512,8 @@ private fun ProgramRow(
     ) {
         items(
             count = channelRow.programs.size,
-            key = { channelRow.programs[it].startTime }
+            key = { channelRow.programs[it].startTime },
+            contentType = { "program" }
         ) { index ->
             val program = channelRow.programs[index]
             ProgramCell(
@@ -625,7 +628,8 @@ private fun EpgSearchContent(
             ) {
                 items(
                     count = searchResults.size,
-                    key = { searchResults[it].program.startTime }
+                    key = { searchResults[it].program.startTime },
+                    contentType = { "epg_search_result" }
                 ) { index ->
                     val result = searchResults[index]
                     SearchResultItem(
@@ -645,6 +649,15 @@ private fun SearchResultItem(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledStyles = remember(scale, typography) {
+        object {
+            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+            val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
+            val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+        }
+    }
 
     Card(
         onClick = onClick,
@@ -679,9 +692,7 @@ private fun SearchResultItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = result.program.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                    ),
+                    style = scaledStyles.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = CinemaTextPrimary,
                     maxLines = 1,
@@ -689,9 +700,7 @@ private fun SearchResultItem(
                 )
                 Text(
                     text = result.channel.name,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                    ),
+                    style = scaledStyles.bodySmall,
                     color = CinemaTextSecondary,
                     maxLines = 1
                 )
@@ -700,18 +709,14 @@ private fun SearchResultItem(
                         result.program.startTime,
                         result.program.endTime
                     ),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
-                    ),
+                    style = scaledStyles.labelSmall,
                     color = CinemaTextSecondary
                 )
                 result.program.description?.let { desc ->
                     if (desc.isNotBlank()) {
                         Text(
                             text = desc,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                            ),
+                            style = scaledStyles.bodySmall,
                             color = CinemaTextSecondary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -722,9 +727,7 @@ private fun SearchResultItem(
             if (result.isCurrent) {
                 Text(
                     text = "NOW",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = MaterialTheme.typography.labelMedium.fontSize.scaled(scale)
-                    ),
+                    style = scaledStyles.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
                 )

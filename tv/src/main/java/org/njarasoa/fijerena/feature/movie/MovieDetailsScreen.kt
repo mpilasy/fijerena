@@ -86,21 +86,7 @@ fun MovieDetailsScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        kotlinx.coroutines.runBlocking {
-            val providerRepo = ProviderRepository(appContext)
-            val entity = providerRepo.getActiveProvider()
-            val repo = MediaRepository(appContext, entity?.id ?: 0L)
-            if (entity != null) {
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect() // Authenticate before making API calls
-                repo.setProvider(provider)
-            }
-            repo
-        }
-    }
+    var mediaRepository by remember { mutableStateOf<MediaRepository?>(null) }
 
     var movieDetail by remember { mutableStateOf<MovieDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -118,7 +104,20 @@ fun MovieDetailsScreen(
         isLoading = true
         error = null
 
-        val result = mediaRepository.getMovieDetail(movieId)
+        // Initialize repository asynchronously (avoids runBlocking on main thread)
+        val appContext = context.applicationContext
+        val providerRepo = ProviderRepository(appContext)
+        val entity = providerRepo.getActiveProvider()
+        val repo = MediaRepository(appContext, entity?.id ?: 0L)
+        if (entity != null) {
+            val password = providerRepo.getPassword(entity.id) ?: ""
+            val provider = MediaProviderFactory.create(entity, appContext, password)
+            provider.connect()
+            repo.setProvider(provider)
+        }
+        mediaRepository = repo
+
+        val result = repo.getMovieDetail(movieId)
         result.fold(
             onSuccess = { detail ->
                 movieDetail = detail
@@ -131,7 +130,7 @@ fun MovieDetailsScreen(
         )
 
         // Load resume position
-        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, ContentType.MOVIES)
+        val watched = repo.getPlaybackPositionSuspend(movieId, ContentType.MOVIES)
         if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
             val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
             if (progress in 2.0..95.0) {
@@ -159,7 +158,7 @@ fun MovieDetailsScreen(
                     movieId = movieId,
                     movieName = movieName,
                     categoryId = categoryId,
-                    mediaRepository = mediaRepository,
+                    mediaRepository = mediaRepository!!,
                     resumePositionMs = resumePositionMs,
                     resumeDurationMs = resumeDurationMs,
                     onPlayMovie = onPlayMovie,
@@ -189,6 +188,17 @@ private fun MovieDetailsContent(
     val providerName by remember { mutableStateOf(appSettings.providerName) }
     val extension = movieDetail.extension ?: "mp4"
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledStyles = remember(scale, typography) {
+        object {
+            val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
+            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+            val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+            val bodyLarge = typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale))
+            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+        }
+    }
 
     // Favorite state
     var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, ContentType.MOVIES)) }
@@ -240,9 +250,7 @@ private fun MovieDetailsContent(
                 ) {
                     Text(
                         text = movieDetail.name.ifEmpty { movieName },
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
-                        ),
+                        style = scaledStyles.displaySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     // Favorite button
@@ -290,9 +298,7 @@ private fun MovieDetailsContent(
             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
             Text(
                 text = providerName,
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
-                ),
+                style = scaledStyles.titleSmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
         }
@@ -326,27 +332,21 @@ private fun MovieDetailsContent(
             movieDetail.metadata?.rating?.let { rating ->
                 Text(
                     text = "★ $rating",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                    ),
+                    style = scaledStyles.titleMedium,
                     color = CinemaAccent
                 )
             }
             movieDetail.metadata?.year?.let { year ->
                 Text(
                     text = "$year",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                    ),
+                    style = scaledStyles.titleMedium,
                     color = CinemaTextSecondary
                 )
             }
             movieDetail.metadata?.duration?.let { duration ->
                 Text(
                     text = formatDuration(duration),
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                    ),
+                    style = scaledStyles.titleMedium,
                     color = CinemaTextSecondary
                 )
             }
@@ -358,9 +358,7 @@ private fun MovieDetailsContent(
             if (endsAtText != null) {
                 Text(
                     text = "Ends at $endsAtText",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                    ),
+                    style = scaledStyles.titleMedium,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium)
                 )
             }
@@ -371,9 +369,7 @@ private fun MovieDetailsContent(
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Text(
                 text = genre,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                ),
+                style = scaledStyles.bodyMedium,
                 color = CinemaAccent
             )
         }
@@ -419,9 +415,7 @@ private fun MovieDetailsContent(
             Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             Text(
                 text = plot,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
-                ),
+                style = scaledStyles.bodyLarge,
                 color = CinemaTextPrimary,
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis
@@ -434,9 +428,7 @@ private fun MovieDetailsContent(
         movieDetail.metadata?.cast?.let { cast ->
             Text(
                 text = "Cast: $cast",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                ),
+                style = scaledStyles.bodySmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -446,9 +438,7 @@ private fun MovieDetailsContent(
         movieDetail.metadata?.director?.let { director ->
             Text(
                 text = "Director: $director",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                ),
+                style = scaledStyles.bodySmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))

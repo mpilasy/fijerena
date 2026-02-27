@@ -39,25 +39,27 @@ fun Modifier.bounceMarquee(
     val density = LocalDensity.current
     var overflowPx by remember { mutableIntStateOf(0) }
 
-    val animating = overflowPx > 0
-    val durationMs = if (animating) {
-        with(density) { ((overflowPx / velocity.toPx()) * 1000).toInt().coerceAtLeast(500) }
-    } else 1000
-
-    val transition = rememberInfiniteTransition(label = "bounce_marquee")
-    val fraction by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = if (animating) 1f else 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = durationMs,
-                delayMillis = delayMillis,
-                easing = LinearEasing
+    // Only create transition when content actually overflows
+    val fraction = if (overflowPx > 0) {
+        val durationMs = with(density) { ((overflowPx / velocity.toPx()) * 1000).toInt().coerceAtLeast(500) }
+        val transition = rememberInfiniteTransition(label = "bounce_marquee")
+        val animatedFraction by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = durationMs,
+                    delayMillis = delayMillis,
+                    easing = LinearEasing
+                ),
+                repeatMode = RepeatMode.Reverse
             ),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "bounce_offset"
-    )
+            label = "bounce_offset"
+        )
+        animatedFraction
+    } else {
+        0f
+    }
 
     this
         .clipToBounds()

@@ -93,6 +93,16 @@ class CategoryViewModel(
     private val _supportsNativeEpg = MutableStateFlow(false)
     val supportsNativeEpg: StateFlow<Boolean> = _supportsNativeEpg.asStateFlow()
 
+    // Pre-computed per-item data — avoids calling ViewModel methods inline per visible item
+    private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteIds: StateFlow<Set<String>> = _favoriteIds.asStateFlow()
+
+    private val _favoriteCategoryIds = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteCategoryIds: StateFlow<Set<String>> = _favoriteCategoryIds.asStateFlow()
+
+    private val _watchProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val watchProgress: StateFlow<Map<String, Float>> = _watchProgress.asStateFlow()
+
     // Lazily initialized in init coroutine to avoid blocking the UI thread
     private lateinit var repository: MediaRepository
 
@@ -107,6 +117,14 @@ class CategoryViewModel(
         viewModelScope.launch {
             repository = AppContainer.getInstance(context).getMediaRepository()
             loadCategoriesInternal()
+        }
+        // Refresh pre-computed per-item data whenever UI state changes
+        viewModelScope.launch {
+            _uiState.collect { state ->
+                if (state is UiState.Success && ::repository.isInitialized) {
+                    refreshPerItemData()
+                }
+            }
         }
     }
 
@@ -408,12 +426,43 @@ class CategoryViewModel(
     fun isFavoriteCategory(categoryId: String, contentType: String) =
         repository.isFavoriteCategory(categoryId, contentType)
 
+    /**
+     * Refresh pre-computed per-item data (favorites, watch progress) for current streams.
+     * Called after streams change or favorites are toggled.
+     */
+    private fun refreshPerItemData() {
+        if (!::repository.isInitialized) return
+        val streams = currentStreams
+        val ct = contentType
+
+        // Build favorite IDs set
+        _favoriteIds.value = streams
+            .filter { repository.isFavorite(it.id, ct) }
+            .mapTo(HashSet()) { it.id }
+
+        // Build favorite category IDs set
+        _favoriteCategoryIds.value = categories
+            .filter { repository.isFavoriteCategory(it.id, ct) }
+            .mapTo(HashSet()) { it.id }
+
+        // Build watch progress map
+        val progressMap = HashMap<String, Float>(streams.size)
+        for (item in streams) {
+            val watched = repository.getPlaybackPosition(item.id, ct)
+            if (watched != null && watched.duration > 0) {
+                progressMap[item.id] = (watched.playbackPosition.toFloat() / watched.duration.toFloat()).coerceIn(0f, 1f)
+            }
+        }
+        _watchProgress.value = progressMap
+    }
+
     fun toggleFavoriteCategory(categoryId: String, categoryName: String, contentType: String) {
         if (repository.isFavoriteCategory(categoryId, contentType)) {
             repository.removeFavoriteCategory(categoryId, contentType)
         } else {
             repository.addFavoriteCategory(categoryId, categoryName, contentType)
         }
+        refreshPerItemData()
         // Local rebuild only — no network fetch needed for a local favorite change
         refreshCategoriesLocal()
     }
@@ -424,6 +473,7 @@ class CategoryViewModel(
         } else {
             repository.addFavorite(itemId, itemName, categoryId, contentType)
         }
+        refreshPerItemData()
         // Local rebuild only — no network fetch needed for a local favorite change
         refreshCategoriesLocal()
     }

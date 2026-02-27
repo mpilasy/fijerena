@@ -36,21 +36,7 @@ fun MobileMovieDetailsScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        val providerRepo = ProviderRepository(appContext)
-        kotlinx.coroutines.runBlocking {
-            val entity = providerRepo.getActiveProvider()
-            if (entity != null) {
-                val resolvedRepo = MediaRepository(appContext, entity.id)
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect() // Authenticate before making API calls
-                resolvedRepo.setProvider(provider)
-                resolvedRepo
-            } else MediaRepository(appContext, 0L)
-        }
-    }
+    var mediaRepository by remember { mutableStateOf<MediaRepository?>(null) }
 
     var movieDetail by remember { mutableStateOf<MovieDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -59,15 +45,29 @@ fun MobileMovieDetailsScreen(
     var resumeDurationMs by remember { mutableStateOf(0L) }
 
     // Favorite state
-    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, ContentType.MOVIES)) }
+    var isFavorite by remember { mutableStateOf(false) }
 
-    android.util.Log.d("MovieDetailsScreen", "State: isLoading=$isLoading, error=$error, movieDetail=${movieDetail != null}")
-
-    // Load movie info on launch
+    // Initialize repository and load movie info asynchronously
     LaunchedEffect(movieId) {
         isLoading = true
         error = null
-        val result = mediaRepository.getMovieDetail(movieId)
+
+        val appContext = context.applicationContext
+        val providerRepo = ProviderRepository(appContext)
+        val entity = providerRepo.getActiveProvider()
+        val repo = if (entity != null) {
+            val resolvedRepo = MediaRepository(appContext, entity.id)
+            val password = providerRepo.getPassword(entity.id) ?: ""
+            val provider = MediaProviderFactory.create(entity, appContext, password)
+            provider.connect()
+            resolvedRepo.setProvider(provider)
+            resolvedRepo
+        } else MediaRepository(appContext, 0L)
+        mediaRepository = repo
+
+        isFavorite = repo.isFavorite(movieId, ContentType.MOVIES)
+
+        val result = repo.getMovieDetail(movieId)
         result.fold(
             onSuccess = { detail ->
                 movieDetail = detail
@@ -80,7 +80,7 @@ fun MobileMovieDetailsScreen(
         )
 
         // Load resume position
-        val watched = mediaRepository.getPlaybackPositionSuspend(movieId, ContentType.MOVIES)
+        val watched = repo.getPlaybackPositionSuspend(movieId, ContentType.MOVIES)
         if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
             val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
             if (progress in 2.0..95.0) {
@@ -101,12 +101,14 @@ fun MobileMovieDetailsScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        if (isFavorite) {
-                            mediaRepository.removeFavorite(movieId, ContentType.MOVIES)
-                        } else {
-                            mediaRepository.addFavorite(movieId, movieName, categoryId, ContentType.MOVIES)
+                        mediaRepository?.let { repo ->
+                            if (isFavorite) {
+                                repo.removeFavorite(movieId, ContentType.MOVIES)
+                            } else {
+                                repo.addFavorite(movieId, movieName, categoryId, ContentType.MOVIES)
+                            }
+                            isFavorite = !isFavorite
                         }
-                        isFavorite = !isFavorite
                     }) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,

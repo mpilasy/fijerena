@@ -45,21 +45,7 @@ fun MobileEpisodeSelectionScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val mediaRepository = remember {
-        val appContext = context.applicationContext
-        val providerRepo = ProviderRepository(appContext)
-        kotlinx.coroutines.runBlocking {
-            val entity = providerRepo.getActiveProvider()
-            if (entity != null) {
-                val resolvedRepo = MediaRepository(appContext, entity.id)
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect() // Authenticate before making API calls
-                resolvedRepo.setProvider(provider)
-                resolvedRepo
-            } else MediaRepository(appContext, 0L)
-        }
-    }
+    var mediaRepository by remember { mutableStateOf<MediaRepository?>(null) }
 
     var seriesDetail by remember { mutableStateOf<SeriesDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -67,7 +53,7 @@ fun MobileEpisodeSelectionScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
-    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(seriesId, ContentType.TV_SHOWS)) }
+    var isFavorite by remember { mutableStateOf(false) }
 
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {
@@ -78,7 +64,26 @@ fun MobileEpisodeSelectionScreen(
     LaunchedEffect(seriesId, refreshTrigger) {
         if (!isRefreshing) isLoading = true
         error = null
-        val result = mediaRepository.getSeriesDetail(seriesId)
+
+        // Initialize repository asynchronously (avoids runBlocking on main thread)
+        val repo = mediaRepository ?: run {
+            val appContext = context.applicationContext
+            val providerRepo = ProviderRepository(appContext)
+            val entity = providerRepo.getActiveProvider()
+            val r = if (entity != null) {
+                val resolvedRepo = MediaRepository(appContext, entity.id)
+                val password = providerRepo.getPassword(entity.id) ?: ""
+                val provider = MediaProviderFactory.create(entity, appContext, password)
+                provider.connect()
+                resolvedRepo.setProvider(provider)
+                resolvedRepo
+            } else MediaRepository(appContext, 0L)
+            mediaRepository = r
+            isFavorite = r.isFavorite(seriesId, ContentType.TV_SHOWS)
+            r
+        }
+
+        val result = repo.getSeriesDetail(seriesId)
         result.fold(
             onSuccess = { detail ->
                 seriesDetail = detail
@@ -110,12 +115,14 @@ fun MobileEpisodeSelectionScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        if (isFavorite) {
-                            mediaRepository.removeFavorite(seriesId, ContentType.TV_SHOWS)
-                        } else {
-                            mediaRepository.addFavorite(seriesId, seriesName, categoryId, ContentType.TV_SHOWS)
+                        mediaRepository?.let { repo ->
+                            if (isFavorite) {
+                                repo.removeFavorite(seriesId, ContentType.TV_SHOWS)
+                            } else {
+                                repo.addFavorite(seriesId, seriesName, categoryId, ContentType.TV_SHOWS)
+                            }
+                            isFavorite = !isFavorite
                         }
-                        isFavorite = !isFavorite
                     }) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
@@ -147,7 +154,7 @@ fun MobileEpisodeSelectionScreen(
                         episode = selectedEpisode!!,
                         seriesDetail = seriesDetail!!,
                         categoryId = categoryId,
-                        mediaRepository = mediaRepository,
+                        mediaRepository = mediaRepository!!,
                         onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
                             onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
                         }
@@ -164,7 +171,7 @@ fun MobileEpisodeSelectionScreen(
                     ) {
                         EpisodeListContent(
                             seriesDetail = seriesDetail!!,
-                            mediaRepository = mediaRepository,
+                            mediaRepository = mediaRepository!!,
                             onEpisodeSelected = { episode ->
                                 selectedEpisode = episode
                             }
@@ -214,7 +221,7 @@ private fun EpisodeListContent(
             val seasonKey = season.seasonNumber.toString()
             val episodes = sortedEpisodesBySeason[seasonKey] ?: continue
             for (episode in episodes) {
-                val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
+                val watched = mediaRepository?.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
                 if (watched == null || !watched.isCompleted) {
                     expandedSeasons = setOf(season.seasonNumber)
                     return@LaunchedEffect
@@ -284,7 +291,7 @@ private fun EpisodeListContent(
 
                 // Season header (skip if only 1 season)
                 if (hasMultipleSeasons) {
-                    item(key = "season_header_$seasonKey") {
+                    item(key = "season_header_$seasonKey", contentType = "header") {
                         SeasonHeader(
                             season = season,
                             episodeCount = seasonEpisodes.size,
@@ -301,7 +308,7 @@ private fun EpisodeListContent(
                 }
 
                 if (isExpanded) {
-                    items(seasonEpisodes, key = { it.id }) { episode ->
+                    items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
                         EpisodeCard(
                             episode = episode,
                             onClick = {
@@ -329,7 +336,7 @@ private fun EpisodeDetailContent(
     var resumePositionMs by remember { mutableStateOf(0L) }
 
     LaunchedEffect(episode.id) {
-        val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
+        val watched = mediaRepository?.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
         if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
             val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
             if (progress in 2.0..95.0) {
