@@ -98,6 +98,8 @@ class MediaRepository(
 
     // In-memory caches to avoid repeated JSON deserialization from SharedPreferences
     private var cachedWatchHistory: List<WatchedItem>? = null
+    // O(1) lookup map for getPlaybackPosition — keyed by (itemId, contentType)
+    private var watchHistoryLookup: Map<Pair<String, String>, WatchedItem>? = null
     private var cachedFavorites: List<FavoriteItem>? = null
     private var cachedFavoriteCategories: List<FavoriteCategoryItem>? = null
     private var cachedFavoriteShows: List<FavoriteShowItem>? = null
@@ -437,6 +439,7 @@ class MediaRepository(
 
             // Update in-memory cache immediately (reads always see latest data)
             cachedWatchHistory = trimmed
+            watchHistoryLookup = null
             watchHistoryDirty = true
         }
         // Debounce disk write — coalesces rapid updates (e.g. playback progress) into one write
@@ -467,6 +470,7 @@ class MediaRepository(
 
         // Populate cache
         cachedWatchHistory = history
+        watchHistoryLookup = null
         return history
     }
 
@@ -504,6 +508,7 @@ class MediaRepository(
         watchHistoryWriteHandler.removeCallbacks(watchHistoryWriteRunnable)
         synchronized(watchHistoryLock) {
             cachedWatchHistory = emptyList()
+            watchHistoryLookup = null
             watchHistoryDirty = false
             cache.edit().remove(KEY_WATCH_HISTORY).apply()
         }
@@ -712,8 +717,12 @@ class MediaRepository(
     }
 
     fun getPlaybackPosition(itemId: String, contentType: String): WatchedItem? {
-        return getWatchHistory()
-            .firstOrNull { it.itemId == itemId && it.contentType == contentType }
+        synchronized(watchHistoryLock) {
+            val map = watchHistoryLookup ?: getWatchHistoryLocked()
+                .associateBy { it.itemId to it.contentType }
+                .also { watchHistoryLookup = it }
+            return map[itemId to contentType]
+        }
     }
 
     fun getInProgressItems(contentType: String): List<MediaItem> {
@@ -822,6 +831,7 @@ class MediaRepository(
 
                 // Update cache
                 cachedWatchHistory = history
+                watchHistoryLookup = null
 
                 cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
             }
@@ -856,6 +866,7 @@ class MediaRepository(
         cachedRecentCategories.clear()
         synchronized(watchHistoryLock) {
             cachedWatchHistory = null
+            watchHistoryLookup = null
         }
     }
 

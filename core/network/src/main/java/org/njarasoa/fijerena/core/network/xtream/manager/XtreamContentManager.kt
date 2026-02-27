@@ -378,7 +378,7 @@ class XtreamContentManager(
                              type = type,
                              contentHash = 0
                          )
-                         base.copy(contentHash = base.hashCode())
+                         base.copy(contentHash = base.computeContentHash())
                      }
 
                      val currentHashes = categoryDao.getCategoryHashes(providerId, type)
@@ -447,7 +447,7 @@ class XtreamContentManager(
                                  tvArchiveDuration = it.tvArchiveDuration,
                                  contentHash = 0
                              )
-                             val entity = base.copy(contentHash = base.hashCode())
+                             val entity = base.copy(contentHash = base.computeContentHash())
                              seenIds.add(entity.streamId)
 
                              val oldHash = currentHashes[entity.streamId]
@@ -527,7 +527,7 @@ class XtreamContentManager(
                                  backdropPath = it.backdropPath?.joinToString(","),
                                  contentHash = 0
                              )
-                             val entity = base.copy(contentHash = base.hashCode())
+                             val entity = base.copy(contentHash = base.computeContentHash())
                              seenIds.add(entity.seriesId)
 
                              val oldHash = currentHashes[entity.seriesId]

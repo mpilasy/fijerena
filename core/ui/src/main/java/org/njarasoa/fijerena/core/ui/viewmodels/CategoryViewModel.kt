@@ -3,11 +3,13 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -371,30 +373,33 @@ class CategoryViewModel(
      * Refresh pre-computed per-item data (favorites, watch progress) for current streams.
      * Called after streams change or favorites are toggled.
      */
-    private fun refreshPerItemData() {
+    private suspend fun refreshPerItemData() {
         if (!::repository.isInitialized) return
         val streams = currentStreams
         val ct = contentType
+        val cats = categories
 
-        // Build favorite IDs set
-        _favoriteIds.value = streams
-            .filter { repository.isFavorite(it.id, ct) }
-            .mapTo(HashSet()) { it.id }
+        withContext(Dispatchers.Default) {
+            // Build favorite IDs set
+            _favoriteIds.value = streams
+                .filter { repository.isFavorite(it.id, ct) }
+                .mapTo(HashSet()) { it.id }
 
-        // Build favorite category IDs set
-        _favoriteCategoryIds.value = categories
-            .filter { repository.isFavoriteCategory(it.id, ct) }
-            .mapTo(HashSet()) { it.id }
+            // Build favorite category IDs set
+            _favoriteCategoryIds.value = cats
+                .filter { repository.isFavoriteCategory(it.id, ct) }
+                .mapTo(HashSet()) { it.id }
 
-        // Build watch progress map
-        val progressMap = HashMap<String, Float>(streams.size)
-        for (item in streams) {
-            val watched = repository.getPlaybackPosition(item.id, ct)
-            if (watched != null && watched.duration > 0) {
-                progressMap[item.id] = (watched.playbackPosition.toFloat() / watched.duration.toFloat()).coerceIn(0f, 1f)
+            // Build watch progress map
+            val progressMap = HashMap<String, Float>(streams.size)
+            for (item in streams) {
+                val watched = repository.getPlaybackPosition(item.id, ct)
+                if (watched != null && watched.duration > 0) {
+                    progressMap[item.id] = (watched.playbackPosition.toFloat() / watched.duration.toFloat()).coerceIn(0f, 1f)
+                }
             }
+            _watchProgress.value = progressMap
         }
-        _watchProgress.value = progressMap
     }
 
     fun toggleFavoriteCategory(categoryId: String, categoryName: String, contentType: String) {
@@ -403,7 +408,7 @@ class CategoryViewModel(
         } else {
             repository.addFavoriteCategory(categoryId, categoryName, contentType)
         }
-        refreshPerItemData()
+        viewModelScope.launch { refreshPerItemData() }
         // Local rebuild only — no network fetch needed for a local favorite change
         refreshCategoriesLocal()
     }
@@ -414,7 +419,7 @@ class CategoryViewModel(
         } else {
             repository.addFavorite(itemId, itemName, categoryId, contentType)
         }
-        refreshPerItemData()
+        viewModelScope.launch { refreshPerItemData() }
         // Local rebuild only — no network fetch needed for a local favorite change
         refreshCategoriesLocal()
     }
