@@ -78,8 +78,9 @@ fun CinemaThumbnail(
         contentAlignment = Alignment.Center
     ) {
         if (!url.isNullOrBlank()) {
-            var showShimmer by remember { mutableStateOf(true) }
-            var showFallback by remember { mutableStateOf(false) }
+            // Key on url so shimmer/fallback state resets when the image URL changes
+            var showShimmer by remember(url) { mutableStateOf(true) }
+            var showFallback by remember(url) { mutableStateOf(false) }
 
             val model = remember(context, url, measuredSize) {
                 ImageRequest.Builder(context)

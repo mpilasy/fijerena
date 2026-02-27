@@ -10,6 +10,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.njarasoa.fijerena.core.network.XtreamRepository
@@ -32,20 +33,30 @@ fun CacheManagementSection(
     onClearTvShowsClick: () -> Unit
 ) {
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    // Memoize scaled TextStyles to avoid allocating new copies per recomposition
+    val styles = remember(scale, typography) {
+        object {
+            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+            val headlineSmall = typography.headlineSmall.copy(fontSize = typography.headlineSmall.fontSize.scaled(scale))
+            val bodyLarge = typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale))
+            val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+        }
+    }
 
     Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
     Text(
         text = "Cache Management",
-        style = MaterialTheme.typography.titleMedium.copy(
-            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-        ),
+        style = styles.titleMedium,
         color = CinemaAccent
     )
     Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
     Text(
         text = "Clear cached data to free up storage space",
-        style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+        style = styles.bodySmall,
         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
     )
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -60,12 +71,12 @@ fun CacheManagementSection(
             Column {
                 Text(
                     text = "Total Cache Size",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)),
+                    style = styles.bodyLarge,
                     color = CinemaTextPrimary
                 )
                 Text(
                     text = formatBytes(stats.totalSize),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = MaterialTheme.typography.headlineSmall.fontSize.scaled(scale)),
+                    style = styles.headlineSmall,
                     color = CinemaAccent
                 )
             }
@@ -88,17 +99,17 @@ fun CacheManagementSection(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Live TV",
-                    style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+                    style = styles.titleSmall,
                     color = CinemaTextPrimary
                 )
                 Text(
                     text = formatBytes(stats.liveTv.size),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
+                    style = styles.bodyMedium,
                     color = CinemaAccent
                 )
                 Text(
                     text = "${if (stats.liveTv.categoryCached) "1 category" else "No categories"}, ${stats.liveTv.streamListsCount} stream lists",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                    style = styles.bodySmall,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
             }
@@ -120,17 +131,17 @@ fun CacheManagementSection(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Movies",
-                    style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+                    style = styles.titleSmall,
                     color = CinemaTextPrimary
                 )
                 Text(
                     text = formatBytes(stats.movies.size),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
+                    style = styles.bodyMedium,
                     color = CinemaAccent
                 )
                 Text(
                     text = "${if (stats.movies.categoryCached) "1 category" else "No categories"}, ${stats.movies.streamListsCount} stream lists",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                    style = styles.bodySmall,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
             }
@@ -152,17 +163,17 @@ fun CacheManagementSection(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "TV Shows",
-                    style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+                    style = styles.titleSmall,
                     color = CinemaTextPrimary
                 )
                 Text(
                     text = formatBytes(stats.tvShows.size),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
+                    style = styles.bodyMedium,
                     color = CinemaAccent
                 )
                 Text(
                     text = "${if (stats.tvShows.categoryCached) "1 category" else "No categories"}, ${stats.tvShows.streamListsCount} stream lists",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                    style = styles.bodySmall,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
             }
@@ -178,12 +189,12 @@ fun CacheManagementSection(
         // EPG & Other
         Text(
             text = "EPG Data: ${stats.epgCount} channels",
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+            style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
         )
         Text(
             text = "Other: ${formatBytes(stats.otherSize)}",
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+            style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
         )
     }
