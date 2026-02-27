@@ -236,13 +236,25 @@ internal fun TwoColumnLayout(
                     }
                 },
                 onStreamLongPress = { item ->
-                    favoriteMenuTarget = FavoriteMenuTarget.Stream(
-                        itemId = item.id,
-                        itemName = item.name,
-                        categoryId = item.categoryId,
-                        contentType = contentType,
-                        isFavorite = categoryViewModel.isFavorite(item.id, contentType)
-                    )
+                    // Category reference items (from "Favorite Categories" / "Recent Categories")
+                    // should toggle the category favorite, not create a stream favorite
+                    val realCategoryId = item.providerData["categoryId"]
+                    if (item.providerData["isCategoryRef"] == "true" && realCategoryId != null) {
+                        favoriteMenuTarget = FavoriteMenuTarget.Category(
+                            categoryId = realCategoryId,
+                            categoryName = item.name,
+                            contentType = contentType,
+                            isFavorite = categoryViewModel.isFavoriteCategory(realCategoryId, contentType)
+                        )
+                    } else {
+                        favoriteMenuTarget = FavoriteMenuTarget.Stream(
+                            itemId = item.id,
+                            itemName = item.name,
+                            categoryId = item.categoryId,
+                            contentType = contentType,
+                            isFavorite = categoryViewModel.isFavorite(item.id, contentType)
+                        )
+                    }
                 },
                 onRefreshStreams = onRefreshStreams,
                 modifier = Modifier

@@ -270,13 +270,25 @@ fun MobileCategoryListScreen(
                                     }
                                 },
                                 onItemLongPress = { item ->
-                                    favoriteMenuTarget = MobileFavoriteMenuTarget.Stream(
-                                        itemId = item.id,
-                                        itemName = item.name,
-                                        categoryId = item.categoryId,
-                                        contentType = contentType,
-                                        isFavorite = viewModel.isFavorite(item.id, contentType)
-                                    )
+                                    // Category reference items (from "Favorite Categories" / "Recent Categories")
+                                    // should toggle the category favorite, not create a stream favorite
+                                    val realCategoryId = item.providerData["categoryId"]
+                                    if (item.providerData["isCategoryRef"] == "true" && realCategoryId != null) {
+                                        favoriteMenuTarget = MobileFavoriteMenuTarget.Category(
+                                            categoryId = realCategoryId,
+                                            categoryName = item.name,
+                                            contentType = contentType,
+                                            isFavorite = viewModel.isFavoriteCategory(realCategoryId, contentType)
+                                        )
+                                    } else {
+                                        favoriteMenuTarget = MobileFavoriteMenuTarget.Stream(
+                                            itemId = item.id,
+                                            itemName = item.name,
+                                            categoryId = item.categoryId,
+                                            contentType = contentType,
+                                            isFavorite = viewModel.isFavorite(item.id, contentType)
+                                        )
+                                    }
                                 }
                             )
                         }
