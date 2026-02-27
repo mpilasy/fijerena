@@ -17,9 +17,11 @@ fun formatTime(millis: Long): String {
     }
 }
 
+// Cached formatter — avoids allocating SimpleDateFormat on every call
+private val epochTimeFormat by lazy { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+
 fun formatEpochTime(epochSeconds: Long): String {
-    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return sdf.format(Date(epochSeconds * 1000))
+    return epochTimeFormat.format(Date(epochSeconds * 1000))
 }
 
 fun formatBitrate(bitrate: Int): String {

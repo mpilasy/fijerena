@@ -183,12 +183,16 @@ fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
         label = "shimmer_translate"
     )
 
-    val shimmerBrush = Brush.linearGradient(
-        colors = listOf(
+    // Memoize colors list — only palette changes between themes, not every animation frame
+    val shimmerColors = remember(palette) {
+        listOf(
             palette.surface,
             palette.surfaceLight.copy(alpha = CinemaAlpha.imageOverlayLight),
             palette.surface
-        ),
+        )
+    }
+    val shimmerBrush = Brush.linearGradient(
+        colors = shimmerColors,
         start = Offset(translateX, 0f),
         end = Offset(translateX + 300f, 0f)
     )

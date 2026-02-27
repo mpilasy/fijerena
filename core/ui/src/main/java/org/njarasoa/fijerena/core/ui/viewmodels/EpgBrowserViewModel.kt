@@ -235,6 +235,8 @@ class EpgBrowserViewModel(
     private fun groupByDate(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
         val tz = TimeZone.getDefault()
         val dayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).apply { timeZone = tz }
+        // Reuse a single formatter instance instead of allocating per date group
+        val labelFormat = SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).apply { timeZone = tz }
         val now = Date()
         val today = dayFormat.format(now)
         val cal = Calendar.getInstance(tz)
@@ -252,8 +254,7 @@ class EpgBrowserViewModel(
                 val label = when (dayKey) {
                     today -> "Today"
                     tomorrow -> "Tomorrow"
-                    else -> SimpleDateFormat("EEEE, MMM d", Locale.getDefault())
-                        .apply { timeZone = tz }.format(sampleDate)
+                    else -> labelFormat.format(sampleDate)
                 }
 
                 // Compute day start epoch for sorting

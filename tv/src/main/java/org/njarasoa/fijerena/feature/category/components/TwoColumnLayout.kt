@@ -62,6 +62,8 @@ internal fun TwoColumnLayout(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val providerName by remember { mutableStateOf(appSettings.providerName) }
+    // Read once — avoids SharedPreferences disk I/O on every recomposition
+    val isDevMode = remember { appSettings.isDevMode }
 
     val scale = LocalUiScale.current
 
@@ -217,12 +219,15 @@ internal fun TwoColumnLayout(
                 streams = streams,
                 streamsLoading = streamsLoading,
                 selectedCategoryId = selectedCategoryId,
-                selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name,
+                // Memoize linear search — only recompute when inputs change
+                selectedCategoryName = remember(categories, selectedCategoryId) {
+                    categories.find { it.id == selectedCategoryId }?.name
+                },
                 lastPlayedItemId = lastPlayedItemId,
                 nowPlaying = nowPlaying,
                 contentType = contentType,
                 categoryViewModel = categoryViewModel,
-                isDevMode = appSettings.isDevMode,
+                isDevMode = isDevMode,
                 onStreamSelected = { streamId, streamName, categoryId ->
                     // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
                     val item = streams?.firstOrNull { it.id == streamId }

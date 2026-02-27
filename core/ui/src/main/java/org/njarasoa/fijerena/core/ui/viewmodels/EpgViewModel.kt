@@ -3,6 +3,9 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +15,6 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
-import org.njarasoa.fijerena.core.player.model.EpgUtils
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -59,6 +61,7 @@ class EpgViewModel(
     private lateinit var repository: MediaRepository
 
     private var currentDate = LocalDate.now()
+    private var searchJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -151,24 +154,31 @@ class EpgViewModel(
     fun searchPrograms(query: String) {
         _searchQuery.value = query
         if (query.isBlank()) {
+            searchJob?.cancel()
             _searchResults.value = emptyList()
             return
         }
-        val state = _uiState.value
-        if (state !is UiState.Success) return
-        _searchResults.value = buildList {
-            for (row in state.channelRows) {
-                for (program in row.programs) {
-                    if (program.title.contains(query, ignoreCase = true)) {
-                        add(EpgSearchResult(
-                            program = program,
-                            channel = row.channel,
-                            isCurrent = EpgUtils.isCurrentProgram(program)
-                        ))
+        // Debounce: cancel previous search, wait 200ms before scanning all programs
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch(Dispatchers.Default) {
+            delay(200)
+            val state = _uiState.value
+            if (state !is UiState.Success) return@launch
+            val now = System.currentTimeMillis() / 1000
+            _searchResults.value = buildList {
+                for (row in state.channelRows) {
+                    for (program in row.programs) {
+                        if (program.title.contains(query, ignoreCase = true)) {
+                            add(EpgSearchResult(
+                                program = program,
+                                channel = row.channel,
+                                isCurrent = now in program.startTime..program.endTime
+                            ))
+                        }
                     }
                 }
-            }
-        }.sortedByDescending { it.isCurrent }
+            }.sortedByDescending { it.isCurrent }
+        }
     }
 
     fun clearSearch() {
