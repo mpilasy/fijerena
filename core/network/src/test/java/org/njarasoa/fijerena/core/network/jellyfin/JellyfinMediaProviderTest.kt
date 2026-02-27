@@ -6,6 +6,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -77,5 +78,89 @@ class JellyfinMediaProviderTest {
                 sortOrder = any()
             )
         }
+    }
+
+    @Test
+    fun `getSeriesDetail all three API calls are made in parallel`() = runTest {
+        val seriesId = "series1"
+
+        val seriesItem = JellyfinItem(id = seriesId, name = "Test Series", type = "Series")
+        val season1 = JellyfinItem(id = "s1", name = "Season 1", type = "Season", indexNumber = 1)
+        val ep1 = JellyfinItem(id = "ep1", name = "Ep 1", type = "Episode", indexNumber = 1, parentIndexNumber = 1)
+
+        coEvery { api.getItemById(seriesId) } returns Result.success(seriesItem)
+        coEvery { api.getSeasons(seriesId) } returns Result.success(listOf(season1))
+        coEvery {
+            api.getItems(parentId = seriesId, includeItemTypes = "Episode", sortBy = any(), sortOrder = any())
+        } returns Result.success(listOf(ep1))
+        every { api.isAuthenticated() } returns true
+
+        val result = provider.getSeriesDetail(seriesId)
+
+        assertTrue(result.isSuccess)
+
+        // All three calls should be made exactly once (launched in parallel)
+        coVerify(exactly = 1) { api.getItemById(seriesId) }
+        coVerify(exactly = 1) { api.getSeasons(seriesId) }
+        coVerify(exactly = 1) {
+            api.getItems(parentId = seriesId, includeItemTypes = "Episode", sortBy = any(), sortOrder = any())
+        }
+    }
+
+    @Test
+    fun `getSeriesDetail returns failure when series item fetch fails`() = runTest {
+        val seriesId = "series1"
+
+        coEvery { api.getItemById(seriesId) } returns Result.failure(Exception("Not found"))
+        coEvery { api.getSeasons(seriesId) } returns Result.success(emptyList())
+        coEvery {
+            api.getItems(parentId = seriesId, includeItemTypes = "Episode", sortBy = any(), sortOrder = any())
+        } returns Result.success(emptyList())
+        every { api.isAuthenticated() } returns true
+
+        val result = provider.getSeriesDetail(seriesId)
+
+        assertTrue(result.isFailure)
+        assertNotNull(result.exceptionOrNull())
+    }
+
+    @Test
+    fun `getSeriesDetail returns failure when seasons fetch fails`() = runTest {
+        val seriesId = "series1"
+        val seriesItem = JellyfinItem(id = seriesId, name = "Test Series", type = "Series")
+
+        coEvery { api.getItemById(seriesId) } returns Result.success(seriesItem)
+        coEvery { api.getSeasons(seriesId) } returns Result.failure(Exception("Server error"))
+        coEvery {
+            api.getItems(parentId = seriesId, includeItemTypes = "Episode", sortBy = any(), sortOrder = any())
+        } returns Result.success(emptyList())
+        every { api.isAuthenticated() } returns true
+
+        val result = provider.getSeriesDetail(seriesId)
+
+        assertTrue(result.isFailure)
+        assertNotNull(result.exceptionOrNull())
+    }
+
+    @Test
+    fun `getSeriesDetail succeeds with empty episodes when episode fetch fails`() = runTest {
+        val seriesId = "series1"
+        val seriesItem = JellyfinItem(id = seriesId, name = "Test Series", type = "Series")
+        val season1 = JellyfinItem(id = "s1", name = "Season 1", type = "Season", indexNumber = 1)
+
+        coEvery { api.getItemById(seriesId) } returns Result.success(seriesItem)
+        coEvery { api.getSeasons(seriesId) } returns Result.success(listOf(season1))
+        coEvery {
+            api.getItems(parentId = seriesId, includeItemTypes = "Episode", sortBy = any(), sortOrder = any())
+        } returns Result.failure(Exception("Timeout"))
+        every { api.isAuthenticated() } returns true
+
+        val result = provider.getSeriesDetail(seriesId)
+
+        // Should still succeed — episode failure is gracefully handled
+        assertTrue(result.isSuccess)
+        val detail = result.getOrThrow()
+        assertEquals(1, detail.seasons.size)
+        assertTrue(detail.episodes.isEmpty())
     }
 }
