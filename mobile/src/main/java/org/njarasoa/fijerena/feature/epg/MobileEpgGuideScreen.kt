@@ -57,6 +57,9 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+// Pre-compiled formatter — avoid recompiling on every recomposition
+private val EPG_SHORT_DATE_FORMATTER = DateTimeFormatter.ofPattern("EEE, MMM d")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileEpgGuideScreen(
@@ -149,9 +152,7 @@ fun MobileEpgGuideScreen(
                     Column(modifier = Modifier.fillMaxSize()) {
                         // Date navigation row
                         DateNavigationRow(
-                            selectedDate = state.selectedDate.format(
-                                DateTimeFormatter.ofPattern("EEE, MMM d")
-                            ),
+                            selectedDate = state.selectedDate.format(EPG_SHORT_DATE_FORMATTER),
                             onPreviousDay = { viewModel.selectPreviousDay() },
                             onNextDay = { viewModel.selectNextDay() },
                             onJumpToNow = { viewModel.jumpToNow() }

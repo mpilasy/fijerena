@@ -567,7 +567,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private fun extractHttpStatusCode(error: PlaybackException): Int? {
             var cause: Throwable? = error.cause
             while (cause != null) {
-                val match = Regex("Response code: (\\d{3})").find(cause.message ?: "")
+                val match = HTTP_STATUS_REGEX.find(cause.message ?: "")
                 if (match != null) return match.groupValues[1].toIntOrNull()
                 cause = cause.cause
             }
@@ -575,9 +575,14 @@ class StreamingPlaybackService : MediaSessionService() {
         }
 
         private fun extractCodecInfo(message: String): String {
-            val codecRegex = Regex("video/(\\w+)|format=(\\w+)")
-            val match = codecRegex.find(message)
+            val match = CODEC_REGEX.find(message)
             return match?.value?.replace("video/", "")?.uppercase() ?: ""
+        }
+
+        companion object {
+            // Pre-compiled regexes — avoid recompiling on every error event
+            private val HTTP_STATUS_REGEX = Regex("Response code: (\\d{3})")
+            private val CODEC_REGEX = Regex("video/(\\w+)|format=(\\w+)")
         }
 
         private fun updatePlaybackState() {

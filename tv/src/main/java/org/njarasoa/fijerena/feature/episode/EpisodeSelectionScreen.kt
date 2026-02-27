@@ -222,6 +222,11 @@ private fun EpisodeListContent(
             .sorted()
             .map { num -> SeasonInfo(seasonNumber = num, name = "Season $num", episodeCount = seriesDetail.episodes[num.toString()]?.size ?: 0) }
     }
+
+    // Pre-sort episodes per season — avoid re-sorting inside LazyColumn on every recomposition
+    val sortedEpisodesBySeason = remember(seriesDetail) {
+        seriesDetail.episodes.mapValues { (_, eps) -> eps.sortedBy { it.episodeNumber } }
+    }
     val totalEpisodes = remember(seriesDetail) {
         seriesDetail.episodes.values.sumOf { it.size }
     }
@@ -373,9 +378,7 @@ private fun EpisodeListContent(
             ) {
                 sortedSeasons.forEach { season ->
                     val seasonKey = season.seasonNumber.toString()
-                    val seasonEpisodes = seriesDetail.episodes[seasonKey]
-                        ?.sortedBy { it.episodeNumber }
-                        ?: emptyList()
+                    val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
                     val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
 
                     // Season header (skip if only 1 season)

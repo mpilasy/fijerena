@@ -426,9 +426,8 @@ private fun SearchResultsList(
     onCategoryClick: (CategorySearchResult) -> Unit,
     onCategoryLongPress: (CategorySearchResult) -> Unit
 ) {
-    val focusRequesters = remember(results) {
-        results.associate { it.itemId to FocusRequester() }
-    }
+    // Stable map — only add missing keys, never discard existing FocusRequesters
+    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
 
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
 
@@ -524,17 +523,23 @@ private fun SearchResultsList(
                 )
             }
 
+            // Pre-compute grouped results outside TvLazyColumn to avoid O(N×types) per recomposition
+            val groupedByType = remember(categoryResults, results) {
+                val catsByType = categoryResults.groupBy { it.contentType }
+                val streamsByType = results.groupBy { it.contentType }
+                val allTypes = (catsByType.keys + streamsByType.keys).distinct()
+                val sortedTypes = listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (allTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
+                sortedTypes.map { type ->
+                    Triple(type, catsByType[type].orEmpty(), streamsByType[type].orEmpty())
+                }
+            }
+
             TvLazyColumn(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier = Modifier.fillMaxSize()
             ) {
                 if (queryContentType == "ALL") {
-                    val contentTypes = (categoryResults.map { it.contentType } + results.map { it.contentType }).distinct()
-                    val sortedTypes = listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (contentTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
-
-                    sortedTypes.forEach { type ->
-                        val typeCats = categoryResults.filter { it.contentType == type }
-                        val typeStreams = results.filter { it.contentType == type }
+                    groupedByType.forEach { (type, typeCats, typeStreams) ->
 
                         if (typeCats.isNotEmpty() || typeStreams.isNotEmpty()) {
                             val isExpanded = expandedGroups.contains(type)
@@ -561,7 +566,7 @@ private fun SearchResultsList(
                                         result = result,
                                         onClick = { onResultClick(result) },
                                         onLongPress = { onResultLongPress(result) },
-                                        focusRequester = focusRequesters[result.itemId]
+                                        focusRequester = focusRequesters.getOrPut(result.itemId) { FocusRequester() }
                                     )
                                 }
                             }
@@ -607,7 +612,7 @@ private fun SearchResultsList(
                                 result = result,
                                 onClick = { onResultClick(result) },
                                 onLongPress = { onResultLongPress(result) },
-                                focusRequester = focusRequesters[result.itemId]
+                                focusRequester = focusRequesters.getOrPut(result.itemId) { FocusRequester() }
                             )
                         }
                     }

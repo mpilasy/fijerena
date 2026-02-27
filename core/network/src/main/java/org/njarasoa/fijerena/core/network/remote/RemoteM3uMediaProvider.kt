@@ -80,15 +80,18 @@ class RemoteM3uMediaProvider(
             if (connectResult.isFailure) return connectResult.map { emptyList() }
         }
 
+        // Single-pass set construction — avoid intermediate list from filter+map
         val filteredCategories = when (contentType) {
             ContentType.LIVE_TV -> {
-                val liveCategoryIds = items.filter { it.mediaType == MediaType.LIVE_CHANNEL }
-                    .map { it.categoryId }.toSet()
+                val liveCategoryIds = items.mapNotNullTo(HashSet()) {
+                    if (it.mediaType == MediaType.LIVE_CHANNEL) it.categoryId else null
+                }
                 categories.filter { it.id in liveCategoryIds }
             }
             else -> {
-                val videoCategoryIds = items.filter { it.mediaType == MediaType.VIDEO_FILE }
-                    .map { it.categoryId }.toSet()
+                val videoCategoryIds = items.mapNotNullTo(HashSet()) {
+                    if (it.mediaType == MediaType.VIDEO_FILE) it.categoryId else null
+                }
                 categories.filter { it.id in videoCategoryIds }
             }
         }

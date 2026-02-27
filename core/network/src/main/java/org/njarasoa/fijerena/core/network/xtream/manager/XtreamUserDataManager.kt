@@ -276,16 +276,14 @@ class XtreamUserDataManager(
      * Get in-progress streams (for Continue Watching category)
      */
     fun getInProgressStreams(contentType: String): List<WatchedStream> {
+        // Single filter pass — merge both predicates to avoid intermediate list allocation
         return getWatchHistory()
             .filter {
                 it.contentType == contentType &&
                 !it.isCompleted &&
                 it.playbackPosition > 0 &&
-                it.duration > 0
-            }
-            .filter {
-                val progressPercent = (it.playbackPosition.toFloat() / it.duration.toFloat()) * 100f
-                progressPercent in 2.0..95.0 // Only 2-95% watched
+                it.duration > 0 &&
+                (it.playbackPosition.toFloat() / it.duration.toFloat() * 100f) in 2.0..95.0
             }
     }
 

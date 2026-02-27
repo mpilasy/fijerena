@@ -69,6 +69,9 @@ import org.njarasoa.fijerena.ui.theme.scaled
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+// Pre-compiled formatter — avoid recompiling on every recomposition
+private val EPG_DATE_FORMATTER = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")
+
 @Composable
 fun EpgGridLayout(
     categoryName: String,
@@ -199,7 +202,7 @@ private fun EpgHeader(
                 color = CinemaTextPrimary
             )
             Text(
-                text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")),
+                text = selectedDate.format(EPG_DATE_FORMATTER),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
                 ),
