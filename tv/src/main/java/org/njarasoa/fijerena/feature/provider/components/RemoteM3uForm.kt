@@ -8,6 +8,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.scaled
 
 @Composable
 fun RemoteM3uForm(
