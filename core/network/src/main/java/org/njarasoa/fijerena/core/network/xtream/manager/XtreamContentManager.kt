@@ -97,7 +97,8 @@ class XtreamContentManager(
             categoryDao.insertAll(categories.map {
                 XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_VOD)
             })
-            sharedPreferences.edit().putLong(KEY_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
+            // Fix: use VOD-specific timestamp key (was incorrectly using live TV key)
+            sharedPreferences.edit().putLong(KEY_VOD_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
 
             categories
         }

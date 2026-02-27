@@ -344,6 +344,11 @@ private fun ChannelItem(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    // Memoize scaled TextStyle to avoid allocating a new copy per channel per recomposition
+    val scaledBodyMedium = remember(scale, typography) {
+        typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+    }
 
     Card(
         onClick = onClick,
@@ -377,9 +382,7 @@ private fun ChannelItem(
         ) {
             Text(
                 text = channel.name,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                ),
+                style = scaledBodyMedium,
                 color = CinemaTextPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -535,6 +538,14 @@ private fun ProgramCell(
     // Use shared nowEpochSeconds instead of per-cell System.currentTimeMillis()
     val isCurrent = nowEpochSeconds in program.startTime..program.endTime
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    // Memoize scaled TextStyles to avoid allocating new copies per cell per recomposition (50×N cells)
+    val scaledLabelSmall = remember(scale, typography) {
+        typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
+    }
+    val scaledBodyMedium = remember(scale, typography) {
+        typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+    }
 
     Card(
         onClick = onClick,
@@ -569,17 +580,13 @@ private fun ProgramCell(
         ) {
             Text(
                 text = TimeFormat.formatTime(program.startTime),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
-                ),
+                style = scaledLabelSmall,
                 color = CinemaTextSecondary,
                 maxLines = 1
             )
             Text(
                 text = program.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                ),
+                style = scaledBodyMedium,
                 color = CinemaTextPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis

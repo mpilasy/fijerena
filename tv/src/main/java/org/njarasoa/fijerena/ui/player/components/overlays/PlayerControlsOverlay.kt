@@ -84,9 +84,10 @@ fun PlayerControlsOverlay(
 ) {
     val isPaused = playbackState is PlaybackState.Paused
     val isLive = metadata.isLive
-    val audioTrackCount = viewModel.getAudioTracks().size
-    val subtitleTrackCount = viewModel.getSubtitleTracks().size
-    val qualityCount = viewModel.getVideoQualities().size
+    // Memoize track counts keyed on metadata to avoid O(N) track iteration every recomposition (1 Hz clock tick)
+    val audioTrackCount = remember(metadata) { viewModel.getAudioTracks().size }
+    val subtitleTrackCount = remember(metadata) { viewModel.getSubtitleTracks().size }
+    val qualityCount = remember(metadata) { viewModel.getVideoQualities().size }
 
     // Focus requester for the first focusable control
     val controlsFocusRequester = remember { FocusRequester() }
@@ -334,7 +335,7 @@ fun PlayerControlsOverlay(
                         verticalAlignment = CenterVertically
                     ) {
                         // Chapter selector
-                        val chapters = viewModel.getChapters()
+                        val chapters = remember(metadata) { viewModel.getChapters() }
                         if (chapters.isNotEmpty()) {
                             Button(
                                 onClick = onShowChapterSelector,
