@@ -70,6 +70,8 @@ fun MobileEpgManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var autoRefreshEnabled by remember { mutableStateOf(viewModel.autoRefreshEnabled) }
+    var showCleanupConfirm by remember { mutableStateOf(false) }
+    var showPurgeConfirm by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
 
@@ -323,19 +325,47 @@ fun MobileEpgManagementScreen(
                 ) {
                     Text("Refresh All Sources")
                 }
+                if (viewModel.isDevMode) {
+                    val hasFailed = sources.any { it.enabled && it.lastError != null }
+                    val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (System.currentTimeMillis() - it.lastIngestedAtMs) > 24 * 3600 * 1000) }
+                    if (hasFailed || hasOutdated) {
+                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                        ) {
+                            if (hasFailed) {
+                                OutlinedButton(
+                                    onClick = { viewModel.refreshFailed() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Refresh Failed")
+                                }
+                            }
+                            if (hasOutdated) {
+                                OutlinedButton(
+                                    onClick = { viewModel.refreshOutdated() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Refresh Outdated")
+                                }
+                            }
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
                 ) {
                     OutlinedButton(
-                        onClick = { viewModel.cleanupFiles() },
+                        onClick = { showCleanupConfirm = true },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Cleanup")
                     }
                     OutlinedButton(
-                        onClick = { viewModel.purgeOldProgrammes() },
+                        onClick = { showPurgeConfirm = true },
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Purge >7d")
@@ -373,6 +403,45 @@ fun MobileEpgManagementScreen(
                 }
                 showAddDialog = false
                 editingSource = null
+            }
+        )
+    }
+
+    if (showCleanupConfirm) {
+        AlertDialog(
+            onDismissRequest = { showCleanupConfirm = false },
+            title = { Text("Cleanup Files") },
+            text = { Text("This will delete any downloaded EPG files that are no longer associated with a source. The indexed data in the database is not affected.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.cleanupFiles()
+                        showCleanupConfirm = false
+                    }
+                ) { Text("Cleanup") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showCleanupConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showPurgeConfirm) {
+        AlertDialog(
+            onDismissRequest = { showPurgeConfirm = false },
+            title = { Text("Purge Old Programmes") },
+            text = { Text("This will permanently delete all programme data older than 7 days from the database. Channel entries are not affected.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.purgeOldProgrammes()
+                        showPurgeConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
+                ) { Text("Purge") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showPurgeConfirm = false }) { Text("Cancel") }
             }
         )
     }

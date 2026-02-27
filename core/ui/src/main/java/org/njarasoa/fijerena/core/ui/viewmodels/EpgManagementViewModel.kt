@@ -173,6 +173,74 @@ class EpgManagementViewModel(
         }
     }
 
+    fun refreshFailed() {
+        viewModelScope.launch {
+            val sources = withContext(Dispatchers.IO) { sourceDao.getFailedSources() }
+            if (sources.isEmpty()) return@launch
+
+            epgFileManager.launchProcessSources(
+                sources = sources,
+                taskId = "epg_refresh_failed",
+                onComplete = {
+                    refreshDbStats()
+                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                },
+                onCellularConfirm = {
+                    _cellularDialog.value = CellularConfirmDialog.RefreshAll(
+                        onConfirm = {
+                            val retryFailed = withContext(Dispatchers.IO) { sourceDao.getFailedSources() }
+                            epgFileManager.launchProcessSources(
+                                sources = retryFailed,
+                                taskId = "epg_refresh_failed",
+                                onComplete = {
+                                    refreshDbStats()
+                                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                                }
+                            )
+                        },
+                        onDismiss = { _cellularDialog.value = CellularConfirmDialog.Hidden }
+                    )
+                    false
+                }
+            )
+        }
+    }
+
+    fun refreshOutdated() {
+        viewModelScope.launch {
+            val thresholdMs = System.currentTimeMillis() - 24 * 3600 * 1000
+            val sources = withContext(Dispatchers.IO) { sourceDao.getStaleSources(thresholdMs) }
+            if (sources.isEmpty()) return@launch
+
+            epgFileManager.launchProcessSources(
+                sources = sources,
+                taskId = "epg_refresh_outdated",
+                onComplete = {
+                    refreshDbStats()
+                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                },
+                onCellularConfirm = {
+                    _cellularDialog.value = CellularConfirmDialog.RefreshAll(
+                        onConfirm = {
+                            val threshold = System.currentTimeMillis() - 24 * 3600 * 1000
+                            val retrySources = withContext(Dispatchers.IO) { sourceDao.getStaleSources(threshold) }
+                            epgFileManager.launchProcessSources(
+                                sources = retrySources,
+                                taskId = "epg_refresh_outdated",
+                                onComplete = {
+                                    refreshDbStats()
+                                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                                }
+                            )
+                        },
+                        onDismiss = { _cellularDialog.value = CellularConfirmDialog.Hidden }
+                    )
+                    false
+                }
+            )
+        }
+    }
+
     fun refreshSource(sourceId: Long) {
         epgFileManager.launchProcessSingleSource(
             sourceId,
