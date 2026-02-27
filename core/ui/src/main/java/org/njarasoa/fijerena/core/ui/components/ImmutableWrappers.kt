@@ -8,7 +8,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 /**
  * @Immutable wrappers for collection types passed to Compose functions.
  *
- * Compose treats raw List/Map as unstable — every emission causes full recomposition
+ * Compose treats raw List/Map/Set as unstable — every emission causes full recomposition
  * of all children that receive them. Wrapping in @Immutable tells the compiler the
  * data is effectively immutable and safe to skip when the reference hasn't changed.
  */
@@ -25,3 +25,18 @@ data class ImmutableNowPlaying(
 data class ImmutableCategoryList(
     private val items: List<MediaCategory> = emptyList()
 ) : List<MediaCategory> by items
+
+@Immutable
+data class ImmutableMediaList(
+    private val items: List<MediaItem> = emptyList()
+) : List<MediaItem> by items
+
+@Immutable
+data class ImmutableStringSet(
+    private val items: Set<String> = emptySet()
+) : Set<String> by items
+
+@Immutable
+data class ImmutableWatchProgress(
+    private val map: Map<String, Float> = emptyMap()
+) : Map<String, Float> by map

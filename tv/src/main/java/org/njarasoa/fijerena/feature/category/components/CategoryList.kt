@@ -45,6 +45,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
+import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
+import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -73,12 +75,12 @@ private val VIRTUAL_CATEGORY_IDS = setOf(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 internal fun CategoryList(
-    categories: List<MediaCategory>,
+    categories: ImmutableCategoryList,
     selectedCategoryId: String?,
     categoriesRefreshing: Boolean,
     contentType: String,
     categoryViewModel: CategoryViewModel,
-    favoriteCategoryIds: Set<String> = emptySet(),
+    favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
     onCategorySelected: (String) -> Unit,
     onRefreshCategories: () -> Unit,
     onCategoryLongPress: (MediaCategory) -> Unit,
