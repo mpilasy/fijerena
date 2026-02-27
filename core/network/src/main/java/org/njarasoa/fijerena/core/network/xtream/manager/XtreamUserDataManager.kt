@@ -16,9 +16,12 @@ import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_WAT
 import org.njarasoa.fijerena.core.network.FavoriteStream
 import org.njarasoa.fijerena.core.network.WatchedStream
 
+import java.util.concurrent.ConcurrentHashMap
+
 class XtreamUserDataManager(
     private val sharedPreferences: SharedPreferences,
-    private val providerSettings: ProviderSettings
+    private val providerSettings: ProviderSettings,
+    private val providerId: Long
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -26,7 +29,14 @@ class XtreamUserDataManager(
     }
     
     private var cachedWatchHistory: List<WatchedStream>? = null
-    private var favoritesCache: List<FavoriteStream>? = null
+
+    companion object {
+        private val favoritesCacheMap = ConcurrentHashMap<Long, List<FavoriteStream>>()
+
+        fun clearMemoryCache(providerId: Long) {
+            favoritesCacheMap.remove(providerId)
+        }
+    }
 
     /**
      * Save last played stream with content-type specific tracking
@@ -170,7 +180,7 @@ class XtreamUserDataManager(
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
         
         // Update cache
-        favoritesCache = trimmed
+        favoritesCacheMap[providerId] = trimmed
 
         // Save
         sharedPreferences.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
@@ -186,7 +196,7 @@ class XtreamUserDataManager(
         
         if (removed) {
             // Update cache
-            favoritesCache = favorites
+            favoritesCacheMap[providerId] = favorites
             sharedPreferences.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
         }
         return removed
@@ -196,7 +206,7 @@ class XtreamUserDataManager(
      * Get all favorites
      */
     fun getFavorites(): List<FavoriteStream> {
-        favoritesCache?.let { return it }
+        favoritesCacheMap[providerId]?.let { return it }
         
         val jsonStr = sharedPreferences.getString(KEY_FAVORITES, null)
         val favorites = if (jsonStr == null) {
@@ -208,7 +218,7 @@ class XtreamUserDataManager(
                 emptyList()
             }
         }
-        favoritesCache = favorites
+        favoritesCacheMap[providerId] = favorites
         return favorites
     }
 
@@ -224,7 +234,7 @@ class XtreamUserDataManager(
      */
     fun clearFavorites() {
         sharedPreferences.edit().remove(KEY_FAVORITES).apply()
-        favoritesCache = emptyList()
+        favoritesCacheMap[providerId] = emptyList()
     }
 
     /**
