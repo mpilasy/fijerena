@@ -258,9 +258,11 @@ fun MobileStatsOverlay(
 
 @Composable
 private fun SectionHeader(title: String) {
+    val typography = MaterialTheme.typography
+    val sectionHeaderStyle = remember(typography) { typography.labelSmall.copy(fontSize = 11.sp) }
     Text(
         text = title,
-        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+        style = sectionHeaderStyle,
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(top = 6.dp)
@@ -269,18 +271,20 @@ private fun SectionHeader(title: String) {
 
 @Composable
 private fun StatRow(label: String, value: String) {
+    val typography = MaterialTheme.typography
+    val bodySmall12sp = remember(typography) { typography.bodySmall.copy(fontSize = 12.sp) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            style = bodySmall12sp,
             color = Color.White.copy(alpha = CinemaAlpha.textMedium)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            style = bodySmall12sp,
             color = Color.White,
             fontWeight = FontWeight.Bold
         )
@@ -289,18 +293,20 @@ private fun StatRow(label: String, value: String) {
 
 @Composable
 private fun StatRowColored(label: String, value: String, valueColor: Color) {
+    val typography = MaterialTheme.typography
+    val bodySmall12sp = remember(typography) { typography.bodySmall.copy(fontSize = 12.sp) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            style = bodySmall12sp,
             color = Color.White.copy(alpha = CinemaAlpha.textMedium)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            style = bodySmall12sp,
             color = valueColor,
             fontWeight = FontWeight.Bold
         )

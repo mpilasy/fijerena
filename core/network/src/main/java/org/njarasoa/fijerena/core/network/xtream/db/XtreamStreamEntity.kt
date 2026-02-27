@@ -31,6 +31,25 @@ data class XtreamStreamEntity(
     val tvArchiveDuration: Int = 0,
     val contentHash: Int = 0
 ) {
+    /** Hash of content fields only, excluding [contentHash] itself to avoid self-referential comparison. */
+    fun computeContentHash(): Int {
+        var result = streamId
+        result = 31 * result + providerId.hashCode()
+        result = 31 * result + type.hashCode()
+        result = 31 * result + num
+        result = 31 * result + name.hashCode()
+        result = 31 * result + streamType.hashCode()
+        result = 31 * result + (streamIcon?.hashCode() ?: 0)
+        result = 31 * result + (epgChannelId?.hashCode() ?: 0)
+        result = 31 * result + (added?.hashCode() ?: 0)
+        result = 31 * result + categoryId.hashCode()
+        result = 31 * result + (customSid?.hashCode() ?: 0)
+        result = 31 * result + tvArchive
+        result = 31 * result + (directSource?.hashCode() ?: 0)
+        result = 31 * result + tvArchiveDuration
+        return result
+    }
+
     companion object {
         const val TYPE_LIVE = "LIVE"
         const val TYPE_VOD = "VOD"

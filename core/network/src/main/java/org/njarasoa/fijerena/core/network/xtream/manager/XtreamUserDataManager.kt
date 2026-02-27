@@ -29,6 +29,8 @@ class XtreamUserDataManager(
     }
     
     private var cachedWatchHistory: List<WatchedStream>? = null
+    // O(1) lookup map for getPlaybackPosition — keyed by (streamId, contentType)
+    private var watchHistoryLookup: Map<Pair<Int, String>, WatchedStream>? = null
 
     // O(1) lookup set for isFavorite — rebuilt when favorites list changes
     private var favoriteIdSet: Set<Pair<Int, String>>? = null
@@ -135,6 +137,7 @@ class XtreamUserDataManager(
         val historyJson = json.encodeToString(trimmedHistory)
         sharedPreferences.edit().putString(KEY_WATCH_HISTORY, historyJson).apply()
         cachedWatchHistory = trimmedHistory
+        watchHistoryLookup = null
     }
 
     /**
@@ -154,6 +157,7 @@ class XtreamUserDataManager(
             }
         }
         cachedWatchHistory = history
+        watchHistoryLookup = null
         return history
     }
 
@@ -163,6 +167,7 @@ class XtreamUserDataManager(
     fun clearWatchHistory() {
         sharedPreferences.edit().remove(KEY_WATCH_HISTORY).apply()
         cachedWatchHistory = emptyList()
+        watchHistoryLookup = null
     }
 
     /**
@@ -277,8 +282,10 @@ class XtreamUserDataManager(
      * Get saved playback position for a stream
      */
     fun getPlaybackPosition(streamId: Int, contentType: String): WatchedStream? {
-        return getWatchHistory()
-            .firstOrNull { it.streamId == streamId && it.contentType == contentType }
+        val map = watchHistoryLookup ?: getWatchHistory()
+            .associateBy { it.streamId to it.contentType }
+            .also { watchHistoryLookup = it }
+        return map[streamId to contentType]
     }
 
     /**
@@ -310,6 +317,7 @@ class XtreamUserDataManager(
             history[index] = item.copy(playbackPosition = 0L, isCompleted = false)
             sharedPreferences.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
             cachedWatchHistory = history
+            watchHistoryLookup = null
         }
     }
 }

@@ -131,6 +131,10 @@ internal fun CategoryList(
     )
 
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledTitleLarge = remember(scale, typography) {
+        typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
+    }
 
     Column(modifier = modifier) {
         Row(
@@ -140,9 +144,7 @@ internal fun CategoryList(
         ) {
             Text(
                 text = "Categories",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
-                ),
+                style = scaledTitleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
             IconButton(
@@ -249,6 +251,10 @@ private fun CategoryItem(
     focusRequester: FocusRequester? = null
 ) {
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledTitleMedium = remember(scale, typography) {
+        typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+    }
 
     Card(
         onClick = onClick,
@@ -300,17 +306,13 @@ private fun CategoryItem(
             if (isFavorite) {
                 Text(
                     text = "\u2605",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                    ),
+                    style = scaledTitleMedium,
                     color = CinemaAccent
                 )
             }
             Text(
                 text = category.name,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                ),
+                style = scaledTitleMedium,
                 color = CinemaTextPrimary,
                 maxLines = 1,
                 modifier = Modifier.bounceMarquee()

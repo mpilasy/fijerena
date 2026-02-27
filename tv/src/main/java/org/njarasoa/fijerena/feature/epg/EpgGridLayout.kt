@@ -461,6 +461,10 @@ private fun TimeHeaderRow(
     modifier: Modifier = Modifier
 ) {
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledLabelMedium = remember(scale, typography) {
+        typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+    }
 
     GlassPanel(modifier = modifier) {
         LazyRow(
@@ -484,9 +488,7 @@ private fun TimeHeaderRow(
                 ) {
                 Text(
                     text = TimeFormat.formatTime(slot.startTime),
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = MaterialTheme.typography.labelMedium.fontSize.scaled(scale)
-                    ),
+                    style = scaledLabelMedium,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                     color = if (isCurrent) CinemaTextPrimary else CinemaTextSecondary
                 )

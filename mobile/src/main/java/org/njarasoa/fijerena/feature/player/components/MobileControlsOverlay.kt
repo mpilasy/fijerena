@@ -89,6 +89,8 @@ fun MobileControlsOverlay(
     val audioTrackCount = remember(metadata) { viewModel.getAudioTracks().size }
     val subtitleTrackCount = remember(metadata) { viewModel.getSubtitleTracks().size }
     val qualityCount = remember(metadata) { viewModel.getVideoQualities().size }
+    val typography = MaterialTheme.typography
+    val bodySmall11sp = remember(typography) { typography.bodySmall.copy(fontSize = 11.sp) }
 
     Box(
         modifier = Modifier
@@ -247,12 +249,12 @@ fun MobileControlsOverlay(
                     ) {
                         Text(
                             text = "Remaining: ${formatTime(remainingTime)}",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                            style = bodySmall11sp,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = "Ends at ${org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date(estimatedEndTimeMillis))}",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                            style = bodySmall11sp,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -304,7 +306,7 @@ fun MobileControlsOverlay(
                         if (nextEpgProgram != null) {
                             Text(
                                 text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(epgContext, nextEpgProgram.startTime)})",
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                style = bodySmall11sp,
                                 color = Color.White.copy(alpha = CinemaAlpha.tint),
                                 modifier = Modifier.padding(top = 2.dp)
                             )
