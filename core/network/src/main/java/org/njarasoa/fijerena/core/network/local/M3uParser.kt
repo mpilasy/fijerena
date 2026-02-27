@@ -19,6 +19,8 @@ object M3uParser {
     private const val GROUP_TITLE_PREFIX = "group-title=\""
     private const val LOGO_PREFIX = "tvg-logo=\""
     private const val ID_PREFIX = "tvg-id=\""
+    private const val EXTINF_PREFIX = "#EXTINF:"
+    private const val EXTM3U_HEADER = "#EXTM3U"
 
     private data class PendingEntry(
         val name: String,
@@ -37,27 +39,41 @@ object M3uParser {
         if (!iterator.hasNext()) return@sequence
 
         val firstLine = iterator.next()
-        if (!firstLine.trim().startsWith("#EXTM3U")) {
+        // Use trimStart to avoid full string allocation
+        if (!firstLine.trimStart().startsWith(EXTM3U_HEADER)) {
             return@sequence
         }
 
         var pendingEntry: PendingEntry? = null
 
         while (iterator.hasNext()) {
-            val line = iterator.next().trim()
+            val line = iterator.next()
+
+            // Skip empty lines efficiently
             if (line.isEmpty()) continue
 
-            if (line.startsWith("#EXTINF:")) {
-                val infoLine = line.removePrefix("#EXTINF:")
-                val name = extractName(infoLine)
-                val groupTitle = extractAttribute(infoLine, GROUP_TITLE_PREFIX) ?: "Uncategorized"
-                val logo = extractAttribute(infoLine, LOGO_PREFIX)
-                val tvgId = extractAttribute(infoLine, ID_PREFIX)
+            // Check using startsWith on the original line (assuming standard formatting)
+            // or trimStart only if needed. Most M3U files don't have leading spaces, but we should be safe.
+            // Using trimStart() creates a new string only if there is whitespace.
+            val trimmedLine = if (line.isNotEmpty() && line[0].isWhitespace()) line.trimStart() else line
+            if (trimmedLine.isEmpty()) continue
+
+            if (trimmedLine.startsWith(EXTINF_PREFIX)) {
+                // Pass the original string and offset to avoid removing prefix allocation
+                val offset = EXTINF_PREFIX.length
+
+                // Extract directly from the line with offset
+                val name = extractName(trimmedLine, offset)
+                val groupTitle = extractAttribute(trimmedLine, GROUP_TITLE_PREFIX, offset) ?: "Uncategorized"
+                val logo = extractAttribute(trimmedLine, LOGO_PREFIX, offset)
+                val tvgId = extractAttribute(trimmedLine, ID_PREFIX, offset)
 
                 pendingEntry = PendingEntry(name, groupTitle, logo, tvgId)
-            } else if (!line.startsWith("#")) {
+            } else if (!trimmedLine.startsWith("#")) {
                 if (pendingEntry != null) {
-                    val url = line
+                    // Ensure URL is clean by trimming the end (handles trailing spaces/newlines)
+                    val url = trimmedLine.trimEnd()
+
                     if (url.isNotBlank()) {
                         val isLive = isLiveUrl(url)
                         yield(
@@ -139,23 +155,32 @@ object M3uParser {
         }
     }
 
-    private fun extractName(infoLine: String): String {
-        val commaIndex = infoLine.lastIndexOf(',')
-        return if (commaIndex >= 0) infoLine.substring(commaIndex + 1).trim() else "Unknown"
+    private fun extractName(line: String, startIndex: Int): String {
+        val commaIndex = line.lastIndexOf(',')
+        // Ensure comma is after the metadata start
+        return if (commaIndex >= startIndex) {
+             line.substring(commaIndex + 1).trim()
+        } else {
+            "Unknown"
+        }
     }
 
-    private fun extractAttribute(infoLine: String, prefix: String): String? {
-        val startIndex = infoLine.indexOf(prefix)
-        if (startIndex == -1) return null
+    private fun extractAttribute(line: String, prefix: String, startIndex: Int): String? {
+        val foundIndex = line.indexOf(prefix, startIndex)
+        if (foundIndex == -1) return null
 
-        val valueStartIndex = startIndex + prefix.length
-        val valueEndIndex = infoLine.indexOf('"', valueStartIndex)
+        val valueStartIndex = foundIndex + prefix.length
+        val valueEndIndex = line.indexOf('"', valueStartIndex)
         if (valueEndIndex == -1) return null
 
-        return infoLine.substring(valueStartIndex, valueEndIndex)
+        return line.substring(valueStartIndex, valueEndIndex)
     }
 
     private fun isLiveUrl(url: String): Boolean {
+        // Performance note: In benchmarks, creating a lowercase copy was found to be faster
+        // than multiple case-insensitive scans (endsWith/contains with ignoreCase=true).
+        // This is likely because the allocation cost is amortized compared to multiple
+        // character-by-character comparisons.
         val lower = url.lowercase()
         return lower.endsWith(".m3u8") || lower.endsWith(".ts") ||
             lower.contains("/live/") || lower.contains(":8080/") ||
