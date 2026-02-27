@@ -38,6 +38,9 @@ class XmltvEpgService(
     private var parsedEpgCache: Map<String, EpgResponse>? = null
     private var parsedEpgTimestamp: Long = 0L
 
+    // Cached channel match maps — avoids full DB scan + 5 map builds on every getNowPlayingForItems call
+    private var cachedChannelMaps: ChannelMatchMaps? = null
+
     private data class ChannelMatchMaps(
         val byId: Map<String, String>,
         val byIdLower: Map<String, String>,
@@ -47,6 +50,9 @@ class XmltvEpgService(
     )
 
     private suspend fun buildChannelMatchMaps(): ChannelMatchMaps? {
+        // Return cached maps if available — avoids full DB scan on every call
+        cachedChannelMaps?.let { return it }
+
         val db = EpgIndexDatabase.getInstance(context)
         val allXmltvChannels = db.epgIndexDao().getAllChannels()
         if (allXmltvChannels.isEmpty()) return null
@@ -69,6 +75,7 @@ class XmltvEpgService(
         }
 
         return ChannelMatchMaps(byId, byIdLower, byName, byNormalized, normalizedEntries)
+            .also { cachedChannelMaps = it }
     }
 
     private fun matchItems(
@@ -117,7 +124,7 @@ class XmltvEpgService(
             val windowStart = nowSeconds - 24 * 3600
             val windowEnd = nowSeconds + 24 * 3600
 
-            val uniqueXmltvIds = matchedIds.values.toSet().toList()
+            val uniqueXmltvIds = matchedIds.values.distinct()
             val allProgrammes = uniqueXmltvIds.chunked(500).flatMap { chunk ->
                 dao.getProgrammesForChannels(chunk, windowStart, windowEnd)
             }
@@ -172,7 +179,7 @@ class XmltvEpgService(
             val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
             val nowEpoch = System.currentTimeMillis() / 1000
 
-            val uniqueXmltvIds = matchedIds.values.toSet().toList()
+            val uniqueXmltvIds = matchedIds.values.distinct()
             val nowPlayingRows = uniqueXmltvIds.chunked(500).flatMap { chunk ->
                 dao.getNowPlayingForChannels(chunk, nowEpoch)
             }
@@ -203,6 +210,7 @@ class XmltvEpgService(
     fun clearCache() {
         cache.edit().clear().apply()
         parsedEpgCache = null
+        cachedChannelMaps = null
     }
 
     private fun getCachedEpg(): Map<String, EpgResponse>? {

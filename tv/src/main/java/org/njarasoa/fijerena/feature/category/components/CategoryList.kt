@@ -114,7 +114,7 @@ internal fun CategoryList(
         snapshotFlow { categoriesRefreshing }.collect { refreshing ->
             if (refreshing) {
                 while (true) {
-                    targetRotation += 360f
+                    targetRotation = (targetRotation + 360f) % 3600f
                     kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
                 }
             }

@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -19,14 +20,14 @@ fun GradientOverlay(
     alpha: Float = CinemaAlpha.imageOverlay
 ) {
     val palette = CinemaThemeHolder.current
-    Box(
-        modifier = modifier.background(
-            Brush.verticalGradient(
-                colors = listOf(
-                    Color.Transparent,
-                    palette.background.copy(alpha = alpha)
-                )
+    // Memoize brush to avoid allocating new Brush + listOf on every recomposition
+    val brush = remember(palette.background, alpha) {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color.Transparent,
+                palette.background.copy(alpha = alpha)
             )
         )
-    )
+    }
+    Box(modifier = modifier.background(brush))
 }

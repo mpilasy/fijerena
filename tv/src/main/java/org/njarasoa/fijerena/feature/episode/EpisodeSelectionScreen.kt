@@ -221,7 +221,7 @@ private fun EpisodeListContent(
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
             while (isRefreshing) {
-                targetRotation += 360f
+                targetRotation = (targetRotation + 360f) % 3600f
                 kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
             }
         }

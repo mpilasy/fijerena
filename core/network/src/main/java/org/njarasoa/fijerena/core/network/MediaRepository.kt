@@ -519,10 +519,11 @@ class MediaRepository(
     fun removeFavorite(itemId: String, contentType: String): Boolean {
         val favorites = getFavoriteItems().toMutableList()
         val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
+        if (!removed) return false
         cache.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
         cachedFavorites = favorites
         favoriteIdSet = null
-        return removed
+        return true
     }
 
     private fun getFavoriteItems(): List<FavoriteItem> {
@@ -581,10 +582,11 @@ class MediaRepository(
     fun removeFavoriteCategory(categoryId: String, contentType: String): Boolean {
         val favorites = getFavoriteCategoryItems().toMutableList()
         val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
+        if (!removed) return false
         cache.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(favorites)).apply()
         cachedFavoriteCategories = favorites
         favoriteCategoryIdSet = null
-        return removed
+        return true
     }
 
     fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> {
@@ -641,10 +643,11 @@ class MediaRepository(
     fun removeFavoriteShow(showId: String, contentType: String): Boolean {
         val favorites = getFavoriteShowItems().toMutableList()
         val removed = favorites.removeAll { it.showId == showId && it.contentType == contentType }
+        if (!removed) return false
         cache.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(favorites)).apply()
         cachedFavoriteShows = favorites
         favoriteShowIdSet = null
-        return removed
+        return true
     }
 
     fun getFavoriteShowItems(): List<FavoriteShowItem> {

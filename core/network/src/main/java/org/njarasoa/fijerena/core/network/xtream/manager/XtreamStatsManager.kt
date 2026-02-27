@@ -35,9 +35,10 @@ class XtreamStatsManager(
         val vodCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_VOD)
         val seriesCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_SERIES)
 
-        val liveStreamsCount = streamDao.getStreamIds(providerId, XtreamStreamEntity.TYPE_LIVE).size
-        val vodStreamsCount = streamDao.getStreamIds(providerId, XtreamStreamEntity.TYPE_VOD).size
-        val seriesCount = seriesDao.getSeriesIds(providerId).size
+        // Use COUNT(*) queries instead of loading full ID lists into memory
+        val liveStreamsCount = streamDao.countStreams(providerId, XtreamStreamEntity.TYPE_LIVE)
+        val vodStreamsCount = streamDao.countStreams(providerId, XtreamStreamEntity.TYPE_VOD)
+        val seriesCount = seriesDao.countSeries(providerId)
 
         CacheStats(
             totalSize = 0L,

@@ -175,7 +175,9 @@ fun TvPlayerScreen(
                 currentEpgProgram = state.currentEpgProgram,
                 nextEpgProgram = state.nextEpgProgram,
                 categoryStreams = ImmutableMediaList(state.categoryStreams),
-                lastWatchedStreams = ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId }),
+                lastWatchedStreams = remember(state.lastWatchedStreams, state.streamId) {
+                    ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })
+                },
                 onStreamSelected = { item ->
                     loaderViewModel.loadStream(item)
                 },
