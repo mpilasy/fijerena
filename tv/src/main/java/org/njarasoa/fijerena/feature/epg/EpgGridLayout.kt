@@ -38,6 +38,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.runtime.snapshotFlow
+import androidx.tv.foundation.lazy.list.TvLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -144,12 +147,45 @@ fun EpgGridLayout(
         } else if (channelRows.isEmpty()) {
             EmptyEpgMessage()
         } else {
+            // Synchronized vertical scroll states for two-pane grid
+            val channelListState = rememberTvLazyListState()
+            val programGridState = rememberTvLazyListState()
+
+            // Sync channel list → program grid
+            LaunchedEffect(channelListState) {
+                snapshotFlow {
+                    channelListState.firstVisibleItemIndex to
+                            channelListState.firstVisibleItemScrollOffset
+                }.collectLatest { (index, offset) ->
+                    if (programGridState.firstVisibleItemIndex != index ||
+                        programGridState.firstVisibleItemScrollOffset != offset
+                    ) {
+                        programGridState.scrollToItem(index, offset)
+                    }
+                }
+            }
+
+            // Sync program grid → channel list
+            LaunchedEffect(programGridState) {
+                snapshotFlow {
+                    programGridState.firstVisibleItemIndex to
+                            programGridState.firstVisibleItemScrollOffset
+                }.collectLatest { (index, offset) ->
+                    if (channelListState.firstVisibleItemIndex != index ||
+                        channelListState.firstVisibleItemScrollOffset != offset
+                    ) {
+                        channelListState.scrollToItem(index, offset)
+                    }
+                }
+            }
+
             // Two-pane grid
             Row(modifier = Modifier.fillMaxSize()) {
                 // Left: Channel list (20% width)
                 ChannelListColumn(
                     channelRows = channelRows,
                     onChannelSelected = onChannelSelected,
+                    listState = channelListState,
                     modifier = Modifier
                         .weight(0.2f)
                         .fillMaxHeight()
@@ -164,6 +200,7 @@ fun EpgGridLayout(
                     currentTimeSlot = currentTimeSlot,
                     nowEpochSeconds = nowEpochSeconds,
                     onProgramSelected = onProgramSelected,
+                    verticalScrollState = programGridState,
                     modifier = Modifier
                         .weight(0.8f)
                         .fillMaxHeight()
@@ -268,9 +305,9 @@ private fun EmptyEpgMessage() {
 private fun ChannelListColumn(
     channelRows: List<EpgChannelRow>,
     onChannelSelected: (String, String, String) -> Unit,
+    listState: TvLazyListState,
     modifier: Modifier = Modifier
 ) {
-    val listState = rememberTvLazyListState()
     val scale = LocalUiScale.current
 
     GlassPanel(modifier = modifier) {
@@ -357,10 +394,10 @@ private fun TimeGridColumn(
     currentTimeSlot: Int,
     nowEpochSeconds: Long,
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
+    verticalScrollState: TvLazyListState,
     modifier: Modifier = Modifier
 ) {
     val horizontalScrollState = rememberLazyListState()
-    val verticalScrollState = rememberTvLazyListState()
 
     // Auto-scroll to current time on load
     LaunchedEffect(currentTimeSlot) {
