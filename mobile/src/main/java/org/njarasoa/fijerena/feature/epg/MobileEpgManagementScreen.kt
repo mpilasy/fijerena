@@ -66,6 +66,14 @@ fun MobileEpgManagementScreen(
     val indexState by viewModel.indexState.collectAsState()
     val dbStats by viewModel.dbStats.collectAsState()
     val queuedTaskIds by viewModel.queuedTaskIds.collectAsState()
+    val hasStrayFiles by viewModel.hasStrayFiles.collectAsState()
+    val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.toastMessage.collect { message ->
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
@@ -353,22 +361,28 @@ fun MobileEpgManagementScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                ) {
-                    OutlinedButton(
-                        onClick = { showCleanupConfirm = true },
-                        modifier = Modifier.weight(1f)
+                if (hasStrayFiles || staleProgrammeCount > 0) {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
                     ) {
-                        Text("Cleanup")
-                    }
-                    OutlinedButton(
-                        onClick = { showPurgeConfirm = true },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Purge >7d")
+                        if (hasStrayFiles) {
+                            OutlinedButton(
+                                onClick = { showCleanupConfirm = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Cleanup")
+                            }
+                        }
+                        if (staleProgrammeCount > 0) {
+                            OutlinedButton(
+                                onClick = { showPurgeConfirm = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Purge >7d")
+                            }
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))

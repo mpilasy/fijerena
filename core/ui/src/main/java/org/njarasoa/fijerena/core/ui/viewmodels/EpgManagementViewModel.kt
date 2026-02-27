@@ -5,8 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -62,8 +65,28 @@ class EpgManagementViewModel(
     private val _cellularDialog = MutableStateFlow<CellularConfirmDialog>(CellularConfirmDialog.Hidden)
     val cellularDialog: StateFlow<CellularConfirmDialog> = _cellularDialog.asStateFlow()
 
+    private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
+
+    private val _hasStrayFiles = MutableStateFlow(false)
+    val hasStrayFiles: StateFlow<Boolean> = _hasStrayFiles.asStateFlow()
+
+    private val _staleProgrammeCount = MutableStateFlow(0)
+    val staleProgrammeCount: StateFlow<Int> = _staleProgrammeCount.asStateFlow()
+
     init {
         refreshDbStats()
+        refreshMaintenanceState()
+    }
+
+    fun refreshMaintenanceState() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                _hasStrayFiles.value = epgFileManager.getStrayFiles().isNotEmpty()
+                val sevenDaysAgo = (System.currentTimeMillis() / 1000) - (7 * 24 * 3600)
+                _staleProgrammeCount.value = indexer.countStaleProgrammes(sevenDaysAgo)
+            }
+        }
     }
 
     fun refreshDbStats() {
@@ -266,8 +289,14 @@ class EpgManagementViewModel(
 
     fun cleanupFiles() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 epgFileManager.cleanupStrayFiles()
+            }
+            _hasStrayFiles.value = false
+            if (result.filesDeleted > 0) {
+                _toastMessage.tryEmit("Cleaned up ${result.filesDeleted} file(s), freed ${formatBytes(result.bytesFreed)}")
+            } else {
+                _toastMessage.tryEmit("No stray files found")
             }
         }
     }
@@ -278,16 +307,38 @@ class EpgManagementViewModel(
                 indexer.clearAll()
                 refreshDbStats()
             }
+            refreshMaintenanceState()
         }
     }
 
     fun purgeOldProgrammes() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
+            val deleted = withContext(Dispatchers.IO) {
                 val sevenDaysAgo = (System.currentTimeMillis() / 1000) - (7 * 24 * 3600)
                 indexer.purgeOldProgrammes(sevenDaysAgo)
-                refreshDbStats()
             }
+            refreshDbStats()
+            refreshMaintenanceState()
+            if (deleted > 0) {
+                _toastMessage.tryEmit("Purged ${formatCount(deleted)} programme(s)")
+            } else {
+                _toastMessage.tryEmit("No old programmes to purge")
+            }
+        }
+    }
+
+    companion object {
+        private fun formatBytes(bytes: Long): String = when {
+            bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
+            bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
+            bytes >= 1_024 -> "%.1f KB".format(bytes / 1_024.0)
+            else -> "$bytes B"
+        }
+
+        private fun formatCount(count: Int): String = when {
+            count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
+            count >= 1_000 -> "%.1fK".format(count / 1_000.0)
+            else -> count.toString()
         }
     }
 }

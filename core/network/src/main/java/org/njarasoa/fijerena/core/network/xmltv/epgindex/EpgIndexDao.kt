@@ -27,6 +27,9 @@ interface EpgIndexDao {
     @Query("DELETE FROM epg_programme WHERE end_epoch < :cutoffEpoch")
     suspend fun deleteStaleProgrammes(cutoffEpoch: Long)
 
+    @Query("SELECT COUNT(*) FROM epg_programme WHERE end_epoch < :cutoffEpoch")
+    suspend fun countStaleProgrammes(cutoffEpoch: Long): Int
+
     // --------------- Search queries ---------------
 
     @Query(
