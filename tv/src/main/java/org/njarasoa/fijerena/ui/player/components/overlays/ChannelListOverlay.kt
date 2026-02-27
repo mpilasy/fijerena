@@ -3,7 +3,7 @@
 package org.njarasoa.fijerena.ui.player.components.overlays
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,7 +84,7 @@ fun ChannelListOverlay(
                     maxLines = 1,
                     modifier = Modifier
                         .padding(bottom = Spacing.md)
-                        .basicMarquee()
+                        .bounceMarquee()
                 )
                 if (streams.isEmpty()) {
                     Text(
@@ -113,7 +113,7 @@ fun ChannelListOverlay(
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .basicMarquee()
+                                        .bounceMarquee()
                                 )
                             }
                         }

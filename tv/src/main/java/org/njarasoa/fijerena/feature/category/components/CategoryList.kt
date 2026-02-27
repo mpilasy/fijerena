@@ -4,7 +4,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -309,7 +309,7 @@ private fun CategoryItem(
                 ),
                 color = CinemaTextPrimary,
                 maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                modifier = Modifier.bounceMarquee()
             )
         }
     }

@@ -2,7 +2,7 @@ package org.njarasoa.fijerena.feature.epgbrowser
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -329,7 +329,7 @@ private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = f
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).basicMarquee()
+                    modifier = Modifier.weight(1f).bounceMarquee()
                 )
                 val category = program.category
                 if (category != null) {
@@ -412,7 +412,7 @@ private fun MobileAiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false
             color = MaterialTheme.colorScheme.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).basicMarquee()
+            modifier = Modifier.weight(1f).bounceMarquee()
         )
         if (isDevMode && airing.sourceId > 0) {
             val sourceName = sourceLabels[airing.sourceId]
