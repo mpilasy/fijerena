@@ -16,6 +16,10 @@ data class M3uEntry(
 
 object M3uParser {
 
+    private const val GROUP_TITLE_PREFIX = "group-title=\""
+    private const val LOGO_PREFIX = "tvg-logo=\""
+    private const val ID_PREFIX = "tvg-id=\""
+
     private data class PendingEntry(
         val name: String,
         val groupTitle: String,
@@ -46,9 +50,9 @@ object M3uParser {
             if (line.startsWith("#EXTINF:")) {
                 val infoLine = line.removePrefix("#EXTINF:")
                 val name = extractName(infoLine)
-                val groupTitle = extractAttribute(infoLine, "group-title") ?: "Uncategorized"
-                val logo = extractAttribute(infoLine, "tvg-logo")
-                val tvgId = extractAttribute(infoLine, "tvg-id")
+                val groupTitle = extractAttribute(infoLine, GROUP_TITLE_PREFIX) ?: "Uncategorized"
+                val logo = extractAttribute(infoLine, LOGO_PREFIX)
+                val tvgId = extractAttribute(infoLine, ID_PREFIX)
 
                 pendingEntry = PendingEntry(name, groupTitle, logo, tvgId)
             } else if (!line.startsWith("#")) {
@@ -140,12 +144,11 @@ object M3uParser {
         return if (commaIndex >= 0) infoLine.substring(commaIndex + 1).trim() else "Unknown"
     }
 
-    private fun extractAttribute(infoLine: String, attribute: String): String? {
-        val search = "$attribute=\""
-        val startIndex = infoLine.indexOf(search)
+    private fun extractAttribute(infoLine: String, prefix: String): String? {
+        val startIndex = infoLine.indexOf(prefix)
         if (startIndex == -1) return null
 
-        val valueStartIndex = startIndex + search.length
+        val valueStartIndex = startIndex + prefix.length
         val valueEndIndex = infoLine.indexOf('"', valueStartIndex)
         if (valueEndIndex == -1) return null
 
