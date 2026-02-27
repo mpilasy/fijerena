@@ -93,7 +93,7 @@ fun MobileChannelListSheet(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
                     ) {
-                        items(streams) { stream ->
+                        items(streams, key = { it.id }) { stream ->
                             Surface(
                                 onClick = { onSelect(stream) },
                                 modifier = Modifier.fillMaxWidth(),

@@ -33,9 +33,11 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -52,7 +54,6 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
-import org.njarasoa.fijerena.core.player.model.EpgUtils
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -91,6 +92,15 @@ fun EpgGridLayout(
     val configuration = LocalConfiguration.current
     val scale = LocalUiScale.current
     var isSearchActive by remember { mutableStateOf(false) }
+
+    // Shared "now" timestamp refreshed every 60s — avoids per-cell System.currentTimeMillis() calls
+    var nowEpochSeconds by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000)
+            nowEpochSeconds = System.currentTimeMillis() / 1000
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -148,6 +158,7 @@ fun EpgGridLayout(
                     channelRows = channelRows,
                     timeSlots = timeSlots,
                     currentTimeSlot = currentTimeSlot,
+                    nowEpochSeconds = nowEpochSeconds,
                     onProgramSelected = onProgramSelected,
                     modifier = Modifier
                         .weight(0.8f)
@@ -264,7 +275,10 @@ private fun ChannelListColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))
         ) {
-            items(channelRows.size) { index ->
+            items(
+                count = channelRows.size,
+                key = { channelRows[it].channel.id }
+            ) { index ->
                 val row = channelRows[index]
                 ChannelItem(
                     channel = row.channel,
@@ -337,6 +351,7 @@ private fun TimeGridColumn(
     channelRows: List<EpgChannelRow>,
     timeSlots: List<TimeSlot>,
     currentTimeSlot: Int,
+    nowEpochSeconds: Long,
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -373,11 +388,15 @@ private fun TimeGridColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))
         ) {
-            items(channelRows.size) { rowIndex ->
+            items(
+                count = channelRows.size,
+                key = { channelRows[it].channel.id }
+            ) { rowIndex ->
                 val row = channelRows[rowIndex]
                 ProgramRow(
                     channelRow = row,
                     timeSlots = timeSlots,
+                    nowEpochSeconds = nowEpochSeconds,
                     scrollState = horizontalScrollState,
                     onProgramSelected = { program ->
                         onProgramSelected(program, row.channel)
@@ -435,6 +454,7 @@ private fun TimeHeaderRow(
 private fun ProgramRow(
     channelRow: EpgChannelRow,
     timeSlots: List<TimeSlot>,
+    nowEpochSeconds: Long,
     scrollState: LazyListState,
     onProgramSelected: (EpgProgram) -> Unit
 ) {
@@ -447,10 +467,14 @@ private fun ProgramRow(
             .height(TvDimensions.epgRowHeight.scaled(scale)),
         userScrollEnabled = false // Synchronized with header row
     ) {
-        items(channelRow.programs.size) { index ->
+        items(
+            count = channelRow.programs.size,
+            key = { channelRow.programs[it].startTime }
+        ) { index ->
             val program = channelRow.programs[index]
             ProgramCell(
                 program = program,
+                nowEpochSeconds = nowEpochSeconds,
                 onClick = { onProgramSelected(program) }
             )
         }
@@ -460,10 +484,12 @@ private fun ProgramRow(
 @Composable
 private fun ProgramCell(
     program: EpgProgram,
+    nowEpochSeconds: Long,
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val isCurrent = EpgUtils.isCurrentProgram(program)
+    // Use shared nowEpochSeconds instead of per-cell System.currentTimeMillis()
+    val isCurrent = nowEpochSeconds in program.startTime..program.endTime
     val scale = LocalUiScale.current
 
     Card(
@@ -556,7 +582,10 @@ private fun EpgSearchContent(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
             ) {
-                items(searchResults.size) { index ->
+                items(
+                    count = searchResults.size,
+                    key = { searchResults[it].program.startTime }
+                ) { index ->
                     val result = searchResults[index]
                     SearchResultItem(
                         result = result,
