@@ -92,6 +92,10 @@ class MediaRepository(
     private val payloadSizes = ConcurrentHashMap<String, Long>()
     private val fetchTimes = ConcurrentHashMap<String, Long>()
 
+    // In-memory cache for watch history to avoid repeated deserialization
+    private var cachedWatchHistory: List<WatchedItem>? = null
+    private val watchHistoryLock = Any()
+
     companion object {
         private const val KEY_WATCH_HISTORY = "watch_history_v2"
         private const val KEY_FAVORITES = "favorites_v2"
@@ -338,24 +342,47 @@ class MediaRepository(
         duration: Long = 0L,
         isCompleted: Boolean = false
     ) {
-        val history = getWatchHistory().toMutableList()
-        history.removeAll { it.itemId == itemId && it.contentType == contentType }
-        history.add(0, WatchedItem(
-            itemId, itemName, categoryId, contentType,
-            System.currentTimeMillis(),
-            playbackPosition, duration, isCompleted
-        ))
-        val trimmed = history.take(providerSettings.watchHistorySize)
-        cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(trimmed)).apply()
+        synchronized(watchHistoryLock) {
+            val history = getWatchHistoryLocked().toMutableList()
+            history.removeAll { it.itemId == itemId && it.contentType == contentType }
+            history.add(0, WatchedItem(
+                itemId, itemName, categoryId, contentType,
+                System.currentTimeMillis(),
+                playbackPosition, duration, isCompleted
+            ))
+            val trimmed = history.take(providerSettings.watchHistorySize)
+
+            // Update in-memory cache first
+            cachedWatchHistory = trimmed
+
+            cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(trimmed)).apply()
+        }
     }
 
     fun getWatchHistory(): List<WatchedItem> {
-        val historyJson = cache.getString(KEY_WATCH_HISTORY, null) ?: return emptyList()
-        return try {
-            json.decodeFromString<List<WatchedItem>>(historyJson)
-        } catch (e: Exception) {
-            emptyList()
+        synchronized(watchHistoryLock) {
+            return getWatchHistoryLocked()
         }
+    }
+
+    private fun getWatchHistoryLocked(): List<WatchedItem> {
+        // Return cached value if available
+        cachedWatchHistory?.let { return it }
+
+        val historyJson = cache.getString(KEY_WATCH_HISTORY, null)
+        val history = if (historyJson == null) {
+            emptyList()
+        } else {
+            try {
+                json.decodeFromString<List<WatchedItem>>(historyJson)
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+
+        // Populate cache
+        cachedWatchHistory = history
+        return history
     }
 
     fun getWatchHistoryForContentType(contentType: String): List<MediaItem> {
@@ -378,7 +405,10 @@ class MediaRepository(
     }
 
     fun clearWatchHistory() {
-        cache.edit().remove(KEY_WATCH_HISTORY).apply()
+        synchronized(watchHistoryLock) {
+            cachedWatchHistory = emptyList()
+            cache.edit().remove(KEY_WATCH_HISTORY).apply()
+        }
     }
 
     fun addFavorite(itemId: String, itemName: String, categoryId: String, contentType: String): Boolean {
@@ -646,14 +676,20 @@ class MediaRepository(
     }
 
     fun clearPlaybackPosition(itemId: String, contentType: String) {
-        val history = getWatchHistory().toMutableList()
-        val index = history.indexOfFirst {
-            it.itemId == itemId && it.contentType == contentType
-        }
-        if (index != -1) {
-            val item = history[index]
-            history[index] = item.copy(playbackPosition = 0L, isCompleted = false)
-            cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
+        synchronized(watchHistoryLock) {
+            val history = getWatchHistoryLocked().toMutableList()
+            val index = history.indexOfFirst {
+                it.itemId == itemId && it.contentType == contentType
+            }
+            if (index != -1) {
+                val item = history[index]
+                history[index] = item.copy(playbackPosition = 0L, isCompleted = false)
+
+                // Update cache
+                cachedWatchHistory = history
+
+                cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
+            }
         }
     }
 
