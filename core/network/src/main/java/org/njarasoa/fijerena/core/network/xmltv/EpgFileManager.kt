@@ -251,6 +251,42 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
+     * Start processing a pre-filtered list of sources. Shows confirmation dialog on cellular.
+     * Same lifecycle guarantees as [launchProcessAllSources].
+     */
+    fun launchProcessSources(
+        sources: List<EpgSourceEntity>,
+        taskId: String,
+        onComplete: (suspend () -> Unit)? = null,
+        onCellularConfirm: (suspend () -> Boolean)? = null
+    ) {
+        processJob?.cancel()
+
+        processJob = scope.launch {
+            val networkType = NetworkMonitor.currentNetworkType
+            val shouldProceed = if (networkType == NetworkType.CELLULAR && onCellularConfirm != null) {
+                onCellularConfirm()
+            } else {
+                true
+            }
+
+            if (!shouldProceed) {
+                return@launch
+            }
+
+            val task = object : RefreshTask {
+                override val id = taskId
+                override val priority = RefreshPriority.MEDIUM
+                override suspend fun execute() {
+                    processAllSourcesInternal(sources)
+                    onComplete?.invoke()
+                }
+            }
+            RefreshQueue.submit(task)
+        }
+    }
+
+    /**
      * Start processing a single source. Shows confirmation dialog on cellular.
      * Same lifecycle guarantees as [launchProcessAllSources].
      *

@@ -40,6 +40,12 @@ interface EpgSourceDao {
     @Query("UPDATE epg_source SET last_error = :error WHERE id = :id")
     suspend fun markError(id: Long, error: String)
 
+    @Query("SELECT * FROM epg_source WHERE enabled = 1 AND last_error IS NOT NULL ORDER BY added_at_ms ASC")
+    suspend fun getFailedSources(): List<EpgSourceEntity>
+
+    @Query("SELECT * FROM epg_source WHERE enabled = 1 AND (last_ingested_at_ms = 0 OR last_ingested_at_ms < :thresholdMs) ORDER BY added_at_ms ASC")
+    suspend fun getStaleSources(thresholdMs: Long): List<EpgSourceEntity>
+
     @Query("SELECT COUNT(*) FROM epg_source")
     suspend fun getSourceCount(): Int
 }

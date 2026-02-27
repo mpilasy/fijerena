@@ -84,6 +84,8 @@ fun TvEpgManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var autoRefreshEnabled by remember { mutableStateOf(viewModel.autoRefreshEnabled) }
+    var showCleanupConfirm by remember { mutableStateOf(false) }
+    var showPurgeConfirm by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
 
@@ -433,17 +435,41 @@ fun TvEpgManagementScreen(
                                 text = "Refresh All"
                             )
                             CinemaSecondaryButton(
-                                onClick = { viewModel.cleanupFiles() },
+                                onClick = { showCleanupConfirm = true },
                                 text = "Cleanup Files"
                             )
                             CinemaSecondaryButton(
-                                onClick = { viewModel.purgeOldProgrammes() },
+                                onClick = { showPurgeConfirm = true },
                                 text = "Purge >7 Days"
                             )
                             CinemaDangerButton(
                                 onClick = { showClearConfirm = true },
                                 text = "Clear All Data"
                             )
+                        }
+                        if (viewModel.isDevMode) {
+                            val hasFailed = sources.any { it.enabled && it.lastError != null }
+                            val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (System.currentTimeMillis() - it.lastIngestedAtMs) > 24 * 3600 * 1000) }
+                            if (hasFailed || hasOutdated) {
+                                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                                ) {
+                                    if (hasFailed) {
+                                        CinemaSecondaryButton(
+                                            onClick = { viewModel.refreshFailed() },
+                                            text = "Refresh Failed"
+                                        )
+                                    }
+                                    if (hasOutdated) {
+                                        CinemaSecondaryButton(
+                                            onClick = { viewModel.refreshOutdated() },
+                                            text = "Refresh Outdated"
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -469,6 +495,88 @@ fun TvEpgManagementScreen(
                 }
                 showAddDialog = false
                 editingSource = null
+            }
+        )
+    }
+
+    // Cleanup confirmation
+    if (showCleanupConfirm) {
+        AlertDialog(
+            onDismissRequest = { showCleanupConfirm = false },
+            containerColor = CinemaSurface,
+            titleContentColor = CinemaTextPrimary,
+            textContentColor = CinemaTextSecondary,
+            title = {
+                Text(
+                    text = "Cleanup Files",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                    )
+                )
+            },
+            text = {
+                Text(
+                    text = "This will delete any downloaded EPG files that are no longer associated with a source. The indexed data in the database is not affected.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                    )
+                )
+            },
+            confirmButton = {
+                CinemaPrimaryButton(
+                    onClick = {
+                        viewModel.cleanupFiles()
+                        showCleanupConfirm = false
+                    },
+                    text = "Cleanup"
+                )
+            },
+            dismissButton = {
+                CinemaSecondaryButton(
+                    onClick = { showCleanupConfirm = false },
+                    text = "Cancel"
+                )
+            }
+        )
+    }
+
+    // Purge confirmation
+    if (showPurgeConfirm) {
+        AlertDialog(
+            onDismissRequest = { showPurgeConfirm = false },
+            containerColor = CinemaSurface,
+            titleContentColor = CinemaTextPrimary,
+            textContentColor = CinemaTextSecondary,
+            title = {
+                Text(
+                    text = "Purge Old Programmes",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                    )
+                )
+            },
+            text = {
+                Text(
+                    text = "This will permanently delete all programme data older than 7 days from the database. Channel entries are not affected.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
+                    )
+                )
+            },
+            confirmButton = {
+                CinemaDangerButton(
+                    onClick = {
+                        viewModel.purgeOldProgrammes()
+                        showPurgeConfirm = false
+                    },
+                    text = "Purge"
+                )
+            },
+            dismissButton = {
+                CinemaSecondaryButton(
+                    onClick = { showPurgeConfirm = false },
+                    text = "Cancel"
+                )
             }
         )
     }
