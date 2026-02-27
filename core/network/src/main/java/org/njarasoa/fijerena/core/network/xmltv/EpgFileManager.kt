@@ -780,18 +780,35 @@ class EpgFileManager private constructor(private val context: Context) {
         }
     }
 
-    fun cleanupStrayFiles() {
-        try {
-            val cacheDir = context.cacheDir
-            val strayFiles = cacheDir.listFiles { file ->
+    data class CleanupResult(val filesDeleted: Int, val bytesFreed: Long)
+
+    fun getStrayFiles(): List<File> {
+        return try {
+            context.cacheDir.listFiles { file ->
                 file.name.startsWith("xmltv_") && file.isFile
+            }?.toList() ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun cleanupStrayFiles(): CleanupResult {
+        try {
+            val strayFiles = getStrayFiles()
+            var bytesFreed = 0L
+            var filesDeleted = 0
+            strayFiles.forEach { file ->
+                val size = file.length()
+                if (file.delete()) {
+                    bytesFreed += size
+                    filesDeleted++
+                    Log.d(TAG, "Cleaned up stray file: ${file.name}")
+                }
             }
-            strayFiles?.forEach { file ->
-                file.delete()
-                Log.d(TAG, "Cleaned up stray file: ${file.name}")
-            }
+            return CleanupResult(filesDeleted, bytesFreed)
         } catch (e: Exception) {
             Log.w(TAG, "Cleanup failed", e)
+            return CleanupResult(0, 0)
         }
     }
 

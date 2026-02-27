@@ -80,6 +80,14 @@ fun TvEpgManagementScreen(
     val processingState by viewModel.processingState.collectAsState()
     val indexState by viewModel.indexState.collectAsState()
     val dbStats by viewModel.dbStats.collectAsState()
+    val hasStrayFiles by viewModel.hasStrayFiles.collectAsState()
+    val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.toastMessage.collect { message ->
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
@@ -434,14 +442,18 @@ fun TvEpgManagementScreen(
                                 enabled = sources.isNotEmpty(),
                                 text = "Refresh All"
                             )
-                            CinemaSecondaryButton(
-                                onClick = { showCleanupConfirm = true },
-                                text = "Cleanup Files"
-                            )
-                            CinemaSecondaryButton(
-                                onClick = { showPurgeConfirm = true },
-                                text = "Purge >7 Days"
-                            )
+                            if (hasStrayFiles) {
+                                CinemaSecondaryButton(
+                                    onClick = { showCleanupConfirm = true },
+                                    text = "Cleanup Files"
+                                )
+                            }
+                            if (staleProgrammeCount > 0) {
+                                CinemaSecondaryButton(
+                                    onClick = { showPurgeConfirm = true },
+                                    text = "Purge >7 Days"
+                                )
+                            }
                             CinemaDangerButton(
                                 onClick = { showClearConfirm = true },
                                 text = "Clear All Data"

@@ -266,10 +266,19 @@ class EpgIndexer private constructor(private val context: Context) {
     /**
      * Delete programmes older than the given epoch and rebuild FTS.
      */
-    suspend fun purgeOldProgrammes(cutoffEpoch: Long) = withContext(Dispatchers.IO) {
+    suspend fun countStaleProgrammes(cutoffEpoch: Long): Int = withContext(Dispatchers.IO) {
+        try {
+            EpgIndexDatabase.getInstance(context).epgIndexDao().countStaleProgrammes(cutoffEpoch)
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    suspend fun purgeOldProgrammes(cutoffEpoch: Long): Int = withContext(Dispatchers.IO) {
         try {
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
+            val countBefore = dao.getProgrammeCount()
             dao.deleteStaleProgrammes(cutoffEpoch)
 
             db.openHelper.writableDatabase.execSQL(
@@ -279,6 +288,7 @@ class EpgIndexer private constructor(private val context: Context) {
             val now = System.currentTimeMillis()
             val channelCount = dao.getChannelCount()
             val programmeCount = dao.getProgrammeCount()
+            val deleted = countBefore - programmeCount
 
             dao.insertMetadata(
                 EpgIndexMetadata(
@@ -298,9 +308,11 @@ class EpgIndexer private constructor(private val context: Context) {
             }
 
             incrementalVacuum()
-            Log.d(TAG, "Purge complete: $channelCount channels, $programmeCount programmes remaining")
+            Log.d(TAG, "Purge complete: $deleted deleted, $channelCount channels, $programmeCount programmes remaining")
+            deleted
         } catch (e: Exception) {
             Log.e(TAG, "Purge failed: ${e.message}", e)
+            0
         }
     }
 
