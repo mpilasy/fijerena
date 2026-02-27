@@ -15,6 +15,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -90,6 +99,11 @@ fun MobileEpgManagementScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showAddDialog = true }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Source")
                     }
                 }
             )
@@ -198,13 +212,6 @@ fun MobileEpgManagementScreen(
 
             // Sources
             SettingsSection(title = "Sources (${sources.size})") {
-                Button(
-                    onClick = { showAddDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Add Source")
-                }
-
                 sources.forEach { source ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                     Row(
@@ -286,21 +293,16 @@ fun MobileEpgManagementScreen(
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm, Alignment.End)
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End)
                     ) {
-                        OutlinedButton(
-                            onClick = { viewModel.refreshSource(source.id) }
-                        ) {
-                            Text("Refresh")
+                        IconButton(onClick = { viewModel.refreshSource(source.id) }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                         }
-                        OutlinedButton(onClick = { editingSource = source }) {
-                            Text("Edit")
+                        IconButton(onClick = { editingSource = source }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
-                        OutlinedButton(
-                            onClick = { showDeleteConfirm = source.id },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = CinemaError)
-                        ) {
-                            Text("Delete")
+                        IconButton(onClick = { showDeleteConfirm = source.id }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = CinemaError)
                         }
                     }
                 }
@@ -331,7 +333,9 @@ fun MobileEpgManagementScreen(
                     enabled = sources.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Refresh All Sources")
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("Refresh All")
                 }
                 if (viewModel.isDevMode) {
                     val hasFailed = sources.any { it.enabled && it.lastError != null }
@@ -347,7 +351,9 @@ fun MobileEpgManagementScreen(
                                     onClick = { viewModel.refreshFailed() },
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    Text("Refresh Failed")
+                                    Icon(Icons.Default.ErrorOutline, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                    Text("Failed")
                                 }
                             }
                             if (hasOutdated) {
@@ -355,7 +361,9 @@ fun MobileEpgManagementScreen(
                                     onClick = { viewModel.refreshOutdated() },
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    Text("Refresh Outdated")
+                                    Icon(Icons.Default.Update, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                    Text("Outdated")
                                 }
                             }
                         }
@@ -372,6 +380,8 @@ fun MobileEpgManagementScreen(
                                 onClick = { showCleanupConfirm = true },
                                 modifier = Modifier.weight(1f)
                             ) {
+                                Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                                 Text("Cleanup")
                             }
                         }
@@ -380,6 +390,8 @@ fun MobileEpgManagementScreen(
                                 onClick = { showPurgeConfirm = true },
                                 modifier = Modifier.weight(1f)
                             ) {
+                                Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                                 Text("Purge >7d")
                             }
                         }
@@ -391,6 +403,8 @@ fun MobileEpgManagementScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                     Text("Clear All Data")
                 }
             }

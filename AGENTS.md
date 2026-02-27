@@ -180,3 +180,11 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ### 2026-02-27 - Category reference items treated as streams on long-press
 **Learning:** Virtual categories ("Favorite Categories", "Recent Categories") render their entries as `MediaItem` objects with `providerData["isCategoryRef"] = "true"`. The `onItemLongPress` / `onStreamLongPress` handlers in both mobile (`MobileCategoryListScreen`) and TV (`TwoColumnLayout`) were blindly creating `Stream` favorite targets for ALL items, including these category references. This caused long-pressing a category in these lists to call `addFavorite` (stream) instead of `addFavoriteCategory`.
 **Action:** Always check `providerData["isCategoryRef"]` before deciding the favorite target type in any item long-press handler.
+
+### 2026-02-27 - Watch history lookups are O(n×m) in refreshPerItemData
+**Learning:** `MediaRepository.getPlaybackPosition()` does a linear scan of watch history per call. `refreshPerItemData()` calls it in a loop over every stream (hundreds), making it O(n×m) on the main thread with synchronized locks.
+**Action:** Always check for linear scans inside loops first when profiling data layers. Build a Map index for O(1) lookups.
+
+### 2026-02-27 - contentHash self-referential hash bug in XtreamContentManager
+**Learning:** `XtreamContentManager` computes `base.hashCode()` on a data class that includes the `contentHash` field (defaulting to 0). The stored entity has a non-zero `contentHash`, so `hashCode()` never matches on re-fetch — causing spurious DB re-inserts on every sync.
+**Action:** When using `hashCode()` for change detection on data classes, exclude the hash field itself from computation.

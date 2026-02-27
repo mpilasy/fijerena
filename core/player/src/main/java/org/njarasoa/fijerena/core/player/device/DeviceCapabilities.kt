@@ -70,7 +70,7 @@ object DeviceDetector {
 
         return when {
             manufacturer.contains("NVIDIA") || model.contains("SHIELD") -> DeviceType.NVIDIA_SHIELD
-            manufacturer.contains("SONY") || model.contains("BRAVIA") -> DeviceType.SONY_BRAVIA
+            model.contains("BRAVIA") || (manufacturer.contains("SONY") && isAndroidTv()) -> DeviceType.SONY_BRAVIA
             manufacturer.contains("GOOGLE") && device.contains("chromecast") -> DeviceType.CHROMECAST_TV
             isAndroidTv() -> DeviceType.GENERIC_TV
             else -> DeviceType.GENERIC_MOBILE
@@ -78,10 +78,16 @@ object DeviceDetector {
     }
 
     private fun isAndroidTv(): Boolean {
+        // Check ro.build.characteristics for "tv" — reliable on all Android TV devices.
+        // Class.forName("TvInputManager") is NOT reliable: that class exists on all
+        // Android devices since API 21, causing phones to be misdetected as TV.
         return try {
-            val tvManager = Class.forName("android.media.tv.TvInputManager")
-            tvManager != null
-        } catch (e: ClassNotFoundException) {
+            @Suppress("PrivateApi")
+            val clazz = Class.forName("android.os.SystemProperties")
+            val get = clazz.getMethod("get", String::class.java, String::class.java)
+            val characteristics = get.invoke(null, "ro.build.characteristics", "") as String
+            characteristics.contains("tv", ignoreCase = true)
+        } catch (e: Exception) {
             false
         }
     }
