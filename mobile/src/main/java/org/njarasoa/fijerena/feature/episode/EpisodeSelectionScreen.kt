@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -65,6 +67,7 @@ fun MobileEpisodeSelectionScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
+    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(seriesId, ContentType.TV_SHOWS)) }
 
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {
@@ -105,6 +108,22 @@ fun MobileEpisodeSelectionScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
+                actions = {
+                    IconButton(onClick = {
+                        if (isFavorite) {
+                            mediaRepository.removeFavorite(seriesId, ContentType.TV_SHOWS)
+                        } else {
+                            mediaRepository.addFavorite(seriesId, seriesName, categoryId, ContentType.TV_SHOWS)
+                        }
+                        isFavorite = !isFavorite
+                    }) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->

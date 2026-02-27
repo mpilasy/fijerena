@@ -1,7 +1,7 @@
 package org.njarasoa.fijerena.ui.player.utils
 
-import java.text.SimpleDateFormat
-import java.util.Date
+import android.content.Context
+import org.njarasoa.fijerena.core.player.model.TimeFormat
 import java.util.Locale
 
 fun formatTime(millis: Long): String {
@@ -17,11 +17,8 @@ fun formatTime(millis: Long): String {
     }
 }
 
-// Cached formatter — avoids allocating SimpleDateFormat on every call
-private val epochTimeFormat by lazy { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-
-fun formatEpochTime(epochSeconds: Long): String {
-    return epochTimeFormat.format(Date(epochSeconds * 1000))
+fun formatEpochTime(context: Context, epochSeconds: Long): String {
+    return TimeFormat.formatTime(context, epochSeconds)
 }
 
 fun formatBitrate(bitrate: Int): String {

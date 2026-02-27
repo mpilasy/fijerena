@@ -68,9 +68,10 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
-// Pre-compiled formatter — avoid recompiling on every recomposition
-private val EPG_DATE_FORMATTER = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")
+// Pre-compiled formatter — locale-aware full date (e.g., "Thursday, February 27, 2026")
+private val EPG_DATE_FORMATTER = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
 
 @Composable
 fun EpgGridLayout(

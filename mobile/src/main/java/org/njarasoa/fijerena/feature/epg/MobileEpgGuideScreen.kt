@@ -56,9 +56,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
-// Pre-compiled formatter — avoid recompiling on every recomposition
-private val EPG_SHORT_DATE_FORMATTER = DateTimeFormatter.ofPattern("EEE, MMM d")
+// Pre-compiled formatter — locale-aware medium date (e.g., "Feb 27, 2026")
+private val EPG_SHORT_DATE_FORMATTER = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

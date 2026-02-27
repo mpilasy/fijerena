@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.player.utils.formatEpochTime
 import org.njarasoa.fijerena.ui.player.utils.formatTime
+import androidx.compose.ui.platform.LocalContext
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -294,8 +295,9 @@ fun PlayerControlsOverlay(
                             )
                         }
                         if (currentEpgProgram != null) {
-                            val nowStart = formatEpochTime(currentEpgProgram.startTime)
-                            val nowEnd = formatEpochTime(currentEpgProgram.endTime)
+                            val epgContext = LocalContext.current
+                            val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
+                            val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
                             Text(
                                 text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -318,7 +320,7 @@ fun PlayerControlsOverlay(
                             )
                             if (nextEpgProgram != null) {
                                 Text(
-                                    text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(nextEpgProgram.startTime)})",
+                                    text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(epgContext, nextEpgProgram.startTime)})",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(alpha = CinemaAlpha.tint),
                                     modifier = Modifier.padding(top = Spacing.xxs)

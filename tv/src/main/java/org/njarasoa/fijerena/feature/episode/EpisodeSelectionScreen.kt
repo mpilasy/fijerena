@@ -30,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -120,6 +122,7 @@ fun EpisodeSelectionScreen(
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
+    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(seriesId, ContentType.TV_SHOWS)) }
 
     fun refresh() {
         refreshTrigger++
@@ -161,6 +164,15 @@ fun EpisodeSelectionScreen(
                     seriesName = seriesName,
                     categoryId = categoryId,
                     mediaRepository = mediaRepository,
+                    isFavorite = isFavorite,
+                    onToggleFavorite = {
+                        if (isFavorite) {
+                            mediaRepository.removeFavorite(seriesId, ContentType.TV_SHOWS)
+                        } else {
+                            mediaRepository.addFavorite(seriesId, seriesName, categoryId, ContentType.TV_SHOWS)
+                        }
+                        isFavorite = !isFavorite
+                    },
                     onEpisodeSelected = onEpisodeSelected,
                     onRefresh = { refresh() },
                     onBack = onBack
@@ -176,6 +188,8 @@ private fun EpisodeListContent(
     seriesName: String,
     categoryId: String,
     mediaRepository: MediaRepository,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit
@@ -296,6 +310,20 @@ private fun EpisodeListContent(
                             ),
                             color = CinemaTextPrimary
                         )
+                        // Favorite button
+                        IconButton(
+                            onClick = onToggleFavorite,
+                            modifier = Modifier
+                                .size(TvDimensions.iconMedium.scaled(scale))
+                                .tvFocusableNoScale()
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                                tint = if (isFavorite) CinemaAccent else CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale))
+                            )
+                        }
                         // Refresh button
                         IconButton(
                             onClick = {

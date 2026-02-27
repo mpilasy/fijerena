@@ -236,7 +236,7 @@ class EpgBrowserViewModel(
         val tz = TimeZone.getDefault()
         val dayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).apply { timeZone = tz }
         // Reuse a single formatter instance instead of allocating per date group
-        val labelFormat = SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).apply { timeZone = tz }
+        val labelFormat = java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL, Locale.getDefault()).apply { timeZone = tz }
         val now = Date()
         val today = dayFormat.format(now)
         val cal = Calendar.getInstance(tz)
