@@ -40,6 +40,10 @@ class XmltvEpgService(
         encodeDefaults = true
     }
 
+    // In-memory cache — avoid re-deserializing full EPG JSON from SharedPreferences on every call
+    private var parsedEpgCache: Map<String, EpgResponse>? = null
+    private var parsedEpgTimestamp: Long = 0L
+
     /**
      * Get EPG data for channels from the SQLite index.
      * Returns empty map if no index is available.
@@ -142,15 +146,25 @@ class XmltvEpgService(
 
     fun clearCache() {
         cache.edit().clear().apply()
+        parsedEpgCache = null
     }
 
     private fun getCachedEpg(): Map<String, EpgResponse>? {
         val timestamp = cache.getLong(KEY_CACHE_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > PARSED_CACHE_TTL_MS) return null
+        if (System.currentTimeMillis() - timestamp > PARSED_CACHE_TTL_MS) {
+            parsedEpgCache = null
+            return null
+        }
+
+        // Return in-memory cache if still valid (avoids JSON deserialization)
+        parsedEpgCache?.let { if (parsedEpgTimestamp == timestamp) return it }
 
         val cachedJson = cache.getString(KEY_CACHED_EPG, null) ?: return null
         return try {
-            json.decodeFromString<Map<String, EpgResponse>>(cachedJson)
+            json.decodeFromString<Map<String, EpgResponse>>(cachedJson).also {
+                parsedEpgCache = it
+                parsedEpgTimestamp = timestamp
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to deserialize cached EPG", e)
             null
@@ -159,11 +173,14 @@ class XmltvEpgService(
 
     private fun cacheEpg(data: Map<String, EpgResponse>) {
         try {
+            val now = System.currentTimeMillis()
             val serialized = json.encodeToString(data)
             cache.edit()
                 .putString(KEY_CACHED_EPG, serialized)
-                .putLong(KEY_CACHE_TIMESTAMP, System.currentTimeMillis())
+                .putLong(KEY_CACHE_TIMESTAMP, now)
                 .apply()
+            parsedEpgCache = data
+            parsedEpgTimestamp = now
         } catch (e: Exception) {
             Log.w(TAG, "Failed to cache XMLTV EPG", e)
         }

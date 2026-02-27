@@ -85,17 +85,18 @@ class LocalMediaProvider(
             if (connectResult.isFailure) return connectResult.map { emptyList() }
         }
 
+        // Single-pass set construction — avoid intermediate list from filter+map
         val filteredCategories = when (contentType) {
             ContentType.LIVE_TV -> {
-                // Only categories containing live channels
-                val liveCategoryIds = items.filter { it.mediaType == MediaType.LIVE_CHANNEL }
-                    .map { it.categoryId }.toSet()
+                val liveCategoryIds = items.mapNotNullTo(HashSet()) {
+                    if (it.mediaType == MediaType.LIVE_CHANNEL) it.categoryId else null
+                }
                 categories.filter { it.id in liveCategoryIds }
             }
             else -> {
-                // Categories containing video files
-                val videoCategoryIds = items.filter { it.mediaType == MediaType.VIDEO_FILE }
-                    .map { it.categoryId }.toSet()
+                val videoCategoryIds = items.mapNotNullTo(HashSet()) {
+                    if (it.mediaType == MediaType.VIDEO_FILE) it.categoryId else null
+                }
                 categories.filter { it.id in videoCategoryIds }
             }
         }

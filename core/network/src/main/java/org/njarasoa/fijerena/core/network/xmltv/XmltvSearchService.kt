@@ -16,6 +16,8 @@ class XmltvSearchService(private val context: Context) {
 
     companion object {
         private const val TAG = "XmltvSearchService"
+        // Pre-compiled regex — avoid recompiling on every search call
+        private val WHITESPACE_REGEX = Regex("\\s+")
     }
 
     /**
@@ -84,7 +86,7 @@ class XmltvSearchService(private val context: Context) {
         }
 
         // 4. Fall back to LIKE AND: search by shortest word, then filter for all words in memory
-        val words = queryLower.split("\\s+".toRegex()).filter { it.length >= 2 }
+        val words = queryLower.split(WHITESPACE_REGEX).filter { it.length >= 2 }
         if (words.size >= 2) {
             val shortestWord = words.minBy { it.length }
             val broadRows = dao.searchByTitleLike(shortestWord, windowStart, windowEnd)
@@ -121,7 +123,7 @@ class XmltvSearchService(private val context: Context) {
      */
     private fun buildFtsAndQuery(query: String): String? {
         val sanitized = sanitizeQuery(query)
-        val words = sanitized.split("\\s+".toRegex()).filter { it.isNotBlank() }
+        val words = sanitized.split(WHITESPACE_REGEX).filter { it.isNotBlank() }
         if (words.size < 2) return null
         return words.joinToString(" ") { "$it*" }
     }

@@ -11,7 +11,7 @@ import androidx.room.RoomDatabase
         XtreamStreamEntity::class,
         XtreamSeriesEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class XtreamDatabase : RoomDatabase() {

@@ -307,10 +307,15 @@ private fun SearchResults(
             )
         }
     } else {
-        // Precompute content type ordering outside LazyColumn to avoid re-allocating per recomposition
-        val sortedContentTypes = remember(categoryResults, results) {
-            val contentTypes = (categoryResults.map { it.contentType } + results.map { it.contentType }).distinct()
-            listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (contentTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
+        // Pre-compute grouped results outside LazyColumn to avoid O(N×types) filter per recomposition
+        val groupedByType = remember(categoryResults, results) {
+            val catsByType = categoryResults.groupBy { it.contentType }
+            val streamsByType = results.groupBy { it.contentType }
+            val allTypes = (catsByType.keys + streamsByType.keys).distinct()
+            val sortedTypes = listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (allTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
+            sortedTypes.map { type ->
+                Triple(type, catsByType[type].orEmpty(), streamsByType[type].orEmpty())
+            }
         }
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -375,9 +380,7 @@ private fun SearchResults(
             }
 
             if (queryContentType == "ALL") {
-                sortedContentTypes.forEach { type ->
-                    val typeCats = categoryResults.filter { it.contentType == type }
-                    val typeStreams = results.filter { it.contentType == type }
+                groupedByType.forEach { (type, typeCats, typeStreams) ->
 
                     if (typeCats.isNotEmpty() || typeStreams.isNotEmpty()) {
                         val isExpanded = expandedGroups.contains(type)

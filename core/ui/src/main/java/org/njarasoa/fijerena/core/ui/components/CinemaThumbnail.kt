@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -191,13 +192,16 @@ fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
             palette.surface
         )
     }
-    val shimmerBrush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset(translateX, 0f),
-        end = Offset(translateX + 300f, 0f)
-    )
-
+    // Draw gradient in draw phase — avoids Brush allocation during composition (60fps × N items)
     Box(
-        modifier = modifier.background(shimmerBrush)
+        modifier = modifier.drawBehind {
+            drawRect(
+                brush = Brush.linearGradient(
+                    colors = shimmerColors,
+                    start = Offset(translateX, 0f),
+                    end = Offset(translateX + 300f, 0f)
+                )
+            )
+        }
     )
 }

@@ -235,8 +235,7 @@ class SearchViewModel(
                 for (type in targetContentTypes) {
                     val serverCategories = repo.getFilteredCategories(type)
                     serverCategories.getOrDefault(emptyList())
-                        .filter { !it.isVirtual }
-                        .filter { SearchUtils.matchesQuery(it.name, queryWords) }
+                        .filter { !it.isVirtual && SearchUtils.matchesQuery(it.name, queryWords) }
                         .forEach {
                             matchingCategories.add(CategorySearchResult(it.id, it.name, type))
                         }
@@ -428,7 +427,7 @@ class SearchViewModel(
                     if (items != null) {
                         networkBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
                         val matchingItems = items
-                            .filter { SearchUtils.matchesQuery(it.name, queryWords) }
+                            .filter { SearchUtils.matchesQueryLower(it.name.lowercase(), queryWords) }
                             .map { item ->
                                 SearchResult(
                                     itemId = item.id,
@@ -502,20 +501,23 @@ class SearchViewModel(
     }
 
     private fun sortResults(results: List<SearchResult>, normalizedQuery: String, queryWords: List<String>): List<SearchResult> {
-        return results.sortedWith(compareBy<SearchResult> { it.categoryName.lowercase() }
+        // Pre-compute lowercase keys once — avoids O(n log n) String allocations in comparator
+        data class SortEntry(val catLower: String, val nameLower: String, val result: SearchResult)
+        val entries = results.map { SortEntry(it.categoryName.lowercase(), it.streamName.lowercase(), it) }
+        return entries.sortedWith(compareBy<SortEntry> { it.catLower }
             .thenBy {
-                val lowerName = it.streamName.lowercase()
                 when {
-                    lowerName == normalizedQuery -> 0
-                    lowerName.startsWith(normalizedQuery) -> 1
+                    it.nameLower == normalizedQuery -> 0
+                    it.nameLower.startsWith(normalizedQuery) -> 1
                     else -> {
-                        if (queryWords.isNotEmpty() && queryWords.all { w -> lowerName.contains(w) }) {
-                            if (lowerName.startsWith(queryWords[0])) 2 else 3
+                        if (queryWords.isNotEmpty() && queryWords.all { w -> it.nameLower.contains(w) }) {
+                            if (it.nameLower.startsWith(queryWords[0])) 2 else 3
                         } else 4
                     }
                 }
             }
-            .thenBy { it.streamName })
+            .thenBy { it.result.streamName })
+            .map { it.result }
     }
 
     fun isFavorite(itemId: String, contentType: String): Boolean {

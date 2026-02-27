@@ -97,6 +97,11 @@ class MediaRepository(
     private var cachedFavorites: List<FavoriteItem>? = null
     private var cachedFavoriteCategories: List<FavoriteCategoryItem>? = null
     private var cachedFavoriteShows: List<FavoriteShowItem>? = null
+
+    // O(1) lookup sets for isFavorite/isFavoriteCategory/isFavoriteShow — rebuilt when lists change
+    private var favoriteIdSet: Set<Pair<String, String>>? = null
+    private var favoriteCategoryIdSet: Set<Pair<String, String>>? = null
+    private var favoriteShowIdSet: Set<Pair<String, String>>? = null
     private val watchHistoryLock = Any()
     private var watchHistoryDirty = false
     private val watchHistoryWriteHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -395,7 +400,7 @@ class MediaRepository(
 
     fun getWatchHistoryForContentType(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
-        return getWatchHistory()
+        return getWatchHistory().asSequence()
             .filter { it.contentType == contentType }
             .map { watched ->
                 MediaItem(
@@ -410,6 +415,7 @@ class MediaRepository(
                     }
                 )
             }
+            .toList()
     }
 
     fun flushWatchHistory() {
@@ -440,6 +446,7 @@ class MediaRepository(
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
         cache.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
         cachedFavorites = trimmed
+        favoriteIdSet = null
         return true
     }
 
@@ -448,6 +455,7 @@ class MediaRepository(
         val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
         cache.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
         cachedFavorites = favorites
+        favoriteIdSet = null
         return removed
     }
 
@@ -463,7 +471,7 @@ class MediaRepository(
 
     fun getFavoritesForContentType(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
-        return getFavoriteItems()
+        return getFavoriteItems().asSequence()
             .filter { it.contentType == contentType }
             .map { fav ->
                 MediaItem(
@@ -473,14 +481,19 @@ class MediaRepository(
                     categoryId = fav.categoryId
                 )
             }
+            .toList()
     }
 
     fun isFavorite(itemId: String, contentType: String): Boolean {
-        return getFavoriteItems().any { it.itemId == itemId && it.contentType == contentType }
+        val set = favoriteIdSet ?: getFavoriteItems()
+            .mapTo(HashSet()) { it.itemId to it.contentType }
+            .also { favoriteIdSet = it }
+        return (itemId to contentType) in set
     }
 
     fun clearFavorites() {
         cachedFavorites = emptyList()
+        favoriteIdSet = null
         cache.edit().remove(KEY_FAVORITES).apply()
     }
 
@@ -495,6 +508,7 @@ class MediaRepository(
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
         cache.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(trimmed)).apply()
         cachedFavoriteCategories = trimmed
+        favoriteCategoryIdSet = null
         return true
     }
 
@@ -503,6 +517,7 @@ class MediaRepository(
         val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
         cache.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(favorites)).apply()
         cachedFavoriteCategories = favorites
+        favoriteCategoryIdSet = null
         return removed
     }
 
@@ -517,7 +532,7 @@ class MediaRepository(
     }
 
     fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> {
-        return getFavoriteCategoryItems()
+        return getFavoriteCategoryItems().asSequence()
             .filter { it.contentType == contentType }
             .map { fav ->
                 MediaCategory(
@@ -526,14 +541,19 @@ class MediaRepository(
                     isVirtual = false
                 )
             }
+            .toList()
     }
 
     fun isFavoriteCategory(categoryId: String, contentType: String): Boolean {
-        return getFavoriteCategoryItems().any { it.categoryId == categoryId && it.contentType == contentType }
+        val set = favoriteCategoryIdSet ?: getFavoriteCategoryItems()
+            .mapTo(HashSet()) { it.categoryId to it.contentType }
+            .also { favoriteCategoryIdSet = it }
+        return (categoryId to contentType) in set
     }
 
     fun clearFavoriteCategories() {
         cachedFavoriteCategories = emptyList()
+        favoriteCategoryIdSet = null
         cache.edit().remove(KEY_FAVORITE_CATEGORIES).apply()
     }
 
@@ -548,6 +568,7 @@ class MediaRepository(
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
         cache.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(trimmed)).apply()
         cachedFavoriteShows = trimmed
+        favoriteShowIdSet = null
         return true
     }
 
@@ -556,6 +577,7 @@ class MediaRepository(
         val removed = favorites.removeAll { it.showId == showId && it.contentType == contentType }
         cache.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(favorites)).apply()
         cachedFavoriteShows = favorites
+        favoriteShowIdSet = null
         return removed
     }
 
@@ -570,7 +592,7 @@ class MediaRepository(
     }
 
     fun getFavoriteShowsForContentType(contentType: String): List<MediaItem> {
-        return getFavoriteShowItems()
+        return getFavoriteShowItems().asSequence()
             .filter { it.contentType == contentType }
             .map { fav ->
                 MediaItem(
@@ -581,14 +603,19 @@ class MediaRepository(
                     thumbnailUrl = fav.thumbnailUrl
                 )
             }
+            .toList()
     }
 
     fun isFavoriteShow(showId: String, contentType: String): Boolean {
-        return getFavoriteShowItems().any { it.showId == showId && it.contentType == contentType }
+        val set = favoriteShowIdSet ?: getFavoriteShowItems()
+            .mapTo(HashSet()) { it.showId to it.contentType }
+            .also { favoriteShowIdSet = it }
+        return (showId to contentType) in set
     }
 
     fun clearFavoriteShows() {
         cachedFavoriteShows = emptyList()
+        favoriteShowIdSet = null
         cache.edit().remove(KEY_FAVORITE_SHOWS).apply()
     }
 
@@ -616,7 +643,7 @@ class MediaRepository(
 
     fun getInProgressItems(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
-        return getWatchHistory()
+        return getWatchHistory().asSequence()
             .filter { item ->
                 item.contentType == contentType &&
                 !item.isCompleted &&
@@ -640,6 +667,7 @@ class MediaRepository(
                     }
                 )
             }
+            .toList()
     }
 
     // --- Server-aware suspend methods (branch on supportsServerUserData) ---

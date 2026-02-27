@@ -8,7 +8,9 @@ import androidx.room.Index
     primaryKeys = ["streamId", "providerId", "type"],
     indices = [
         Index(value = ["providerId", "type"]),
-        Index(value = ["categoryId", "providerId"])
+        Index(value = ["categoryId", "providerId"]),
+        // Composite index covering getStreamsByCategory query (providerId + type + categoryId)
+        Index(value = ["providerId", "type", "categoryId"])
     ]
 )
 data class XtreamStreamEntity(
