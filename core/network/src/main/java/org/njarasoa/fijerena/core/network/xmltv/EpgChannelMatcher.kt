@@ -52,13 +52,14 @@ class EpgChannelMatcher(streams: List<XtreamStreamEntity>) {
         // 4. Normalized name equality
         byNormalized[normalizedChannelName]?.let { return it.toMatched() }
 
-        // 5. Contains match (min 4 chars)
+        // 5. Contains match (min 4 chars, pre-filter by length)
         if (normalizedChannelName.length >= 4) {
+            val chanLen = normalizedChannelName.length
             for ((norm, stream) in normalizedEntries) {
                 if (norm.length < 4) continue
-                if (normalizedChannelName.contains(norm) || norm.contains(normalizedChannelName)) {
-                    return stream.toMatched()
-                }
+                // Only check contains when needle ≤ haystack length
+                if (chanLen >= norm.length && normalizedChannelName.contains(norm)) return stream.toMatched()
+                if (norm.length >= chanLen && norm.contains(normalizedChannelName)) return stream.toMatched()
             }
         }
 

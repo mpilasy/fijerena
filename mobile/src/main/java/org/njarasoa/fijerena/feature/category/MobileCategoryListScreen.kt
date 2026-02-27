@@ -351,6 +351,10 @@ private fun CategoryChipRow(
     }
 
     val listState = rememberLazyListState()
+    val chipColors = FilterChipDefaults.filterChipColors(
+        selectedContainerColor = MaterialTheme.colorScheme.primary,
+        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+    )
 
     LaunchedEffect(selectedCategoryId) {
         if (selectedCategoryId != null && selectedCategoryId !in VIRTUAL_CATEGORY_IDS) {
@@ -427,10 +431,7 @@ private fun CategoryChipRow(
                         onClick = { onCategorySelected(category.id) },
                         onLongClick = { onCategoryLongPress(category) }
                     ),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                    )
+                    colors = chipColors
                 )
             }
         }

@@ -25,7 +25,6 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -278,17 +277,17 @@ class EpgBrowserViewModel(
 
     private fun groupByDate(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
         val tz = TimeZone.getDefault()
-        val dayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).apply { timeZone = tz }
-        // Reuse a single formatter instance instead of allocating per date group
+        // Reuse a single formatter instance for display labels only
         val labelFormat = java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL, Locale.getDefault()).apply { timeZone = tz }
-        val now = Date()
-        val today = dayFormat.format(now)
-        val cal = Calendar.getInstance(tz)
-        cal.add(Calendar.DAY_OF_YEAR, 1)
-        val tomorrow = dayFormat.format(cal.time)
 
-        // Group airings by their start day
-        val byDay = airings.groupBy { dayFormat.format(Date(it.airing.startEpoch * 1000L)) }
+        // Use epoch arithmetic for day-key grouping (avoids Date + SimpleDateFormat per airing)
+        fun localDayOf(epochMillis: Long): Long = (epochMillis + tz.getOffset(epochMillis)) / 86400000L
+        val nowMillis = System.currentTimeMillis()
+        val todayDay = localDayOf(nowMillis)
+        val tomorrowDay = todayDay + 1
+
+        // Group airings by their local day number
+        val byDay = airings.groupBy { localDayOf(it.airing.startEpoch * 1000L) }
 
         return byDay.entries
             .sortedBy { it.key }
@@ -296,8 +295,8 @@ class EpgBrowserViewModel(
                 // Compute date label
                 val sampleDate = Date(dayAirings.first().airing.startEpoch * 1000L)
                 val label = when (dayKey) {
-                    today -> "Today"
-                    tomorrow -> "Tomorrow"
+                    todayDay -> "Today"
+                    tomorrowDay -> "Tomorrow"
                     else -> labelFormat.format(sampleDate)
                 }
 

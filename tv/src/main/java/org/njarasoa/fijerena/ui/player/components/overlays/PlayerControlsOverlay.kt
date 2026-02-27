@@ -254,7 +254,7 @@ fun PlayerControlsOverlay(
 
                         // Remaining time and estimated end time
                         val remainingTime = duration - position
-                        val estimatedEndTimeMillis = System.currentTimeMillis() + remainingTime
+                        val estimatedEndTimeMillis = remember(remainingTime) { System.currentTimeMillis() + remainingTime }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -302,8 +302,8 @@ fun PlayerControlsOverlay(
                                 color = Color.White.copy(alpha = CinemaAlpha.textMedium),
                                 modifier = Modifier.padding(top = Spacing.xxs)
                             )
-                            // Programme progress bar
-                            val nowEpoch = System.currentTimeMillis() / 1000
+                            // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
+                            val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
                             val epgProgress = if (currentEpgProgram.duration > 0) {
                                 ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(0f, 1f)
                             } else 0f

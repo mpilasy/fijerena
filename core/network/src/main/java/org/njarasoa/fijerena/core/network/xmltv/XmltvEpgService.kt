@@ -305,13 +305,14 @@ class XmltvEpgService(
             }
         }
 
-        // 6. Contains match (min 4 chars to avoid false positives)
+        // 6. Contains match (min 4 chars to avoid false positives, pre-filter by length)
         if (normalizedItemName.length >= 4) {
+            val itemLen = normalizedItemName.length
             for ((norm, xmltvId) in normalizedEntries) {
                 if (norm.length < 4) continue
-                if (normalizedItemName.contains(norm) || norm.contains(normalizedItemName)) {
-                    return xmltvId
-                }
+                // Only check contains when needle ≤ haystack length
+                if (itemLen >= norm.length && normalizedItemName.contains(norm)) return xmltvId
+                if (norm.length >= itemLen && norm.contains(normalizedItemName)) return xmltvId
             }
         }
 

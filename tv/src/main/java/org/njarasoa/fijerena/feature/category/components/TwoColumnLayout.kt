@@ -43,6 +43,8 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
+private val CinemaTextSecondaryHigh = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+
 @Composable
 internal fun TwoColumnLayout(
     categoryViewModel: CategoryViewModel,
@@ -170,7 +172,7 @@ internal fun TwoColumnLayout(
             Text(
                 text = providerName,
                 style = scaledStyles.titleSmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                color = CinemaTextSecondaryHigh
             )
         }
 
