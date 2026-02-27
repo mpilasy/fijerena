@@ -50,12 +50,14 @@ class RemoteM3uMediaProvider(
     override suspend fun connect(): Result<Unit> {
         return try {
             val file = loadM3uContent()
-            val entries = file.bufferedReader().use { M3uParser.parse(it) }
-            if (entries.isEmpty()) {
+            val (cats, its) = file.bufferedReader().use { reader ->
+                M3uParser.processEntries(reader, ID_PREFIX)
+            }
+            if (its.isEmpty()) {
                 return Result.failure(IllegalStateException("No valid entries found in M3U playlist"))
             }
-            categories = M3uParser.entriesToCategories(entries, ID_PREFIX)
-            items = M3uParser.entriesToItems(entries, categories, ID_PREFIX)
+            categories = cats
+            items = its
             connected = true
             Result.success(Unit)
         } catch (e: Exception) {
