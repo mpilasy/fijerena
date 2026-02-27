@@ -92,7 +92,6 @@ fun PlayerEffects(
             val totalSecondsIntoHour = now.get(Calendar.MINUTE) * 60 + now.get(Calendar.SECOND)
             val showAtSecond = 59 * 60 + 30 // 3570s into the hour
             state.showTopOfHourClock = totalSecondsIntoHour >= showAtSecond || totalSecondsIntoHour < 90
-            state.clockTick = System.currentTimeMillis()
             delay(1000L)
         }
     }

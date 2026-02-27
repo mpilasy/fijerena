@@ -14,7 +14,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
@@ -191,8 +197,7 @@ fun PlayerScreen(
                 onShowSubtitleSelector = { state.showSubtitleSelector = true },
                 onShowQualitySelector = { state.showQualitySelector = true },
                 onShowChapterSelector = { state.showChapterSelector = true },
-                onShowStats = { state.showStats = !state.showStats },
-                clockTick = state.clockTick
+                onShowStats = { state.showStats = !state.showStats }
             )
         }
 
@@ -234,8 +239,16 @@ fun PlayerScreen(
             enter = fadeIn(),
             exit = fadeOut()
         ) {
+            // Self-ticking: only this composable recomposes each second
+            var tick by remember { mutableLongStateOf(0L) }
+            LaunchedEffect(Unit) {
+                while (true) {
+                    tick = System.currentTimeMillis()
+                    delay(1000L)
+                }
+            }
             @Suppress("UNUSED_VARIABLE")
-            val tick = state.clockTick
+            val ignored = tick
             val screenHeight = LocalConfiguration.current.screenHeightDp.dp
             Box(
                 modifier = Modifier

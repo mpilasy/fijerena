@@ -146,6 +146,13 @@ fun TvAddProviderScreen(
 
     CompositionLocalProvider(LocalUiScale provides uiScale) {
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledDisplaySmall = remember(scale, typography) {
+        typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
+    }
+    val scaledBodyMedium = remember(scale, typography) {
+        typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+    }
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
@@ -166,9 +173,7 @@ fun TvAddProviderScreen(
             ) {
                 Text(
                     text = if (isEditMode) "Edit Provider" else "Add Provider",
-                    style = MaterialTheme.typography.displaySmall.copy(
-                        fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
-                    ),
+                    style = scaledDisplaySmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
@@ -285,7 +290,7 @@ fun TvAddProviderScreen(
                     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                     Text(
                         text = errorMsg,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
+                        style = scaledBodyMedium,
                         color = CinemaError
                     )
                 }

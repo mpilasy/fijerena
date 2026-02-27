@@ -31,7 +31,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -80,7 +83,6 @@ fun PlayerControlsOverlay(
     onShowQualitySelector: () -> Unit,
     onShowChapterSelector: () -> Unit,
     onShowStats: () -> Unit,
-    clockTick: Long // Used to force recomposition for clock update
 ) {
     val isPaused = playbackState is PlaybackState.Paused
     val isLive = metadata.isLive
@@ -105,9 +107,8 @@ fun PlayerControlsOverlay(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = CinemaAlpha.focusedTint))
     ) {
-        // Clock in top-right corner — isolated so only this leaf recomposes each second
+        // Clock in top-right corner — self-ticking so only this leaf recomposes each second
         ClockDisplay(
-            clockTick = clockTick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
@@ -419,9 +420,16 @@ fun PlayerControlsOverlay(
 }
 
 @Composable
-private fun ClockDisplay(clockTick: Long, modifier: Modifier = Modifier) {
+private fun ClockDisplay(modifier: Modifier = Modifier) {
+    var tick by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            tick = System.currentTimeMillis()
+            delay(1000L)
+        }
+    }
     @Suppress("UNUSED_VARIABLE")
-    val tick = clockTick
+    val ignored = tick // Read to trigger recomposition
     Text(
         text = TimeFormat.formatClockTime(Date()),
         style = MaterialTheme.typography.titleMedium,

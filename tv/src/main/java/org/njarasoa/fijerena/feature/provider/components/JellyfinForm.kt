@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,6 +34,9 @@ fun JellyfinForm(
     onQuickConnectClick: () -> Unit
 ) {
     val scale = LocalUiScale.current
+    val scaledBodySmall = MaterialTheme.typography.bodySmall.let { style ->
+        remember(scale, style) { style.copy(fontSize = style.fontSize.scaled(scale)) }
+    }
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
@@ -87,7 +91,7 @@ fun JellyfinForm(
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = "— or —",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                style = scaledBodySmall,
                 color = CinemaTextSecondary
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
