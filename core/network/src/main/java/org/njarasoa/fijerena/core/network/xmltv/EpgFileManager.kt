@@ -502,9 +502,9 @@ class EpgFileManager private constructor(private val context: Context) {
                 if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
 
             } catch (e: java.net.UnknownHostException) {
-                Log.w(TAG, "No internet connection")
-                sourceDao.markError(source.id, "No internet connection")
-                return SourceStats(source.id, label, error = "No internet connection")
+                lastError = "DNS lookup failed for ${e.message ?: "host"}"
+                Log.w(TAG, "EPG streaming DNS failure (attempt $attempt): $lastError", e)
+                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
             } catch (e: OutOfMemoryError) {
                 System.gc()
                 lastError = "out of memory during streaming"
@@ -596,9 +596,9 @@ class EpgFileManager private constructor(private val context: Context) {
                     if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
 
                 } catch (e: java.net.UnknownHostException) {
-                    Log.w(TAG, "No internet connection")
-                    sourceDao.markError(source.id, "No internet connection")
-                    return SourceStats(source.id, label, error = "No internet connection")
+                    lastError = "DNS lookup failed for ${e.message ?: "host"}"
+                    Log.w(TAG, "EPG download DNS failure (attempt $attempt): $lastError", e)
+                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
                 } catch (e: OutOfMemoryError) {
                     System.gc()
                     lastError = "out of memory during download"
