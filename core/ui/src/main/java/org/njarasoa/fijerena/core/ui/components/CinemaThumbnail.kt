@@ -165,14 +165,17 @@ fun TypographyFallback(
         contentAlignment = Alignment.Center
     ) {
         if (letter != null) {
-            androidx.compose.foundation.text.BasicText(
-                text = letter.uppercase(),
-                style = androidx.compose.ui.text.TextStyle(
+            val textStyle = remember(palette) {
+                androidx.compose.ui.text.TextStyle(
                     color = palette.textPrimary,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
+            }
+            androidx.compose.foundation.text.BasicText(
+                text = letter.uppercase(),
+                style = textStyle
             )
         }
     }

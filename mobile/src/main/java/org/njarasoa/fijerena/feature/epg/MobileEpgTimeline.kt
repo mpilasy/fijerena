@@ -128,21 +128,19 @@ fun MobileEpgTimeline(
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
         ) {
             items(channelRows, key = { it.channel.id }, contentType = { "channel_row" }) { row ->
+                val onProgram = remember(row.channel) {
+                    { program: EpgProgram -> onProgramSelected(program, row.channel) }
+                }
+                val onChannel = remember(row.channel) {
+                    { onChannelSelected(row.channel.id, row.channel.name, row.channel.categoryId) }
+                }
                 ChannelTimelineRow(
                     channelRow = row,
                     dayStart = dayStart,
                     dayEnd = dayEnd,
                     nowEpochSeconds = nowEpochSeconds,
-                    onProgramSelected = { program ->
-                        onProgramSelected(program, row.channel)
-                    },
-                    onChannelSelected = {
-                        onChannelSelected(
-                            row.channel.id,
-                            row.channel.name,
-                            row.channel.categoryId
-                        )
-                    }
+                    onProgramSelected = onProgram,
+                    onChannelSelected = onChannel
                 )
             }
         }

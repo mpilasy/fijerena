@@ -195,32 +195,34 @@ private fun CategoryGridContent(
         // Stats overlay (only visible in dev mode)
         when (val state = uiState) {
             is CategoryViewModel.UiState.Success -> {
-                val stats = buildMap {
-                    // Payload sizes
-                    state.categoriesPayloadSize?.let { put("Cat. Payload", it) }
-                    state.streamsPayloadSize?.let { put("Streams Payload", it) }
-                    // Fetch times
-                    catViewModel.getCategoriesFetchTime()?.let { put("Cat. Time", it) }
-                    state.selectedCategoryId?.let {
-                        catViewModel.getFetchTime(it)?.let { time -> put("Streams Time", time) }
-                    }
-                    // Counts
-                    put("Categories", "${state.categories.size}")
-                    state.streams?.let { put("Streams", "${it.size}") }
-                    // EPG index info (Live TV only)
-                    if (contentType == ContentType.LIVE_TV) {
-                        when (val epg = epgIndexState) {
-                            is EpgIndexState.Indexed -> {
-                                put("EPG Index", "${epg.programmeCount} progs, ${epg.channelCount} ch")
-                            }
-                            is EpgIndexState.Indexing -> {
-                                put("EPG Index", "Indexing ${epg.progressPercent}%")
-                            }
-                            is EpgIndexState.Failed -> {
-                                put("EPG Index", "Failed")
-                            }
-                            is EpgIndexState.NotIndexed -> {
-                                put("EPG Index", "No data")
+                val stats = remember(state, contentType, epgIndexState) {
+                    buildMap {
+                        // Payload sizes
+                        state.categoriesPayloadSize?.let { put("Cat. Payload", it) }
+                        state.streamsPayloadSize?.let { put("Streams Payload", it) }
+                        // Fetch times
+                        catViewModel.getCategoriesFetchTime()?.let { put("Cat. Time", it) }
+                        state.selectedCategoryId?.let {
+                            catViewModel.getFetchTime(it)?.let { time -> put("Streams Time", time) }
+                        }
+                        // Counts
+                        put("Categories", "${state.categories.size}")
+                        state.streams?.let { put("Streams", "${it.size}") }
+                        // EPG index info (Live TV only)
+                        if (contentType == ContentType.LIVE_TV) {
+                            when (val epg = epgIndexState) {
+                                is EpgIndexState.Indexed -> {
+                                    put("EPG Index", "${epg.programmeCount} progs, ${epg.channelCount} ch")
+                                }
+                                is EpgIndexState.Indexing -> {
+                                    put("EPG Index", "Indexing ${epg.progressPercent}%")
+                                }
+                                is EpgIndexState.Failed -> {
+                                    put("EPG Index", "Failed")
+                                }
+                                is EpgIndexState.NotIndexed -> {
+                                    put("EPG Index", "No data")
+                                }
                             }
                         }
                     }
