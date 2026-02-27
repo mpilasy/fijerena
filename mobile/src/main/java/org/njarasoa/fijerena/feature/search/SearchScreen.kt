@@ -307,6 +307,11 @@ private fun SearchResults(
             )
         }
     } else {
+        // Precompute content type ordering outside LazyColumn to avoid re-allocating per recomposition
+        val sortedContentTypes = remember(categoryResults, results) {
+            val contentTypes = (categoryResults.map { it.contentType } + results.map { it.contentType }).distinct()
+            listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (contentTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
+        }
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             contentPadding = PaddingValues(bottom = Spacing.md)
@@ -370,10 +375,7 @@ private fun SearchResults(
             }
 
             if (queryContentType == "ALL") {
-                val contentTypes = (categoryResults.map { it.contentType } + results.map { it.contentType }).distinct()
-                val sortedTypes = listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (contentTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
-
-                sortedTypes.forEach { type ->
+                sortedContentTypes.forEach { type ->
                     val typeCats = categoryResults.filter { it.contentType == type }
                     val typeStreams = results.filter { it.contentType == type }
 

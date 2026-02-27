@@ -549,12 +549,15 @@ private fun AiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sour
     }
 }
 
+// Cached formatter — avoids allocating SimpleDateFormat on every call
+private val airingTimeFormat by lazy {
+    SimpleDateFormat("h:mm a", Locale.getDefault()).apply { timeZone = TimeZone.getDefault() }
+}
+
 private fun formatAiringTime(startEpoch: Long, endEpoch: Long): String {
-    val timeOnlyFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-    timeOnlyFormat.timeZone = TimeZone.getDefault()
     val startDate = Date(startEpoch * 1000L)
     val endDate = Date(endEpoch * 1000L)
-    return "${timeOnlyFormat.format(startDate)} – ${timeOnlyFormat.format(endDate)}"
+    return "${airingTimeFormat.format(startDate)} – ${airingTimeFormat.format(endDate)}"
 }
 
 private fun formatFileSize(bytes: Long): String {

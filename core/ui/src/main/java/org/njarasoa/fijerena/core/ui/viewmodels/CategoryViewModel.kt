@@ -390,8 +390,8 @@ class CategoryViewModel(
         } else {
             repository.addFavoriteCategory(categoryId, categoryName, contentType)
         }
-        // Refresh to update virtual categories list
-        refreshCategories()
+        // Local rebuild only — no network fetch needed for a local favorite change
+        refreshCategoriesLocal()
     }
 
     fun toggleFavoriteStream(itemId: String, itemName: String, categoryId: String, contentType: String) {
@@ -400,7 +400,8 @@ class CategoryViewModel(
         } else {
             repository.addFavorite(itemId, itemName, categoryId, contentType)
         }
-        refreshCategories()
+        // Local rebuild only — no network fetch needed for a local favorite change
+        refreshCategoriesLocal()
     }
 
     fun retry() {
@@ -457,8 +458,8 @@ class CategoryViewModel(
         return virtualCats + regularCategories
     }
 
-    fun refreshCategories() {
-        // Immediately rebuild virtual categories from local data so UI updates instantly
+    /** Rebuild virtual categories from local data only — no network I/O. */
+    private fun refreshCategoriesLocal() {
         val regularCategories = categories.filter { !it.isVirtual }
         categories = rebuildVirtualCategories(regularCategories)
         val lastItemId = repository.getLastItemId(contentType)
@@ -472,6 +473,11 @@ class CategoryViewModel(
             categoriesPayloadSize = getCategoriesPayloadSize(),
             streamsPayloadSize = getPayloadSize(currentCategoryId ?: "")
         )
+    }
+
+    fun refreshCategories() {
+        // Immediately rebuild virtual categories from local data so UI updates instantly
+        refreshCategoriesLocal()
 
         // Also refresh from network in the background
         viewModelScope.launch {

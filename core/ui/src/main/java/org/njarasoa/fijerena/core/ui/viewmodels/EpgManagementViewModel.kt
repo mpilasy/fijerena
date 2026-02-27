@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -31,7 +32,8 @@ class EpgManagementViewModel(
     private val indexer = EpgIndexer.getInstance(context)
     private val appSettings = AppSettings(context)
 
-    val sources: Flow<List<EpgSourceEntity>> = sourceDao.getAllSources()
+    // distinctUntilChanged: Room emits on every table write; skip if data is unchanged
+    val sources: Flow<List<EpgSourceEntity>> = sourceDao.getAllSources().distinctUntilChanged()
 
     val processingState: StateFlow<EpgFileManager.MultiSourceState> = epgFileManager.state
 
