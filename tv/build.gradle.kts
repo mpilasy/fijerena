@@ -2,9 +2,20 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-opt-in=androidx.tv.material3.ExperimentalTvMaterial3Api",
+            "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi"
+        )
+    }
 }
 
 android {
