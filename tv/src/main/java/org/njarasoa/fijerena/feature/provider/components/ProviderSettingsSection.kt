@@ -50,6 +50,17 @@ fun ProviderSettingsSection(
     onManageFiltersClick: () -> Unit
 ) {
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    // Memoize scaled TextStyles to avoid allocating new copies per recomposition
+    val styles = remember(scale, typography) {
+        object {
+            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+            val titleLarge = typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
+            val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+        }
+    }
 
     Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
     HorizontalDivider(color = CinemaTextSecondary.copy(alpha = CinemaAlpha.focusedTint))
@@ -57,9 +68,7 @@ fun ProviderSettingsSection(
 
     Text(
         text = "Provider Settings",
-        style = MaterialTheme.typography.titleMedium.copy(
-            fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-        ),
+        style = styles.titleMedium,
         color = CinemaAccent
     )
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -75,12 +84,12 @@ fun ProviderSettingsSection(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Auto-Resume",
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+                style = styles.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Resume VOD content from where you left off",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                style = styles.bodySmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
         }
@@ -125,12 +134,12 @@ fun ProviderSettingsSection(
     Column {
         Text(
             text = "Clear All Favorites",
-            style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+            style = styles.titleSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = "Remove all favorited streams from all content types",
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+            style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -146,12 +155,12 @@ fun ProviderSettingsSection(
     Column {
         Text(
             text = "Clear Playback Progress",
-            style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+            style = styles.titleSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = "Remove all saved positions (Continue Watching will be empty)",
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+            style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -168,31 +177,31 @@ fun ProviderSettingsSection(
         Column {
             Text(
                 text = "Category Filters",
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+                style = styles.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Hide or show categories based on name prefixes",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                style = styles.bodySmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Mode: ${if (providerSettings.categoryFilters.mode == FilterMode.EXCLUDE) "Exclude" else "Include"}",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
+                    style = styles.bodyMedium,
                     color = CinemaTextPrimary
                 )
                 Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 Text(
                     text = "Prefixes: ${if (providerSettings.categoryFilters.prefixes.isEmpty()) "None" else providerSettings.categoryFilters.prefixes.joinToString(", ")}",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
+                    style = styles.bodyMedium,
                     color = CinemaTextSecondary
                 )
             }
             Text(
                 text = "Scripts: ${if (providerSettings.categoryFilters.allowedScripts.isEmpty()) "All" else providerSettings.categoryFilters.allowedScripts.joinToString(", ") { it.displayName }}",
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
+                style = styles.bodyMedium,
                 color = CinemaTextSecondary
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -215,12 +224,12 @@ fun ProviderSettingsSection(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Enable Caching",
-                    style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+                    style = styles.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Cache categories and streams for faster loading",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                    style = styles.bodySmall,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
             }
@@ -247,18 +256,26 @@ private fun WatchHistorySizeSetting(
     onSizeChanged: (Int) -> Unit
 ) {
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val styles = remember(scale, typography) {
+        object {
+            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+            val titleLarge = typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
+            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+        }
+    }
     var isEditing by remember { mutableStateOf(false) }
     var newSize by remember { mutableStateOf("") }
 
     Column {
         Text(
             text = "Last Watched Queue Size",
-            style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+            style = styles.titleSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = "Items to keep in Last Watched category (1-100)",
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+            style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -270,7 +287,7 @@ private fun WatchHistorySizeSetting(
             ) {
                 Text(
                     text = currentSize.toString(),
-                    style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)),
+                    style = styles.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
@@ -331,18 +348,26 @@ private fun FavoritesMaxSizeSetting(
     onSizeChanged: (Int) -> Unit
 ) {
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val styles = remember(scale, typography) {
+        object {
+            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+            val titleLarge = typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
+            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+        }
+    }
     var isEditing by remember { mutableStateOf(false) }
     var newSize by remember { mutableStateOf("") }
 
     Column {
         Text(
             text = "Favorites Max Size",
-            style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)),
+            style = styles.titleSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
             text = "Maximum number of favorites to store (10-500)",
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+            style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -354,7 +379,7 @@ private fun FavoritesMaxSizeSetting(
             ) {
                 Text(
                     text = currentSize.toString(),
-                    style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)),
+                    style = styles.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
