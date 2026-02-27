@@ -382,7 +382,7 @@ class XtreamContentManager(
 
                      val currentHashes = categoryDao.getCategoryHashes(providerId, type)
 
-                     val toDeleteIds = currentHashes.keys - entities.map { it.categoryId }.toSet()
+                     val toDeleteIds = currentHashes.keys - entities.mapTo(HashSet()) { it.categoryId }
 
                      val toInsert = entities.filter { newEntity ->
                          val oldHash = currentHashes[newEntity.categoryId]

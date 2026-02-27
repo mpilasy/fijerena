@@ -35,4 +35,7 @@ interface XtreamSeriesDao {
 
     @Query("DELETE FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId")
     fun deleteByCategoryId(providerId: Long, categoryId: String)
+
+    @Query("SELECT COUNT(*) FROM xtream_series WHERE providerId = :providerId")
+    fun countSeries(providerId: Long): Int
 }

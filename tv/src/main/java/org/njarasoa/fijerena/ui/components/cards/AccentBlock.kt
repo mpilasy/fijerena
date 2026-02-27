@@ -34,6 +34,12 @@ enum class ContentCardType {
     DEFAULT     // Surface gradient
 }
 
+// Pre-allocated brushes — colors are compile-time constants, no need to recreate per composition
+private val LiveTvBrush = Brush.verticalGradient(listOf(CinemaOrange, CinemaOrangeDark))
+private val MovieBrush = Brush.verticalGradient(listOf(CinemaAccent, CinemaAccentDark))
+private val TvShowBrush = Brush.verticalGradient(listOf(CinemaAccentLight, CinemaAccent))
+private val DefaultBrush = Brush.verticalGradient(listOf(CinemaSurfaceVariant, CinemaSurface))
+
 /**
  * AccentBlock - Gradient fill for StandardCardContainer imageCard slot.
  * Provides content-type-aware visual identity.
@@ -46,18 +52,10 @@ fun AccentBlock(
     fallbackLetter: Char? = null
 ) {
     val gradient = when (contentType) {
-        ContentCardType.LIVE_TV -> Brush.verticalGradient(
-            colors = listOf(CinemaOrange, CinemaOrangeDark)
-        )
-        ContentCardType.MOVIE -> Brush.verticalGradient(
-            colors = listOf(CinemaAccent, CinemaAccentDark)
-        )
-        ContentCardType.TV_SHOW -> Brush.verticalGradient(
-            colors = listOf(CinemaAccentLight, CinemaAccent)
-        )
-        ContentCardType.DEFAULT -> Brush.verticalGradient(
-            colors = listOf(CinemaSurfaceVariant, CinemaSurface)
-        )
+        ContentCardType.LIVE_TV -> LiveTvBrush
+        ContentCardType.MOVIE -> MovieBrush
+        ContentCardType.TV_SHOW -> TvShowBrush
+        ContentCardType.DEFAULT -> DefaultBrush
     }
 
     Box(

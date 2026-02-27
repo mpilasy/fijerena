@@ -30,6 +30,9 @@ class XtreamUserDataManager(
     
     private var cachedWatchHistory: List<WatchedStream>? = null
 
+    // O(1) lookup set for isFavorite — rebuilt when favorites list changes
+    private var favoriteIdSet: Set<Pair<Int, String>>? = null
+
     companion object {
         private val favoritesCacheMap = ConcurrentHashMap<Long, List<FavoriteStream>>()
 
@@ -181,6 +184,7 @@ class XtreamUserDataManager(
         
         // Update cache
         favoritesCacheMap[providerId] = trimmed
+        favoriteIdSet = null
 
         // Save
         sharedPreferences.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
@@ -197,6 +201,7 @@ class XtreamUserDataManager(
         if (removed) {
             // Update cache
             favoritesCacheMap[providerId] = favorites
+            favoriteIdSet = null
             sharedPreferences.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
         }
         return removed
@@ -226,7 +231,10 @@ class XtreamUserDataManager(
      * Check if a stream is favorited
      */
     fun isFavorite(streamId: Int, contentType: String): Boolean {
-        return getFavorites().any { it.streamId == streamId && it.contentType == contentType }
+        val set = favoriteIdSet ?: getFavorites()
+            .mapTo(HashSet()) { it.streamId to it.contentType }
+            .also { favoriteIdSet = it }
+        return (streamId to contentType) in set
     }
 
     /**
@@ -235,6 +243,7 @@ class XtreamUserDataManager(
     fun clearFavorites() {
         sharedPreferences.edit().remove(KEY_FAVORITES).apply()
         favoritesCacheMap[providerId] = emptyList()
+        favoriteIdSet = null
     }
 
     /**
