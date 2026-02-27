@@ -423,7 +423,7 @@ class XtreamContentManager(
                  try {
                      coroutineScope {
                          val batch = mutableListOf<XtreamStreamEntity>()
-                         val BATCH_SIZE = 500
+                         val BATCH_SIZE = 2000
 
                          val currentHashes = streamDao.getStreamHashes(providerId, type)
                          val seenIds = mutableSetOf<Int>()
@@ -455,12 +455,11 @@ class XtreamContentManager(
                              }
 
                              if (batch.size >= BATCH_SIZE) {
-                                 val toInsert = batch.toList()
+                                 val toInsert = ArrayList(batch)
                                  batch.clear()
                                  database.runInTransaction {
                                      streamDao.insertAll(toInsert)
                                  }
-                                 delay(50) // Give GC time to breathe between massive batches
                              }
                          }
 
@@ -501,7 +500,7 @@ class XtreamContentManager(
                  try {
                      coroutineScope {
                          val batch = mutableListOf<XtreamSeriesEntity>()
-                         val BATCH_SIZE = 500
+                         val BATCH_SIZE = 2000
 
                          val currentHashes = seriesDao.getSeriesHashes(providerId)
                          val seenIds = mutableSetOf<Int>()
@@ -536,12 +535,11 @@ class XtreamContentManager(
                              }
 
                              if (batch.size >= BATCH_SIZE) {
-                                 val toInsert = batch.toList()
+                                 val toInsert = ArrayList(batch)
                                  batch.clear()
                                  database.runInTransaction {
                                      seriesDao.insertAll(toInsert)
                                  }
-                                 delay(50) // Give GC time to breathe
                              }
                          }
 
