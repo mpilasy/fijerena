@@ -202,47 +202,53 @@ class CategoryViewModel(
 
             // Handle virtual categories
             if (categoryId == CONTINUE_WATCHING_CATEGORY_ID) {
-                currentStreams = repository.getInProgressItemsSuspend(contentType)
+                val items = repository.getInProgressItemsSuspend(contentType)
+                currentStreams = items
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,
-                    streams = currentStreams,
+                    streams = items,
                     streamsLoading = false,
                     categoriesRefreshing = false,
                     lastPlayedItemId = lastItemId,
                     categoriesPayloadSize = getCategoriesPayloadSize(),
                     streamsPayloadSize = null
                 )
+                loadNowPlaying(items)
                 return@launch
             }
 
             if (categoryId == LAST_WATCHED_CATEGORY_ID) {
-                currentStreams = repository.getWatchHistoryForContentTypeSuspend(contentType)
+                val items = repository.getWatchHistoryForContentTypeSuspend(contentType)
+                currentStreams = items
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,
-                    streams = currentStreams,
+                    streams = items,
                     streamsLoading = false,
                     categoriesRefreshing = false,
                     lastPlayedItemId = lastItemId,
                     categoriesPayloadSize = getCategoriesPayloadSize(),
                     streamsPayloadSize = null
                 )
+                loadNowPlaying(items)
                 return@launch
             }
 
             if (categoryId == FAVORITES_CATEGORY_ID) {
-                currentStreams = repository.getFavoritesForContentTypeSuspend(contentType)
+                val items = repository.getFavoritesForContentTypeSuspend(contentType)
+                currentStreams = items
                 _uiState.value = UiState.Success(
                     categories = categories,
                     selectedCategoryId = categoryId,
-                    streams = currentStreams,
+                    streams = items,
                     streamsLoading = false,
                     categoriesRefreshing = false,
                     lastPlayedItemId = lastItemId,
                     categoriesPayloadSize = getCategoriesPayloadSize(),
                     streamsPayloadSize = null
                 )
+                loadNowPlaying(items)
                 return@launch
             }
 
