@@ -4,7 +4,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -329,7 +329,7 @@ private fun StreamItem(
                             ),
                             color = CinemaTextPrimary,
                             maxLines = 1,
-                            modifier = Modifier.basicMarquee()
+                            modifier = Modifier.bounceMarquee()
                         )
                     }
                     // Rating (e.g. "7.9 | PG-13")
@@ -352,7 +352,7 @@ private fun StreamItem(
                             ),
                             color = CinemaOrangeLight,
                             maxLines = 1,
-                            modifier = Modifier.basicMarquee()
+                            modifier = Modifier.bounceMarquee()
                         )
                     }
                 }

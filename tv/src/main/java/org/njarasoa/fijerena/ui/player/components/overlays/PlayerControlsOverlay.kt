@@ -3,7 +3,7 @@
 package org.njarasoa.fijerena.ui.player.components.overlays
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -129,7 +129,7 @@ fun PlayerControlsOverlay(
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
-                modifier = Modifier.basicMarquee()
+                modifier = Modifier.bounceMarquee()
             )
             Text(
                 text = metadata.title,
@@ -138,7 +138,7 @@ fun PlayerControlsOverlay(
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.basicMarquee()
+                modifier = Modifier.bounceMarquee()
             )
         }
 

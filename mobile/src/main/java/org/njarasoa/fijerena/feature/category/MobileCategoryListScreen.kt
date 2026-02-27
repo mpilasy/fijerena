@@ -1,7 +1,7 @@
 package org.njarasoa.fijerena.feature.category
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.basicMarquee
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -377,7 +377,7 @@ private fun CategoryChipRow(
                             Text(
                                 text = category.name,
                                 maxLines = 1,
-                                modifier = Modifier.basicMarquee()
+                                modifier = Modifier.bounceMarquee()
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
@@ -417,7 +417,7 @@ private fun CategoryChipRow(
                             Text(
                                 text = category.name,
                                 maxLines = 1,
-                                modifier = Modifier.basicMarquee()
+                                modifier = Modifier.bounceMarquee()
                             )
                         }
                     },
@@ -622,7 +622,7 @@ private fun StreamCard(
                     text = item.name,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 2,
-                    modifier = Modifier.basicMarquee()
+                    modifier = Modifier.bounceMarquee()
                 )
                 item.metadata.rating?.let { rating ->
                     Text(
@@ -639,7 +639,7 @@ private fun StreamCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary,
                         maxLines = 1,
-                        modifier = Modifier.basicMarquee()
+                        modifier = Modifier.bounceMarquee()
                     )
                 }
             }
