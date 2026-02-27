@@ -86,6 +86,14 @@ fun CategoryFilterDialog(
     onDismiss: () -> Unit
 ) {
     val scale = LocalUiScale.current
+    val typography = MaterialTheme.typography
+    val scaledStyles = remember(scale, typography) {
+        object {
+            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+            val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+        }
+    }
     var filterMode by remember { mutableStateOf(currentFilters.mode) }
     var prefixesText by remember { mutableStateOf(currentFilters.prefixes.joinToString(", ")) }
     var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
@@ -98,7 +106,7 @@ fun CategoryFilterDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
             ) {
-                Text("Filter Mode:", style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)), color = CinemaTextPrimary)
+                Text("Filter Mode:", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     verticalAlignment = Alignment.CenterVertically
@@ -119,10 +127,10 @@ fun CategoryFilterDialog(
                 Text(
                     if (filterMode == FilterMode.EXCLUDE) "Hide categories that start with these prefixes"
                     else "Show only categories that start with these prefixes",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                    style = scaledStyles.bodySmall,
                     color = CinemaTextSecondary
                 )
-                Text("Prefixes (comma-separated):", style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)), color = CinemaTextPrimary)
+                Text("Prefixes (comma-separated):", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 OutlinedTextField(
                     value = prefixesText,
                     onValueChange = { prefixesText = it },
@@ -143,8 +151,8 @@ fun CategoryFilterDialog(
                         cursorColor = CinemaAccent
                     )
                 )
-                Text("Language Script Filter:", style = MaterialTheme.typography.titleSmall.copy(fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)), color = CinemaTextPrimary)
-                Text("Show only categories in selected scripts (none = show all)", style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)), color = CinemaTextSecondary)
+                Text("Language Script Filter:", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                Text("Show only categories in selected scripts (none = show all)", style = scaledStyles.bodySmall, color = CinemaTextSecondary)
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
                     val scriptCheckboxColors = CheckboxDefaults.colors(
                         checkedColor = CinemaAccent,
@@ -164,7 +172,7 @@ fun CategoryFilterDialog(
                                 colors = scriptCheckboxColors
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                            Text(text = script.displayName, style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)), color = CinemaTextPrimary)
+                            Text(text = script.displayName, style = scaledStyles.bodyMedium, color = CinemaTextPrimary)
                         }
                     }
                 }

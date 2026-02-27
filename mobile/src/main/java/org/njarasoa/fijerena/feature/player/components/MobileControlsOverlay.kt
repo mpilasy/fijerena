@@ -38,10 +38,13 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -70,7 +73,6 @@ fun MobileControlsOverlay(
     isFavorite: Boolean,
     livePosition: Long,
     liveDuration: Long,
-    clockTick: Long = 0L,
     currentEpgProgram: EpgProgram? = null,
     nextEpgProgram: EpgProgram? = null,
     onPlayPause: () -> Unit,
@@ -116,8 +118,8 @@ fun MobileControlsOverlay(
                     .padding(horizontal = CinemaSpacing.xs),
                 maxLines = 1
             )
-            // Clock — isolated so only this leaf recomposes each second
-            ClockDisplay(clockTick = clockTick)
+            // Clock — self-ticking so only this leaf recomposes each second
+            ClockDisplay()
         }
 
         // Center row: Rewind | Play/Pause | FastForward (VOD only shows seek buttons)
@@ -360,9 +362,16 @@ fun MobileControlsOverlay(
 }
 
 @Composable
-private fun ClockDisplay(clockTick: Long) {
+private fun ClockDisplay() {
+    var tick by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            tick = System.currentTimeMillis()
+            delay(1000L)
+        }
+    }
     @Suppress("UNUSED_VARIABLE")
-    val tick = clockTick
+    val ignored = tick
     Text(
         text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date()),
         style = MaterialTheme.typography.titleMedium,

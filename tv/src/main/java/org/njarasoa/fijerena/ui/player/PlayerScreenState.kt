@@ -31,7 +31,6 @@ class PlayerScreenState(
     var showControlHints by mutableStateOf(false)
 
     // Data states
-    var clockTick by mutableLongStateOf(0L)
     var livePosition by mutableLongStateOf(0L)
     var liveDuration by mutableLongStateOf(0L)
     var displayedMetadata by mutableStateOf(initialMetadata)
