@@ -24,18 +24,17 @@ object M3uParser {
     )
 
     fun parse(content: String): List<M3uEntry> {
-        return parse(content.reader().buffered())
+        return parse(content.reader().buffered()).toList()
     }
 
-    fun parse(reader: BufferedReader): List<M3uEntry> {
-        val entries = mutableListOf<M3uEntry>()
+    fun parse(reader: BufferedReader): Sequence<M3uEntry> = sequence {
         val iterator = reader.lineSequence().iterator()
 
-        if (!iterator.hasNext()) return emptyList()
+        if (!iterator.hasNext()) return@sequence
 
         val firstLine = iterator.next()
         if (!firstLine.trim().startsWith("#EXTM3U")) {
-            return emptyList()
+            return@sequence
         }
 
         var pendingEntry: PendingEntry? = null
@@ -57,7 +56,7 @@ object M3uParser {
                     val url = line
                     if (url.isNotBlank()) {
                         val isLive = isLiveUrl(url)
-                        entries.add(
+                        yield(
                             M3uEntry(
                                 pendingEntry.name,
                                 pendingEntry.groupTitle,
@@ -72,7 +71,38 @@ object M3uParser {
                 }
             }
         }
-        return entries
+    }
+
+    fun processEntries(reader: BufferedReader, idPrefix: String = "local"): Pair<List<MediaCategory>, List<MediaItem>> {
+        val categories = mutableListOf<MediaCategory>()
+        val categoryMap = mutableMapOf<String, MediaCategory>()
+        val items = mutableListOf<MediaItem>()
+
+        parse(reader).forEachIndexed { index, entry ->
+            val category = categoryMap.getOrPut(entry.groupTitle) {
+                val newCat = MediaCategory(
+                    id = "${idPrefix}_cat_${categories.size}",
+                    name = entry.groupTitle
+                )
+                categories.add(newCat)
+                newCat
+            }
+
+            items.add(
+                MediaItem(
+                    id = "${idPrefix}_m3u_$index",
+                    name = entry.name,
+                    mediaType = if (entry.isLive) MediaType.LIVE_CHANNEL else MediaType.VIDEO_FILE,
+                    categoryId = category.id,
+                    thumbnailUrl = entry.logo,
+                    streamUri = entry.url,
+                    providerData = buildMap {
+                        entry.tvgId?.let { put("epgChannelId", it) }
+                    }
+                )
+            )
+        }
+        return categories to items
     }
 
     fun entriesToCategories(entries: List<M3uEntry>, idPrefix: String = "local"): List<MediaCategory> {

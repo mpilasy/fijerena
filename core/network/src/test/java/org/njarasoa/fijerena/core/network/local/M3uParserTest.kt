@@ -44,7 +44,7 @@ class M3uParserTest {
             }
         }
 
-        val entries = file.bufferedReader().use { M3uParser.parse(it) }
+        val entries = file.bufferedReader().use { M3uParser.parse(it).toList() }
         assert(entries.size == entriesCount)
         assert(entries.last().name == "Channel $entriesCount")
     }
