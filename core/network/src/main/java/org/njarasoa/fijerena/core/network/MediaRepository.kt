@@ -247,7 +247,8 @@ class MediaRepository(
         // Try XMLTV EPG from SQLite index
         try {
             val xmltvResult = xmltvEpgService.getEpgForChannels(items)
-            if (xmltvResult.isNotEmpty()) {
+            // Check that at least one REQUESTED item has EPG data, not just cached leftovers
+            if (items.any { xmltvResult.containsKey(it.id) }) {
                 return kotlin.Result.success(xmltvResult)
             }
         } catch (_: Exception) {
