@@ -20,12 +20,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -51,7 +54,9 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import androidx.compose.ui.draw.alpha
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -79,7 +84,8 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 @Composable
 fun EpgBrowserScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onNavigateToPlayer: (streamId: String, streamName: String, categoryId: String) -> Unit = { _, _, _ -> }
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel = viewModel(
@@ -155,7 +161,8 @@ fun EpgBrowserScreen(
                         isDevMode = isDevMode,
                         epgDbStats = epgDbStats,
                         sourceLabels = sourceLabels,
-                        onSearch = { viewModel.performSearch(it) }
+                        onSearch = { viewModel.performSearch(it) },
+                        onNavigateToPlayer = onNavigateToPlayer
                     )
                 }
             }
@@ -171,7 +178,8 @@ private fun EpgBrowserContent(
     isDevMode: Boolean,
     epgDbStats: String?,
     sourceLabels: Map<Long, String>,
-    onSearch: (String) -> Unit
+    onSearch: (String) -> Unit,
+    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     var localQuery by remember { mutableStateOf("") }
@@ -318,7 +326,7 @@ private fun EpgBrowserContent(
                 }
             }
             is EpgBrowserViewModel.UiState.Results -> {
-                ResultsContent(results = uiState, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                ResultsContent(results = uiState, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
             }
             else -> {} // NoEpgFile and Error handled in parent
         }
@@ -326,7 +334,7 @@ private fun EpgBrowserContent(
 }
 
 @Composable
-private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
+private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap(), onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }) {
     val scale = LocalUiScale.current
 
     Column {
@@ -369,7 +377,7 @@ private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMo
                         dateGroup.programs,
                         key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" }
                     ) { program ->
-                        ProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                        ProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
                     }
                 }
             }
@@ -393,8 +401,9 @@ private fun DateHeader(dateLabel: String) {
 }
 
 @Composable
-private fun ProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
+private fun ProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap(), onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }) {
     val scale = LocalUiScale.current
+    var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
 
     Card(
         onClick = {},
@@ -479,26 +488,72 @@ private fun ProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, 
             // Airings
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             program.airings.forEach { airing ->
-                AiringRow(airing = airing, isDevMode = isDevMode, sourceLabels = sourceLabels)
+                AiringRow(
+                    airing = airing,
+                    isDevMode = isDevMode,
+                    sourceLabels = sourceLabels,
+                    onNavigateToPlayer = onNavigateToPlayer,
+                    onRequestConfirmation = { pendingConfirmAiring = it }
+                )
+            }
+
+            // Confirmation dialog for non-ON-AIR matched airings
+            val pending = pendingConfirmAiring
+            if (pending != null) {
+                val matched = pending.matchedStream!!
+                val airingContext = LocalContext.current
+                AlertDialog(
+                    onDismissRequest = { pendingConfirmAiring = null },
+                    title = { Text("Watch now?") },
+                    text = {
+                        Text("This show airs at ${formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch)}.\nWatch ${pending.channelName} now?")
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            pendingConfirmAiring = null
+                            onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                        }) { Text("Watch now") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun AiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap()) {
+private fun AiringRow(
+    airing: EpgBrowserAiring,
+    isDevMode: Boolean = false,
+    sourceLabels: Map<Long, String> = emptyMap(),
+    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    onRequestConfirmation: (EpgBrowserAiring) -> Unit = {}
+) {
     val nowEpoch = remember { System.currentTimeMillis() / 1000L }
     val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
     val isSoon = !isOnAir && airing.startEpoch > nowEpoch && (airing.startEpoch - nowEpoch) <= 7200L
     val scale = LocalUiScale.current
+    val isMatched = airing.matchedStream != null
 
+    val rowContent: @Composable () -> Unit = {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (isMatched) 1f else 0.5f)
             .padding(vertical = Spacing.xxs.scaled(scale)),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (isMatched) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Watch",
+                modifier = Modifier.size(Spacing.lg.scaled(scale)),
+                tint = if (isOnAir) CinemaSuccess else CinemaAccentLight
+            )
+        }
         Text(
             text = airing.channelName,
             style = MaterialTheme.typography.bodyMedium.copy(
@@ -543,6 +598,25 @@ private fun AiringRow(airing: EpgBrowserAiring, isDevMode: Boolean = false, sour
             ),
             color = if (isOnAir) CinemaSuccess else if (isSoon) CinemaWarning else CinemaTextSecondary
         )
+    }
+    } // end rowContent
+
+    if (isMatched) {
+        Surface(
+            onClick = {
+                val matched = airing.matchedStream!!
+                if (isOnAir) {
+                    onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                } else {
+                    onRequestConfirmation(airing)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            rowContent()
+        }
+    } else {
+        rowContent()
     }
 }
 

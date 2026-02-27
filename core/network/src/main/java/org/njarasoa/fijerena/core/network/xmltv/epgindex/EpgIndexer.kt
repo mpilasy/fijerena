@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
+import org.njarasoa.fijerena.core.player.model.EpgResponse
 import java.io.InputStream
 
 /**
@@ -202,6 +203,117 @@ class EpgIndexer private constructor(private val context: Context) {
             Log.e(TAG, msg, e)
             lastIngestionStats = IngestionStats()
             if (!wasIndexed) _state.value = EpgIndexState.Failed(msg)
+        }
+    }
+
+    data class XtreamStreamInfo(
+        val streamId: Int,
+        val name: String,
+        val epgChannelId: String?,
+        val iconUrl: String?
+    )
+
+    /**
+     * Ingest EPG data fetched from the Xtream API into the SQLite index.
+     *
+     * Creates/upserts an EpgSource with ingestMethod=XTREAM_API.
+     * Deletes old programmes for that source before inserting fresh data.
+     * Channels are inserted with IGNORE to avoid overwriting XMLTV channels.
+     */
+    suspend fun ingestFromXtreamEpg(
+        epgByStreamId: Map<Int, EpgResponse>,
+        streamInfo: Map<Int, XtreamStreamInfo>,
+        providerId: Long
+    ) = withContext(Dispatchers.IO) {
+        if (epgByStreamId.isEmpty()) return@withContext
+
+        Log.d(TAG, "Ingesting Xtream EPG: ${epgByStreamId.size} streams for provider $providerId")
+
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            val sourceDao = db.epgSourceDao()
+
+            // Upsert EpgSource
+            val sourceUrl = "xtream://$providerId"
+            val existingSource = sourceDao.getSourceByUrl(sourceUrl)
+            val sourceId = if (existingSource != null) {
+                existingSource.id
+            } else {
+                sourceDao.insertSource(
+                    EpgSourceEntity(
+                        url = sourceUrl,
+                        label = "Xtream Provider $providerId",
+                        ingestMethod = "XTREAM_API"
+                    )
+                )
+            }
+
+            // Clean slate for this source
+            dao.deleteBySourceId(sourceId)
+
+            // Build channels and programmes
+            val channelEntities = mutableListOf<EpgChannelEntity>()
+            val programmeBatch = mutableListOf<EpgProgrammeEntity>()
+            var totalProgrammes = 0
+
+            for ((streamId, epgResponse) in epgByStreamId) {
+                val info = streamInfo[streamId] ?: continue
+                val channelId = info.epgChannelId ?: streamId.toString()
+
+                channelEntities.add(
+                    EpgChannelEntity(
+                        xmltvId = channelId,
+                        displayName = info.name,
+                        iconUrl = info.iconUrl
+                    )
+                )
+
+                for (prog in epgResponse.listings) {
+                    programmeBatch.add(
+                        EpgProgrammeEntity(
+                            channelId = channelId,
+                            title = prog.title,
+                            titleLowercase = prog.title.lowercase(),
+                            description = prog.description,
+                            startEpoch = prog.startTime,
+                            endEpoch = prog.endTime,
+                            sourceId = sourceId
+                        )
+                    )
+                    totalProgrammes++
+
+                    if (programmeBatch.size >= BATCH_SIZE) {
+                        db.withTransaction { dao.insertProgrammes(programmeBatch.toList()) }
+                        programmeBatch.clear()
+                    }
+                }
+            }
+
+            // Flush remaining
+            if (channelEntities.isNotEmpty()) {
+                db.withTransaction { dao.insertChannelsIgnore(channelEntities) }
+            }
+            if (programmeBatch.isNotEmpty()) {
+                db.withTransaction { dao.insertProgrammes(programmeBatch.toList()) }
+            }
+
+            // Update source stats
+            sourceDao.markIngested(
+                id = sourceId,
+                timestamp = System.currentTimeMillis(),
+                channels = channelEntities.size,
+                programmes = totalProgrammes,
+                downloadBytes = 0,
+                ingestMethod = "XTREAM_API"
+            )
+
+            lastIngestionStats = IngestionStats(channelEntities.size, totalProgrammes)
+            Log.d(TAG, "Xtream EPG ingestion complete: ${channelEntities.size} channels, $totalProgrammes programmes")
+
+            rebuildFtsAndUpdateState()
+        } catch (e: Exception) {
+            Log.e(TAG, "Xtream EPG ingestion failed: ${e.message}", e)
         }
     }
 

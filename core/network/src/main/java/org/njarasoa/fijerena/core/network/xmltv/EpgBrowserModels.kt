@@ -13,7 +13,14 @@ data class EpgBrowserAiring(
     val channelIconUrl: String?,
     val startEpoch: Long,
     val endEpoch: Long,
-    val sourceId: Long = 0
+    val sourceId: Long = 0,
+    val matchedStream: EpgBrowserMatchedStream? = null
+)
+
+data class EpgBrowserMatchedStream(
+    val streamId: Int,
+    val streamName: String,
+    val categoryId: String
 )
 
 data class EpgBrowserDateGroup(

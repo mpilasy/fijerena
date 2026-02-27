@@ -216,7 +216,10 @@ fun TvNavHost(
             // EPG Browser Screen
             composable<Screen.EpgBrowser> {
                 EpgBrowserScreen(
-                    onBack = { navController.navigateUp() }
+                    onBack = { navController.navigateUp() },
+                    onNavigateToPlayer = { streamId, streamName, categoryId ->
+                        navController.navigate(Screen.Player(streamId, streamName, categoryId, ContentType.LIVE_TV))
+                    }
                 )
             }
 
