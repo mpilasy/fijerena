@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -80,11 +81,13 @@ internal fun StreamList(
     // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
 
-    LaunchedEffect(streamsLoading) {
-        if (streamsLoading) {
-            while (streamsLoading) {
-                targetRotation += 360f
-                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
+    LaunchedEffect(Unit) {
+        snapshotFlow { streamsLoading }.collect { loading ->
+            if (loading) {
+                while (true) {
+                    targetRotation += 360f
+                    kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
+                }
             }
         }
     }
@@ -95,9 +98,7 @@ internal fun StreamList(
         label = "refresh_rotation"
     )
     val listState = rememberTvLazyListState()
-    val focusRequesters = remember(streams) {
-        streams?.associate { it.id to FocusRequester() } ?: emptyMap()
-    }
+    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
 
     val scale = LocalUiScale.current
 
@@ -109,7 +110,7 @@ internal fun StreamList(
             val lastPlayedIndex = streams.indexOfFirst { it.id == lastPlayedItemId }
             if (lastPlayedIndex != -1) {
                 listState.animateScrollToItem(lastPlayedIndex)
-                focusRequesters[lastPlayedItemId]?.requestFocus()
+                focusRequesters.getOrPut(lastPlayedItemId) { FocusRequester() }.requestFocus()
                 lastFocusedItemId = lastPlayedItemId
             }
         }
@@ -230,7 +231,7 @@ internal fun StreamList(
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
                                 onLongPress = { onStreamLongPress(item) },
-                                focusRequester = focusRequesters[item.id]
+                                focusRequester = focusRequesters.getOrPut(item.id) { FocusRequester() }
                             )
                         }
                     }

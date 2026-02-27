@@ -312,6 +312,15 @@ fun MobileCategoryListScreen(
     }
 }
 
+// Extracted as a top-level constant to avoid allocating a new Set on every recomposition
+private val VIRTUAL_CATEGORY_IDS = setOf(
+    CategoryViewModel.FAVORITES_CATEGORY_ID,
+    CategoryViewModel.FAVORITE_CATEGORIES_ID,
+    CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
+    CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
+    CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
+)
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CategoryChipRow(
@@ -322,20 +331,15 @@ private fun CategoryChipRow(
     onCategorySelected: (String) -> Unit,
     onCategoryLongPress: (org.njarasoa.fijerena.core.player.domain.MediaCategory) -> Unit = {}
 ) {
-    val virtualCategoryIds = setOf(
-        CategoryViewModel.FAVORITES_CATEGORY_ID,
-        CategoryViewModel.FAVORITE_CATEGORIES_ID,
-        CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
-        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
-        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
-    )
-    val virtualCategories = categories.filter { it.id in virtualCategoryIds }
-    val regularCategories = categories.filter { it.id !in virtualCategoryIds }
+    // Single-pass partition instead of two separate filter() calls
+    val (virtualCategories, regularCategories) = remember(categories) {
+        categories.partition { it.id in VIRTUAL_CATEGORY_IDS }
+    }
 
     val listState = rememberLazyListState()
 
     LaunchedEffect(selectedCategoryId) {
-        if (selectedCategoryId != null && selectedCategoryId !in virtualCategoryIds) {
+        if (selectedCategoryId != null && selectedCategoryId !in VIRTUAL_CATEGORY_IDS) {
             val index = regularCategories.indexOfFirst { it.id == selectedCategoryId }
             if (index >= 0) {
                 listState.animateScrollToItem(index)

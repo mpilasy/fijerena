@@ -12,6 +12,7 @@ import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.PlayableStream
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import kotlinx.coroutines.delay
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -141,7 +142,7 @@ class RemoteM3uMediaProvider(
         )
     }
 
-    private fun loadM3uContent(): File {
+    private suspend fun loadM3uContent(): File {
         // Check cache
         if (cacheFile.exists()) {
             val age = System.currentTimeMillis() - cacheFile.lastModified()
@@ -157,7 +158,7 @@ class RemoteM3uMediaProvider(
         return cacheFile
     }
 
-    private fun downloadWithRetries() {
+    private suspend fun downloadWithRetries() {
         var lastError: Exception? = null
 
         for (attempt in 1..MAX_RETRIES) {
@@ -177,7 +178,7 @@ class RemoteM3uMediaProvider(
                     lastError = Exception("Server returned HTTP $statusCode")
                     if (statusCode in 400..499) break // Client errors won't recover
                     if (attempt < MAX_RETRIES) {
-                        Thread.sleep(RETRY_BASE_DELAY_MS * attempt)
+                        delay(RETRY_BASE_DELAY_MS * attempt)
                         continue
                     }
                     break
@@ -219,7 +220,7 @@ class RemoteM3uMediaProvider(
                 lastError = e
                 Log.w(TAG, "M3U download error (attempt $attempt): ${e.message}")
                 if (attempt < MAX_RETRIES) {
-                    Thread.sleep(RETRY_BASE_DELAY_MS * attempt)
+                    delay(RETRY_BASE_DELAY_MS * attempt)
                 }
             } finally {
                 connection?.disconnect()

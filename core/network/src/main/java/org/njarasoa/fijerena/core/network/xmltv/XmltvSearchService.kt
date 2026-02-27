@@ -24,7 +24,7 @@ class XmltvSearchService(private val context: Context) {
      * @param query Case-insensitive substring to match
      * @return [XmltvSearchResult] or null if no index is available.
      */
-    fun search(query: String): XmltvSearchResult? {
+    suspend fun search(query: String): XmltvSearchResult? {
         val indexer = EpgIndexer.getInstance(context)
         if (indexer.state.value !is EpgIndexState.Indexed) {
             return null
@@ -41,7 +41,7 @@ class XmltvSearchService(private val context: Context) {
         }
     }
 
-    private fun searchFromIndex(
+    private suspend fun searchFromIndex(
         query: String,
         windowStart: Long,
         windowEnd: Long
@@ -52,9 +52,7 @@ class XmltvSearchService(private val context: Context) {
         // 1. Try FTS phrase match ("word1 word2"*)
         val rows: List<EpgSearchResultRow> = try {
             val ftsQuery = buildFtsQuery(query)
-            kotlinx.coroutines.runBlocking {
-                dao.searchByTitleFts(ftsQuery, windowStart, windowEnd)
-            }
+            dao.searchByTitleFts(ftsQuery, windowStart, windowEnd)
         } catch (e: Exception) {
             Log.d(TAG, "FTS phrase query failed ('$query'): ${e.message}")
             emptyList()
@@ -68,9 +66,7 @@ class XmltvSearchService(private val context: Context) {
         val andFtsQuery = buildFtsAndQuery(query)
         if (andFtsQuery != null) {
             val andRows = try {
-                kotlinx.coroutines.runBlocking {
-                    dao.searchByTitleFts(andFtsQuery, windowStart, windowEnd)
-                }
+                dao.searchByTitleFts(andFtsQuery, windowStart, windowEnd)
             } catch (e: Exception) {
                 Log.d(TAG, "FTS AND query failed ('$query'): ${e.message}")
                 emptyList()
@@ -82,9 +78,7 @@ class XmltvSearchService(private val context: Context) {
 
         // 3. Fall back to LIKE with full query
         val queryLower = query.lowercase(Locale.ROOT)
-        val likeRows = kotlinx.coroutines.runBlocking {
-            dao.searchByTitleLike(queryLower, windowStart, windowEnd)
-        }
+        val likeRows = dao.searchByTitleLike(queryLower, windowStart, windowEnd)
         if (likeRows.isNotEmpty()) {
             return rowsToSearchResult(likeRows, searchedFromIndex = true)
         }
@@ -93,9 +87,7 @@ class XmltvSearchService(private val context: Context) {
         val words = queryLower.split("\\s+".toRegex()).filter { it.length >= 2 }
         if (words.size >= 2) {
             val shortestWord = words.minBy { it.length }
-            val broadRows = kotlinx.coroutines.runBlocking {
-                dao.searchByTitleLike(shortestWord, windowStart, windowEnd)
-            }
+            val broadRows = dao.searchByTitleLike(shortestWord, windowStart, windowEnd)
             val filtered = broadRows.filter { row ->
                 val titleLower = row.title.lowercase(Locale.ROOT)
                 words.all { word -> titleLower.contains(word) }

@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -60,6 +61,15 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
+// Extracted as a top-level constant to avoid allocating a new Set on every recomposition
+private val VIRTUAL_CATEGORY_IDS = setOf(
+    CategoryViewModel.FAVORITES_CATEGORY_ID,
+    CategoryViewModel.FAVORITE_CATEGORIES_ID,
+    CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
+    CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
+    CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
+)
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 internal fun CategoryList(
@@ -73,34 +83,25 @@ internal fun CategoryList(
     onCategoryLongPress: (MediaCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Separate virtual and regular categories
-    val virtualCategoryIds = setOf(
-        CategoryViewModel.FAVORITES_CATEGORY_ID,
-        CategoryViewModel.FAVORITE_CATEGORIES_ID,
-        CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
-        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
-        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
-    )
-
-    val virtualCategories = categories.filter { it.id in virtualCategoryIds }
-    val regularCategories = categories.filter { it.id !in virtualCategoryIds }
+    // Single-pass partition instead of two separate filter() calls
+    val (virtualCategories, regularCategories) = remember(categories) {
+        categories.partition { it.id in VIRTUAL_CATEGORY_IDS }
+    }
 
     val listState = rememberTvLazyListState()
-    val focusRequesters = remember(categories) {
-        categories.associate { it.id to FocusRequester() }
-    }
+    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
 
     // Auto-scroll and focus on selected category
     LaunchedEffect(regularCategories, selectedCategoryId) {
         if (selectedCategoryId != null) {
-            if (selectedCategoryId in virtualCategoryIds) {
+            if (selectedCategoryId in VIRTUAL_CATEGORY_IDS) {
                 // Focus virtual category in sidebar
-                focusRequesters[selectedCategoryId]?.requestFocus()
+                focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus()
             } else if (regularCategories.isNotEmpty()) {
                 val selectedIndex = regularCategories.indexOfFirst { it.id == selectedCategoryId }
                 if (selectedIndex != -1) {
                     listState.animateScrollToItem(selectedIndex)
-                    focusRequesters[selectedCategoryId]?.requestFocus()
+                    focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus()
                 }
             }
         }
@@ -109,11 +110,13 @@ internal fun CategoryList(
     // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
 
-    LaunchedEffect(categoriesRefreshing) {
-        if (categoriesRefreshing) {
-            while (categoriesRefreshing) {
-                targetRotation += 360f
-                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
+    LaunchedEffect(Unit) {
+        snapshotFlow { categoriesRefreshing }.collect { refreshing ->
+            if (refreshing) {
+                while (true) {
+                    targetRotation += 360f
+                    kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
+                }
             }
         }
     }
@@ -188,7 +191,7 @@ internal fun CategoryList(
                                 isFavorite = false,
                                 onClick = { onCategorySelected(category.id) },
                                 onLongPress = {},
-                                focusRequester = focusRequesters[category.id]
+                                focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() }
                             )
                         }
                     }
@@ -222,7 +225,7 @@ internal fun CategoryList(
                             isFavorite = categoryViewModel.isFavoriteCategory(category.id, contentType),
                             onClick = { onCategorySelected(category.id) },
                             onLongPress = { onCategoryLongPress(category) },
-                            focusRequester = focusRequesters[category.id]
+                            focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() }
                         )
                     }
                 }

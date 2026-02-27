@@ -95,6 +95,9 @@ class MediaRepository(
     // In-memory cache for watch history to avoid repeated deserialization
     private var cachedWatchHistory: List<WatchedItem>? = null
     private val watchHistoryLock = Any()
+    private var watchHistoryDirty = false
+    private val watchHistoryWriteHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val watchHistoryWriteRunnable = Runnable { flushWatchHistory() }
 
     companion object {
         private const val KEY_WATCH_HISTORY = "watch_history_v2"
@@ -352,11 +355,13 @@ class MediaRepository(
             ))
             val trimmed = history.take(providerSettings.watchHistorySize)
 
-            // Update in-memory cache first
+            // Update in-memory cache immediately (reads always see latest data)
             cachedWatchHistory = trimmed
-
-            cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(trimmed)).apply()
+            watchHistoryDirty = true
         }
+        // Debounce disk write — coalesces rapid updates (e.g. playback progress) into one write
+        watchHistoryWriteHandler.removeCallbacks(watchHistoryWriteRunnable)
+        watchHistoryWriteHandler.postDelayed(watchHistoryWriteRunnable, 500L)
     }
 
     fun getWatchHistory(): List<WatchedItem> {
@@ -404,9 +409,21 @@ class MediaRepository(
             }
     }
 
+    fun flushWatchHistory() {
+        synchronized(watchHistoryLock) {
+            if (!watchHistoryDirty) return
+            cachedWatchHistory?.let { history ->
+                cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
+            }
+            watchHistoryDirty = false
+        }
+    }
+
     fun clearWatchHistory() {
+        watchHistoryWriteHandler.removeCallbacks(watchHistoryWriteRunnable)
         synchronized(watchHistoryLock) {
             cachedWatchHistory = emptyList()
+            watchHistoryDirty = false
             cache.edit().remove(KEY_WATCH_HISTORY).apply()
         }
     }
