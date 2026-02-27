@@ -410,6 +410,8 @@ class SearchViewModel(
                 }
 
                 var lastUiUpdateTime = 0L
+                var lastSortedSize = 0
+                var lastSortedDisplay = emptyList<SearchResult>()
                 repeat(uncachedCategories.size) {
                     if (results.size >= TARGET_RESULTS) {
                         categoriesSearched++
@@ -449,16 +451,19 @@ class SearchViewModel(
                     val now = System.currentTimeMillis()
                     if (now - lastUiUpdateTime > 100 || categoriesSearched == realCategories.size) {
                         lastUiUpdateTime = now
-                        val sorted = sortResults(results, normalizedQuery, queryWords)
-                        val display = sorted.take(TARGET_RESULTS)
+                        // Only re-sort when results have actually grown
+                        if (results.size > lastSortedSize) {
+                            lastSortedSize = results.size
+                            lastSortedDisplay = sortResults(results, normalizedQuery, queryWords).take(TARGET_RESULTS)
+                        }
                         val now2 = System.currentTimeMillis()
                         _uiState.value = UiState.Success(
                             categoryResults = matchingCategories,
-                            allResults = display,
-                            filteredResults = display,
+                            allResults = lastSortedDisplay,
+                            filteredResults = lastSortedDisplay,
                             query = query,
                             isSearching = true,
-                            searchProgress = "Found ${display.size} results (searched $categoriesSearched/${realCategories.size} categories)",
+                            searchProgress = "Found ${lastSortedDisplay.size} results (searched $categoriesSearched/${realCategories.size} categories)",
                             searchDataSize = formatBytes(networkBytes),
                             totalDuration = formatSeconds(now2 - startTime),
                             networkWallDuration = formatSeconds(now2 - networkStartTime),

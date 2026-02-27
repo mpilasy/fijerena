@@ -92,8 +92,11 @@ class MediaRepository(
     private val payloadSizes = ConcurrentHashMap<String, Long>()
     private val fetchTimes = ConcurrentHashMap<String, Long>()
 
-    // In-memory cache for watch history to avoid repeated deserialization
+    // In-memory caches to avoid repeated JSON deserialization from SharedPreferences
     private var cachedWatchHistory: List<WatchedItem>? = null
+    private var cachedFavorites: List<FavoriteItem>? = null
+    private var cachedFavoriteCategories: List<FavoriteCategoryItem>? = null
+    private var cachedFavoriteShows: List<FavoriteShowItem>? = null
     private val watchHistoryLock = Any()
     private var watchHistoryDirty = false
     private val watchHistoryWriteHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -436,6 +439,7 @@ class MediaRepository(
         favorites.add(0, FavoriteItem(itemId, itemName, categoryId, contentType))
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
         cache.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
+        cachedFavorites = trimmed
         return true
     }
 
@@ -443,15 +447,17 @@ class MediaRepository(
         val favorites = getFavoriteItems().toMutableList()
         val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
         cache.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
+        cachedFavorites = favorites
         return removed
     }
 
     private fun getFavoriteItems(): List<FavoriteItem> {
-        val favJson = cache.getString(KEY_FAVORITES, null) ?: return emptyList()
+        cachedFavorites?.let { return it }
+        val favJson = cache.getString(KEY_FAVORITES, null) ?: return emptyList<FavoriteItem>().also { cachedFavorites = it }
         return try {
-            json.decodeFromString<List<FavoriteItem>>(favJson)
+            json.decodeFromString<List<FavoriteItem>>(favJson).also { cachedFavorites = it }
         } catch (e: Exception) {
-            emptyList()
+            emptyList<FavoriteItem>().also { cachedFavorites = it }
         }
     }
 
@@ -474,6 +480,7 @@ class MediaRepository(
     }
 
     fun clearFavorites() {
+        cachedFavorites = emptyList()
         cache.edit().remove(KEY_FAVORITES).apply()
     }
 
@@ -487,6 +494,7 @@ class MediaRepository(
         favorites.add(0, FavoriteCategoryItem(categoryId, categoryName, contentType))
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
         cache.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(trimmed)).apply()
+        cachedFavoriteCategories = trimmed
         return true
     }
 
@@ -494,15 +502,17 @@ class MediaRepository(
         val favorites = getFavoriteCategoryItems().toMutableList()
         val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
         cache.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(favorites)).apply()
+        cachedFavoriteCategories = favorites
         return removed
     }
 
     fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> {
-        val raw = cache.getString(KEY_FAVORITE_CATEGORIES, null) ?: return emptyList()
+        cachedFavoriteCategories?.let { return it }
+        val raw = cache.getString(KEY_FAVORITE_CATEGORIES, null) ?: return emptyList<FavoriteCategoryItem>().also { cachedFavoriteCategories = it }
         return try {
-            json.decodeFromString<List<FavoriteCategoryItem>>(raw)
+            json.decodeFromString<List<FavoriteCategoryItem>>(raw).also { cachedFavoriteCategories = it }
         } catch (_: Exception) {
-            emptyList()
+            emptyList<FavoriteCategoryItem>().also { cachedFavoriteCategories = it }
         }
     }
 
@@ -523,6 +533,7 @@ class MediaRepository(
     }
 
     fun clearFavoriteCategories() {
+        cachedFavoriteCategories = emptyList()
         cache.edit().remove(KEY_FAVORITE_CATEGORIES).apply()
     }
 
@@ -536,6 +547,7 @@ class MediaRepository(
         favorites.add(0, FavoriteShowItem(showId, showName, categoryId, contentType, thumbnailUrl))
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
         cache.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(trimmed)).apply()
+        cachedFavoriteShows = trimmed
         return true
     }
 
@@ -543,15 +555,17 @@ class MediaRepository(
         val favorites = getFavoriteShowItems().toMutableList()
         val removed = favorites.removeAll { it.showId == showId && it.contentType == contentType }
         cache.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(favorites)).apply()
+        cachedFavoriteShows = favorites
         return removed
     }
 
     fun getFavoriteShowItems(): List<FavoriteShowItem> {
-        val raw = cache.getString(KEY_FAVORITE_SHOWS, null) ?: return emptyList()
+        cachedFavoriteShows?.let { return it }
+        val raw = cache.getString(KEY_FAVORITE_SHOWS, null) ?: return emptyList<FavoriteShowItem>().also { cachedFavoriteShows = it }
         return try {
-            json.decodeFromString<List<FavoriteShowItem>>(raw)
+            json.decodeFromString<List<FavoriteShowItem>>(raw).also { cachedFavoriteShows = it }
         } catch (_: Exception) {
-            emptyList()
+            emptyList<FavoriteShowItem>().also { cachedFavoriteShows = it }
         }
     }
 
@@ -574,6 +588,7 @@ class MediaRepository(
     }
 
     fun clearFavoriteShows() {
+        cachedFavoriteShows = emptyList()
         cache.edit().remove(KEY_FAVORITE_SHOWS).apply()
     }
 
@@ -732,13 +747,20 @@ class MediaRepository(
         cache.edit().clear().apply()
         payloadSizes.clear()
         fetchTimes.clear()
+        cachedFavorites = null
+        cachedFavoriteCategories = null
+        cachedFavoriteShows = null
+        synchronized(watchHistoryLock) {
+            cachedWatchHistory = null
+        }
     }
 
     fun getCacheSize(): Long {
         var totalSize = 0L
         cache.all.forEach { (_, value) ->
             when (value) {
-                is String -> totalSize += value.toByteArray(Charsets.UTF_8).size
+                // Estimate UTF-8 size without allocating byte arrays (worst-case 3 bytes per char)
+                is String -> totalSize += value.length.toLong() * 3
                 is Long -> totalSize += 8
                 is Int -> totalSize += 4
                 is Boolean -> totalSize += 1

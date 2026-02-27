@@ -23,7 +23,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,7 +37,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
-import org.njarasoa.fijerena.core.player.model.EpgUtils
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -107,6 +110,15 @@ fun MobileEpgTimeline(
         selectedDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
     }
 
+    // Shared "now" timestamp, refreshed every 60s to avoid per-chip System.currentTimeMillis() calls
+    var nowEpochSeconds by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            nowEpochSeconds = System.currentTimeMillis() / 1000
+        }
+    }
+
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh
@@ -120,6 +132,7 @@ fun MobileEpgTimeline(
                     channelRow = row,
                     dayStart = dayStart,
                     dayEnd = dayEnd,
+                    nowEpochSeconds = nowEpochSeconds,
                     onProgramSelected = { program ->
                         onProgramSelected(program, row.channel)
                     },
@@ -141,6 +154,7 @@ private fun ChannelTimelineRow(
     channelRow: EpgChannelRow,
     dayStart: Long,
     dayEnd: Long,
+    nowEpochSeconds: Long,
     onProgramSelected: (EpgProgram) -> Unit,
     onChannelSelected: () -> Unit
 ) {
@@ -149,8 +163,7 @@ private fun ChannelTimelineRow(
     }
 
     // Find index of program overlapping "now" for auto-scroll
-    val nowEpochSeconds = remember { System.currentTimeMillis() / 1000 }
-    val nowIndex = remember(filledPrograms) {
+    val nowIndex = remember(filledPrograms, nowEpochSeconds) {
         val idx = filledPrograms.indexOfFirst {
             nowEpochSeconds in it.startTime..it.endTime
         }
@@ -194,11 +207,13 @@ private fun ChannelTimelineRow(
             contentPadding = PaddingValues(horizontal = CinemaSpacing.xs)
         ) {
             items(filledPrograms, key = { it.id }) { program ->
+                val isCurrent = nowEpochSeconds in program.startTime..program.endTime
                 if (isGapEntry(program)) {
-                    GapChip(program = program)
+                    GapChip(program = program, isCurrent = isCurrent)
                 } else {
                     ProgramChip(
                         program = program,
+                        isCurrent = isCurrent,
                         onClick = { onProgramSelected(program) }
                     )
                 }
@@ -210,9 +225,9 @@ private fun ChannelTimelineRow(
 @Composable
 private fun ProgramChip(
     program: EpgProgram,
+    isCurrent: Boolean,
     onClick: () -> Unit
 ) {
-    val isCurrent = EpgUtils.isCurrentProgram(program)
     val bgColor = if (isCurrent) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -253,8 +268,7 @@ private fun ProgramChip(
 }
 
 @Composable
-private fun GapChip(program: EpgProgram) {
-    val isCurrent = EpgUtils.isCurrentProgram(program)
+private fun GapChip(program: EpgProgram, isCurrent: Boolean = false) {
     val bgColor = MaterialTheme.colorScheme.surface
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
 

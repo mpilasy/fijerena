@@ -128,19 +128,21 @@ fun TypographyFallback(
     modifier: Modifier = Modifier
 ) {
     val palette = CinemaThemeHolder.current
-    val gradient = when (contentType) {
-        ThumbnailContentType.LIVE_TV -> Brush.verticalGradient(
-            colors = listOf(palette.orange, palette.orangeDark)
-        )
-        ThumbnailContentType.MOVIE -> Brush.verticalGradient(
-            colors = listOf(palette.accent, palette.accentDark)
-        )
-        ThumbnailContentType.TV_SHOW -> Brush.verticalGradient(
-            colors = listOf(palette.accentLight, palette.accent)
-        )
-        ThumbnailContentType.DEFAULT -> Brush.verticalGradient(
-            colors = listOf(palette.surfaceVariant, palette.surface)
-        )
+    val gradient = remember(contentType, palette) {
+        when (contentType) {
+            ThumbnailContentType.LIVE_TV -> Brush.verticalGradient(
+                colors = listOf(palette.orange, palette.orangeDark)
+            )
+            ThumbnailContentType.MOVIE -> Brush.verticalGradient(
+                colors = listOf(palette.accent, palette.accentDark)
+            )
+            ThumbnailContentType.TV_SHOW -> Brush.verticalGradient(
+                colors = listOf(palette.accentLight, palette.accent)
+            )
+            ThumbnailContentType.DEFAULT -> Brush.verticalGradient(
+                colors = listOf(palette.surfaceVariant, palette.surface)
+            )
+        }
     }
 
     Box(
