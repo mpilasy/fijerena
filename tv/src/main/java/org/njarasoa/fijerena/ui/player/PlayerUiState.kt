@@ -1,9 +1,5 @@
 package org.njarasoa.fijerena.ui.player
 
-import androidx.compose.runtime.Immutable
-import org.njarasoa.fijerena.core.player.domain.MediaItem
-
-@Immutable
-data class ImmutableMediaList(
-    private val items: List<MediaItem> = emptyList()
-) : List<MediaItem> by items
+// ImmutableMediaList moved to core/ui ImmutableWrappers.kt
+// This file kept for package compatibility — re-export the type.
+typealias ImmutableMediaList = org.njarasoa.fijerena.core.ui.components.ImmutableMediaList

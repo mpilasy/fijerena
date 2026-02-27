@@ -44,7 +44,10 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
+import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
+import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -65,7 +68,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 internal fun StreamList(
-    streams: List<MediaItem>?,
+    streams: ImmutableMediaList?,
     streamsLoading: Boolean,
     selectedCategoryId: String?,
     selectedCategoryName: String?,
@@ -74,8 +77,8 @@ internal fun StreamList(
     contentType: String,
     categoryViewModel: CategoryViewModel,
     isDevMode: Boolean,
-    favoriteIds: Set<String> = emptySet(),
-    watchProgress: Map<String, Float> = emptyMap(),
+    favoriteIds: ImmutableStringSet = ImmutableStringSet(),
+    watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
     onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onStreamLongPress: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,

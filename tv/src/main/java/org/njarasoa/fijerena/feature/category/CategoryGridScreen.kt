@@ -25,7 +25,11 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
+import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
+import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
+import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.ErrorScreen
 import org.njarasoa.fijerena.feature.category.components.LoadingScreen
@@ -85,13 +89,17 @@ fun CategoryGridScreen(
         }
     }
 
+    val immutableFavoriteIds = remember(favoriteIds) { ImmutableStringSet(favoriteIds) }
+    val immutableFavoriteCategoryIds = remember(favoriteCategoryIds) { ImmutableStringSet(favoriteCategoryIds) }
+    val immutableWatchProgress = remember(watchProgress) { ImmutableWatchProgress(watchProgress) }
+
     CategoryGridContent(
         uiState = uiState,
         nowPlaying = nowPlaying,
         supportsNativeEpg = supportsNativeEpg,
-        favoriteIds = favoriteIds,
-        favoriteCategoryIds = favoriteCategoryIds,
-        watchProgress = watchProgress,
+        favoriteIds = immutableFavoriteIds,
+        favoriteCategoryIds = immutableFavoriteCategoryIds,
+        watchProgress = immutableWatchProgress,
         epgIndexState = epgIndexState,
         configuration = configuration,
         isDevMode = isDevMode,
@@ -109,9 +117,9 @@ private fun CategoryGridContent(
     uiState: CategoryViewModel.UiState,
     nowPlaying: ImmutableNowPlaying,
     supportsNativeEpg: Boolean,
-    favoriteIds: Set<String>,
-    favoriteCategoryIds: Set<String>,
-    watchProgress: Map<String, Float>,
+    favoriteIds: ImmutableStringSet,
+    favoriteCategoryIds: ImmutableStringSet,
+    watchProgress: ImmutableWatchProgress,
     epgIndexState: EpgIndexState,
     configuration: android.content.res.Configuration,
     isDevMode: Boolean,
@@ -141,11 +149,13 @@ private fun CategoryGridContent(
                     LoadingScreen()
                 }
                 is CategoryViewModel.UiState.Success -> {
+                    val immutableCategories = remember(state.categories) { ImmutableCategoryList(state.categories) }
+                    val immutableStreams = remember(state.streams) { state.streams?.let { ImmutableMediaList(it) } }
                     TwoColumnLayout(
                         categoryViewModel = catViewModel,
-                        categories = state.categories,
+                        categories = immutableCategories,
                         selectedCategoryId = state.selectedCategoryId,
-                        streams = state.streams,
+                        streams = immutableStreams,
                         streamsLoading = state.streamsLoading,
                         categoriesRefreshing = state.categoriesRefreshing,
                         lastPlayedItemId = state.lastPlayedItemId,

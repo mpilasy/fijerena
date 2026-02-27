@@ -30,13 +30,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 @Composable
 fun MobileChannelListSheet(
     title: String,
-    streams: List<MediaItem>,
+    streams: ImmutableMediaList,
     onSelect: (MediaItem) -> Unit,
     onDismiss: () -> Unit,
     panelAlignment: Alignment = Alignment.CenterStart

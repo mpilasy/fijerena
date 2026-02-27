@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
@@ -462,7 +463,7 @@ fun MobilePlayerScreen(
             ) {
                 MobileChannelListSheet(
                     title = "Category Channels",
-                    streams = state.categoryStreams,
+                    streams = remember(state.categoryStreams) { ImmutableMediaList(state.categoryStreams) },
                     panelAlignment = Alignment.CenterStart,
                     onSelect = { item ->
                         showCategoryOverlay = false
@@ -481,7 +482,7 @@ fun MobilePlayerScreen(
                 MobileChannelListSheet(
                     title = "Last Watched",
                     streams = remember(state.lastWatchedStreams, state.streamId) {
-                        state.lastWatchedStreams.filter { it.id != state.streamId }
+                        ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })
                     },
                     panelAlignment = Alignment.CenterEnd,
                     onSelect = { item ->
