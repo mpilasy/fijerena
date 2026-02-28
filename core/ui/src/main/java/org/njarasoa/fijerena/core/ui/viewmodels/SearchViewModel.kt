@@ -98,7 +98,7 @@ class SearchViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val repo = try {
                 ensureRepo()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 return@launch
             }
 
@@ -106,8 +106,9 @@ class SearchViewModel(
                 repo.connect()
             }
 
+            val capabilities = repo.getCapabilities()
             val targetContentTypes = if (contentType == CONTENT_TYPE_ALL) {
-                repo.getCapabilities()?.supportedContentTypes?.toList() ?: emptyList()
+                capabilities?.supportedContentTypes?.toList() ?: emptyList()
             } else {
                 listOf(contentType)
             }
@@ -126,7 +127,7 @@ class SearchViewModel(
                     // Launch prefetch for this batch
                     realCategories.map { category ->
                         launch {
-                            if (repo.getItemsIfCached(category.id, type) != null) return@launch
+                            if (!repo.getItemsIfCached(category.id, type).isNullOrEmpty()) return@launch
                             semaphore.withPermit {
                                 try {
                                     repo.getItemsForSearch(category.id, type)
@@ -145,7 +146,7 @@ class SearchViewModel(
         if (query.isBlank() || query.length < 2) return
         // Cancel previous search, start new one
         searchJob?.cancel()
-        searchJob = viewModelScope.launch {
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
             doSearch(this, query)
         }
     }
@@ -258,7 +259,7 @@ class SearchViewModel(
             }
 
             // Fall back to parallel client-side category iteration
-            val realCategories = prefetchedCategories ?: run {
+            val realCategories = prefetchedCategories?.takeIf { it.isNotEmpty() } ?: run {
                 val allFetched = mutableListOf<SearchableCategory>()
                 for (type in targetContentTypes) {
                     val categoriesResult = repo.getFilteredCategories(type)
@@ -298,11 +299,13 @@ class SearchViewModel(
             var categoriesSearched = 0
 
             // Phase 1: Sweep all categories from cache (instant, no network)
+            // Note: Room returns [] for categories that were never fetched, so treat
+            // empty results as "not cached" to ensure phase 2 fetches them.
             val uncachedCategories = mutableListOf<SearchableCategory>()
             for (sc in realCategories) {
                 currentCoroutineContext().job.ensureActive() // respect cancellation
                 val cached = repo.getItemsIfCached(sc.category.id, sc.contentType)
-                if (cached != null) {
+                if (!cached.isNullOrEmpty()) {
                     categoriesSearched++
                     val matchingItems = cached
                         .filter { SearchUtils.matchesQuery(it.name, queryWords) }

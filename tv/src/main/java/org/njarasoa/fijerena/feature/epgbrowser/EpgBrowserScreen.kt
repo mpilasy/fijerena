@@ -406,29 +406,15 @@ private fun ProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, 
     val scale = LocalUiScale.current
     var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
 
-    Card(
-        onClick = {},
+    androidx.compose.material3.Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.xs.scaled(scale)),
-        colors = CardDefaults.colors(
+        colors = androidx.compose.material3.CardDefaults.cardColors(
             containerColor = CinemaSurface,
-            contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
-            focusedContentColor = CinemaTextPrimary
+            contentColor = CinemaTextPrimary
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium)),
-        scale = CardDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleContent,
-            pressedScale = TvFocusTokens.pressedScaleSubtle
-        ),
-        glow = CardDefaults.glow(
-            focusedGlow = Glow(
-                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                elevation = TvFocusTokens.focusShadowElevation
-            )
-        )
+        shape = RoundedCornerShape(CornerRadius.medium)
     ) {
         Column(
             modifier = Modifier
@@ -602,21 +588,19 @@ private fun AiringRow(
     }
     } // end rowContent
 
-    if (isMatched) {
-        Surface(
-            onClick = {
+    Surface(
+        onClick = {
+            if (isMatched) {
                 val matched = airing.matchedStream!!
                 if (isOnAir) {
                     onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
                 } else {
                     onRequestConfirmation(airing)
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            rowContent()
-        }
-    } else {
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
+    ) {
         rowContent()
     }
 }

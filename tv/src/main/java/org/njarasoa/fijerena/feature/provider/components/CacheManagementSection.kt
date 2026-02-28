@@ -62,7 +62,9 @@ fun CacheManagementSection(
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
     cacheStats?.let { stats ->
-        // Total cache size
+        val totalItems = stats.liveTv.streamListsCount + stats.movies.streamListsCount + stats.tvShows.streamListsCount
+
+        // Total cache
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -70,12 +72,12 @@ fun CacheManagementSection(
         ) {
             Column {
                 Text(
-                    text = "Total Cache Size",
+                    text = "Total Database Items",
                     style = styles.bodyLarge,
                     color = CinemaTextPrimary
                 )
                 Text(
-                    text = formatBytes(stats.totalSize),
+                    text = "$totalItems Items",
                     style = styles.headlineSmall,
                     color = CinemaAccent
                 )
@@ -103,12 +105,12 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary
                 )
                 Text(
-                    text = formatBytes(stats.liveTv.size),
+                    text = "${stats.liveTv.streamListsCount} channels",
                     style = styles.bodyMedium,
                     color = CinemaAccent
                 )
                 Text(
-                    text = "${if (stats.liveTv.categoryCached) "1 category" else "No categories"}, ${stats.liveTv.streamListsCount} stream lists",
+                    text = if (stats.liveTv.categoryCached) "Categories cached" else "No categories",
                     style = styles.bodySmall,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
@@ -116,7 +118,7 @@ fun CacheManagementSection(
             CinemaSecondaryButton(
                 onClick = onClearLiveTvClick,
                 text = "Clear",
-                enabled = stats.liveTv.size > 0
+                enabled = stats.liveTv.streamListsCount > 0
             )
         }
 
@@ -135,12 +137,12 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary
                 )
                 Text(
-                    text = formatBytes(stats.movies.size),
+                    text = "${stats.movies.streamListsCount} movies",
                     style = styles.bodyMedium,
                     color = CinemaAccent
                 )
                 Text(
-                    text = "${if (stats.movies.categoryCached) "1 category" else "No categories"}, ${stats.movies.streamListsCount} stream lists",
+                    text = if (stats.movies.categoryCached) "Categories cached" else "No categories",
                     style = styles.bodySmall,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
@@ -148,7 +150,7 @@ fun CacheManagementSection(
             CinemaSecondaryButton(
                 onClick = onClearMoviesClick,
                 text = "Clear",
-                enabled = stats.movies.size > 0
+                enabled = stats.movies.streamListsCount > 0
             )
         }
 
@@ -167,12 +169,12 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary
                 )
                 Text(
-                    text = formatBytes(stats.tvShows.size),
+                    text = "${stats.tvShows.streamListsCount} shows",
                     style = styles.bodyMedium,
                     color = CinemaAccent
                 )
                 Text(
-                    text = "${if (stats.tvShows.categoryCached) "1 category" else "No categories"}, ${stats.tvShows.streamListsCount} stream lists",
+                    text = if (stats.tvShows.categoryCached) "Categories cached" else "No categories",
                     style = styles.bodySmall,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                 )
@@ -180,7 +182,7 @@ fun CacheManagementSection(
             CinemaSecondaryButton(
                 onClick = onClearTvShowsClick,
                 text = "Clear",
-                enabled = stats.tvShows.size > 0
+                enabled = stats.tvShows.streamListsCount > 0
             )
         }
 
@@ -192,19 +194,5 @@ fun CacheManagementSection(
             style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
         )
-        Text(
-            text = "Other: ${formatBytes(stats.otherSize)}",
-            style = styles.bodySmall,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-        )
-    }
-}
-
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes < 1024 -> "$bytes B"
-        bytes < 1024 * 1024 -> String.format("%.2f KB", bytes / 1024.0)
-        bytes < 1024 * 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
-        else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
     }
 }
