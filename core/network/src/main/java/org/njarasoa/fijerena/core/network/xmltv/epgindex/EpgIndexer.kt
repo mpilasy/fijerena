@@ -88,25 +88,32 @@ class EpgIndexer private constructor(private val context: Context) {
      * Commits transactions every 5000 items to prevent Room/SQLite from buffering
      * too much data in memory for a single massive transaction.
      */
-    suspend fun ingestFromStream(
-        inputStream: InputStream,
-        sourceId: Long = 0,
-        onProgress: ((channels: Int, programmes: Int) -> Unit)? = null
-    ) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Ingesting from stream (sourceId=$sourceId)")
-
-        val db = EpgIndexDatabase.getInstance(context)
-        val dao = db.epgIndexDao()
-        var channelCount = 0
-        var programmeCount = 0
-        val wasIndexed = _state.value is EpgIndexState.Indexed
-        if (!wasIndexed) {
+    /**
+     * Set state to Indexing if not already Indexed.
+     * Call once before parallel ingestion begins.
+     */
+    fun setIndexing() {
+        if (_state.value !is EpgIndexState.Indexed) {
             _state.value = EpgIndexState.Indexing(
                 progressPercent = 0,
                 channelsIndexed = 0,
                 programmesIndexed = 0
             )
         }
+    }
+
+    suspend fun ingestFromStream(
+        inputStream: InputStream,
+        sourceId: Long = 0,
+        timezoneOverrideHours: Int = 0,
+        onProgress: ((channels: Int, programmes: Int) -> Unit)? = null
+    ): IngestionStats = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Ingesting from stream (sourceId=$sourceId, tz=$timezoneOverrideHours)")
+
+        val db = EpgIndexDatabase.getInstance(context)
+        val dao = db.epgIndexDao()
+        var channelCount = 0
+        var programmeCount = 0
 
         // Skip programmes that ended before yesterday
         val cutoffEpoch = (System.currentTimeMillis() / 1000) - 86400
@@ -122,7 +129,7 @@ class EpgIndexer private constructor(private val context: Context) {
             parser.setInput(inputStream, null)
 
             var eventType = parser.eventType
-            
+
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 if (eventType == XmlPullParser.START_TAG) {
                     when (parser.name) {
@@ -130,7 +137,7 @@ class EpgIndexer private constructor(private val context: Context) {
                             XmltvParser.parseChannelForIndex(parser)?.let {
                                 channelBatch.add(it)
                                 channelCount++
-                                
+
                                 if (channelBatch.size >= BATCH_SIZE) {
                                     db.withTransaction {
                                         dao.insertChannelsIgnore(channelBatch.toList())
@@ -150,31 +157,24 @@ class EpgIndexer private constructor(private val context: Context) {
                                 channelBatch.clear()
                             }
 
-                            XmltvParser.parseProgrammeForIndex(parser, sourceId)?.let {
+                            XmltvParser.parseProgrammeForIndex(parser, sourceId, timezoneOverrideHours)?.let {
                                 if (it.endEpoch < cutoffEpoch) return@let
                                 programmeBatch.add(it)
                                 programmeCount++
                                 itemsSinceLastProgressUpdate++
-                                
+
                                 if (programmeBatch.size >= BATCH_SIZE) {
                                     db.withTransaction {
                                         dao.insertProgrammes(programmeBatch.toList())
                                     }
                                     programmeBatch.clear()
-                                    
+
                                     // Throttled UI updates to reduce main thread pressure during playback
                                     if (itemsSinceLastProgressUpdate >= 50000) {
                                         onProgress?.invoke(channelCount, programmeCount)
-                                        if (!wasIndexed) {
-                                            _state.value = EpgIndexState.Indexing(
-                                                progressPercent = 0,
-                                                channelsIndexed = channelCount,
-                                                programmesIndexed = programmeCount
-                                            )
-                                        }
                                         itemsSinceLastProgressUpdate = 0
                                     }
-                                    
+
                                     // Yield CPU more aggressively to other tasks (like video decoding)
                                     delay(100)
                                 }
@@ -193,21 +193,21 @@ class EpgIndexer private constructor(private val context: Context) {
                 db.withTransaction { dao.insertProgrammes(programmeBatch.toList()) }
             }
 
-            lastIngestionStats = IngestionStats(channelCount, programmeCount)
+            val stats = IngestionStats(channelCount, programmeCount)
+            lastIngestionStats = stats
             Log.d(TAG, "Stream ingestion complete: $channelCount channels, $programmeCount programmes")
+            stats
 
         } catch (e: OutOfMemoryError) {
             System.gc()
             val msg = "Out of memory during stream indexing ($channelCount ch, $programmeCount prg ingested before failure)"
             Log.e(TAG, msg, e)
             lastIngestionStats = IngestionStats(channelCount, programmeCount)
-            if (!wasIndexed) _state.value = EpgIndexState.Failed(msg)
             throw java.io.IOException(msg, e)
         } catch (e: Exception) {
             val msg = "Stream indexing failed: ${e.message} ($channelCount ch, $programmeCount prg ingested before failure)"
             Log.e(TAG, msg, e)
             lastIngestionStats = IngestionStats(channelCount, programmeCount)
-            if (!wasIndexed) _state.value = EpgIndexState.Failed(msg)
             throw e
         }
     }
