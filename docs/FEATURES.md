@@ -84,7 +84,11 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 - Mobile: download to cache dir first, then ingest
 - Auto-refresh on startup and 24h periodic WorkManager background sync
 - First source clears existing data (full rebuild); subsequent sources append
-- Actions: Refresh All, Cleanup Files, Purge >7 days, Clear All Data
+- Selective refresh: checkboxes to select specific sources, then "Refresh Selected"
+- Source deletion cleans up associated channels and programmes from the index
+- Import date filter: programmes ending before yesterday are skipped during ingestion
+- Ingestion progress percentage shown when file size is known
+- Actions: Refresh All, Refresh Selected, Cleanup Files, Purge >2 days, Clear All Data
 
 **Indexer states:** NotIndexed → Indexing(progress%) → Indexed(programmes, channels) → Failed(reason)
 
@@ -241,7 +245,7 @@ Enable in Settings. Features gated behind dev mode:
 
 | Setting | Description |
 |---------|-------------|
-| Active Provider | Shows current provider name and URL |
+| Active Provider | Shows current provider name, URL, and subscription info (Xtream: expiry, max connections, trial status) |
 | Manage Providers | CRUD for all providers; set active |
 | Theme | Select from 4 dark themes |
 | Manage EPG Data | Add/edit/delete XMLTV sources, trigger refresh |

@@ -271,9 +271,13 @@ epg_index.db
 2. Dual-mode: TV/fixed devices stream directly (zero disk I/O), mobile downloads to `cacheDir` first
 3. `XmltvParser` performs streaming XML parse with 128KB buffers
 4. `EpgIndexer` does 500-row batch INSERTs wrapped in Room `withTransaction`
-5. First source clears existing data (full rebuild), subsequent sources append (REPLACE on overlap)
-6. Files deleted immediately after ingestion
-7. Mobile background sync via WorkManager `EpgSyncWorker` (24h periodic)
+5. Date filter: programmes ending before yesterday (current time - 24h) are skipped during ingestion
+6. First source clears existing data (full rebuild), subsequent sources append (REPLACE on overlap)
+7. Files deleted immediately after ingestion
+8. Mobile background sync via WorkManager `EpgSyncWorker` (24h periodic)
+9. Source deletion cleans up associated programmes via `deleteBySourceId()`
+10. Selective refresh: UI allows selecting specific sources to refresh instead of all
+11. Ingestion progress percentage tracked via `CountingInputStream` (mobile file mode)
 
 ### Search
 

@@ -1,5 +1,37 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: App Polish & EPG Improvements
+**Release Date:** 2026-02-28
+
+### Branding & Naming
+- Replaced all "IPTV.atr" references with "fijerena" across login screens, category headers, and player
+- Content type selection screen now shows "fijerena" as app title instead of provider name
+- TV category page loads actual provider name from database instead of hardcoded "My Provider"
+
+### EPG Management
+- **Selective refresh:** Checkboxes on each source row allow selecting multiple sources for targeted refresh
+- **Source deletion cleanup:** Deleting a source now also removes its channels and programmes from the index
+- **Import date filter:** Programmes ending before yesterday are skipped during ingestion, reducing DB size
+- **Ingestion progress:** Percentage shown during file-based ingestion (mobile) via byte tracking
+- **Purge threshold:** Changed from 7 days to 2 days for stale programme cleanup
+
+### Provider & Settings
+- **Subscription info:** Xtream provider settings now show expiration date, max connections, and trial status
+- **Startup restore:** App restores last browsed category on startup (not just content type)
+
+### Player & VOD
+- **Resume button focus:** TV movie/episode details screens now focus the Resume button when resume position is available
+- **VOD position flush:** `StreamLoaderViewModel.onCleared()` now flushes pending watch history writes, preventing lost resume positions
+
+### Files Modified
+- 4 login/branding files, 2 content selection screens, 2 settings screens
+- 2 EPG management screens, 1 EPG management ViewModel
+- 1 EPG indexer (date filter), 1 EPG file manager (progress tracking)
+- 2 NavHost files (startup restore), 2 TV detail screens (focus fix)
+- 1 StreamLoaderViewModel (flush fix), 1 TV ProviderSettingsCard
+
+---
+
 ## Version: EPG Browser Date Grouping
 **Release Date:** 2026-02-27
 
