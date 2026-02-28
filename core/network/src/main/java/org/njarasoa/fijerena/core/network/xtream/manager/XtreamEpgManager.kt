@@ -7,8 +7,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -68,19 +66,19 @@ class XtreamEpgManager(
         withContext(Dispatchers.IO) {
             suspendResultOf {
                 coroutineScope {
-                    val semaphore = Semaphore(10)
-                    val deferreds = streamIds.map { streamId ->
-                        async {
-                            semaphore.withPermit {
+                    val results = mutableMapOf<Int, EpgResponse>()
+                    // Batch requests to prevent OOM from too many concurrent coroutines/network tasks
+                    val batchSize = 10
+                    streamIds.chunked(batchSize).forEach { batch ->
+                        val deferreds = batch.map { streamId ->
+                            async {
                                 streamId to getEpgForStream(streamId)
                             }
                         }
-                    }
-
-                    val results = mutableMapOf<Int, EpgResponse>()
-                    deferreds.awaitAll().forEach { (streamId, result) ->
-                        if (result is Result.Success) {
-                            results[streamId] = result.data
+                        deferreds.awaitAll().forEach { (streamId, result) ->
+                            if (result is Result.Success) {
+                                results[streamId] = result.data
+                            }
                         }
                     }
                     results
