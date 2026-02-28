@@ -327,6 +327,33 @@ fun MobileSettingsScreen(
                 }
             }
 
+            // === Playback ===
+            SettingsSection(title = "Playback") {
+                var watchDelayText by remember { mutableStateOf(appSettings.watchDelaySeconds.toString()) }
+                Text(
+                    text = "How long to watch a channel before it's added to Last Watched",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = watchDelayText,
+                    onValueChange = { newValue ->
+                        watchDelayText = newValue
+                        newValue.toIntOrNull()?.let { seconds ->
+                            appSettings.watchDelaySeconds = seconds
+                        }
+                    },
+                    label = { Text("Watch delay (seconds)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    supportingText = {
+                        Text("${AppSettings.MIN_WATCH_DELAY_SECONDS}–${AppSettings.MAX_WATCH_DELAY_SECONDS} seconds")
+                    }
+                )
+            }
+
             // === Theme ===
             SettingsSection(title = "Theme") {
                 Text(

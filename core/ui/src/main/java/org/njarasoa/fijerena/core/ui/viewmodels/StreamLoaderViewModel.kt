@@ -182,10 +182,10 @@ class StreamLoaderViewModel(
                         isFavorite = isFav
                     )
 
-                    // Schedule history update (Recent Channels) after 30 seconds of watching
+                    // Schedule history update (Recent Channels) after configured delay
                     historyJob?.cancel()
                     historyJob = viewModelScope.launch(Dispatchers.IO) {
-                        delay(30_000)
+                        delay(AppSettings(context).watchDelaySeconds * 1000L)
                         val watchHistoryStreamId = if (contentType == ContentType.TV_SHOWS && seriesId != null) seriesId else streamId
                         val watchHistoryStreamName = if (contentType == ContentType.TV_SHOWS && seriesName != null) seriesName else streamName
                         repo.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)

@@ -27,7 +27,11 @@ class AppSettings(context: Context) {
         private const val KEY_CELLULAR_LIVE_MULTIPLIER = "cellular_live_multiplier"
         private const val KEY_CELLULAR_VOD_MULTIPLIER = "cellular_vod_multiplier"
         private const val KEY_HAS_PROVIDER_CACHE = "has_provider_cache"
+        private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
+        const val DEFAULT_WATCH_DELAY_SECONDS = 30
+        const val MIN_WATCH_DELAY_SECONDS = 5
+        const val MAX_WATCH_DELAY_SECONDS = 120
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
         const val DEFAULT_UI_SCALE = 1.0f
@@ -163,6 +167,17 @@ class AppSettings(context: Context) {
      * Used for fast startup — avoids Room DB query on cold start.
      * Must be updated whenever providers are added or removed.
      */
+    /**
+     * Delay in seconds before a live channel is marked as "watched" (added to Last Watched).
+     * Range: 5-120 seconds. Default: 30 seconds.
+     */
+    var watchDelaySeconds: Int
+        get() = prefs.getInt(KEY_WATCH_DELAY_SECONDS, DEFAULT_WATCH_DELAY_SECONDS)
+        set(value) {
+            val clamped = value.coerceIn(MIN_WATCH_DELAY_SECONDS, MAX_WATCH_DELAY_SECONDS)
+            prefs.edit().putInt(KEY_WATCH_DELAY_SECONDS, clamped).apply()
+        }
+
     var hasProviderCache: Boolean
         get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
         set(value) = prefs.edit().putBoolean(KEY_HAS_PROVIDER_CACHE, value).apply()
