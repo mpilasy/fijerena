@@ -38,8 +38,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import androidx.compose.runtime.snapshotFlow
 import androidx.tv.foundation.lazy.list.TvLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -147,64 +145,79 @@ fun EpgGridLayout(
         } else if (channelRows.isEmpty()) {
             EmptyEpgMessage()
         } else {
-            // Synchronized vertical scroll states for two-pane grid
-            val channelListState = rememberTvLazyListState()
-            val programGridState = rememberTvLazyListState()
+            val horizontalScrollState = rememberLazyListState()
+            val verticalScrollState = rememberTvLazyListState()
 
-            // Sync channel list → program grid
-            LaunchedEffect(channelListState) {
-                snapshotFlow {
-                    channelListState.firstVisibleItemIndex to
-                            channelListState.firstVisibleItemScrollOffset
-                }.collectLatest { (index, offset) ->
-                    if (programGridState.firstVisibleItemIndex != index ||
-                        programGridState.firstVisibleItemScrollOffset != offset
-                    ) {
-                        programGridState.scrollToItem(index, offset)
-                    }
+            // Auto-scroll to current time on load
+            LaunchedEffect(currentTimeSlot) {
+                if (currentTimeSlot > 0 && currentTimeSlot < timeSlots.size) {
+                    horizontalScrollState.animateScrollToItem(
+                        currentTimeSlot.coerceIn(0, timeSlots.lastIndex)
+                    )
                 }
             }
 
-            // Sync program grid → channel list
-            LaunchedEffect(programGridState) {
-                snapshotFlow {
-                    programGridState.firstVisibleItemIndex to
-                            programGridState.firstVisibleItemScrollOffset
-                }.collectLatest { (index, offset) ->
-                    if (channelListState.firstVisibleItemIndex != index ||
-                        channelListState.firstVisibleItemScrollOffset != offset
-                    ) {
-                        channelListState.scrollToItem(index, offset)
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Time header row with left spacer for channel column
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.width(TvDimensions.epgChannelColumnWidth.scaled(scale) + Spacing.md.scaled(scale)))
+                    TimeHeaderRow(
+                        timeSlots = timeSlots,
+                        scrollState = horizontalScrollState,
+                        currentTimeSlot = currentTimeSlot,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(TvDimensions.epgTimeHeaderHeight.scaled(scale))
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+
+                // Single unified vertical list: each item is channel + programs
+                TvLazyColumn(
+                    state = verticalScrollState,
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))
+                ) {
+                    items(
+                        count = channelRows.size,
+                        key = { channelRows[it].channel.id },
+                        contentType = { "channel_row" }
+                    ) { index ->
+                        val row = channelRows[index]
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Channel name on the left
+                            ChannelItem(
+                                channel = row.channel,
+                                onClick = {
+                                    onChannelSelected(
+                                        row.channel.id,
+                                        row.channel.name,
+                                        row.channel.categoryId
+                                    )
+                                },
+                                modifier = Modifier.width(TvDimensions.epgChannelColumnWidth.scaled(scale))
+                            )
+
+                            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
+
+                            // Program row on the right
+                            ProgramRow(
+                                channelRow = row,
+                                timeSlots = timeSlots,
+                                nowEpochSeconds = nowEpochSeconds,
+                                scrollState = horizontalScrollState,
+                                onProgramSelected = { program ->
+                                    onProgramSelected(program, row.channel)
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
-            }
-
-            // Two-pane grid
-            Row(modifier = Modifier.fillMaxSize()) {
-                // Left: Channel list (20% width)
-                ChannelListColumn(
-                    channelRows = channelRows,
-                    onChannelSelected = onChannelSelected,
-                    listState = channelListState,
-                    modifier = Modifier
-                        .weight(0.2f)
-                        .fillMaxHeight()
-                )
-
-                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-
-                // Right: Scrollable time grid (80% width)
-                TimeGridColumn(
-                    channelRows = channelRows,
-                    timeSlots = timeSlots,
-                    currentTimeSlot = currentTimeSlot,
-                    nowEpochSeconds = nowEpochSeconds,
-                    onProgramSelected = onProgramSelected,
-                    verticalScrollState = programGridState,
-                    modifier = Modifier
-                        .weight(0.8f)
-                        .fillMaxHeight()
-                )
             }
         }
     }
@@ -302,45 +315,10 @@ private fun EmptyEpgMessage() {
 }
 
 @Composable
-private fun ChannelListColumn(
-    channelRows: List<EpgChannelRow>,
-    onChannelSelected: (String, String, String) -> Unit,
-    listState: TvLazyListState,
-    modifier: Modifier = Modifier
-) {
-    val scale = LocalUiScale.current
-
-    GlassPanel(modifier = modifier) {
-        TvLazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))
-        ) {
-            items(
-                count = channelRows.size,
-                key = { channelRows[it].channel.id },
-                contentType = { "channel" }
-            ) { index ->
-                val row = channelRows[index]
-                ChannelItem(
-                    channel = row.channel,
-                    onClick = {
-                        onChannelSelected(
-                            row.channel.id,
-                            row.channel.name,
-                            row.channel.categoryId
-                        )
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun ChannelItem(
     channel: MediaItem,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val scale = LocalUiScale.current
@@ -352,8 +330,7 @@ private fun ChannelItem(
 
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .height(TvDimensions.epgRowHeight.scaled(scale))
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
@@ -387,68 +364,6 @@ private fun ChannelItem(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-        }
-    }
-}
-
-@Composable
-private fun TimeGridColumn(
-    channelRows: List<EpgChannelRow>,
-    timeSlots: List<TimeSlot>,
-    currentTimeSlot: Int,
-    nowEpochSeconds: Long,
-    onProgramSelected: (EpgProgram, MediaItem) -> Unit,
-    verticalScrollState: TvLazyListState,
-    modifier: Modifier = Modifier
-) {
-    val horizontalScrollState = rememberLazyListState()
-
-    // Auto-scroll to current time on load
-    LaunchedEffect(currentTimeSlot) {
-        if (currentTimeSlot > 0 && currentTimeSlot < timeSlots.size) {
-            horizontalScrollState.animateScrollToItem(
-                currentTimeSlot.coerceIn(0, timeSlots.lastIndex)
-            )
-        }
-    }
-
-    val scale = LocalUiScale.current
-
-    Column(modifier = modifier) {
-        // Time header row
-        TimeHeaderRow(
-            timeSlots = timeSlots,
-            scrollState = horizontalScrollState,
-            currentTimeSlot = currentTimeSlot,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(TvDimensions.epgTimeHeaderHeight.scaled(scale))
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-
-        // Program grid
-        TvLazyColumn(
-            state = verticalScrollState,
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))
-        ) {
-            items(
-                count = channelRows.size,
-                key = { channelRows[it].channel.id },
-                contentType = { "program_row" }
-            ) { rowIndex ->
-                val row = channelRows[rowIndex]
-                ProgramRow(
-                    channelRow = row,
-                    timeSlots = timeSlots,
-                    nowEpochSeconds = nowEpochSeconds,
-                    scrollState = horizontalScrollState,
-                    onProgramSelected = { program ->
-                        onProgramSelected(program, row.channel)
-                    }
-                )
-            }
         }
     }
 }
@@ -504,14 +419,14 @@ private fun ProgramRow(
     timeSlots: List<TimeSlot>,
     nowEpochSeconds: Long,
     scrollState: LazyListState,
-    onProgramSelected: (EpgProgram) -> Unit
+    onProgramSelected: (EpgProgram) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val scale = LocalUiScale.current
 
     LazyRow(
         state = scrollState,
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .height(TvDimensions.epgRowHeight.scaled(scale)),
         userScrollEnabled = false // Synchronized with header row
     ) {

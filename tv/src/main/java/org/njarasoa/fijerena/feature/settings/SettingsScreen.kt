@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.feature.settings.components.DeveloperSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.EpgSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ExportImportSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
+import org.njarasoa.fijerena.feature.settings.components.PlaybackSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ProviderSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ThemeSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.UiScaleSettingsCard
@@ -96,6 +97,7 @@ fun SettingsScreen(
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
     var uiScale by remember { mutableStateOf(appSettings.uiScale) }
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
+    var watchDelaySeconds by remember { mutableStateOf(appSettings.watchDelaySeconds) }
 
     // Export/Import state
     var exportImportMessage by remember { mutableStateOf<String?>(null) }
@@ -276,6 +278,18 @@ fun SettingsScreen(
                         currentUrl = currentUrl,
                         onManageProviders = onManageProviders,
                         initialFocusRequester = initialFocusRequester,
+                        scale = scale
+                    )
+                }
+
+                // Playback
+                item {
+                    PlaybackSettingsCard(
+                        watchDelaySeconds = watchDelaySeconds,
+                        onWatchDelayChanged = { seconds ->
+                            watchDelaySeconds = seconds
+                            appSettings.watchDelaySeconds = seconds
+                        },
                         scale = scale
                     )
                 }
