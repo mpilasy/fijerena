@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,20 +65,20 @@ fun CategoryGridScreen(
         )
     )
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val nowPlayingMap by viewModel.nowPlaying.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val nowPlayingMap by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val nowPlaying = remember(nowPlayingMap) { ImmutableNowPlaying(nowPlayingMap) }
-    val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsState()
-    val favoriteIds by viewModel.favoriteIds.collectAsState()
-    val favoriteCategoryIds by viewModel.favoriteCategoryIds.collectAsState()
-    val watchProgress by viewModel.watchProgress.collectAsState()
+    val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsStateWithLifecycle()
+    val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
+    val favoriteCategoryIds by viewModel.favoriteCategoryIds.collectAsStateWithLifecycle()
+    val watchProgress by viewModel.watchProgress.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
 
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
-    val epgIndexState by epgIndexer.state.collectAsState()
+    val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
 
     // Refresh last played item when screen resumes (e.g. back from player)
     // Uses repeatOnLifecycle to avoid recomposing the entire screen on every lifecycle transition

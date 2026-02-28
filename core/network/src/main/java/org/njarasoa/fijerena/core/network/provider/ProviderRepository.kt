@@ -20,6 +20,14 @@ class ProviderRepository(private val context: Context) {
     private val db = ProviderDatabase.getInstance(context)
     private val dao = db.providerDao()
 
+    private val masterKey: MasterKey by lazy {
+        MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+    }
+
+    private val encryptedPrefsCache = java.util.concurrent.ConcurrentHashMap<Long, android.content.SharedPreferences>()
+
     fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders().distinctUntilChanged()
 
     suspend fun getAllProvidersList(): List<ProviderEntity> = dao.getAllProvidersList()
@@ -190,13 +198,13 @@ class ProviderRepository(private val context: Context) {
         return repo.getCacheStats()
     }
 
-    fun clearAllCacheForProvider(providerId: Long) {
+    suspend fun clearAllCacheForProvider(providerId: Long) {
         val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context)
         val repo = XtreamRepository(accountManager, context, providerId)
         repo.clearCache()
     }
 
-    fun clearCacheForProviderContentType(providerId: Long, contentType: String) {
+    suspend fun clearCacheForProviderContentType(providerId: Long, contentType: String) {
         val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context)
         val repo = XtreamRepository(accountManager, context, providerId)
         repo.clearCacheForContentType(contentType)
@@ -213,6 +221,7 @@ class ProviderRepository(private val context: Context) {
     private fun clearProviderPassword(providerId: Long) {
         try {
             getProviderPrefs(providerId).edit().clear().apply()
+            encryptedPrefsCache.remove(providerId)
         } catch (_: Exception) {
             // Ignore errors clearing prefs for deleted provider
         }
@@ -229,15 +238,14 @@ class ProviderRepository(private val context: Context) {
     }
 
     private fun getProviderPrefs(providerId: Long): android.content.SharedPreferences {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        return EncryptedSharedPreferences.create(
-            context,
-            "provider_creds_$providerId",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        return encryptedPrefsCache.getOrPut(providerId) {
+            EncryptedSharedPreferences.create(
+                context,
+                "provider_creds_$providerId",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
     }
 }

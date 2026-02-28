@@ -32,7 +32,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,10 +91,10 @@ fun EpgBrowserScreen(
     val viewModel: EpgBrowserViewModel = viewModel(
         factory = remember { EpgBrowserViewModelFactory(context.applicationContext) }
     )
-    val uiState by viewModel.uiState.collectAsState()
-    val indexState by viewModel.indexState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val isDevMode = viewModel.isDevMode
-    val sourceLabels by viewModel.sourceLabels.collectAsState()
+    val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
     val epgDbStats = when (val idx = indexState) {
         is EpgIndexState.Indexed -> "${idx.programmeCount} progs, ${idx.channelCount} channels"
         else -> null

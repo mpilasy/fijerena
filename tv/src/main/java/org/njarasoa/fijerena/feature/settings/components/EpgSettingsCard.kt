@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,7 +45,7 @@ fun EpgSettingsCard(
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
 
             val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
-            val indexState by epgIndexer.state.collectAsState()
+            val indexState by epgIndexer.state.collectAsStateWithLifecycle()
             var sourceCount by remember { mutableStateOf(0) }
             LaunchedEffect(epgRefreshTrigger) {
                 sourceCount = epgIndexer.getSourceCount()

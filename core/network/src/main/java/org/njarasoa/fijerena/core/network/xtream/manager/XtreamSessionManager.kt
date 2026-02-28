@@ -11,7 +11,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 
 class XtreamSessionManager(
     private val accountManager: AccountManager,
-    private val onClearCache: () -> Unit
+    private val onClearCache: suspend () -> Unit
 ) {
     var apiService: XtreamApiService? = null
         private set

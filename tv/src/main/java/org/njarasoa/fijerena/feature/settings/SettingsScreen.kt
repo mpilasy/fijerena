@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -179,8 +179,8 @@ fun SettingsScreen(
     }
 
     // Drive sync state
-    val syncStatus by syncManager.syncStatus.collectAsState()
-    val signedInEmail by syncManager.signedInEmail.collectAsState()
+    val syncStatus by syncManager.syncStatus.collectAsStateWithLifecycle()
+    val signedInEmail by syncManager.signedInEmail.collectAsStateWithLifecycle()
 
     // Sign-in error state
     var signInError by remember { mutableStateOf<String?>(null) }
@@ -215,7 +215,7 @@ fun SettingsScreen(
 
     // Re-check provider when returning from provider management screens
     val lifecycleOwner = LocalLifecycleOwner.current
-    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     LaunchedEffect(lifecycleState) {
         if (lifecycleState == Lifecycle.State.RESUMED) {
             val activeProvider = providerRepo.getActiveProvider()

@@ -4,7 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -139,7 +139,7 @@ fun TvNavHost(
         initializationComplete = true
     }
 
-    val isAuthenticated by authViewModel.authResponse.collectAsState()
+    val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()
 
     // Determine initial destination based on provider configuration
     val startDestination = remember(initializationComplete, hasProvider) {
