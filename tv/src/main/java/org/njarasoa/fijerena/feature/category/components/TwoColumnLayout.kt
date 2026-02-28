@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,9 +72,15 @@ internal fun TwoColumnLayout(
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val providerName by remember { mutableStateOf(appSettings.providerName) }
+    var providerName by remember { mutableStateOf(appSettings.providerName) }
     // Read once — avoids SharedPreferences disk I/O on every recomposition
     val isDevMode = remember { appSettings.isDevMode }
+
+    // Load actual provider name from database (AppSettings default is "My Provider")
+    LaunchedEffect(Unit) {
+        val repo = org.njarasoa.fijerena.core.network.provider.ProviderRepository(context.applicationContext)
+        repo.getActiveProvider()?.let { providerName = it.name }
+    }
 
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
@@ -153,7 +160,7 @@ internal fun TwoColumnLayout(
                 }
                 Column {
                     Text(
-                        text = "IPTV.atr",
+                        text = providerName,
                         style = scaledStyles.displaySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )

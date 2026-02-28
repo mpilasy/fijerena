@@ -112,7 +112,7 @@ fun LoginScreenTv(
         ) {
             // Title
             Text(
-                text = "Xtream IPTV.atr Login",
+                text = "Xtream Login",
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 48.dp)

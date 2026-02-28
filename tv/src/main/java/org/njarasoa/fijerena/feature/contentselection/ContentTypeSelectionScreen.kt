@@ -206,7 +206,7 @@ fun ContentTypeSelectionScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = providerName.ifEmpty { "Fijerena" },
+                    text = "fijerena",
                     style = MaterialTheme.typography.displayMedium.copy(
                         fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)
                     ),

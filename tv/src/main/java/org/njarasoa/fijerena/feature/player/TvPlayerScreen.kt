@@ -126,7 +126,7 @@ fun TvPlayerScreen(
         if (state is StreamLoaderViewModel.StreamState.Success) {
             val metadata = PlayerMetadata(
                 title = state.streamName,
-                channelName = "IPTV.atr", // Could be fetched from provider settings
+                channelName = state.streamName,
                 streamUrl = state.streamUrl,
                 isLive = state.isLive,
                 headers = state.streamHeaders

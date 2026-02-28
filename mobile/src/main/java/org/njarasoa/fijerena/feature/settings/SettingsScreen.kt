@@ -65,6 +65,11 @@ fun MobileSettingsScreen(
     var currentUrl by remember { mutableStateOf("") }
     var currentUsername by remember { mutableStateOf("") }
     var activeProviderId by remember { mutableStateOf<Long?>(null) }
+    var providerType by remember { mutableStateOf("") }
+    var subscriptionExpiry by remember { mutableStateOf<String?>(null) }
+    var subscriptionStatus by remember { mutableStateOf<String?>(null) }
+    var subscriptionMaxCons by remember { mutableStateOf<String?>(null) }
+    var subscriptionIsTrial by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val activeProvider = providerRepo.getActiveProvider()
@@ -72,6 +77,30 @@ fun MobileSettingsScreen(
         currentUrl = activeProvider?.url ?: ""
         currentUsername = activeProvider?.username ?: ""
         activeProviderId = activeProvider?.id
+        providerType = activeProvider?.type ?: ""
+
+        if (activeProvider?.type == "XTREAM") {
+            val accountManager = AccountManager(context.applicationContext)
+            accountManager.getAuthResponse()?.userInfo?.let { info ->
+                subscriptionStatus = info.status
+                subscriptionMaxCons = info.maxConnections
+                subscriptionIsTrial = info.isTrial == "1"
+                val expDate = info.expDate
+                subscriptionExpiry = when {
+                    expDate.isNullOrEmpty() -> null
+                    expDate.equals("Unlimited", ignoreCase = true) -> "Unlimited"
+                    else -> {
+                        val epoch = expDate.toLongOrNull()
+                        if (epoch != null) {
+                            val date = java.time.Instant.ofEpochSecond(epoch)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate()
+                            date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy"))
+                        } else expDate
+                    }
+                }
+            }
+        }
     }
 
     // Global settings
@@ -319,6 +348,33 @@ fun MobileSettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
+                if (subscriptionExpiry != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val isExpired = subscriptionStatus?.equals("Expired", ignoreCase = true) == true
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Expires", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow))
+                        Text(
+                            text = subscriptionExpiry!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    if (subscriptionMaxCons != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Max connections", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow))
+                            Text(subscriptionMaxCons!!, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if (subscriptionIsTrial) {
+                        Text("Trial account", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = onManageProviders,

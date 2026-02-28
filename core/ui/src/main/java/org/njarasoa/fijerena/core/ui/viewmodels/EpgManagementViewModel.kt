@@ -85,8 +85,8 @@ class EpgManagementViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 _hasStrayFiles.value = epgFileManager.getStrayFiles().isNotEmpty()
-                val sevenDaysAgo = (System.currentTimeMillis() / 1000) - (7 * 24 * 3600)
-                _staleProgrammeCount.value = indexer.countStaleProgrammes(sevenDaysAgo)
+                val twoDaysAgo = (System.currentTimeMillis() / 1000) - (2 * 24 * 3600)
+                _staleProgrammeCount.value = indexer.countStaleProgrammes(twoDaysAgo)
             }
         }
     }
@@ -148,6 +148,8 @@ class EpgManagementViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 sourceDao.deleteSource(id)
+                db.epgIndexDao().deleteBySourceId(id)
+                refreshDbStats()
             }
         }
     }
@@ -266,6 +268,43 @@ class EpgManagementViewModel(
         }
     }
 
+    fun refreshSelected(selectedIds: Set<Long>) {
+        viewModelScope.launch {
+            val selectedSources = withContext(Dispatchers.IO) {
+                sourceDao.getAllSourcesOnce().filter { it.id in selectedIds }
+            }
+            if (selectedSources.isEmpty()) return@launch
+
+            epgFileManager.launchProcessSources(
+                sources = selectedSources,
+                taskId = "epg_refresh_selected",
+                onComplete = {
+                    refreshDbStats()
+                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                },
+                onCellularConfirm = {
+                    _cellularDialog.value = CellularConfirmDialog.RefreshAll(
+                        onConfirm = {
+                            val retrySelected = withContext(Dispatchers.IO) {
+                                sourceDao.getAllSourcesOnce().filter { it.id in selectedIds }
+                            }
+                            epgFileManager.launchProcessSources(
+                                sources = retrySelected,
+                                taskId = "epg_refresh_selected",
+                                onComplete = {
+                                    refreshDbStats()
+                                    _cellularDialog.value = CellularConfirmDialog.Hidden
+                                }
+                            )
+                        },
+                        onDismiss = { _cellularDialog.value = CellularConfirmDialog.Hidden }
+                    )
+                    false
+                }
+            )
+        }
+    }
+
     fun refreshSource(sourceId: Long) {
         epgFileManager.launchProcessSingleSource(
             sourceId,
@@ -316,8 +355,8 @@ class EpgManagementViewModel(
     fun purgeOldProgrammes() {
         viewModelScope.launch {
             val deleted = withContext(Dispatchers.IO) {
-                val sevenDaysAgo = (System.currentTimeMillis() / 1000) - (7 * 24 * 3600)
-                indexer.purgeOldProgrammes(sevenDaysAgo)
+                val twoDaysAgo = (System.currentTimeMillis() / 1000) - (2 * 24 * 3600)
+                indexer.purgeOldProgrammes(twoDaysAgo)
             }
             refreshDbStats()
             refreshMaintenanceState()

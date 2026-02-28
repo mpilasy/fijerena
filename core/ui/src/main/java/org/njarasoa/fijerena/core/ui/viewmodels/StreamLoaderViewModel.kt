@@ -247,6 +247,12 @@ class StreamLoaderViewModel(
         }
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        // Flush any pending watch history writes so position isn't lost
+        mediaRepository?.flushWatchHistory()
+    }
+
     fun recordHistory(position: Long, duration: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _state.value as? StreamState.Success ?: return@launch

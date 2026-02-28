@@ -206,8 +206,8 @@ private fun MovieDetailsContent(
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
 
-    // Request focus on Play button when screen loads
-    LaunchedEffect(Unit) {
+    // Request focus on Play/Resume button when screen loads or resume data arrives
+    LaunchedEffect(resumePositionMs) {
         playButtonFocusRequester.requestFocus()
     }
 

@@ -89,6 +89,10 @@ fun SettingsScreen(
     var currentUrl by remember { mutableStateOf("") }
     var currentUsername by remember { mutableStateOf("") }
     var activeProviderId by remember { mutableStateOf<Long?>(null) }
+    var subscriptionExpiry by remember { mutableStateOf<String?>(null) }
+    var subscriptionStatus by remember { mutableStateOf<String?>(null) }
+    var subscriptionMaxCons by remember { mutableStateOf<String?>(null) }
+    var subscriptionIsTrial by remember { mutableStateOf(false) }
 
     // Track whether we had a provider at initial load
     var hadProviderOnLoad by remember { mutableStateOf<Boolean?>(null) }
@@ -211,6 +215,29 @@ fun SettingsScreen(
         currentUsername = activeProvider?.username ?: ""
         activeProviderId = activeProvider?.id
         hadProviderOnLoad = activeProvider != null
+
+        if (activeProvider?.type == "XTREAM") {
+            val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context.applicationContext)
+            accountManager.getAuthResponse()?.userInfo?.let { info ->
+                subscriptionStatus = info.status
+                subscriptionMaxCons = info.maxConnections
+                subscriptionIsTrial = info.isTrial == "1"
+                val expDate = info.expDate
+                subscriptionExpiry = when {
+                    expDate.isNullOrEmpty() -> null
+                    expDate.equals("Unlimited", ignoreCase = true) -> "Unlimited"
+                    else -> {
+                        val epoch = expDate.toLongOrNull()
+                        if (epoch != null) {
+                            val date = java.time.Instant.ofEpochSecond(epoch)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate()
+                            date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy"))
+                        } else expDate
+                    }
+                }
+            }
+        }
     }
 
     // Re-check provider when returning from provider management screens
@@ -276,6 +303,10 @@ fun SettingsScreen(
                     ProviderSettingsCard(
                         providerName = providerName,
                         currentUrl = currentUrl,
+                        subscriptionExpiry = subscriptionExpiry,
+                        subscriptionMaxCons = subscriptionMaxCons,
+                        subscriptionIsTrial = subscriptionIsTrial,
+                        subscriptionStatus = subscriptionStatus,
                         onManageProviders = onManageProviders,
                         initialFocusRequester = initialFocusRequester,
                         scale = scale

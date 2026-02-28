@@ -48,6 +48,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
@@ -96,6 +98,7 @@ fun TvEpgManagementScreen(
     var showPurgeConfirm by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
+    var selectedSourceIds by remember { mutableStateOf(emptySet<Long>()) }
 
     val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
@@ -169,8 +172,14 @@ fun TvEpgManagementScreen(
                         val procState = processingState
                         if (procState is EpgFileManager.MultiSourceState.Processing) {
                             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                            val phaseText = buildString {
+                                append("Source ${procState.sourceIndex}/${procState.totalSources}: ${procState.phase} ${procState.sourceLabel}")
+                                if (procState.phase == "Ingesting" && procState.ingestPercent in 0..100) {
+                                    append(" (${procState.ingestPercent}%)")
+                                }
+                            }
                             Text(
-                                text = "Source ${procState.sourceIndex}/${procState.totalSources}: ${procState.phase} ${procState.sourceLabel}",
+                                text = phaseText,
                                 style = scaledBodySmall,
                                 color = CinemaTextSecondary
                             )
@@ -275,6 +284,23 @@ fun TvEpgManagementScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // Selection checkbox
+                            val isSelected = source.id in selectedSourceIds
+                            CinemaIconButton(
+                                onClick = {
+                                    selectedSourceIds = if (isSelected) selectedSourceIds - source.id
+                                    else selectedSourceIds + source.id
+                                },
+                                icon = {
+                                    Icon(
+                                        if (isSelected) Icons.Filled.CheckBox else Icons.Filled.CheckBoxOutlineBlank,
+                                        contentDescription = "Select",
+                                        tint = if (isSelected) CinemaAccent else CinemaTextSecondary
+                                    )
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+
                             // Status dot
                             val dotColor = when {
                                 !source.enabled -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
@@ -410,6 +436,15 @@ fun TvEpgManagementScreen(
                                 enabled = sources.isNotEmpty(),
                                 text = "Refresh All"
                             )
+                            if (selectedSourceIds.isNotEmpty()) {
+                                CinemaPrimaryButton(
+                                    onClick = {
+                                        viewModel.refreshSelected(selectedSourceIds)
+                                        selectedSourceIds = emptySet()
+                                    },
+                                    text = "Selected (${selectedSourceIds.size})"
+                                )
+                            }
                             if (hasStrayFiles) {
                                 CinemaSecondaryButton(
                                     onClick = { showCleanupConfirm = true },
@@ -419,7 +454,7 @@ fun TvEpgManagementScreen(
                             if (staleProgrammeCount > 0) {
                                 CinemaSecondaryButton(
                                     onClick = { showPurgeConfirm = true },
-                                    text = "Purge >7 Days"
+                                    text = "Purge >2 Days"
                                 )
                             }
                             CinemaDangerButton(
@@ -531,7 +566,7 @@ fun TvEpgManagementScreen(
             },
             text = {
                 Text(
-                    text = "This will permanently delete all programme data older than 7 days from the database. Channel entries are not affected.",
+                    text = "This will permanently delete all programme data older than 2 days from the database. Channel entries are not affected.",
                     style = scaledBodyMedium
                 )
             },
