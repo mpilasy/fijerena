@@ -170,13 +170,13 @@ object XmltvParser {
         }
     }
 
-    private fun parseProgramme(parser: XmlPullParser): XmltvProgramme? {
+    private fun parseProgramme(parser: XmlPullParser, timezoneOverrideHours: Int = this.timezoneOverrideHours): XmltvProgramme? {
         val startStr = parser.getAttributeValue(null, "start") ?: return null
         val stopStr = parser.getAttributeValue(null, "stop") ?: return null
         val channelId = parser.getAttributeValue(null, "channel") ?: return null
 
-        val startEpoch = parseTimestamp(startStr)
-        val endEpoch = parseTimestamp(stopStr)
+        val startEpoch = parseTimestamp(startStr, timezoneOverrideHours)
+        val endEpoch = parseTimestamp(stopStr, timezoneOverrideHours)
         if (startEpoch == 0L || endEpoch == 0L) return null
 
         var title: String? = null
@@ -334,8 +334,8 @@ object XmltvParser {
      * Parse a <programme> element and return a Room entity for indexing.
      * Reuses the same parsing logic as [parseProgramme].
      */
-    fun parseProgrammeForIndex(parser: XmlPullParser, sourceId: Long = 0): EpgProgrammeEntity? {
-        val programme = parseProgramme(parser) ?: return null
+    fun parseProgrammeForIndex(parser: XmlPullParser, sourceId: Long = 0, timezoneOverrideHours: Int = this.timezoneOverrideHours): EpgProgrammeEntity? {
+        val programme = parseProgramme(parser, timezoneOverrideHours) ?: return null
         return EpgProgrammeEntity(
             channelId = programme.channelId,
             title = programme.title,
@@ -360,7 +360,7 @@ object XmltvParser {
 
     private val timeZoneCache = java.util.concurrent.ConcurrentHashMap<String, TimeZone>()
 
-    fun parseTimestamp(ts: String): Long {
+    fun parseTimestamp(ts: String, timezoneOverrideHours: Int = this.timezoneOverrideHours): Long {
         return try {
             // XMLTV format: "20260206180000 +0000" or "20260206180000"
             val trimmed = ts.trim()

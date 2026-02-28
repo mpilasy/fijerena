@@ -172,47 +172,27 @@ fun TvEpgManagementScreen(
                         val procState = processingState
                         if (procState is EpgFileManager.MultiSourceState.Processing) {
                             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                            val phaseText = buildString {
-                                append("Source ${procState.sourceIndex}/${procState.totalSources}: ${procState.phase} ${procState.sourceLabel}")
-                                if (procState.phase == "Ingesting" && procState.ingestPercent in 0..100) {
-                                    append(" (${procState.ingestPercent}%)")
-                                }
-                            }
                             Text(
-                                text = phaseText,
+                                text = "${procState.completedCount}/${procState.totalSources} sources" +
+                                    if (procState.activeSourceLabels.isNotEmpty()) " — ${procState.activeSourceLabels.joinToString(", ")}" else "",
                                 style = scaledBodySmall,
                                 color = CinemaTextSecondary
                             )
-                            if (procState.phase == "Streaming" && (procState.sourceChannels > 0 || procState.sourceProgrammes > 0)) {
+                            if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
                                 Text(
-                                    text = "${formatCount(procState.sourceChannels)}ch, ${formatCount(procState.sourceProgrammes)}prg",
+                                    text = "${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
                                     style = scaledLabelSmall,
                                     color = CinemaTextSecondary
                                 )
                             }
-                            if (viewModel.isDevMode) {
-                                if (procState.phase == "Downloading" && procState.downloadedBytes > 0) {
-                                    val progress = if (procState.downloadTotalBytes > 0) {
-                                        "${formatBytes(procState.downloadedBytes)} / ${formatBytes(procState.downloadTotalBytes)}" +
-                                            " (${(procState.downloadedBytes * 100 / procState.downloadTotalBytes)}%)"
-                                    } else {
-                                        formatBytes(procState.downloadedBytes)
-                                    }
+                            if (viewModel.isDevMode && procState.completedSourceStats.isNotEmpty()) {
+                                procState.completedSourceStats.forEach { stat ->
                                     Text(
-                                        text = "Download: $progress",
+                                        text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
+                                            (stat.error?.let { " [$it]" } ?: ""),
                                         style = scaledLabelSmall,
-                                        color = CinemaTextSecondary
+                                        color = if (stat.error != null) CinemaError else CinemaTextSecondary
                                     )
-                                }
-                                if (procState.completedSourceStats.isNotEmpty()) {
-                                    procState.completedSourceStats.forEach { stat ->
-                                        Text(
-                                            text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
-                                                (stat.error?.let { " [$it]" } ?: ""),
-                                            style = scaledLabelSmall,
-                                            color = if (stat.error != null) CinemaError else CinemaTextSecondary
-                                        )
-                                    }
                                 }
                             }
                         }

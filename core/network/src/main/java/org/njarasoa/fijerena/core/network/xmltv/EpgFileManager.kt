@@ -3,22 +3,21 @@ package org.njarasoa.fijerena.core.network.xmltv
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.request.prepareGet
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.utils.io.jvm.javaio.toInputStream
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import java.util.concurrent.CopyOnWriteArrayList
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
@@ -107,15 +106,12 @@ class EpgFileManager private constructor(private val context: Context) {
     sealed interface MultiSourceState {
         data object Idle : MultiSourceState
         data class Processing(
-            val sourceLabel: String,
-            val sourceIndex: Int,
+            val completedCount: Int,
             val totalSources: Int,
-            val phase: String, // "Streaming" or "Downloading" or "Ingesting"
-            val downloadedBytes: Long = 0,
-            val downloadTotalBytes: Long = -1, // -1 = unknown
-            val sourceChannels: Int = 0,
-            val sourceProgrammes: Int = 0,
-            val ingestPercent: Int = -1, // -1 = unknown
+            val activeSourceLabels: List<String>,
+            val totalChannels: Int = 0,
+            val totalProgrammes: Int = 0,
+            val totalDownloadedBytes: Long = 0,
             val completedSourceStats: List<SourceStats> = emptyList()
         ) : MultiSourceState
         data class Completed(
@@ -350,17 +346,37 @@ class EpgFileManager private constructor(private val context: Context) {
             val sourceDao = db.epgSourceDao()
             val indexer = EpgIndexer.getInstance(context)
 
-            var errorCount = 0
-            val allStats = mutableListOf<SourceStats>()
+            val maxConcurrency = if (isFixedDevice()) 2 else 3
+            val semaphore = Semaphore(maxConcurrency)
+            val completedStats = CopyOnWriteArrayList<SourceStats>()
+            val activeLabels = CopyOnWriteArrayList<String>()
 
-            sources.forEachIndexed { index, source ->
-                val label = source.label.ifBlank { extractLabel(source.url) }
-                val stats = processSource(source, label, index, sources.size, sourceDao, indexer, allStats)
-                allStats.add(stats)
-                if (stats.error != null) errorCount++
+            indexer.setIndexing()
+
+            _state.value = MultiSourceState.Processing(
+                completedCount = 0,
+                totalSources = sources.size,
+                activeSourceLabels = emptyList()
+            )
+
+            val allStats = coroutineScope {
+                sources.map { source ->
+                    async {
+                        val label = source.label.ifBlank { extractLabel(source.url) }
+                        semaphore.withPermit {
+                            activeLabels.add(label)
+                            updateAggregateProgress(completedStats, activeLabels, sources.size)
+                            val stats = processSourceParallel(source, label, sourceDao, indexer)
+                            activeLabels.remove(label)
+                            completedStats.add(stats)
+                            updateAggregateProgress(completedStats, activeLabels, sources.size)
+                            stats
+                        }
+                    }
+                }.map { it.await() }
             }
 
-            // Rebuild FTS once at the end, then reclaim freed pages
+            // Single FTS rebuild + vacuum after ALL sources complete
             indexer.rebuildFtsAndUpdateState()
             indexer.incrementalVacuum()
 
@@ -370,7 +386,7 @@ class EpgFileManager private constructor(private val context: Context) {
 
             _state.value = MultiSourceState.Completed(
                 sourcesProcessed = sources.size,
-                errors = errorCount,
+                errors = allStats.count { it.error != null },
                 sourceStats = allStats,
                 totalChannels = totalChannels,
                 totalProgrammes = totalProgrammes,
@@ -384,6 +400,22 @@ class EpgFileManager private constructor(private val context: Context) {
         scheduleIdleReset()
     }
 
+    private fun updateAggregateProgress(
+        completedStats: List<SourceStats>,
+        activeLabels: List<String>,
+        totalSources: Int
+    ) {
+        _state.value = MultiSourceState.Processing(
+            completedCount = completedStats.size,
+            totalSources = totalSources,
+            activeSourceLabels = activeLabels.toList(),
+            totalChannels = completedStats.sumOf { it.channelsIngested },
+            totalProgrammes = completedStats.sumOf { it.programmesIngested },
+            totalDownloadedBytes = completedStats.sumOf { it.downloadBytes },
+            completedSourceStats = completedStats.toList()
+        )
+    }
+
     private suspend fun processSingleSourceInternal(sourceId: Long) {
         try {
             val db = EpgIndexDatabase.getInstance(context)
@@ -395,10 +427,18 @@ class EpgFileManager private constructor(private val context: Context) {
             val indexer = EpgIndexer.getInstance(context)
             val label = source.label.ifBlank { extractLabel(source.url) }
 
-            val stats = processSource(source, label, 0, 1, sourceDao, indexer, emptyList())
+            indexer.setIndexing()
+            _state.value = MultiSourceState.Processing(
+                completedCount = 0,
+                totalSources = 1,
+                activeSourceLabels = listOf(label)
+            )
+
+            val stats = processSourceParallel(source, label, sourceDao, indexer)
 
             // Rebuild FTS
             indexer.rebuildFtsAndUpdateState()
+            indexer.incrementalVacuum()
 
             _state.value = MultiSourceState.Completed(
                 sourcesProcessed = 1,
@@ -427,48 +467,35 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Process a single source. Dispatches to streaming (TV) or download (mobile) path.
+     * Process a single source for parallel ingestion. Thread-safe: no singleton mutation.
+     * Dispatches to streaming (TV) or download (mobile) path.
      */
-    private suspend fun processSource(
+    private suspend fun processSourceParallel(
         source: EpgSourceEntity,
         label: String,
-        index: Int,
-        total: Int,
         sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
-        indexer: EpgIndexer,
-        completedStats: List<SourceStats>
+        indexer: EpgIndexer
     ): SourceStats {
         val isGzip = source.url.endsWith(".gz", ignoreCase = true)
 
         return if (isFixedDevice()) {
-            processSourceStream(source, label, index, total, isGzip, sourceDao, indexer, completedStats)
+            processSourceStreamParallel(source, label, isGzip, sourceDao, indexer)
         } else {
-            processSourceDownload(source, label, index, total, isGzip, sourceDao, indexer, completedStats)
+            processSourceDownloadParallel(source, label, isGzip, sourceDao, indexer)
         }
     }
 
     /**
-     * TV path: stream directly from network to database. Zero disk writes.
-     * Ktor HttpClient → InputStream → BufferedInputStream → GZIPInputStream (if .gz) → XmlPullParser → DB.
+     * TV path (parallel-safe): stream directly from network to database.
+     * No XmltvParser.timezoneOverrideHours mutation — passes tz as parameter.
      */
-    private suspend fun processSourceStream(
+    private suspend fun processSourceStreamParallel(
         source: EpgSourceEntity,
         label: String,
-        index: Int,
-        total: Int,
         isGzip: Boolean,
         sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
-        indexer: EpgIndexer,
-        completedStats: List<SourceStats>
+        indexer: EpgIndexer
     ): SourceStats {
-        _state.value = MultiSourceState.Processing(
-            sourceLabel = label,
-            sourceIndex = index + 1,
-            totalSources = total,
-            phase = "Streaming",
-            completedSourceStats = completedStats
-        )
-
         var lastError: String? = null
 
         for (attempt in 1..MAX_RETRIES) {
@@ -489,27 +516,10 @@ class EpgFileManager private constructor(private val context: Context) {
                     val buffered = BufferedInputStream(rawStream, STREAM_BUFFER_SIZE)
                     val stream = if (isGzip) GZIPInputStream(buffered, STREAM_BUFFER_SIZE) else buffered
 
-                    val previousTz = XmltvParser.timezoneOverrideHours
-                    XmltvParser.timezoneOverrideHours = source.timezoneOffsetHours
-                    try {
-                        stream.use {
-                            indexer.ingestFromStream(it, sourceId = source.id) { ch, prg ->
-                                _state.value = MultiSourceState.Processing(
-                                    sourceLabel = label,
-                                    sourceIndex = index + 1,
-                                    totalSources = total,
-                                    phase = "Streaming",
-                                    sourceChannels = ch,
-                                    sourceProgrammes = prg,
-                                    completedSourceStats = completedStats
-                                )
-                            }
-                        }
-                    } finally {
-                        XmltvParser.timezoneOverrideHours = previousTz
+                    val ingestionStats = stream.use {
+                        indexer.ingestFromStream(it, sourceId = source.id, timezoneOverrideHours = source.timezoneOffsetHours)
                     }
 
-                    val ingestionStats = indexer.lastIngestionStats
                     sourceDao.markIngested(
                         id = source.id,
                         timestamp = System.currentTimeMillis(),
@@ -518,12 +528,11 @@ class EpgFileManager private constructor(private val context: Context) {
                         downloadBytes = 0,
                         ingestMethod = "STREAMED"
                     )
-                    Log.d(TAG, "Source ${index + 1}/$total streamed: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
+                    Log.d(TAG, "Source streamed: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
 
-                    lastError = null // Success — clear error
+                    lastError = null
                 }
 
-                // If we got here without error, return success
                 if (lastError == null) {
                     val ingestionStats = indexer.lastIngestionStats
                     return SourceStats(
@@ -534,7 +543,6 @@ class EpgFileManager private constructor(private val context: Context) {
                     )
                 }
 
-                // 4xx error — don't retry
                 if (lastError?.contains("HTTP 4") == true) break
                 if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
 
@@ -554,7 +562,7 @@ class EpgFileManager private constructor(private val context: Context) {
             } catch (e: org.xmlpull.v1.XmlPullParserException) {
                 lastError = "Invalid XMLTV data: ${e.message}"
                 Log.e(TAG, "EPG streaming parse error: $lastError", e)
-                break // No point retrying invalid data
+                break
             } catch (e: java.io.IOException) {
                 lastError = e.message ?: "I/O error"
                 Log.w(TAG, "EPG streaming I/O error (attempt $attempt): $lastError", e)
@@ -572,28 +580,16 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Mobile path: download to cache file, then ingest from file.
-     * OkHttp → File → BufferedInputStream → GZIPInputStream (if .gz) → XmlPullParser → DB.
-     * Temp file deleted after ingestion.
+     * Mobile path (parallel-safe): download to cache file, then ingest.
+     * No XmltvParser.timezoneOverrideHours mutation — passes tz as parameter.
      */
-    private suspend fun processSourceDownload(
+    private suspend fun processSourceDownloadParallel(
         source: EpgSourceEntity,
         label: String,
-        index: Int,
-        total: Int,
         isGzip: Boolean,
         sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
-        indexer: EpgIndexer,
-        completedStats: List<SourceStats>
+        indexer: EpgIndexer
     ): SourceStats {
-        _state.value = MultiSourceState.Processing(
-            sourceLabel = label,
-            sourceIndex = index + 1,
-            totalSources = total,
-            phase = "Downloading",
-            completedSourceStats = completedStats
-        )
-
         val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
         var downloadedBytes = 0L
         var lastError: String? = null
@@ -614,14 +610,12 @@ class EpgFileManager private constructor(private val context: Context) {
                         }
 
                         val body = response.body ?: throw java.io.IOException("Empty response body")
-                        val downloadTotalBytes = body.contentLength()
-                        
+
                         tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
                             val input = body.byteStream()
                             input.copyTo(output, STREAM_BUFFER_SIZE)
                             output.flush()
                         }
-                        // Verify file exists and has size
                         if (tmpFile.exists()) {
                             downloadedBytes = tmpFile.length()
                         }
@@ -662,47 +656,13 @@ class EpgFileManager private constructor(private val context: Context) {
             }
 
             // Ingest from file
-            _state.value = MultiSourceState.Processing(
-                sourceLabel = label,
-                sourceIndex = index + 1,
-                totalSources = total,
-                phase = "Ingesting",
-                downloadedBytes = downloadedBytes,
-                downloadTotalBytes = downloadedBytes,
-                completedSourceStats = completedStats
-            )
-
-            val rawFileStream = tmpFile.inputStream()
-            val countingStream = CountingInputStream(rawFileStream)
-            val fileSize = tmpFile.length()
-            val bufferedStream = BufferedInputStream(countingStream, STREAM_BUFFER_SIZE)
+            val bufferedStream = BufferedInputStream(tmpFile.inputStream(), STREAM_BUFFER_SIZE)
             val stream = if (isGzip) GZIPInputStream(bufferedStream, STREAM_BUFFER_SIZE) else bufferedStream
 
-            val previousTz = XmltvParser.timezoneOverrideHours
-            XmltvParser.timezoneOverrideHours = source.timezoneOffsetHours
-            try {
-                stream.use {
-                    indexer.ingestFromStream(it, sourceId = source.id) { ch, prg ->
-                        val pct = if (fileSize > 0) ((countingStream.bytesRead * 100) / fileSize).toInt().coerceIn(0, 100) else -1
-                        _state.value = MultiSourceState.Processing(
-                            sourceLabel = label,
-                            sourceIndex = index + 1,
-                            totalSources = total,
-                            phase = "Ingesting",
-                            downloadedBytes = downloadedBytes,
-                            downloadTotalBytes = downloadedBytes,
-                            sourceChannels = ch,
-                            sourceProgrammes = prg,
-                            ingestPercent = pct,
-                            completedSourceStats = completedStats
-                        )
-                    }
-                }
-            } finally {
-                XmltvParser.timezoneOverrideHours = previousTz
+            val ingestionStats = stream.use {
+                indexer.ingestFromStream(it, sourceId = source.id, timezoneOverrideHours = source.timezoneOffsetHours)
             }
 
-            val ingestionStats = indexer.lastIngestionStats
             sourceDao.markIngested(
                 id = source.id,
                 timestamp = System.currentTimeMillis(),
@@ -711,7 +671,7 @@ class EpgFileManager private constructor(private val context: Context) {
                 downloadBytes = downloadedBytes,
                 ingestMethod = "DOWNLOADED"
             )
-            Log.d(TAG, "Source ${index + 1}/$total downloaded+ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg, ${downloadedBytes / 1024}KB)")
+            Log.d(TAG, "Source downloaded+ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg, ${downloadedBytes / 1024}KB)")
 
             return SourceStats(
                 sourceId = source.id,
@@ -727,7 +687,6 @@ class EpgFileManager private constructor(private val context: Context) {
             return SourceStats(source.id, label, downloadBytes = downloadedBytes, error = e.message ?: "Unknown error")
         } finally {
             tmpFile.delete()
-            indexer.incrementalVacuum()
         }
     }
 
@@ -818,25 +777,4 @@ class EpgFileManager private constructor(private val context: Context) {
         }
     }
 
-}
-
-/** Simple InputStream wrapper that counts bytes read. */
-private class CountingInputStream(private val wrapped: java.io.InputStream) : java.io.InputStream() {
-    var bytesRead = 0L
-        private set
-
-    override fun read(): Int {
-        val b = wrapped.read()
-        if (b >= 0) bytesRead++
-        return b
-    }
-
-    override fun read(b: ByteArray, off: Int, len: Int): Int {
-        val n = wrapped.read(b, off, len)
-        if (n > 0) bytesRead += n
-        return n
-    }
-
-    override fun close() = wrapped.close()
-    override fun available() = wrapped.available()
 }
