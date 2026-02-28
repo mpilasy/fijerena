@@ -151,10 +151,26 @@ fun TvNavHost(
         }
     }
 
-    // Auto-navigate to last content type on startup
+    // Auto-navigate to last content type (and category) on startup
     LaunchedEffect(lastContentType, initializationComplete) {
-        if (initializationComplete && lastContentType != null) {
-            navController.navigate(Screen.CategoryList(lastContentType!!)) {
+        val ct = lastContentType
+        if (initializationComplete && ct != null) {
+            val providerRepo = ProviderRepository(context.applicationContext)
+            val activeProvider = providerRepo.getActiveProvider()
+            val lastCategoryId = if (activeProvider != null) {
+                val prefs = context.applicationContext.getSharedPreferences(
+                    "media_cache_${activeProvider.id}",
+                    android.content.Context.MODE_PRIVATE
+                )
+                val key = when (ct) {
+                    org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV -> "last_live_category"
+                    org.njarasoa.fijerena.core.player.domain.ContentType.MOVIES -> "last_movies_category"
+                    org.njarasoa.fijerena.core.player.domain.ContentType.TV_SHOWS -> "last_tvshows_category"
+                    else -> null
+                }
+                key?.let { prefs.getString(it, null) }
+            } else null
+            navController.navigate(Screen.CategoryList(ct, lastCategoryId)) {
                 popUpTo(Screen.ContentTypeSelection) { inclusive = false }
             }
         }

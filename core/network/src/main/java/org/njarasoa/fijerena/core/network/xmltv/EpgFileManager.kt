@@ -115,6 +115,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val downloadTotalBytes: Long = -1, // -1 = unknown
             val sourceChannels: Int = 0,
             val sourceProgrammes: Int = 0,
+            val ingestPercent: Int = -1, // -1 = unknown
             val completedSourceStats: List<SourceStats> = emptyList()
         ) : MultiSourceState
         data class Completed(
@@ -671,14 +672,18 @@ class EpgFileManager private constructor(private val context: Context) {
                 completedSourceStats = completedStats
             )
 
-            val fileStream = BufferedInputStream(tmpFile.inputStream(), STREAM_BUFFER_SIZE)
-            val stream = if (isGzip) GZIPInputStream(fileStream, STREAM_BUFFER_SIZE) else fileStream
+            val rawFileStream = tmpFile.inputStream()
+            val countingStream = CountingInputStream(rawFileStream)
+            val fileSize = tmpFile.length()
+            val bufferedStream = BufferedInputStream(countingStream, STREAM_BUFFER_SIZE)
+            val stream = if (isGzip) GZIPInputStream(bufferedStream, STREAM_BUFFER_SIZE) else bufferedStream
 
             val previousTz = XmltvParser.timezoneOverrideHours
             XmltvParser.timezoneOverrideHours = source.timezoneOffsetHours
             try {
                 stream.use {
                     indexer.ingestFromStream(it, sourceId = source.id) { ch, prg ->
+                        val pct = if (fileSize > 0) ((countingStream.bytesRead * 100) / fileSize).toInt().coerceIn(0, 100) else -1
                         _state.value = MultiSourceState.Processing(
                             sourceLabel = label,
                             sourceIndex = index + 1,
@@ -688,6 +693,7 @@ class EpgFileManager private constructor(private val context: Context) {
                             downloadTotalBytes = downloadedBytes,
                             sourceChannels = ch,
                             sourceProgrammes = prg,
+                            ingestPercent = pct,
                             completedSourceStats = completedStats
                         )
                     }
@@ -812,4 +818,25 @@ class EpgFileManager private constructor(private val context: Context) {
         }
     }
 
+}
+
+/** Simple InputStream wrapper that counts bytes read. */
+private class CountingInputStream(private val wrapped: java.io.InputStream) : java.io.InputStream() {
+    var bytesRead = 0L
+        private set
+
+    override fun read(): Int {
+        val b = wrapped.read()
+        if (b >= 0) bytesRead++
+        return b
+    }
+
+    override fun read(b: ByteArray, off: Int, len: Int): Int {
+        val n = wrapped.read(b, off, len)
+        if (n > 0) bytesRead += n
+        return n
+    }
+
+    override fun close() = wrapped.close()
+    override fun available() = wrapped.available()
 }

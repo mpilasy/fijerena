@@ -13,9 +13,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.foundation.layout.Arrangement
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -25,10 +27,18 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun ProviderSettingsCard(
     providerName: String,
     currentUrl: String,
+    subscriptionExpiry: String? = null,
+    subscriptionMaxCons: String? = null,
+    subscriptionIsTrial: Boolean = false,
+    subscriptionStatus: String? = null,
     onManageProviders: () -> Unit,
     initialFocusRequester: FocusRequester,
     scale: Float
 ) {
+    val bodySmallStyle = MaterialTheme.typography.bodySmall.copy(
+        fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
+    )
+
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
@@ -53,11 +63,36 @@ fun ProviderSettingsCard(
                     )
                     Text(
                         text = currentUrl,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                        ),
+                        style = bodySmallStyle,
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
                     )
+                    if (subscriptionExpiry != null) {
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        val isExpired = subscriptionStatus?.equals("Expired", ignoreCase = true) == true
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Expires", style = bodySmallStyle, color = CinemaTextSecondary)
+                            Text(
+                                text = subscriptionExpiry,
+                                style = bodySmallStyle,
+                                color = if (isExpired) CinemaError else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        if (subscriptionMaxCons != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Max connections", style = bodySmallStyle, color = CinemaTextSecondary)
+                                Text(subscriptionMaxCons, style = bodySmallStyle)
+                            }
+                        }
+                        if (subscriptionIsTrial) {
+                            Text("Trial account", style = bodySmallStyle, color = CinemaAccent)
+                        }
+                    }
                 }
                 CinemaSecondaryButton(
                     onClick = onManageProviders,

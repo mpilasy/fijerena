@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -49,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -91,6 +94,7 @@ fun MobileEpgManagementScreen(
     var showPurgeConfirm by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
+    var selectedSourceIds by remember { mutableStateOf(emptySet<Long>()) }
 
     Scaffold(
         topBar = {
@@ -138,8 +142,14 @@ fun MobileEpgManagementScreen(
                 val procState = processingState
                 if (procState is EpgFileManager.MultiSourceState.Processing) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                    val phaseText = buildString {
+                        append("Source ${procState.sourceIndex}/${procState.totalSources}: ${procState.phase} ${procState.sourceLabel}")
+                        if (procState.phase == "Ingesting" && procState.ingestPercent in 0..100) {
+                            append(" (${procState.ingestPercent}%)")
+                        }
+                    }
                     Text(
-                        text = "Source ${procState.sourceIndex}/${procState.totalSources}: ${procState.phase} ${procState.sourceLabel}",
+                        text = phaseText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -218,6 +228,23 @@ fun MobileEpgManagementScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val isSelected = source.id in selectedSourceIds
+                        IconButton(
+                            onClick = {
+                                selectedSourceIds = if (isSelected) selectedSourceIds - source.id
+                                else selectedSourceIds + source.id
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                if (isSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                                contentDescription = "Select",
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+
                         val isQueued = queuedTaskIds.contains("epg_refresh_source_${source.id}") || queuedTaskIds.contains("epg_refresh_all")
 
                         val dotColor = when {
@@ -328,14 +355,32 @@ fun MobileEpgManagementScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Button(
-                    onClick = { viewModel.refreshAll() },
-                    enabled = sources.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                    Text("Refresh All")
+                    Button(
+                        onClick = { viewModel.refreshAll() },
+                        enabled = sources.isNotEmpty(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                        Text("Refresh All")
+                    }
+                    if (selectedSourceIds.isNotEmpty()) {
+                        Button(
+                            onClick = {
+                                viewModel.refreshSelected(selectedSourceIds)
+                                selectedSourceIds = emptySet()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Selected (${selectedSourceIds.size})")
+                        }
+                    }
                 }
                 if (viewModel.isDevMode) {
                     val hasFailed = sources.any { it.enabled && it.lastError != null }
@@ -392,7 +437,7 @@ fun MobileEpgManagementScreen(
                             ) {
                                 Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                 Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                Text("Purge >7d")
+                                Text("Purge >2d")
                             }
                         }
                     }
@@ -458,7 +503,7 @@ fun MobileEpgManagementScreen(
         AlertDialog(
             onDismissRequest = { showPurgeConfirm = false },
             title = { Text("Purge Old Programmes") },
-            text = { Text("This will permanently delete all programme data older than 7 days from the database. Channel entries are not affected.") },
+            text = { Text("This will permanently delete all programme data older than 2 days from the database. Channel entries are not affected.") },
             confirmButton = {
                 Button(
                     onClick = {

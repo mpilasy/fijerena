@@ -108,6 +108,9 @@ class EpgIndexer private constructor(private val context: Context) {
             )
         }
 
+        // Skip programmes that ended before yesterday
+        val cutoffEpoch = (System.currentTimeMillis() / 1000) - 86400
+
         try {
             val channelBatch = mutableListOf<EpgChannelEntity>()
             val programmeBatch = mutableListOf<EpgProgrammeEntity>()
@@ -148,6 +151,7 @@ class EpgIndexer private constructor(private val context: Context) {
                             }
 
                             XmltvParser.parseProgrammeForIndex(parser, sourceId)?.let {
+                                if (it.endEpoch < cutoffEpoch) return@let
                                 programmeBatch.add(it)
                                 programmeCount++
                                 itemsSinceLastProgressUpdate++
@@ -254,6 +258,9 @@ class EpgIndexer private constructor(private val context: Context) {
             // Clean slate for this source
             dao.deleteBySourceId(sourceId)
 
+            // Skip programmes that ended before yesterday
+            val cutoffEpoch = (System.currentTimeMillis() / 1000) - 86400
+
             // Build channels and programmes
             val channelEntities = mutableListOf<EpgChannelEntity>()
             val programmeBatch = mutableListOf<EpgProgrammeEntity>()
@@ -272,6 +279,7 @@ class EpgIndexer private constructor(private val context: Context) {
                 )
 
                 for (prog in epgResponse.listings) {
+                    if (prog.endTime < cutoffEpoch) continue
                     programmeBatch.add(
                         EpgProgrammeEntity(
                             channelId = channelId,
