@@ -44,7 +44,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,13 +86,13 @@ fun MobileCategoryListScreen(
         )
     )
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val nowPlayingMap by viewModel.nowPlaying.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val nowPlayingMap by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val nowPlaying = remember(nowPlayingMap) { ImmutableNowPlaying(nowPlayingMap) }
-    val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsState()
+    val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
-    val epgIndexState by epgIndexer.state.collectAsState()
+    val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode = remember { appSettings.isDevMode }
 

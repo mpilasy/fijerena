@@ -40,7 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,13 +70,13 @@ fun MobileEpgManagementScreen(
         factory = remember { EpgManagementViewModelFactory(context.applicationContext) }
     )
 
-    val sources by viewModel.sources.collectAsState(initial = emptyList())
-    val processingState by viewModel.processingState.collectAsState()
-    val indexState by viewModel.indexState.collectAsState()
-    val dbStats by viewModel.dbStats.collectAsState()
-    val queuedTaskIds by viewModel.queuedTaskIds.collectAsState()
-    val hasStrayFiles by viewModel.hasStrayFiles.collectAsState()
-    val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsState()
+    val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
+    val processingState by viewModel.processingState.collectAsStateWithLifecycle()
+    val indexState by viewModel.indexState.collectAsStateWithLifecycle()
+    val dbStats by viewModel.dbStats.collectAsStateWithLifecycle()
+    val queuedTaskIds by viewModel.queuedTaskIds.collectAsStateWithLifecycle()
+    val hasStrayFiles by viewModel.hasStrayFiles.collectAsStateWithLifecycle()
+    val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->

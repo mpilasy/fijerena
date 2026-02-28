@@ -38,7 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -98,8 +98,8 @@ fun MobileAddProviderScreen(
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    val saveState by viewModel.saveState.collectAsState()
-    val syncState by viewModel.syncState.collectAsState()
+    val saveState by viewModel.saveState.collectAsStateWithLifecycle()
+    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving || syncState is SyncState.Syncing
 
     // Quick Connect state (Jellyfin only)
@@ -1043,9 +1043,11 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                providerRepo.clearAllCacheForProvider(editId)
-                                cacheRefreshTrigger++
-                                showClearCacheDialog = false
+                                coroutineScope.launch {
+                                    providerRepo.clearAllCacheForProvider(editId)
+                                    cacheRefreshTrigger++
+                                    showClearCacheDialog = false
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
                         ) { Text("Clear All") }
@@ -1064,9 +1066,11 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
-                                cacheRefreshTrigger++
-                                showClearLiveTvCacheDialog = false
+                                coroutineScope.launch {
+                                    providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
+                                    cacheRefreshTrigger++
+                                    showClearLiveTvCacheDialog = false
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
                         ) { Text("Clear") }
@@ -1085,9 +1089,11 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
-                                cacheRefreshTrigger++
-                                showClearMoviesCacheDialog = false
+                                coroutineScope.launch {
+                                    providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
+                                    cacheRefreshTrigger++
+                                    showClearMoviesCacheDialog = false
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
                         ) { Text("Clear") }
@@ -1106,9 +1112,11 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
-                                cacheRefreshTrigger++
-                                showClearTvShowsCacheDialog = false
+                                coroutineScope.launch {
+                                    providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
+                                    cacheRefreshTrigger++
+                                    showClearTvShowsCacheDialog = false
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
                         ) { Text("Clear") }

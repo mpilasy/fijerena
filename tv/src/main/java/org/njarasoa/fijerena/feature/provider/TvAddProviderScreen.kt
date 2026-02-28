@@ -17,7 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -87,7 +87,7 @@ fun TvAddProviderScreen(
     var shareName by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
     var error by remember { mutableStateOf<String?>(null) }
-    val saveState by viewModel.saveState.collectAsState()
+    val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
 
     // Quick Connect state (Jellyfin only)
@@ -430,9 +430,11 @@ fun TvAddProviderScreen(
                         text = "This will remove all cached data (Live TV, Movies, TV Shows, EPG). The app will need to re-download data from the server.",
                         confirmText = "Clear All",
                         onConfirm = {
-                            providerRepo.clearAllCacheForProvider(editId)
-                            cacheRefreshTrigger++
-                            showClearCacheDialog = false
+                            coroutineScope.launch {
+                                providerRepo.clearAllCacheForProvider(editId)
+                                cacheRefreshTrigger++
+                                showClearCacheDialog = false
+                            }
                         },
                         onDismiss = { showClearCacheDialog = false }
                     )
@@ -444,9 +446,11 @@ fun TvAddProviderScreen(
                         text = "This will remove all cached Live TV data (categories and streams).",
                         confirmText = "Clear",
                         onConfirm = {
-                            providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
-                            cacheRefreshTrigger++
-                            showClearLiveTvCacheDialog = false
+                            coroutineScope.launch {
+                                providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
+                                cacheRefreshTrigger++
+                                showClearLiveTvCacheDialog = false
+                            }
                         },
                         onDismiss = { showClearLiveTvCacheDialog = false }
                     )
@@ -458,9 +462,11 @@ fun TvAddProviderScreen(
                         text = "This will remove all cached Movies data (categories and streams).",
                         confirmText = "Clear",
                         onConfirm = {
-                            providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
-                            cacheRefreshTrigger++
-                            showClearMoviesCacheDialog = false
+                            coroutineScope.launch {
+                                providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
+                                cacheRefreshTrigger++
+                                showClearMoviesCacheDialog = false
+                            }
                         },
                         onDismiss = { showClearMoviesCacheDialog = false }
                     )
@@ -472,9 +478,11 @@ fun TvAddProviderScreen(
                         text = "This will remove all cached TV Shows data (categories and streams).",
                         confirmText = "Clear",
                         onConfirm = {
-                            providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
-                            cacheRefreshTrigger++
-                            showClearTvShowsCacheDialog = false
+                            coroutineScope.launch {
+                                providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
+                                cacheRefreshTrigger++
+                                showClearTvShowsCacheDialog = false
+                            }
                         },
                         onDismiss = { showClearTvShowsCacheDialog = false }
                     )

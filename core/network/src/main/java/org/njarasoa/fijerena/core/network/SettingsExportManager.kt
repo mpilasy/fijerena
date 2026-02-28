@@ -177,7 +177,9 @@ class SettingsExportManager(private val context: Context) {
             cellularVodMultiplier = appSettings.cellularVodMultiplier
         )
 
-        val providers = providerRepo.getAllProvidersList().map { entity ->
+        val allProviders = providerRepo.getAllProvidersList()
+
+        val providers = allProviders.map { entity ->
             ExportedProvider(
                 name = entity.name,
                 url = entity.url,
@@ -199,7 +201,6 @@ class SettingsExportManager(private val context: Context) {
         }
 
         // Export favorites per provider
-        val allProviders = providerRepo.getAllProvidersList()
         val providerFavorites = allProviders.mapNotNull { entity ->
             val cachePrefs = context.getSharedPreferences(
                 "media_cache_${entity.id}",
@@ -322,10 +323,10 @@ class SettingsExportManager(private val context: Context) {
             val jsonString = file.readText(Charsets.UTF_8)
             val exported = json.decodeFromString<ExportedSettings>(jsonString)
             val providerRepo = ProviderRepository(context)
-            val existingProviders = providerRepo.getAllProvidersList()
+            val existingNames = providerRepo.getAllProvidersList().map { it.name }.toSet()
 
             val conflicts = exported.providers
-                .filter { ep -> existingProviders.any { it.name == ep.name } }
+                .filter { ep -> ep.name in existingNames }
                 .map { it.name }
 
             kotlin.Result.success(ParsedImport(exported, jsonString, conflicts))
@@ -348,10 +349,10 @@ class SettingsExportManager(private val context: Context) {
 
             val exported = json.decodeFromString<ExportedSettings>(jsonString)
             val providerRepo = ProviderRepository(context)
-            val existingProviders = providerRepo.getAllProvidersList()
+            val existingNames = providerRepo.getAllProvidersList().map { it.name }.toSet()
 
             val conflicts = exported.providers
-                .filter { ep -> existingProviders.any { it.name == ep.name } }
+                .filter { ep -> ep.name in existingNames }
                 .map { it.name }
 
             kotlin.Result.success(ParsedImport(exported, jsonString, conflicts))
@@ -419,13 +420,14 @@ class SettingsExportManager(private val context: Context) {
             // Import providers
             val providerRepo = ProviderRepository(context)
             val existingProviders = providerRepo.getAllProvidersList()
+            val existingByName = existingProviders.associateBy { it.name }
             var providersAdded = 0
             var providersUpdated = 0
             var providersSkipped = 0
 
             if (options.importProviders) {
                 for (ep in exported.providers) {
-                    val existing = existingProviders.find { it.name == ep.name }
+                    val existing = existingByName[ep.name]
                     if (existing != null) {
                         when (conflictResolution) {
                             ConflictResolution.SKIP -> {
@@ -467,9 +469,11 @@ class SettingsExportManager(private val context: Context) {
                 if (activeExport != null) {
                     val currentActive = providerRepo.getActiveProvider()
                     if (currentActive == null) {
-                        val allProviders = providerRepo.getAllProvidersList()
-                        val matching = allProviders.find { it.name == activeExport.name && it.url == activeExport.url }
-                            ?: allProviders.find { it.name == "${activeExport.name} (imported)" }
+                        val updatedProviders = providerRepo.getAllProvidersList()
+                        val updatedByNameUrl = updatedProviders.associateBy { "${it.name}\u0000${it.url}" }
+                        val updatedByName = updatedProviders.associateBy { it.name }
+                        val matching = updatedByNameUrl["${activeExport.name}\u0000${activeExport.url}"]
+                            ?: updatedByName["${activeExport.name} (imported)"]
                         if (matching != null) {
                             providerRepo.setActiveProvider(matching.id)
                         }
@@ -485,10 +489,11 @@ class SettingsExportManager(private val context: Context) {
                 val epgDb = EpgIndexDatabase.getInstance(context)
                 val sourceDao = epgDb.epgSourceDao()
                 val existingSources = sourceDao.getAllSourcesOnce()
+                val existingUrls = existingSources.map { it.url }.toSet()
 
                 Log.d(TAG, "EPG import: ${exported.epgSources.size} sources in file, ${existingSources.size} existing in DB")
                 for (es in exported.epgSources) {
-                    val exists = existingSources.any { it.url == es.url }
+                    val exists = es.url in existingUrls
                     if (exists) {
                         Log.d(TAG, "EPG source already exists, skipping: ${es.url}")
                         sourcesSkipped++
@@ -510,11 +515,15 @@ class SettingsExportManager(private val context: Context) {
             // Import favorites per provider (match by name + URL)
             var favoritesRestored = 0
 
+            // Re-fetch providers once for all favorites sections (may have new providers from import)
+            val allProvidersForFavorites = providerRepo.getAllProvidersList()
+            val providersByNameUrl = allProvidersForFavorites.associateBy { "${it.name}\u0000${it.url}" }
+            val providersByName = allProvidersForFavorites.associateBy { it.name }
+
             if (options.importFavorites && exported.providerFavorites.isNotEmpty()) {
-                val allProviders = providerRepo.getAllProvidersList()
                 for (pf in exported.providerFavorites) {
-                    val matchingProvider = allProviders.find { it.name == pf.providerName && it.url == pf.providerUrl }
-                        ?: allProviders.find { it.name == pf.providerName }
+                    val matchingProvider = providersByNameUrl["${pf.providerName}\u0000${pf.providerUrl}"]
+                        ?: providersByName[pf.providerName]
                         ?: continue
                     val cachePrefs = context.getSharedPreferences(
                         "media_cache_${matchingProvider.id}",
@@ -531,9 +540,9 @@ class SettingsExportManager(private val context: Context) {
                     } else {
                         emptyList()
                     }
-                    val existingKeys = existingFavorites.map { "${it.itemId}::${it.contentType}" }.toSet()
+                    val existingKeys = existingFavorites.mapTo(HashSet()) { Pair(it.itemId, it.contentType) }
                     val newFavorites = pf.favorites
-                        .filter { "${it.itemId}::${it.contentType}" !in existingKeys }
+                        .filter { Pair(it.itemId, it.contentType) !in existingKeys }
                         .map { fav ->
                             FavoriteItem(
                                 itemId = fav.itemId,
@@ -554,10 +563,9 @@ class SettingsExportManager(private val context: Context) {
             var favoriteCategoriesRestored = 0
 
             if (options.importFavorites && exported.providerFavoriteCategories.isNotEmpty()) {
-                val allProvidersForCats = providerRepo.getAllProvidersList()
                 for (pfc in exported.providerFavoriteCategories) {
-                    val matchingProvider = allProvidersForCats.find { it.name == pfc.providerName && it.url == pfc.providerUrl }
-                        ?: allProvidersForCats.find { it.name == pfc.providerName }
+                    val matchingProvider = providersByNameUrl["${pfc.providerName}\u0000${pfc.providerUrl}"]
+                        ?: providersByName[pfc.providerName]
                         ?: continue
                     val cachePrefs = context.getSharedPreferences(
                         "media_cache_${matchingProvider.id}",
@@ -573,9 +581,9 @@ class SettingsExportManager(private val context: Context) {
                     } else {
                         emptyList()
                     }
-                    val existingKeys = existingFavCats.map { "${it.categoryId}::${it.contentType}" }.toSet()
+                    val existingKeys = existingFavCats.mapTo(HashSet()) { Pair(it.categoryId, it.contentType) }
                     val newFavCats = pfc.favoriteCategories
-                        .filter { "${it.categoryId}::${it.contentType}" !in existingKeys }
+                        .filter { Pair(it.categoryId, it.contentType) !in existingKeys }
                         .map { fav ->
                             FavoriteCategoryItem(
                                 categoryId = fav.categoryId,
@@ -595,10 +603,9 @@ class SettingsExportManager(private val context: Context) {
             var favoriteShowsRestored = 0
 
             if (options.importFavorites && exported.providerFavoriteShows.isNotEmpty()) {
-                val allProvidersForShows = providerRepo.getAllProvidersList()
                 for (pfs in exported.providerFavoriteShows) {
-                    val matchingProvider = allProvidersForShows.find { it.name == pfs.providerName && it.url == pfs.providerUrl }
-                        ?: allProvidersForShows.find { it.name == pfs.providerName }
+                    val matchingProvider = providersByNameUrl["${pfs.providerName}\u0000${pfs.providerUrl}"]
+                        ?: providersByName[pfs.providerName]
                         ?: continue
                     val cachePrefs = context.getSharedPreferences(
                         "media_cache_${matchingProvider.id}",
@@ -614,9 +621,9 @@ class SettingsExportManager(private val context: Context) {
                     } else {
                         emptyList()
                     }
-                    val existingKeys = existingFavShows.map { "${it.showId}::${it.contentType}" }.toSet()
+                    val existingKeys = existingFavShows.mapTo(HashSet()) { Pair(it.showId, it.contentType) }
                     val newFavShows = pfs.favoriteShows
-                        .filter { "${it.showId}::${it.contentType}" !in existingKeys }
+                        .filter { Pair(it.showId, it.contentType) !in existingKeys }
                         .map { fav ->
                             FavoriteShowItem(
                                 showId = fav.showId,
@@ -656,7 +663,7 @@ class SettingsExportManager(private val context: Context) {
     }
 
     private suspend fun addNewProvider(providerRepo: ProviderRepository, ep: ExportedProvider) {
-        providerRepo.addProvider(
+        val newId = providerRepo.addProvider(
             name = ep.name,
             url = ep.url,
             username = ep.username,
@@ -665,14 +672,10 @@ class SettingsExportManager(private val context: Context) {
             config = ep.config
         )
         if (ep.providerSettings != "{}") {
-            val allProviders = providerRepo.getAllProvidersList()
-            val newProvider = allProviders.find { it.name == ep.name && it.url == ep.url }
-            if (newProvider != null) {
-                try {
-                    val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
-                    providerRepo.updateProviderSettings(newProvider.id, settings)
-                } catch (_: Exception) { }
-            }
+            try {
+                val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
+                providerRepo.updateProviderSettings(newId, settings)
+            } catch (_: Exception) { }
         }
     }
 

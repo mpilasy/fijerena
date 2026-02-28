@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -262,8 +263,8 @@ fun MobileSettingsScreen(
     }
 
     // Drive sync state
-    val syncStatus by syncManager.syncStatus.collectAsState()
-    val signedInEmail by syncManager.signedInEmail.collectAsState()
+    val syncStatus by syncManager.syncStatus.collectAsStateWithLifecycle()
+    val signedInEmail by syncManager.signedInEmail.collectAsStateWithLifecycle()
 
     // Sign-in error state
     var signInError by remember { mutableStateOf<String?>(null) }
@@ -398,7 +399,7 @@ fun MobileSettingsScreen(
             // === EPG Data ===
             SettingsSection(title = "EPG Data") {
                 val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
-                val indexState by epgIndexer.state.collectAsState()
+                val indexState by epgIndexer.state.collectAsStateWithLifecycle()
                 var sourceCount by remember { mutableStateOf(0) }
                 LaunchedEffect(epgRefreshTrigger) {
                     sourceCount = epgIndexer.getSourceCount()

@@ -50,7 +50,7 @@ class XtreamStatsManager(
         )
     }
 
-    fun clearCache() {
+    suspend fun clearCache() = withContext(Dispatchers.IO) {
         // Clear SharedPreferences timestamps and legacy keys
         sharedPreferences.edit().clear().apply()
         metricsManager.clearFetchTimes()
@@ -67,7 +67,7 @@ class XtreamStatsManager(
     /**
      * Clear cache for specific content type (clears DB tables)
      */
-    fun clearCacheForContentType(contentType: String) {
+    suspend fun clearCacheForContentType(contentType: String) = withContext(Dispatchers.IO) {
         val editor = sharedPreferences.edit()
         when (contentType) {
             "LIVE_TV" -> {
@@ -95,7 +95,7 @@ class XtreamStatsManager(
     /**
      * Clear streams cache for a specific category
      */
-    fun clearStreamsCache(categoryId: String) {
+    suspend fun clearStreamsCache(categoryId: String) = withContext(Dispatchers.IO) {
         sharedPreferences.edit()
             .remove(KEY_STREAMS_TIMESTAMP_PREFIX + categoryId)
             .apply()
@@ -114,7 +114,7 @@ class XtreamStatsManager(
     /**
      * Clear categories cache for a specific content type
      */
-    fun clearCategoriesCache(contentType: String) {
+    suspend fun clearCategoriesCache(contentType: String) = withContext(Dispatchers.IO) {
         val editor = sharedPreferences.edit()
         when (contentType) {
             "LIVE_TV" -> {

@@ -191,17 +191,17 @@ class XtreamRepository(
     fun clearPlaybackPosition(streamId: Int, contentType: String) = userDataManager.clearPlaybackPosition(streamId, contentType)
 
 
-    fun clearCache() = statsManager.clearCache()
+    suspend fun clearCache() = statsManager.clearCache()
 
     fun getCacheSize(): Long = statsManager.getCacheSize()
 
     suspend fun getCacheStats(): CacheStats = statsManager.getCacheStats()
 
-    fun clearCacheForContentType(contentType: String) = statsManager.clearCacheForContentType(contentType)
+    suspend fun clearCacheForContentType(contentType: String) = statsManager.clearCacheForContentType(contentType)
 
-    fun clearStreamsCache(categoryId: String) = statsManager.clearStreamsCache(categoryId)
+    suspend fun clearStreamsCache(categoryId: String) = statsManager.clearStreamsCache(categoryId)
 
-    fun clearCategoriesCache(contentType: String) = statsManager.clearCategoriesCache(contentType)
+    suspend fun clearCategoriesCache(contentType: String) = statsManager.clearCategoriesCache(contentType)
 
 
     // Metrics (Delegated partially via getFetchTime/Formatted/PayloadSize)
