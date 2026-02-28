@@ -194,4 +194,5 @@ The application uses several specialized SharedPreferences files for internal st
 | `drive_settings_sync_prefs`| Stores Google Drive sync metadata, including last sync time and folder IDs. |
 | `player_prefs` | Stores in-player state, such as whether control discoverability hints have been shown. |
 | `last_content_type_prefs` | Persists the last visited content type (`LIVE_TV`, `MOVIES`, `TV_SHOWS`) for automatic navigation on startup. |
+| `media_cache_{providerId}` | Also stores `last_live_category`, `last_movies_category`, `last_tvshows_category` for startup category restore. |
 | `provider_creds_{id}` | (Encrypted) Stores passwords and sensitive tokens for individual providers using `EncryptedSharedPreferences`. |

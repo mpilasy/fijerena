@@ -142,6 +142,8 @@ Located in `:mobile/navigation/MobileNavHost.kt`
 
 On startup, the app checks for a configured provider via `ProviderRepository`. If a provider exists, it auto-navigates to the last used content type (CategoryList) or ContentTypeSelection. If not, it navigates to Settings.
 
+**Category restore:** When auto-navigating to `CategoryList`, the app also reads the last browsed category ID from per-provider SharedPreferences (`last_{contentType}_category`) and passes it as `initialCategoryId`. This restores the user to the same category they were viewing before the app was closed.
+
 ### Transitions
 - **Enter**: Slide left + fade in
 - **Exit**: Slide left + fade out

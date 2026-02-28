@@ -253,7 +253,15 @@ EPG is configured via **Settings → Manage EPG Data** (`Screen.EpgManagement`).
 
 **Status indicators (UI):** green = ingested <24h, yellow = >24h stale, red = error, gray = disabled.
 
-**Actions:** Refresh All, Cleanup Files, Purge >7 days, Clear All Data (with confirmation dialog).
+**Actions:** Refresh All, Refresh Selected, Cleanup Files, Purge >2 days, Clear All Data (with confirmation dialog).
+
+**Selective refresh:** Checkboxes on each source row allow selecting multiple sources. A "Refresh Selected (N)" button appears when sources are selected, triggering refresh only for chosen sources.
+
+**Source deletion cleanup:** Deleting a source also removes all associated channels and programmes from the index database.
+
+**Import date filter:** During ingestion, programmes whose end time is before yesterday (current time - 24h) are skipped. This reduces database size and speeds up indexing.
+
+**Ingestion progress:** When ingesting from a downloaded file (mobile), a percentage progress is shown based on bytes read vs file size. For streamed ingestion (TV), only channel/programme counts are shown.
 
 **Timezone override behavior:** The per-source offset is applied at parse time. Changing it requires re-ingesting the source because epoch values stored in SQLite depend on the parse-time timezone.
 
