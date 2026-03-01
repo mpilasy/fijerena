@@ -431,7 +431,7 @@ private fun ClockDisplay(modifier: Modifier = Modifier) {
     @Suppress("UNUSED_VARIABLE")
     val ignored = tick // Read to trigger recomposition
     Text(
-        text = TimeFormat.formatClockTime(Date()),
+        text = TimeFormat.formatClockTime(Date(tick)),
         style = MaterialTheme.typography.titleMedium,
         color = Color.White,
         modifier = modifier

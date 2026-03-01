@@ -37,28 +37,11 @@ Prefer real hardware for validation:
 ### P1: Medium Impact & UI Polish
 *Focuses on reducing allocations in frequent UI updates.*
 
-5. **Hoist System.currentTimeMillis() in EPG management screens**
-   - **Files:** `tv/.../TvEpgManagementScreen.kt`, `mobile/.../MobileEpgManagementScreen.kt`
-   - **Problem:** Called per-item per-recomposition for dot color logic.
-   - **Fix:** Hoist to a single `val nowMs = remember { ... }` at the top of the composable.
-
-6. **Reduce lambda allocations in MobileEpgBrowserScreen items**
-   - **File:** `mobile/.../MobileEpgBrowserScreen.kt:449-458`
-   - **Problem:** Clicking lambdas capture multiple changing variables, causing allocations during list scrolls.
-   - **Fix:** Wrap clickable lambda in `remember`.
-
-7. **Use tick value in ClockDisplay instead of bare Date()**
-   - **Files:** `MobileControlsOverlay.kt`, `PlayerControlsOverlay.kt`, `PlayerScreen.kt`
-   - **Problem:** New `Date` allocation every second.
-   - **Fix:** Use `Date(tick)` as `tick` already contains the timestamp.
-
-8. **Hoist gradient Brush in ContentTypeSelectionScreen**
-   - **File:** `tv/.../ContentTypeSelectionScreen.kt:186,460`
-   - **Problem:** `Brush.verticalGradient()` allocated every recomposition.
-
-9. **Hoist ButtonDefaults.colors() in player selector dialogs**
-   - **Files:** `AudioTrackSelectorDialog.kt`, `SubtitleSelectorDialog.kt`
-   - **Problem:** Color configurations allocated inside `forEachIndexed` loops.
+5. ~~**Hoist System.currentTimeMillis() in EPG management screens**~~ DONE
+6. ~~**Reduce lambda allocations in MobileEpgBrowserScreen items**~~ DONE
+7. ~~**Use tick value in ClockDisplay instead of bare Date()**~~ DONE
+8. ~~**Hoist gradient Brush in ContentTypeSelectionScreen**~~ DONE
+9. ~~**Hoist ButtonDefaults.colors() in player selector dialogs**~~ DONE
 
 ### P2: Low Impact & Maintenance
 *Minor optimizations and code cleanup.*

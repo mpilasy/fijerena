@@ -85,6 +85,8 @@ fun MobileEpgManagementScreen(
     val hasStrayFiles by viewModel.hasStrayFiles.collectAsStateWithLifecycle()
     val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsStateWithLifecycle()
 
+    val nowMs = remember { System.currentTimeMillis() }
+
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
             android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
@@ -267,7 +269,7 @@ fun MobileEpgManagementScreen(
                             isQueued -> androidx.compose.ui.graphics.Color.Yellow
                             !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                             source.lastError != null -> CinemaError
-                            source.lastIngestedAtMs > 0 && (System.currentTimeMillis() - source.lastIngestedAtMs) < 24 * 3600 * 1000 -> MaterialTheme.colorScheme.primary
+                            source.lastIngestedAtMs > 0 && (nowMs - source.lastIngestedAtMs) < 24 * 3600 * 1000 -> MaterialTheme.colorScheme.primary
                             source.lastIngestedAtMs > 0 -> androidx.compose.ui.graphics.Color(0xFFFFAB40)
                             else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                         }
@@ -400,7 +402,7 @@ fun MobileEpgManagementScreen(
                 }
                 if (viewModel.isDevMode) {
                     val hasFailed = sources.any { it.enabled && it.lastError != null }
-                    val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (System.currentTimeMillis() - it.lastIngestedAtMs) > 24 * 3600 * 1000) }
+                    val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 24 * 3600 * 1000) }
                     if (hasFailed || hasOutdated) {
                         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                         Row(

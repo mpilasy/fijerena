@@ -479,18 +479,25 @@ private fun MobileAiringRow(
     val isSoon = !isOnAir && airing.startEpoch > nowEpoch && (airing.startEpoch - nowEpoch) <= 7200L
     val isMatched = airing.matchedStream != null
 
+    val onClick = remember(isMatched, isOnAir, airing, onNavigateToPlayer, onRequestConfirmation) {
+        if (!isMatched) null
+        else {
+            {
+                val matched = airing.matchedStream!!
+                if (isOnAir) {
+                    onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                } else {
+                    onRequestConfirmation(airing)
+                }
+            }
+        }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .then(
-                if (isMatched) Modifier.clickable {
-                    val matched = airing.matchedStream!!
-                    if (isOnAir) {
-                        onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
-                    } else {
-                        onRequestConfirmation(airing)
-                    }
-                } else Modifier
+                if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
             )
             .alpha(if (isMatched) 1f else 0.5f)
             .padding(vertical = CinemaSpacing.xxs),

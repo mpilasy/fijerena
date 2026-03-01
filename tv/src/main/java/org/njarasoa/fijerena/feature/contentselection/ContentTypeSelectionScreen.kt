@@ -82,6 +82,14 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
+private val BACKGROUND_GRADIENT = Brush.verticalGradient(
+    colors = listOf(
+        CinemaBackground,
+        CinemaAccentDark.copy(alpha = CinemaAlpha.ghost),
+        CinemaBackground
+    )
+)
+
 /**
  * Content type selection screen with icons, category counts, and gradient cards.
  */
@@ -182,15 +190,7 @@ fun ContentTypeSelectionScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        CinemaBackground,
-                        CinemaAccentDark.copy(alpha = CinemaAlpha.ghost),
-                        CinemaBackground
-                    )
-                )
-            )
+            .background(BACKGROUND_GRADIENT)
             .padding(
                 horizontal = Spacing.tvSafeMarginHorizontal,
                 vertical = Spacing.tvSafeMarginVertical
@@ -453,11 +453,12 @@ private fun ContentTypeHeroCard(
             )
         )
     ) {
+        val brush = remember(gradientColors) { Brush.verticalGradient(colors = gradientColors) }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.verticalGradient(colors = gradientColors),
+                    brush = brush,
                     shape = RoundedCornerShape(CinemaCornerRadius.xLarge)
                 ),
             contentAlignment = Alignment.Center
