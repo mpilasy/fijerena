@@ -168,8 +168,8 @@ adb shell dumpsys package org.njarasoa.fijerena
 applicationId: org.njarasoa.fijerena
 minSdk: 30  (Android 11 and above)
 targetSdk: 36  (Latest Android)
-versionCode: 1
-versionName: 1.0
+versionCode: 4
+versionName: 1.0.0
 ```
 
 ### Features Included

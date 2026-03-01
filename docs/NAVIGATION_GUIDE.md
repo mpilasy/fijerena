@@ -53,7 +53,7 @@ navController.navigate(Screen.ContentTypeSelection)
 navController.navigate(Screen.CategoryList(contentType = "LIVE_TV"))
 
 // Navigate to player with parameters
-navController.navigate(Screen.Player(streamId = 12345, streamName = "CNN", categoryId = "1", contentType = "LIVE_TV"))
+navController.navigate(Screen.Player(streamId = "12345", streamName = "CNN", categoryId = "1", contentType = "LIVE_TV"))
 
 // Navigate to provider management
 navController.navigate(Screen.ProviderSelection)

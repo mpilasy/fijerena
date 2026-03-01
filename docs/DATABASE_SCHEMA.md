@@ -44,7 +44,7 @@ Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast
 | `last_channels` | INTEGER | Channel count from last ingest |
 | `last_programmes` | INTEGER | Programme count from last ingest |
 | `last_download_bytes` | INTEGER | Size of XML data fetched |
-| `ingest_method` | TEXT | `STREAMED` or `DOWNLOADED` |
+| `ingest_method` | TEXT | Ingestion strategy: `DOWNLOADED`, `STREAMED`, or `XTREAM_API` (default `DOWNLOADED`) |
 
 ### Table: `epg_channel`
 | Column | Type | Description |
@@ -82,6 +82,20 @@ Provides full-text search over `epg_programme`.
 | `channel_count` | INTEGER | Global channel count |
 | `programme_count` | INTEGER | Global programme count |
 | `timezone_offset_hours`| INTEGER | Default offset |
+
+### Database Pragmas (set on open)
+- `synchronous = NORMAL` — reduced fsync for better write performance
+- `cache_size = -8000` — 8 MB page cache
+- `auto_vacuum = INCREMENTAL` — enables incremental page reclamation without full VACUUM
+
+### Migration History
+| From | To | Change |
+|------|----|--------|
+| 7 | 8 | Added `ingest_method TEXT NOT NULL DEFAULT 'DOWNLOADED'` to `epg_source` |
+
+### Notable Operations
+- **`clearAll()`** — Destroys and recreates the database file (Room recreates the schema on next access). User-configured sources are saved beforehand and restored afterward with ingestion stats reset to zero.
+- **`resetAllIngestionState()`** — Resets `last_ingested_at_ms`, `last_channels`, `last_programmes`, and `last_download_bytes` to 0 and `last_error` to NULL for all sources, forcing a full re-ingest on the next sync.
 
 ---
 

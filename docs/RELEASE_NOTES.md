@@ -1,5 +1,25 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Parallel EPG Pipeline, Clear Fix & TV Stability
+**Release Date:** 2026-03-01
+
+### Parallel EPG Ingestion Pipeline
+- **Channel-based producer-consumer architecture:** Downloads run concurrently (3 on mobile, 1 on TV), ingestion sequential. Per-source progress tracking with download % and ingestion % using `CountingInputStream`.
+
+### EPG Clear All Data Fix
+- **Instant DB destroy+recreate:** Replaced `DELETE FROM` (took 10+ min on 4M rows on Shield TV) with instant DB destroy and recreate. Sources saved and restored automatically. Blocking overlay shown during clear.
+
+### Cancel Support
+- **RefreshQueue tracks running job:** Cancel button stops all running and queued EPG refreshes.
+
+### TV Focus Crash Fixes
+- **Try-catch on FocusRequester.requestFocus():** Added try-catch in `LaunchedEffect` across all TV screens. Fixed `focusRestorer` lambda compatibility with current Compose version. Conditional button rendering changed to always-render with `enabled` flag to prevent `FocusRestorerNode` crash.
+
+### ViewModel DB Resilience
+- **EpgManagementViewModel uses db() function:** Replaced cached DB reference with `db()` function. Sources Flow re-subscribes via `_dbGeneration` counter with `flatMapLatest` after DB recreation.
+
+---
+
 ## Version: App Polish & EPG Improvements
 **Release Date:** 2026-02-28
 

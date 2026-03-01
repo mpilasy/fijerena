@@ -82,13 +82,17 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 - Download-ingest-delete pipeline: XML downloaded to temp, parsed into SQLite, file deleted immediately
 - TV/fixed devices: stream directly from network to DB (zero disk I/O)
 - Mobile: download to cache dir first, then ingest
+- Parallel ingestion: sources download concurrently (3 on mobile, 1 on TV); ingestion into SQLite is sequential
+- Per-source progress: shows download % and ingestion % with channel/programme counts
+- Cancel button: running or queued EPG refreshes can be cancelled mid-operation
 - Auto-refresh on startup and 24h periodic WorkManager background sync
 - First source clears existing data (full rebuild); subsequent sources append
-- Selective refresh: checkboxes to select specific sources, then "Refresh Selected"
+- Selective refresh: can refresh selected sources, failed sources, or outdated sources
 - Source deletion cleans up associated channels and programmes from the index
 - Import date filter: programmes ending before yesterday are skipped during ingestion
-- Ingestion progress percentage shown when file size is known
-- Actions: Refresh All, Refresh Selected, Cleanup Files, Purge >2 days, Clear All Data
+- Stray file cleanup: detects and removes orphaned cache files not tied to any source
+- Clear All Data: instant DB destroy+recreate (not row-by-row delete), shows blocking overlay, sources preserved
+- Actions: Refresh All, Refresh Selected, Refresh Failed, Refresh Outdated, Cleanup Files, Purge >2 days, Clear All Data
 
 **Indexer states:** NotIndexed → Indexing(progress%) → Indexed(programmes, channels) → Failed(reason)
 
