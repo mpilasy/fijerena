@@ -267,17 +267,59 @@ epg_index.db
 
 ### Ingestion Pipeline
 
-1. `EpgFileManager` manages multi-source lifecycle
-2. Dual-mode: TV/fixed devices stream directly (zero disk I/O), mobile downloads to `cacheDir` first
+Channel-based producer-consumer architecture:
+
+1. **Download phase (producers):** Sources download concurrently, bounded by `Semaphore` (3 on mobile, 1 on TV). Each download produces a `DownloadedSource` object (source metadata + temp file + byte count) and sends it to a `Channel<DownloadedSource>(UNLIMITED)`.
+2. **Ingestion phase (consumer):** A single coroutine consumes from the channel sequentially (SQLite single-writer constraint). Each `DownloadedSource` is ingested via `EpgIndexer.ingestFromStream()`.
 3. `XmltvParser` performs streaming XML parse with 128KB buffers
 4. `EpgIndexer` does 500-row batch INSERTs wrapped in Room `withTransaction`
 5. Date filter: programmes ending before yesterday (current time - 24h) are skipped during ingestion
-6. First source clears existing data (full rebuild), subsequent sources append (REPLACE on overlap)
-7. Files deleted immediately after ingestion
+6. Append-only: uses REPLACE on unique (channel_id, start_epoch) index so the database stays searchable during sync
+7. Temp files deleted immediately after ingestion
 8. Mobile background sync via WorkManager `EpgSyncWorker` (24h periodic)
 9. Source deletion cleans up associated programmes via `deleteBySourceId()`
 10. Selective refresh: UI allows selecting specific sources to refresh instead of all
-11. Ingestion progress percentage tracked via `CountingInputStream` (mobile file mode)
+11. Ingestion progress percentage tracked via `CountingInputStream` (file mode)
+
+### Progress Tracking
+
+`ActiveSourceProgress` tracks per-source state during processing:
+
+| Field | Description |
+|-------|-------------|
+| `label` | Source display name |
+| `phase` | `"Downloading"` or `"Ingesting"` |
+| `progressPercent` | 0-100, or -1 if content-length unknown |
+| `downloadedBytes` / `downloadTotalBytes` | Download progress |
+| `channels` / `programmes` | Ingestion counters (updated per batch) |
+
+Download progress updates throttled to every 512KB. Aggregate progress (`MultiSourceState.Processing`) sums completed stats + active progress for total channels, programmes, and bytes.
+
+### Cancel
+
+`RefreshQueue` (singleton priority queue) tracks `currentJob`. `cancelAll()` cancels the running task's `Job` and clears pending tasks. `EpgFileManager.cancelProcessing()` also cancels its own `processJob` coroutine, which tears down the producer-consumer pipeline.
+
+### Clear All Data
+
+Uses `EpgIndexDatabase.destroy()` to close the Room instance, null the singleton, and delete the DB file (plus WAL/SHM). Room recreates the schema on next `getInstance()`. Sources are saved before destroy and restored with stats reset (`lastIngestedAtMs=0`, counters zeroed, error cleared). Instant regardless of data size.
+
+### State Machine
+
+`MultiSourceState` (sealed interface):
+
+| State | Description |
+|-------|-------------|
+| `Idle` | No processing active |
+| `Processing` | Active download/ingestion with per-source progress, aggregate stats |
+| `Completed` | Final stats (sources processed, errors, per-source breakdown) |
+| `Error` | Processing failed with reason string |
+| `Clearing` | Blocking overlay while `clearDatabase()` runs |
+
+`Completed` and `Error` auto-reset to `Idle` after 10 seconds.
+
+### ViewModel
+
+`EpgManagementViewModel` uses `db()` function (not a cached reference) to always get the fresh `EpgIndexDatabase` singleton. A `_dbGeneration` counter is incremented after `destroy()`/recreate. The `sources` Flow uses `flatMapLatest` on `_dbGeneration` so it automatically re-subscribes to the new database's DAO after clearing.
 
 ### Search
 

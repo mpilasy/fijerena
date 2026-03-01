@@ -2,30 +2,21 @@
 
 ## High Impact
 
-### 1. Migrate collectAsState() to collectAsStateWithLifecycle()
-- **Scope:** 60+ call sites across all screens
+### 1. Migrate remaining collectAsState() to collectAsStateWithLifecycle()
+- **Scope:** 7 remaining call sites (player screens and AuthViewModel)
+- **Files:** `TvPlayerScreen.kt`, `MobileStatsOverlay.kt`, `PlayerScreen.kt`, `MobilePlayerScreen.kt`, `ChapterSelectorDialog.kt`, `StatsOverlay.kt`, `AuthViewModel.kt`
 - **Problem:** Flows keep collecting when app is backgrounded, wasting CPU/memory/battery.
-- **Fix:** Add `lifecycle-runtime-compose` dependency, replace `collectAsState()` with `collectAsStateWithLifecycle()` in all non-player screens.
+- **Fix:** Replace `collectAsState()` with `collectAsStateWithLifecycle()` in these remaining files. Player screens may intentionally use `collectAsState()` to keep collecting during PiP — verify before changing.
 
-### 2. Memoize typography.copy() in TvEpgManagementScreen
-- **File:** `tv/.../TvEpgManagementScreen.kt` — 20+ sites
-- **Problem:** Every `Text()` calls `.copy(fontSize = *.scaled(scale))` — 20+ TextStyle allocations per recomposition, including inside `items {}` blocks.
-- **Fix:** Hoist `val scaledBodyLarge = remember(scale) { typography.bodyLarge.copy(...) }` etc. above the `items {}` block.
+### ~~2. Memoize typography.copy() in TvEpgManagementScreen~~ DONE
 
-### 3. Eliminate O(n²) loops and duplicate DB queries in SettingsExportManager
-- **File:** `core/network/.../SettingsExportManager.kt`
-- **Problem:** `.find`/`.any` inside loops over provider/source lists (lines 327, 428, 491, 516, 559, 600). `getAllProvidersList()` called 4 separate times during import.
-- **Fix:** Build lookup `Map`/`Set` before loops, fetch providers once and reuse.
+### ~~3. Eliminate O(n²) loops and duplicate DB queries in SettingsExportManager~~ MOSTLY DONE
+- O(n²) `.find`/`.any` loops eliminated (1 harmless `.find` remains at line 468 for active export).
+- `getAllProvidersList()` still called 6 times during import — could be consolidated.
 
-### 4. Cache MasterKey and EncryptedSharedPreferences in ProviderRepository
-- **File:** `core/network/.../ProviderRepository.kt:231-242`
-- **Problem:** `MasterKey.Builder.build()` performs keystore I/O on every `getProviderPrefs()` call. `clearAllCacheForProvider`/`getCacheStatsForProvider` instantiate `AccountManager` + `XtreamRepository` (2 keystore ops each).
-- **Fix:** Cache `MasterKey` as lazy singleton, cache `EncryptedSharedPreferences` in `ConcurrentHashMap<Long, SharedPreferences>`.
+### ~~4. Cache MasterKey and EncryptedSharedPreferences in ProviderRepository~~ DONE
 
-### 5. Make XtreamStatsManager cache-clearing methods suspend
-- **File:** `core/network/.../XtreamStatsManager.kt:53-137`
-- **Problem:** `clearCache()`, `clearCacheForContentType()` etc. execute 6+ synchronous Room DAO DELETE calls without `Dispatchers.IO`.
-- **Fix:** Make these `suspend fun` with `withContext(Dispatchers.IO)`.
+### ~~5. Make XtreamStatsManager cache-clearing methods suspend~~ DONE
 
 ## Medium Impact
 
@@ -40,14 +31,11 @@
 - **Fix:** Replace with existing `chipColors` val (1-line change).
 
 ### 8. Hoist gradient Brush + Color.copy() in ContentTypeSelectionScreen
-- **File:** `tv/.../ContentTypeSelectionScreen.kt:186-192`
-- **Problem:** `listOf()` + `Brush.verticalGradient()` + `Color.copy()` allocated every recomposition.
+- **File:** `tv/.../ContentTypeSelectionScreen.kt:186,460`
+- **Problem:** `Brush.verticalGradient()` allocated every recomposition.
 - **Fix:** Extract as `private val` or wrap in `remember`.
 
-### 9. Extract gradient listOf() in CategoryList item loop
-- **File:** `tv/.../CategoryList.kt:175-181`
-- **Problem:** `listOf(CinemaGlassBorder, Color.White.copy(...), CinemaGlassBorder)` created per item per recomposition.
-- **Fix:** Extract as top-level `private val`.
+### ~~9. Extract gradient listOf() in CategoryList item loop~~ DONE
 
 ### 10. Use tick value in ClockDisplay instead of bare Date()
 - **Files:** `mobile/.../MobileControlsOverlay.kt:378`, `tv/.../PlayerControlsOverlay.kt:434`, `tv/.../PlayerScreen.kt:260`
@@ -55,17 +43,14 @@
 - **Fix:** `TimeFormat.formatClockTime(Date(tick))`
 
 ### 11. Hoist System.currentTimeMillis() in EPG management screens
-- **Files:** `tv/.../TvEpgManagementScreen.kt:298,464`, `mobile/.../MobileEpgManagementScreen.kt:227,342`
+- **Files:** `tv/.../TvEpgManagementScreen.kt:326,483`, `mobile/.../MobileEpgManagementScreen.kt:270,403`
 - **Problem:** `System.currentTimeMillis()` called per-item per-recomposition for dot color logic.
 - **Fix:** Hoist `val nowMs = remember { System.currentTimeMillis() }` to composable scope.
 
-### 12. Use Pair instead of string key construction in SettingsExportManager
-- **File:** `core/network/.../SettingsExportManager.kt:534/536, 576/578, 617/619`
-- **Problem:** `"${itemId}::${contentType}"` string built once for the set, then again per item in `.filter`. Appears 3 times.
-- **Fix:** Use `Set<Pair<String,String>>` instead of synthetic string keys.
+### ~~12. Use Pair instead of string key construction in SettingsExportManager~~ DONE
 
 ### 13. Hoist ButtonDefaults.colors() in player selector dialogs
-- **Files:** `tv/.../AudioTrackSelectorDialog.kt:135`, `SubtitleSelectorDialog.kt:121,192`, `QualitySelectorDialog.kt:121,199`, `ChapterSelectorDialog.kt:142`
+- **Files:** `tv/.../AudioTrackSelectorDialog.kt:134`, `SubtitleSelectorDialog.kt:120,191`
 - **Problem:** `ButtonDefaults.colors()` + `Color.copy()` allocated inside `forEachIndexed` loops.
 - **Fix:** Hoist color configs above the loop with `remember`.
 
@@ -77,17 +62,17 @@
 - **Fix:** `private val SCALE_OPTIONS = listOf(...).chunked(2)` at file level.
 
 ### 15. Key nowEpoch remember in EpgBrowserScreen airing rows
-- **Files:** `tv/.../EpgBrowserScreen.kt:535`, `mobile/.../MobileEpgBrowserScreen.kt:441`
+- **Files:** `tv/.../EpgBrowserScreen.kt:521`
 - **Problem:** `remember { System.currentTimeMillis() / 1000L }` with no keys — stale if app stays open across program boundaries.
 - **Fix:** Key on a shared hoisted time state or `airing.startEpoch`.
 
 ### 16. Remove unnecessary .toList() in EpgIndexer batch insert
-- **File:** `core/network/.../EpgIndexer.kt:133,145,156,186,189`
+- **File:** `core/network/.../EpgIndexer.kt:143,155,168,190,193,297,308`
 - **Problem:** `.toList()` copies batch before `insertAll()` inside a hot loop processing thousands of entries.
 - **Fix:** Pass batch directly, clear after DAO call.
 
 ### 17. Hoist AppSettings outside while(true) loop in EpgFileManager
-- **File:** `core/network/.../EpgFileManager.kt:763`
+- **File:** `core/network/.../EpgFileManager.kt:829`
 - **Problem:** `AppSettings(context)` instantiated every 4 hours inside loop.
 - **Fix:** Create once before the loop.
 

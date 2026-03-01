@@ -1,5 +1,12 @@
 # XtreamApiService Usage Guide
 
+> **Note (2026-03):** This document was written early in development. The package name
+> `com.example.firstvideoplayer` no longer exists (now `org.njarasoa.fijerena`). The
+> "Next Steps" at the bottom (caching, EPG, VOD/series) have all been implemented.
+> Modern code should **never** instantiate `XtreamApiService` directly in ViewModels —
+> use `AppContainer` to obtain `MediaRepository` / `ProviderRepository` singletons.
+> The low-level API patterns below remain accurate for `XtreamApiService` itself.
+
 ## Overview
 
 The `XtreamApiService` class provides a Ktor-based HTTP client for interacting with Xtream IPTV APIs. It uses the OkHttp engine for better stability on Android TV hardware.

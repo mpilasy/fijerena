@@ -79,7 +79,14 @@ The project follows a modular, Clean Architecture pattern with MVVM.
 ### 4. EPG & Data
 - **EPG Indexing:** XMLTV data is indexed into a Room SQLite DB with FTS4 support.
 - **Search:** Supports multi-word queries. Primary search uses `FTS4 MATCH` (for EPG) or client-side word-matching (for Xtream VOD), with `LIKE` as a fallback.
-- **Multi-Source EPG:** Managed via `EpgFileManager` with streaming ingestion on fixed devices.
+- **Multi-Source EPG:** Managed via `EpgFileManager` singleton with a pipeline architecture:
+  - **Download phase:** Sources download concurrently (Semaphore-gated: 3 on mobile, 1 on TV).
+  - **Ingestion phase:** Downloads feed into a `Channel<DownloadedSource>` consumed sequentially (SQLite single-writer).
+  - **Clear:** Saves source configs, destroys the DB file, recreates via Room schema, restores sources with stats reset.
+  - **Cancel:** `cancelProcessing()` cancels the coroutine job and calls `RefreshQueue.cancelAll()` to stop queued tasks.
+  - **Progress:** Per-source `ActiveSourceProgress` tracking (phase, percent, bytes, channels, programmes) aggregated into `MultiSourceState.Processing`.
+  - **States:** `MultiSourceState` sealed interface — `Idle`, `Processing`, `Completed`, `Error`, `Clearing`.
+  - **Task queue:** All refresh work is submitted to `RefreshQueue` (priority-ordered, sequential execution) to prevent overlapping ingestion.
 
 ## 🔍 Investigation Strategy
 When investigating issues:
