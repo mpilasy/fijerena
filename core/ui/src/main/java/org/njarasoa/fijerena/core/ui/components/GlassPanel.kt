@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asComposeRenderEffect
@@ -34,8 +35,10 @@ fun GlassPanel(
 ) {
     val palette = CinemaThemeHolder.current
     val shape = panelShape
-    val bg = if (backgroundAlpha < 1f) palette.glassBackground.copy(alpha = palette.glassBackground.alpha * backgroundAlpha)
-             else palette.glassBackground
+    val bg = remember(palette.glassBackground, backgroundAlpha) {
+        if (backgroundAlpha < 1f) palette.glassBackground.copy(alpha = palette.glassBackground.alpha * backgroundAlpha)
+        else palette.glassBackground
+    }
 
     Box(
         modifier = modifier

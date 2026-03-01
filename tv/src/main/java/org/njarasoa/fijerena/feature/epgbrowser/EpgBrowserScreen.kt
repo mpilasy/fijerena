@@ -99,6 +99,16 @@ fun EpgBrowserScreen(
         is EpgIndexState.Indexed -> "${idx.programmeCount} progs, ${idx.channelCount} channels"
         else -> null
     }
+
+    // Shared time tick to keep "On Air" status fresh without individual row LaunchedEffects
+    var nowEpoch by remember { mutableStateOf(System.currentTimeMillis() / 1000L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            nowEpoch = System.currentTimeMillis() / 1000L
+        }
+    }
+
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
@@ -477,6 +487,7 @@ private fun ProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, 
             program.airings.forEach { airing ->
                 AiringRow(
                     airing = airing,
+                    nowEpoch = nowEpoch,
                     isDevMode = isDevMode,
                     sourceLabels = sourceLabels,
                     onNavigateToPlayer = onNavigateToPlayer,
@@ -513,12 +524,12 @@ private fun ProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, 
 @Composable
 private fun AiringRow(
     airing: EpgBrowserAiring,
+    nowEpoch: Long,
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
     onRequestConfirmation: (EpgBrowserAiring) -> Unit = {}
 ) {
-    val nowEpoch = remember { System.currentTimeMillis() / 1000L }
     val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
     val isSoon = !isOnAir && airing.startEpoch > nowEpoch && (airing.startEpoch - nowEpoch) <= 7200L
     val scale = LocalUiScale.current

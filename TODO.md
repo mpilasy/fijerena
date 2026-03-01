@@ -1,82 +1,80 @@
-# Performance Optimization TODO
+# TODO - Known Issues & Status
 
-## High Impact
+## No Active Blockers
 
-### 1. Migrate remaining collectAsState() to collectAsStateWithLifecycle()
-- **Scope:** 7 remaining call sites (player screens and AuthViewModel)
-- **Files:** `TvPlayerScreen.kt`, `MobileStatsOverlay.kt`, `PlayerScreen.kt`, `MobilePlayerScreen.kt`, `ChapterSelectorDialog.kt`, `StatsOverlay.kt`, `AuthViewModel.kt`
-- **Problem:** Flows keep collecting when app is backgrounded, wasting CPU/memory/battery.
-- **Fix:** Replace `collectAsState()` with `collectAsStateWithLifecycle()` in these remaining files. Player screens may intentionally use `collectAsState()` to keep collecting during PiP — verify before changing.
+The build environment is fully operational. All recent commits compile and deploy successfully.
 
-### ~~2. Memoize typography.copy() in TvEpgManagementScreen~~ DONE
+---
 
-### ~~3. Eliminate O(n²) loops and duplicate DB queries in SettingsExportManager~~ MOSTLY DONE
-- O(n²) `.find`/`.any` loops eliminated (1 harmless `.find` remains at line 468 for active export).
-- `getAllProvidersList()` still called 6 times during import — could be consolidated.
+## Open Investigation
 
-### ~~4. Cache MasterKey and EncryptedSharedPreferences in ProviderRepository~~ DONE
+### Cellular Streaming Buffering
+CDN throttles to ~1.5 Mbps per connection on cellular; stream is 1080p single-quality at ~1.3 Mbps. iMPlayer plays smoothly with same bandwidth — root cause still unknown. See `docs/CELLULAR_STREAMING_INVESTIGATION.md` for details.
 
-### ~~5. Make XtreamStatsManager cache-clearing methods suspend~~ DONE
+**Next step:** Packet capture (PCAPdroid) comparison between our app and iMPlayer.
 
-## Medium Impact
+---
 
-### 6. Memoize Color.copy() in GlassPanel
-- **File:** `core/ui/.../GlassPanel.kt:37`
-- **Problem:** `palette.glassBackground.copy(alpha = ...)` runs bare every recomposition. GlassPanel is the primary container for every item row in the TV layout.
-- **Fix:** `val bg = remember(palette.glassBackground, backgroundAlpha) { ... }`
+## Testing Notes
 
-### 7. Fix virtual categories FilterChipColors not using hoisted chipColors
-- **File:** `mobile/.../MobileCategoryListScreen.kt:389`
-- **Problem:** Regular categories row uses hoisted `chipColors`, but virtual categories row still creates fresh `FilterChipDefaults.filterChipColors(...)` per chip.
-- **Fix:** Replace with existing `chipColors` val (1-line change).
+Prefer real hardware for validation:
+- **NVIDIA Shield**: Best HEVC/4K codec support, AV1 hardware decode
+- **Chromecast with Google TV**: General Android TV compatibility
+- **Sony Bravia**: TV-specific behaviour, reduced animations
 
-### 8. Hoist gradient Brush + Color.copy() in ContentTypeSelectionScreen
-- **File:** `tv/.../ContentTypeSelectionScreen.kt:186,460`
-- **Problem:** `Brush.verticalGradient()` allocated every recomposition.
-- **Fix:** Extract as `private val` or wrap in `remember`.
+---
 
-### ~~9. Extract gradient listOf() in CategoryList item loop~~ DONE
+## Performance Optimization TODO
 
-### 10. Use tick value in ClockDisplay instead of bare Date()
-- **Files:** `mobile/.../MobileControlsOverlay.kt:378`, `tv/.../PlayerControlsOverlay.kt:434`, `tv/.../PlayerScreen.kt:260`
-- **Problem:** `TimeFormat.formatClockTime(Date())` allocates a new `Date` every tick. The `tick` value already holds `System.currentTimeMillis()`.
-- **Fix:** `TimeFormat.formatClockTime(Date(tick))`
+### P0: High Impact & Hot Paths
+*Crucial for battery life, memory usage, and UI fluidity in data-heavy screens.*
 
-### 11. Hoist System.currentTimeMillis() in EPG management screens
-- **Files:** `tv/.../TvEpgManagementScreen.kt:326,483`, `mobile/.../MobileEpgManagementScreen.kt:270,403`
-- **Problem:** `System.currentTimeMillis()` called per-item per-recomposition for dot color logic.
-- **Fix:** Hoist `val nowMs = remember { System.currentTimeMillis() }` to composable scope.
+1. ~~**Remove unnecessary .toList() in EpgIndexer batch insert**~~ DONE
+2. ~~**Memoize Color.copy() in GlassPanel**~~ DONE
+3. ~~**Migrate remaining collectAsState() to collectAsStateWithLifecycle()**~~ DONE
+4. ~~**Key nowEpoch remember in EpgBrowserScreen airing rows**~~ DONE
 
-### ~~12. Use Pair instead of string key construction in SettingsExportManager~~ DONE
+### P1: Medium Impact & UI Polish
+*Focuses on reducing allocations in frequent UI updates.*
 
-### 13. Hoist ButtonDefaults.colors() in player selector dialogs
-- **Files:** `tv/.../AudioTrackSelectorDialog.kt:134`, `SubtitleSelectorDialog.kt:120,191`
-- **Problem:** `ButtonDefaults.colors()` + `Color.copy()` allocated inside `forEachIndexed` loops.
-- **Fix:** Hoist color configs above the loop with `remember`.
+5. **Hoist System.currentTimeMillis() in EPG management screens**
+   - **Files:** `tv/.../TvEpgManagementScreen.kt`, `mobile/.../MobileEpgManagementScreen.kt`
+   - **Problem:** Called per-item per-recomposition for dot color logic.
+   - **Fix:** Hoist to a single `val nowMs = remember { ... }` at the top of the composable.
 
-## Low Impact
+6. **Reduce lambda allocations in MobileEpgBrowserScreen items**
+   - **File:** `mobile/.../MobileEpgBrowserScreen.kt:449-458`
+   - **Problem:** Clicking lambdas capture multiple changing variables, causing allocations during list scrolls.
+   - **Fix:** Wrap clickable lambda in `remember`.
 
-### 14. Extract scale options list in UiScaleSettingsCard
-- **File:** `tv/.../UiScaleSettingsCard.kt:49`
-- **Problem:** `listOf(...).chunked(2)` recreated every recomposition.
-- **Fix:** `private val SCALE_OPTIONS = listOf(...).chunked(2)` at file level.
+7. **Use tick value in ClockDisplay instead of bare Date()**
+   - **Files:** `MobileControlsOverlay.kt`, `PlayerControlsOverlay.kt`, `PlayerScreen.kt`
+   - **Problem:** New `Date` allocation every second.
+   - **Fix:** Use `Date(tick)` as `tick` already contains the timestamp.
 
-### 15. Key nowEpoch remember in EpgBrowserScreen airing rows
-- **Files:** `tv/.../EpgBrowserScreen.kt:521`
-- **Problem:** `remember { System.currentTimeMillis() / 1000L }` with no keys — stale if app stays open across program boundaries.
-- **Fix:** Key on a shared hoisted time state or `airing.startEpoch`.
+8. **Hoist gradient Brush in ContentTypeSelectionScreen**
+   - **File:** `tv/.../ContentTypeSelectionScreen.kt:186,460`
+   - **Problem:** `Brush.verticalGradient()` allocated every recomposition.
 
-### 16. Remove unnecessary .toList() in EpgIndexer batch insert
-- **File:** `core/network/.../EpgIndexer.kt:143,155,168,190,193,297,308`
-- **Problem:** `.toList()` copies batch before `insertAll()` inside a hot loop processing thousands of entries.
-- **Fix:** Pass batch directly, clear after DAO call.
+9. **Hoist ButtonDefaults.colors() in player selector dialogs**
+   - **Files:** `AudioTrackSelectorDialog.kt`, `SubtitleSelectorDialog.kt`
+   - **Problem:** Color configurations allocated inside `forEachIndexed` loops.
 
-### 17. Hoist AppSettings outside while(true) loop in EpgFileManager
-- **File:** `core/network/.../EpgFileManager.kt:829`
-- **Problem:** `AppSettings(context)` instantiated every 4 hours inside loop.
-- **Fix:** Create once before the loop.
+### P2: Low Impact & Maintenance
+*Minor optimizations and code cleanup.*
 
-### 18. Reduce lambda allocations in MobileEpgBrowserScreen items
-- **File:** `mobile/.../MobileEpgBrowserScreen.kt:449-458`
-- **Problem:** Lambda inside `Modifier.clickable {}` captures `airing`, `isOnAir`, `matched` — new allocation per recomposition.
-- **Fix:** Wrap in `remember(airing, isOnAir, matched)`.
+10. **Consolidate getAllProvidersList() in SettingsExportManager**
+    - **File:** `SettingsExportManager.kt`
+    - **Problem:** Still called 6 times during an import process.
+
+11. **Fix virtual categories FilterChipColors not using hoisted chipColors**
+    - **File:** `mobile/.../MobileCategoryListScreen.kt:389`
+    - **Fix:** Reuse existing `chipColors` variable.
+
+12. **Extract scale options list in UiScaleSettingsCard**
+    - **File:** `tv/.../UiScaleSettingsCard.kt:49`
+    - **Fix:** Move to a file-level `private val`.
+
+13. **Hoist AppSettings outside while(true) loop in EpgFileManager**
+    - **File:** `core/network/.../EpgFileManager.kt:829`
+    - **Fix:** Instantiate once before entering the loop.

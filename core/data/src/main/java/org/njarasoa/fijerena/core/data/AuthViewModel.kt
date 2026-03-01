@@ -21,7 +21,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
  * Usage:
  * ```kotlin
  * val authViewModel: AuthViewModel = viewModel()
- * val authResponse by authViewModel.authResponse.collectAsState()
+ * val authResponse by authViewModel.authResponse.collectAsStateWithLifecycle()
  *
  * if (authResponse != null) {
  *     // User is authenticated

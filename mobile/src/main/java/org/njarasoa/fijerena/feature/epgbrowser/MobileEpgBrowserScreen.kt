@@ -40,11 +40,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -87,6 +89,15 @@ fun MobileEpgBrowserScreen(
     val epgDbStats = when (val idx = indexState) {
         is EpgIndexState.Indexed -> "${idx.programmeCount} progs, ${idx.channelCount} channels"
         else -> null
+    }
+
+    // Shared time tick to keep "On Air" status fresh
+    var nowEpoch by remember { mutableStateOf(System.currentTimeMillis() / 1000L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            nowEpoch = System.currentTimeMillis() / 1000L
+        }
     }
 
     Scaffold(
@@ -225,7 +236,13 @@ fun MobileEpgBrowserScreen(
                     }
                 }
                 is EpgBrowserViewModel.UiState.Results -> {
-                    MobileResultsContent(results = state, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
+                    MobileResultsContent(
+                        results = state,
+                        nowEpoch = nowEpoch,
+                        isDevMode = isDevMode,
+                        sourceLabels = sourceLabels,
+                        onNavigateToPlayer = onNavigateToPlayer
+                    )
                 }
                 is EpgBrowserViewModel.UiState.Error -> {
                     Box(
@@ -246,7 +263,13 @@ fun MobileEpgBrowserScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap(), onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }) {
+private fun MobileResultsContent(
+    results: EpgBrowserViewModel.UiState.Results,
+    nowEpoch: Long,
+    isDevMode: Boolean = false,
+    sourceLabels: Map<Long, String> = emptyMap(),
+    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
+) {
     Column {
         // Stats row
         val timeStr = "%.1f".format(results.searchTimeMs / 1000.0)
@@ -289,7 +312,13 @@ private fun MobileResultsContent(results: EpgBrowserViewModel.UiState.Results, i
                         key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" },
                         contentType = { "program" }
                     ) { program ->
-                        MobileProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
+                        MobileProgramCard(
+                            program = program,
+                            nowEpoch = nowEpoch,
+                            isDevMode = isDevMode,
+                            sourceLabels = sourceLabels,
+                            onNavigateToPlayer = onNavigateToPlayer
+                        )
                     }
                 }
             }
@@ -311,7 +340,13 @@ private fun MobileDateHeader(dateLabel: String) {
 }
 
 @Composable
-private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap(), onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }) {
+private fun MobileProgramCard(
+    program: EpgBrowserProgram,
+    nowEpoch: Long,
+    isDevMode: Boolean = false,
+    sourceLabels: Map<Long, String> = emptyMap(),
+    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
+) {
     var expanded by remember { mutableStateOf(false) }
     val showExpander = program.airings.size > 3
     var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
@@ -373,6 +408,7 @@ private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = f
             visibleAirings.forEach { airing ->
                 MobileAiringRow(
                     airing = airing,
+                    nowEpoch = nowEpoch,
                     isDevMode = isDevMode,
                     sourceLabels = sourceLabels,
                     onNavigateToPlayer = onNavigateToPlayer,
@@ -433,12 +469,12 @@ private fun MobileProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = f
 @Composable
 private fun MobileAiringRow(
     airing: EpgBrowserAiring,
+    nowEpoch: Long,
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
     onRequestConfirmation: (EpgBrowserAiring) -> Unit = {}
 ) {
-    val nowEpoch = remember { System.currentTimeMillis() / 1000L }
     val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
     val isSoon = !isOnAir && airing.startEpoch > nowEpoch && (airing.startEpoch - nowEpoch) <= 7200L
     val isMatched = airing.matchedStream != null

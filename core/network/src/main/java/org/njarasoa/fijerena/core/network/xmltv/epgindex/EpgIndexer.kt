@@ -140,7 +140,7 @@ class EpgIndexer private constructor(private val context: Context) {
 
                                 if (channelBatch.size >= BATCH_SIZE) {
                                     db.withTransaction {
-                                        dao.insertChannelsIgnore(channelBatch.toList())
+                                        dao.insertChannelsIgnore(channelBatch)
                                     }
                                     channelBatch.clear()
                                     // Yield CPU briefly to other tasks (like video playback)
@@ -152,7 +152,7 @@ class EpgIndexer private constructor(private val context: Context) {
                             // Flush any remaining channels before starting programmes
                             if (channelBatch.isNotEmpty()) {
                                 db.withTransaction {
-                                    dao.insertChannelsIgnore(channelBatch.toList())
+                                    dao.insertChannelsIgnore(channelBatch)
                                 }
                                 channelBatch.clear()
                             }
@@ -165,7 +165,7 @@ class EpgIndexer private constructor(private val context: Context) {
 
                                 if (programmeBatch.size >= BATCH_SIZE) {
                                     db.withTransaction {
-                                        dao.insertProgrammes(programmeBatch.toList())
+                                        dao.insertProgrammes(programmeBatch)
                                     }
                                     programmeBatch.clear()
 
@@ -187,10 +187,10 @@ class EpgIndexer private constructor(private val context: Context) {
 
             // Flush remaining
             if (channelBatch.isNotEmpty()) {
-                db.withTransaction { dao.insertChannelsIgnore(channelBatch.toList()) }
+                db.withTransaction { dao.insertChannelsIgnore(channelBatch) }
             }
             if (programmeBatch.isNotEmpty()) {
-                db.withTransaction { dao.insertProgrammes(programmeBatch.toList()) }
+                db.withTransaction { dao.insertProgrammes(programmeBatch) }
             }
 
             val stats = IngestionStats(channelCount, programmeCount)
@@ -294,7 +294,7 @@ class EpgIndexer private constructor(private val context: Context) {
                     totalProgrammes++
 
                     if (programmeBatch.size >= BATCH_SIZE) {
-                        db.withTransaction { dao.insertProgrammes(programmeBatch.toList()) }
+                        db.withTransaction { dao.insertProgrammes(programmeBatch) }
                         programmeBatch.clear()
                     }
                 }
@@ -305,7 +305,7 @@ class EpgIndexer private constructor(private val context: Context) {
                 db.withTransaction { dao.insertChannelsIgnore(channelEntities) }
             }
             if (programmeBatch.isNotEmpty()) {
-                db.withTransaction { dao.insertProgrammes(programmeBatch.toList()) }
+                db.withTransaction { dao.insertProgrammes(programmeBatch) }
             }
 
             // Update source stats
