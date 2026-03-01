@@ -427,6 +427,13 @@ class EpgFileManager private constructor(private val context: Context) {
 
                             if (result != null) {
                                 // Success — send to ingestion pipeline
+                                activeProgress[source.id] = ActiveSourceProgress(
+                                    label = label,
+                                    phase = "Awaiting Ingestion",
+                                    downloadedBytes = result.downloadedBytes,
+                                    downloadTotalBytes = result.downloadedBytes
+                                )
+                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                                 ingestionQueue.send(result)
                             } else {
                                 // Download failed — record and clean up
@@ -534,6 +541,14 @@ class EpgFileManager private constructor(private val context: Context) {
             val downloaded = downloadSource(source, label, sourceDao, activeProgress) { updateSingleProgress() }
 
             val stats = if (downloaded != null) {
+                // Buffer state between phases
+                activeProgress[source.id] = ActiveSourceProgress(
+                    label = label, phase = "Awaiting Ingestion",
+                    downloadedBytes = downloaded.downloadedBytes,
+                    downloadTotalBytes = downloaded.downloadedBytes
+                )
+                updateSingleProgress()
+
                 // Ingest phase
                 activeProgress[source.id] = ActiveSourceProgress(
                     label = label, phase = "Ingesting",
