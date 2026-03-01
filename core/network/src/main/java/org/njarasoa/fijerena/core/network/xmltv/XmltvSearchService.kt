@@ -43,6 +43,23 @@ class XmltvSearchService(private val context: Context) {
         }
     }
 
+    suspend fun getNowPlaying(nowEpoch: Long): XmltvSearchResult? {
+        val indexer = EpgIndexer.getInstance(context)
+        if (indexer.state.value !is EpgIndexState.Indexed) {
+            return null
+        }
+
+        return try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            val rows = dao.getNowPlaying(nowEpoch)
+            rowsToSearchResult(rows, searchedFromIndex = true)
+        } catch (e: Exception) {
+            Log.w(TAG, "SQLite getNowPlaying failed", e)
+            null
+        }
+    }
+
     private suspend fun searchFromIndex(
         query: String,
         windowStart: Long,

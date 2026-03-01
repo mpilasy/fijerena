@@ -205,6 +205,15 @@ fun MobileEpgBrowserScreen(
                         )
                     }
                 }
+                is EpgBrowserViewModel.UiState.NowPlaying -> {
+                    MobileNowPlayingContent(
+                        nowPlaying = state,
+                        nowEpoch = nowEpoch,
+                        isDevMode = isDevMode,
+                        sourceLabels = sourceLabels,
+                        onNavigateToPlayer = onNavigateToPlayer
+                    )
+                }
                 is EpgBrowserViewModel.UiState.NoEpgFile -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -320,6 +329,63 @@ private fun MobileResultsContent(
                             onNavigateToPlayer = onNavigateToPlayer
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MobileNowPlayingContent(
+    nowPlaying: EpgBrowserViewModel.UiState.NowPlaying,
+    nowEpoch: Long,
+    isDevMode: Boolean = false,
+    sourceLabels: Map<Long, String> = emptyMap(),
+    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
+) {
+    Column {
+        // Stats row
+        Text(
+            text = "Now Playing: ${nowPlaying.totalPrograms} programs",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(
+                horizontal = Spacing.md,
+                vertical = Spacing.xs
+            )
+        )
+
+        if (nowPlaying.programs.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No matched programmes currently playing",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = Spacing.md)
+            ) {
+                items(
+                    nowPlaying.programs,
+                    key = { "now_playing::${it.title}::${it.description}" },
+                    contentType = { "program" }
+                ) { program ->
+                    MobileProgramCard(
+                        program = program,
+                        nowEpoch = nowEpoch,
+                        isDevMode = isDevMode,
+                        sourceLabels = sourceLabels,
+                        onNavigateToPlayer = onNavigateToPlayer
+                    )
                 }
             }
         }

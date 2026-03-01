@@ -46,6 +46,11 @@ class EpgBrowserViewModel(
             val progressPercent: Int,
             val programmesIndexed: Int
         ) : UiState
+        data class NowPlaying(
+            val programs: List<EpgBrowserProgram>,
+            val totalPrograms: Int,
+            val totalAirings: Int
+        ) : UiState
         data class Results(
             val query: String,
             val dateGroups: List<EpgBrowserDateGroup>,
@@ -111,6 +116,9 @@ class EpgBrowserViewModel(
                     if (liveStreams.isNotEmpty()) {
                         channelMatcher = EpgChannelMatcher(liveStreams)
                     }
+                    if (_uiState.value is UiState.Idle) {
+                        loadNowPlaying()
+                    }
                 } catch (_: Exception) { }
             }
         }
@@ -147,7 +155,14 @@ class EpgBrowserViewModel(
     }
 
     fun performSearch(query: String) {
-        if (query.length < 2) return
+        if (query.length < 2) {
+            if (query.isEmpty()) {
+                viewModelScope.launch {
+                    loadNowPlaying()
+                }
+            }
+            return
+        }
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
@@ -246,6 +261,72 @@ class EpgBrowserViewModel(
      */
     fun refreshNowPlaying() {
         initPagedNowPlaying()
+    }
+
+    suspend fun loadNowPlaying() {
+        val indexer = EpgIndexer.getInstance(context)
+        if (indexer.state.value !is EpgIndexState.Indexed) return
+        val matcher = channelMatcher ?: return
+
+        _uiState.value = UiState.Searching
+        try {
+            val nowEpoch = System.currentTimeMillis() / 1000L
+            val result = withContext(Dispatchers.IO) {
+                searchService.getNowPlaying(nowEpoch)
+            }
+            if (result == null) {
+                _uiState.value = UiState.NoEpgFile
+                return
+            }
+
+            // Convert all programmes to airings with programme info
+            val allAirings = result.programmes.map { prog ->
+                val channel = result.channels[prog.channelId]
+                AiringWithProgramme(
+                    title = prog.title,
+                    description = prog.description,
+                    category = prog.category,
+                    airing = EpgBrowserAiring(
+                        channelId = prog.channelId,
+                        channelName = channel?.displayName ?: prog.channelId,
+                        channelIconUrl = channel?.iconUrl,
+                        startEpoch = prog.startEpoch,
+                        endEpoch = prog.endEpoch,
+                        sourceId = prog.sourceId
+                    )
+                )
+            }
+
+            // Keep only matched airings
+            val matchedAirings = allAirings.mapNotNull {
+                val matched = matcher.match(it.airing.channelId, it.airing.channelName)
+                if (matched != null) it.copy(airing = it.airing.copy(matchedStream = matched)) else null
+            }
+
+            val programs = matchedAirings
+                .groupBy { it.title.trim().lowercase() to (it.description?.trim()?.lowercase() ?: "") }
+                .map { (_, group) ->
+                    val rep = group.first()
+                    EpgBrowserProgram(
+                        title = rep.title,
+                        description = rep.description ?: group.firstNotNullOfOrNull { it.description },
+                        category = rep.category ?: group.firstNotNullOfOrNull { it.category },
+                        airings = group.map { it.airing }.sortedBy { it.startEpoch }
+                    )
+                }
+                .sortedBy { it.title }
+
+            val totalPrograms = programs.size
+            val totalAirings = matchedAirings.size
+
+            _uiState.value = UiState.NowPlaying(
+                programs = programs,
+                totalPrograms = totalPrograms,
+                totalAirings = totalAirings
+            )
+        } catch (e: Exception) {
+            _uiState.value = UiState.Error(e.message ?: "Failed to load Now Playing")
+        }
     }
 
     private data class AiringWithProgramme(

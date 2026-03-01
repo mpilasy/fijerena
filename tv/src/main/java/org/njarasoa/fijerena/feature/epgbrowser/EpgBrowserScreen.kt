@@ -315,6 +315,15 @@ private fun EpgBrowserContent(
                     )
                 }
             }
+            is EpgBrowserViewModel.UiState.NowPlaying -> {
+                NowPlayingContent(
+                    nowPlaying = uiState,
+                    nowEpoch = nowEpoch,
+                    isDevMode = isDevMode,
+                    sourceLabels = sourceLabels,
+                    onNavigateToPlayer = onNavigateToPlayer
+                )
+            }
             is EpgBrowserViewModel.UiState.Searching -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -411,6 +420,62 @@ private fun ResultsContent(
                             onNavigateToPlayer = onNavigateToPlayer
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NowPlayingContent(
+    nowPlaying: EpgBrowserViewModel.UiState.NowPlaying,
+    nowEpoch: Long,
+    isDevMode: Boolean = false,
+    sourceLabels: Map<Long, String> = emptyMap(),
+    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
+) {
+    val scale = LocalUiScale.current
+
+    Column {
+        Text(
+            text = "Now Playing: ${nowPlaying.totalPrograms} programs",
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
+            ),
+            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+            modifier = Modifier.padding(bottom = Spacing.sm.scaled(scale))
+        )
+
+        if (nowPlaying.programs.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No matched programmes currently playing",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
+                    ),
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                )
+            }
+        } else {
+            TvLazyColumn(
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(
+                    nowPlaying.programs,
+                    key = { "now_playing::${it.title}::${it.description}" },
+                    contentType = { "program" }
+                ) { program ->
+                    ProgramCard(
+                        program = program,
+                        nowEpoch = nowEpoch,
+                        isDevMode = isDevMode,
+                        sourceLabels = sourceLabels,
+                        onNavigateToPlayer = onNavigateToPlayer
+                    )
                 }
             }
         }
