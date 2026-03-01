@@ -75,6 +75,11 @@ fun PlayerScreen(
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
+    
+    // Capture delegated properties into local variables for stable smart casting
+    val currentPs = playbackState
+    val currentMeta = currentMetadata
+
     val context = LocalContext.current
 
     val state = rememberPlayerScreenState(context, currentMetadata)
@@ -146,13 +151,13 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Center
         ) {
-            when (playbackState) {
+            when (val ps = currentPs) {
                 PlaybackState.Idle -> { /* Silent - no UI flash before stream loads */ }
                 PlaybackState.Buffering -> BufferingContent()
                 is PlaybackState.Ended -> EndedContent(onBack)
                 is PlaybackState.Error -> ErrorContent(
-                    error = playbackState,
-                    onRetry = { viewModel.playStream(currentMetadata) },
+                    error = ps,
+                    onRetry = { viewModel.playStream(currentMeta) },
                     onBack = onBack
                 )
                 else -> { /* Show controls overlay below */ }
@@ -167,8 +172,8 @@ fun PlayerScreen(
             exit = fadeOut()
         ) {
             StatsOverlay(
-                playbackState = playbackState,
-                metadata = currentMetadata,
+                playbackState = currentPs,
+                metadata = currentMeta,
                 onHide = {
                     // Just close stats, leave controls as they are
                     state.showStats = false
@@ -183,7 +188,7 @@ fun PlayerScreen(
             exit = fadeOut()
         ) {
             PlayerControlsOverlay(
-                playbackState = playbackState,
+                playbackState = currentPs,
                 metadata = state.displayedMetadata,
                 viewModel = viewModel,
                 livePosition = state.livePosition,

@@ -46,6 +46,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.Card
@@ -167,6 +168,7 @@ fun EpgBrowserScreen(
                 else -> {
                     EpgBrowserContent(
                         uiState = state,
+                        nowEpoch = nowEpoch,
                         indexState = indexState,
                         isDevMode = isDevMode,
                         epgDbStats = epgDbStats,
@@ -184,6 +186,7 @@ fun EpgBrowserScreen(
 @Composable
 private fun EpgBrowserContent(
     uiState: EpgBrowserViewModel.UiState,
+    nowEpoch: Long,
     indexState: EpgIndexState,
     isDevMode: Boolean,
     epgDbStats: String?,
@@ -336,7 +339,13 @@ private fun EpgBrowserContent(
                 }
             }
             is EpgBrowserViewModel.UiState.Results -> {
-                ResultsContent(results = uiState, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
+                ResultsContent(
+                    results = uiState,
+                    nowEpoch = nowEpoch,
+                    isDevMode = isDevMode,
+                    sourceLabels = sourceLabels,
+                    onNavigateToPlayer = onNavigateToPlayer
+                )
             }
             else -> {} // NoEpgFile and Error handled in parent
         }
@@ -344,7 +353,13 @@ private fun EpgBrowserContent(
 }
 
 @Composable
-private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap(), onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }) {
+private fun ResultsContent(
+    results: EpgBrowserViewModel.UiState.Results,
+    nowEpoch: Long,
+    isDevMode: Boolean = false,
+    sourceLabels: Map<Long, String> = emptyMap(),
+    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
+) {
     val scale = LocalUiScale.current
 
     Column {
@@ -388,7 +403,13 @@ private fun ResultsContent(results: EpgBrowserViewModel.UiState.Results, isDevMo
                         key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" },
                         contentType = { "program" }
                     ) { program ->
-                        ProgramCard(program = program, isDevMode = isDevMode, sourceLabels = sourceLabels, onNavigateToPlayer = onNavigateToPlayer)
+                        ProgramCard(
+                            program = program,
+                            nowEpoch = nowEpoch,
+                            isDevMode = isDevMode,
+                            sourceLabels = sourceLabels,
+                            onNavigateToPlayer = onNavigateToPlayer
+                        )
                     }
                 }
             }
@@ -412,7 +433,13 @@ private fun DateHeader(dateLabel: String) {
 }
 
 @Composable
-private fun ProgramCard(program: EpgBrowserProgram, isDevMode: Boolean = false, sourceLabels: Map<Long, String> = emptyMap(), onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }) {
+private fun ProgramCard(
+    program: EpgBrowserProgram,
+    nowEpoch: Long,
+    isDevMode: Boolean = false,
+    sourceLabels: Map<Long, String> = emptyMap(),
+    onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
+) {
     val scale = LocalUiScale.current
     var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
 
