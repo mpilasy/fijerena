@@ -19,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
@@ -102,7 +102,7 @@ fun MobilePlayerScreen(
         }
     }
 
-    val streamState by loaderViewModel.state.collectAsState()
+    val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
     val currentStreamState by rememberUpdatedState(streamState)
 
     // UI State
@@ -139,7 +139,7 @@ fun MobilePlayerScreen(
     var livePosition by remember { mutableLongStateOf(0L) }
     var liveDuration by remember { mutableLongStateOf(0L) }
 
-    val playbackState = viewModel.playbackState.collectAsState().value
+    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
 
     LaunchedEffect(playbackState) {
         if (playbackState is PlaybackState.Error) {
@@ -169,7 +169,7 @@ fun MobilePlayerScreen(
     var showSubtitleSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
 
-    val currentMetadata = viewModel.currentMetadata.collectAsState().value
+    val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
 
     // Track when video first starts playing so we stop showing the center spinner
     LaunchedEffect(playbackState) {

@@ -20,11 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -107,16 +107,16 @@ fun StatsOverlay(
     var bufferHealth by remember { mutableStateOf(0) }
 
     // Collect dropped frames from service
-    val serviceDroppedFrames = StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsState()
-    val serviceTotalFrames = StreamingPlaybackService.getInstance()?.totalFrames?.collectAsState()
+    val serviceDroppedFrames by StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
+    val serviceTotalFrames by StreamingPlaybackService.getInstance()?.totalFrames?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
 
     // Collect stream stats from service
-    val serviceRetryCount = StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsState()
-    val serviceStartTimeMs = StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsState()
-    val serviceRebufferCount = StreamingPlaybackService.getInstance()?.rebufferCount?.collectAsState()
-    val serviceRebufferTimeMs = StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsState()
-    val serviceBandwidth = StreamingPlaybackService.getInstance()?.bandwidthEstimate?.collectAsState()
-    val serviceQualitySwitches = StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsState()
+    val serviceRetryCount by StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsStateWithLifecycle(0) ?: remember { mutableStateOf(0) }
+    val serviceStartTimeMs by StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
+    val serviceRebufferCount by StreamingPlaybackService.getInstance()?.rebufferCount?.collectAsStateWithLifecycle(0) ?: remember { mutableStateOf(0) }
+    val serviceRebufferTimeMs by StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
+    val serviceBandwidth by StreamingPlaybackService.getInstance()?.bandwidthEstimate?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
+    val serviceQualitySwitches by StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsStateWithLifecycle(0) ?: remember { mutableStateOf(0) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
     // Update stats periodically
@@ -127,7 +127,7 @@ fun StatsOverlay(
                 bufferedPosition = p.bufferedPosition
 
                 // Get dropped frames from analytics
-                droppedFrames = serviceDroppedFrames?.value ?: 0L
+                droppedFrames = serviceDroppedFrames
 
                 // Calculate buffer health (percentage of buffer vs target)
                 val currentPos = p.currentPosition
@@ -175,7 +175,7 @@ fun StatsOverlay(
             }
 
             // Update stream elapsed time
-            val startTime = serviceStartTimeMs?.value ?: 0L
+            val startTime = serviceStartTimeMs
             if (startTime > 0L) {
                 val elapsedSec = (android.os.SystemClock.elapsedRealtime() - startTime) / 1000
                 val hours = elapsedSec / 3600
@@ -334,12 +334,12 @@ fun StatsOverlay(
                         // Network stats
                         SectionHeader("NETWORK")
                         CompactStatRow("Speed", networkSpeed)
-                        val bwEstimate = serviceBandwidth?.value ?: 0L
+                        val bwEstimate = serviceBandwidth
                         CompactStatRow("Bandwidth", if (bwEstimate > 0) formatBitrate(bwEstimate.toInt()) else "N/A")
                         CompactStatRow("Buffer", "${bufferHealth}s")
                         CompactStatRow("Buffered", formatTime(bufferedPosition))
-                        val rebuffers = serviceRebufferCount?.value ?: 0
-                        val rebufferTimeMs = serviceRebufferTimeMs?.value ?: 0L
+                        val rebuffers = serviceRebufferCount
+                        val rebufferTimeMs = serviceRebufferTimeMs
                         val rebufferColor = when {
                             rebuffers == 0 -> CinemaSuccess
                             rebuffers <= 3 -> CinemaWarning
@@ -349,7 +349,7 @@ fun StatsOverlay(
                         if (rebufferTimeMs > 0) {
                             CompactStatRowColored("Rebuf Time", "${rebufferTimeMs / 1000}.${(rebufferTimeMs % 1000) / 100}s", rebufferColor)
                         }
-                        val qSwitches = serviceQualitySwitches?.value ?: 0
+                        val qSwitches = serviceQualitySwitches
                         if (qSwitches > 0) {
                             CompactStatRow("ABR Switches", "$qSwitches")
                         }
@@ -367,7 +367,7 @@ fun StatsOverlay(
 
                         // Performance metrics with color coding
                         SectionHeader("PERFORMANCE")
-                        val totalFrames = serviceTotalFrames?.value ?: 0L
+                        val totalFrames = serviceTotalFrames
                         val dropRate = if (totalFrames > 0) {
                             (droppedFrames.toFloat() / totalFrames * 100)
                         } else 0f
@@ -394,7 +394,7 @@ fun StatsOverlay(
                         // Stream info
                         SectionHeader("STREAM")
                         CompactStatRow("Type", if (metadata.isLive) "Live" else "VOD")
-                        CompactStatRow("Retries", "${serviceRetryCount?.value ?: 0}")
+                        CompactStatRow("Retries", "$serviceRetryCount")
                         CompactStatRow("Uptime", streamElapsed)
                         CompactStatRow("URL", metadata.streamUrl.substringAfterLast("/").take(20))
 

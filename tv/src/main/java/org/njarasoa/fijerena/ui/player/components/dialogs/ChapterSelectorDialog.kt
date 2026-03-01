@@ -21,11 +21,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -64,7 +64,7 @@ fun ChapterSelectorDialog(
     onDismiss: () -> Unit
 ) {
     val chapters = remember { viewModel.getChapters() }
-    val playbackState by viewModel.playbackState.collectAsState()
+    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentPosition = when (val ps = playbackState) {
         is PlaybackState.Playing -> ps.position
         is PlaybackState.Paused -> ps.position
