@@ -46,18 +46,7 @@ Prefer real hardware for validation:
 ### P2: Low Impact & Maintenance
 *Minor optimizations and code cleanup.*
 
-10. **Consolidate getAllProvidersList() in SettingsExportManager**
-    - **File:** `SettingsExportManager.kt`
-    - **Problem:** Still called 6 times during an import process.
-
-11. **Fix virtual categories FilterChipColors not using hoisted chipColors**
-    - **File:** `mobile/.../MobileCategoryListScreen.kt:389`
-    - **Fix:** Reuse existing `chipColors` variable.
-
-12. **Extract scale options list in UiScaleSettingsCard**
-    - **File:** `tv/.../UiScaleSettingsCard.kt:49`
-    - **Fix:** Move to a file-level `private val`.
-
-13. **Hoist AppSettings outside while(true) loop in EpgFileManager**
-    - **File:** `core/network/.../EpgFileManager.kt:829`
-    - **Fix:** Instantiate once before entering the loop.
+10. ~~**Consolidate getAllProvidersList() in SettingsExportManager**~~ DONE
+11. ~~**Fix virtual categories FilterChipColors not using hoisted chipColors**~~ DONE
+12. ~~**Extract scale options list in UiScaleSettingsCard**~~ DONE
+13. ~~**Hoist AppSettings outside while(true) loop in EpgFileManager**~~ DONE
