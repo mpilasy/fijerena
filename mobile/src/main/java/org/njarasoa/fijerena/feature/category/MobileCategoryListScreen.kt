@@ -386,10 +386,7 @@ private fun CategoryChipRow(
                                 modifier = Modifier.bounceMarquee()
                             )
                         },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                        )
+                        colors = chipColors
                     )
                 }
             }

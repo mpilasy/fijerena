@@ -469,7 +469,12 @@ class SettingsExportManager(private val context: Context) {
                 if (activeExport != null) {
                     val currentActive = providerRepo.getActiveProvider()
                     if (currentActive == null) {
-                        val updatedProviders = providerRepo.getAllProvidersList()
+                        // Re-fetch only if providers were actually added/updated
+                        val updatedProviders = if (providersAdded > 0 || providersUpdated > 0) {
+                            providerRepo.getAllProvidersList()
+                        } else {
+                            existingProviders
+                        }
                         val updatedByNameUrl = updatedProviders.associateBy { "${it.name}\u0000${it.url}" }
                         val updatedByName = updatedProviders.associateBy { it.name }
                         val matching = updatedByNameUrl["${activeExport.name}\u0000${activeExport.url}"]
@@ -516,7 +521,11 @@ class SettingsExportManager(private val context: Context) {
             var favoritesRestored = 0
 
             // Re-fetch providers once for all favorites sections (may have new providers from import)
-            val allProvidersForFavorites = providerRepo.getAllProvidersList()
+            val allProvidersForFavorites = if (providersAdded > 0 || providersUpdated > 0) {
+                providerRepo.getAllProvidersList()
+            } else {
+                existingProviders
+            }
             val providersByNameUrl = allProvidersForFavorites.associateBy { "${it.name}\u0000${it.url}" }
             val providersByName = allProvidersForFavorites.associateBy { it.name }
 

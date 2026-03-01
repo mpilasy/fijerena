@@ -17,6 +17,13 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
+private val SCALE_OPTIONS = listOf(
+    0.4f to "40%",
+    0.6f to "60%",
+    0.8f to "80%",
+    1.0f to "100%"
+).chunked(2)
+
 @Composable
 fun UiScaleSettingsCard(
     uiScale: Float,
@@ -46,7 +53,7 @@ fun UiScaleSettingsCard(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
         ) {
-            listOf(0.4f to "40%", 0.6f to "60%", 0.8f to "80%", 1.0f to "100%").chunked(2).forEach { rowItems ->
+            SCALE_OPTIONS.forEach { rowItems ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))

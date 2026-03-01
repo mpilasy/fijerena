@@ -825,8 +825,8 @@ class EpgFileManager private constructor(private val context: Context) {
     private fun scheduleAutoRefresh() {
         autoRefreshJob?.cancel()
         autoRefreshJob = scope.launch {
+            val appSettings = AppSettings(context)
             while (true) {
-                val appSettings = AppSettings(context)
                 if (appSettings.epgAutoRefreshEnabled) {
                     try {
                         autoRefreshIfStale()
