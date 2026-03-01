@@ -242,7 +242,7 @@ fun StatsOverlay(
     if (interactive) {
         LaunchedEffect(visible) {
             if (visible) {
-                focusRequester.requestFocus()
+                try { focusRequester.requestFocus() } catch (_: IllegalStateException) {}
             }
         }
     }

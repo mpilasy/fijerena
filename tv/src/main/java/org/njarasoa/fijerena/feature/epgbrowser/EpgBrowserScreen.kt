@@ -235,7 +235,7 @@ private fun EpgBrowserContent(
 
         // Auto-focus on screen open
         LaunchedEffect(Unit) {
-            searchFocusRequester.requestFocus()
+            try { searchFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
         }
 
         // Dev mode: show EPG DB stats

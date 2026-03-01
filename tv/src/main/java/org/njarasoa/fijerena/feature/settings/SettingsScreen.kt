@@ -263,7 +263,11 @@ fun SettingsScreen(
     val initialFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        initialFocusRequester.requestFocus()
+        try {
+            initialFocusRequester.requestFocus()
+        } catch (_: IllegalStateException) {
+            // FocusRequester not yet attached — ignore
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

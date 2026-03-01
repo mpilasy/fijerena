@@ -51,4 +51,7 @@ interface EpgSourceDao {
 
     @Query("SELECT COUNT(*) FROM epg_source")
     suspend fun getSourceCount(): Int
+
+    @Query("UPDATE epg_source SET last_ingested_at_ms = 0, last_channels = 0, last_programmes = 0, last_download_bytes = 0, last_error = NULL")
+    suspend fun resetAllIngestionState()
 }

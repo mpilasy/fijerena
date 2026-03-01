@@ -117,7 +117,7 @@ internal fun StreamList(
             val lastPlayedIndex = streams.indexOfFirst { it.id == lastPlayedItemId }
             if (lastPlayedIndex != -1) {
                 listState.animateScrollToItem(lastPlayedIndex)
-                lastPlayedFocusRequester.requestFocus()
+                try { lastPlayedFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
                 lastFocusedItemId = lastPlayedItemId
             }
         }

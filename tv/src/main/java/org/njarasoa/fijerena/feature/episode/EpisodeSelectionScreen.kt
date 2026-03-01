@@ -491,7 +491,7 @@ private fun EpisodeDetailPanel(
 
     // Request focus on Play/Resume button when screen loads or resume data arrives
     LaunchedEffect(resumePositionMs) {
-        playButtonFocusRequester.requestFocus()
+        try { playButtonFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
     }
 
     Column(

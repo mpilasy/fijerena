@@ -99,12 +99,12 @@ internal fun CategoryList(
         if (selectedCategoryId != null) {
             if (selectedCategoryId in VIRTUAL_CATEGORY_IDS) {
                 // Focus virtual category in sidebar
-                focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus()
+                try { focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus() } catch (_: IllegalStateException) {}
             } else if (regularCategories.isNotEmpty()) {
                 val selectedIndex = regularCategories.indexOfFirst { it.id == selectedCategoryId }
                 if (selectedIndex != -1) {
                     listState.animateScrollToItem(selectedIndex)
-                    focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus()
+                    try { focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus() } catch (_: IllegalStateException) {}
                 }
             }
         }
