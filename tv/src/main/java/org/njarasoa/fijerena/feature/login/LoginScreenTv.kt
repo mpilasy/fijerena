@@ -80,7 +80,7 @@ fun LoginScreenTv(
 
     // Auto-focus login button on screen open
     LaunchedEffect(Unit) {
-        buttonFocusRequester.requestFocus()
+        try { buttonFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
     }
 
     // Attempt to restore session from encrypted credentials on startup

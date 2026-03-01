@@ -408,7 +408,7 @@ private fun SearchTextField(
 
     // Auto-focus on screen open
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        try { focusRequester.requestFocus() } catch (_: IllegalStateException) {}
     }
 }
 

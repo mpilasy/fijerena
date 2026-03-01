@@ -208,7 +208,7 @@ private fun MovieDetailsContent(
 
     // Request focus on Play/Resume button when screen loads or resume data arrives
     LaunchedEffect(resumePositionMs) {
-        playButtonFocusRequester.requestFocus()
+        try { playButtonFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
     }
 
     // Track refresh state for animation

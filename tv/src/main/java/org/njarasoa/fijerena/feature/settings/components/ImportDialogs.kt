@@ -59,7 +59,7 @@ fun ImportOptionsDialog(
     }
 
     LaunchedEffect(Unit) {
-        importDialogFocusRequester.requestFocus()
+        try { importDialogFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
     }
 
     Box(
@@ -182,7 +182,7 @@ fun ConflictResolutionDialog(
     }
 
     LaunchedEffect(Unit) {
-        conflictDialogFocusRequester.requestFocus()
+        try { conflictDialogFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
     }
 
     Box(

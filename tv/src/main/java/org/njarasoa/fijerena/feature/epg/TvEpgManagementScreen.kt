@@ -2,7 +2,9 @@
 
 package org.njarasoa.fijerena.feature.epg
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -105,7 +107,11 @@ fun TvEpgManagementScreen(
     val initialFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        initialFocusRequester.requestFocus()
+        try {
+            initialFocusRequester.requestFocus()
+        } catch (_: IllegalStateException) {
+            // FocusRequester not yet attached — ignore
+        }
     }
 
     CompositionLocalProvider(LocalUiScale provides uiScale) {
@@ -172,15 +178,47 @@ fun TvEpgManagementScreen(
                         val procState = processingState
                         if (procState is EpgFileManager.MultiSourceState.Processing) {
                             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                            Text(
-                                text = "${procState.completedCount}/${procState.totalSources} sources" +
-                                    if (procState.activeSourceLabels.isNotEmpty()) " — ${procState.activeSourceLabels.joinToString(", ")}" else "",
-                                style = scaledBodySmall,
-                                color = CinemaTextSecondary
-                            )
+                            Row(
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${procState.completedCount}/${procState.totalSources} sources",
+                                    style = scaledBodySmall,
+                                    color = CinemaTextSecondary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                androidx.compose.material3.TextButton(onClick = { viewModel.cancelProcessing() }) {
+                                    Text("Cancel", style = scaledLabelSmall, color = CinemaError)
+                                }
+                            }
+                            // Per-source active progress
+                            procState.activeProgress.forEach { progress ->
+                                val progressText = buildString {
+                                    append(progress.label)
+                                    append(": ")
+                                    append(progress.phase)
+                                    if (progress.progressPercent in 0..100) {
+                                        append(" ${progress.progressPercent}%")
+                                    }
+                                    if (progress.phase == "Downloading") {
+                                        append(" (${formatBytes(progress.downloadedBytes)}")
+                                        if (progress.downloadTotalBytes > 0) {
+                                            append("/${formatBytes(progress.downloadTotalBytes)}")
+                                        }
+                                        append(")")
+                                    } else if (progress.programmes > 0) {
+                                        append(" (${formatCount(progress.channels)}ch, ${formatCount(progress.programmes)}prg)")
+                                    }
+                                }
+                                Text(
+                                    text = progressText,
+                                    style = scaledLabelSmall,
+                                    color = CinemaTextSecondary
+                                )
+                            }
                             if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
                                 Text(
-                                    text = "${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
+                                    text = "Total: ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
                                     style = scaledLabelSmall,
                                     color = CinemaTextSecondary
                                 )
@@ -425,18 +463,16 @@ fun TvEpgManagementScreen(
                                     text = "Selected (${selectedSourceIds.size})"
                                 )
                             }
-                            if (hasStrayFiles) {
-                                CinemaSecondaryButton(
-                                    onClick = { showCleanupConfirm = true },
-                                    text = "Cleanup Files"
-                                )
-                            }
-                            if (staleProgrammeCount > 0) {
-                                CinemaSecondaryButton(
-                                    onClick = { showPurgeConfirm = true },
-                                    text = "Purge >2 Days"
-                                )
-                            }
+                            CinemaSecondaryButton(
+                                onClick = { showCleanupConfirm = true },
+                                enabled = hasStrayFiles,
+                                text = "Cleanup Files"
+                            )
+                            CinemaSecondaryButton(
+                                onClick = { showPurgeConfirm = true },
+                                enabled = staleProgrammeCount > 0,
+                                text = "Purge >2 Days"
+                            )
                             CinemaDangerButton(
                                 onClick = { showClearConfirm = true },
                                 text = "Clear All Data"
@@ -640,6 +676,38 @@ fun TvEpgManagementScreen(
                 )
             }
         )
+    }
+
+    // Blocking overlay while clearing data
+    if (processingState is EpgFileManager.MultiSourceState.Clearing) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            // Semi-transparent background to block interaction
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(CinemaSurface.copy(alpha = 0.85f))
+            )
+            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    color = CinemaAccent,
+                    modifier = Modifier.size(Spacing.xxl.scaled(scale))
+                )
+                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                Text(
+                    text = "Clearing all EPG data...",
+                    style = scaledTitleMedium,
+                    color = CinemaTextPrimary
+                )
+                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                Text(
+                    text = "This may take a moment",
+                    style = scaledBodySmall,
+                    color = CinemaTextSecondary
+                )
+            }
+        }
     }
 
     } // End CompositionLocalProvider

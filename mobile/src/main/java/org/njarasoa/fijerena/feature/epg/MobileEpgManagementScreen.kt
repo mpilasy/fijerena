@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.feature.epg
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +31,8 @@ import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -142,15 +146,47 @@ fun MobileEpgManagementScreen(
                 val procState = processingState
                 if (procState is EpgFileManager.MultiSourceState.Processing) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                    Text(
-                        text = "${procState.completedCount}/${procState.totalSources} sources" +
-                            if (procState.activeSourceLabels.isNotEmpty()) " — ${procState.activeSourceLabels.joinToString(", ")}" else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${procState.completedCount}/${procState.totalSources} sources",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { viewModel.cancelProcessing() }) {
+                            Text("Cancel", style = MaterialTheme.typography.labelSmall, color = CinemaError)
+                        }
+                    }
+                    // Per-source active progress
+                    procState.activeProgress.forEach { progress ->
+                        val progressText = buildString {
+                            append(progress.label)
+                            append(": ")
+                            append(progress.phase)
+                            if (progress.progressPercent in 0..100) {
+                                append(" ${progress.progressPercent}%")
+                            }
+                            if (progress.phase == "Downloading") {
+                                append(" (${formatBytes(progress.downloadedBytes)}")
+                                if (progress.downloadTotalBytes > 0) {
+                                    append("/${formatBytes(progress.downloadTotalBytes)}")
+                                }
+                                append(")")
+                            } else if (progress.programmes > 0) {
+                                append(" (${formatCount(progress.channels)}ch, ${formatCount(progress.programmes)}prg)")
+                            }
+                        }
+                        Text(
+                            text = progressText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
                         Text(
-                            text = "${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
+                            text = "Total: ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -537,6 +573,37 @@ fun MobileEpgManagementScreen(
                 OutlinedButton(onClick = { showDeleteConfirm = null }) { Text("Cancel") }
             }
         )
+    }
+
+    // Blocking overlay while clearing data
+    if (processingState is EpgFileManager.MultiSourceState.Clearing) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+            ) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                Text(
+                    text = "Clearing all EPG data...",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                Text(
+                    text = "This may take a moment",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 

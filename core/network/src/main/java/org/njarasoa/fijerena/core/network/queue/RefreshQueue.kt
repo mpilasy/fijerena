@@ -31,6 +31,8 @@ object RefreshQueue {
     private val _queuedTaskIds = MutableStateFlow<Set<String>>(emptySet())
     val queuedTaskIds = _queuedTaskIds.asStateFlow()
 
+    private var currentJob: Job? = null
+
     private class QueuedTask(
         val task: RefreshTask,
         val deferred: CompletableDeferred<Unit>
@@ -92,13 +94,21 @@ object RefreshQueue {
 
             _isProcessing.value = true
             try {
-                // Execute the task
-                queuedTask.task.execute()
-                queuedTask.deferred.complete(Unit)
+                val job = scope.launch {
+                    queuedTask.task.execute()
+                }
+                currentJob = job
+                job.join()
+                if (job.isCancelled) {
+                    queuedTask.deferred.cancel()
+                } else {
+                    queuedTask.deferred.complete(Unit)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 queuedTask.deferred.completeExceptionally(e)
             } finally {
+                currentJob = null
                 _isProcessing.value = false
             }
         }
@@ -109,8 +119,17 @@ object RefreshQueue {
      */
     suspend fun clear() {
         queueMutex.withLock {
+            queue.forEach { it.deferred.cancel() }
             queue.clear()
             _queuedTaskIds.value = emptySet()
         }
+    }
+
+    /**
+     * Cancel the currently executing task and clear all pending tasks.
+     */
+    suspend fun cancelAll() {
+        currentJob?.cancel()
+        clear()
     }
 }

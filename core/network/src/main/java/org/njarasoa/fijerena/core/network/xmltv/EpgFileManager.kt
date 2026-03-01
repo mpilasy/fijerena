@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
@@ -103,12 +105,23 @@ class EpgFileManager private constructor(private val context: Context) {
         val error: String? = null
     )
 
+    data class ActiveSourceProgress(
+        val label: String,
+        val phase: String, // "Downloading" or "Ingesting"
+        val progressPercent: Int = -1, // 0-100, or -1 if unknown
+        val downloadedBytes: Long = 0,
+        val downloadTotalBytes: Long = -1,
+        val channels: Int = 0,
+        val programmes: Int = 0
+    )
+
     sealed interface MultiSourceState {
         data object Idle : MultiSourceState
         data class Processing(
             val completedCount: Int,
             val totalSources: Int,
             val activeSourceLabels: List<String>,
+            val activeProgress: List<ActiveSourceProgress> = emptyList(),
             val totalChannels: Int = 0,
             val totalProgrammes: Int = 0,
             val totalDownloadedBytes: Long = 0,
@@ -123,6 +136,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val totalDownloadBytes: Long = 0
         ) : MultiSourceState
         data class Error(val reason: String) : MultiSourceState
+        data object Clearing : MultiSourceState
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -335,6 +349,16 @@ class EpgFileManager private constructor(private val context: Context) {
         processAllSourcesInternal(sources)
     }
 
+    /**
+     * Holds a downloaded file ready for ingestion.
+     */
+    private data class DownloadedSource(
+        val source: EpgSourceEntity,
+        val label: String,
+        val tmpFile: File,
+        val downloadedBytes: Long
+    )
+
     private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) {
         if (sources.isEmpty()) {
             _state.value = MultiSourceState.Error("No sources to process")
@@ -346,10 +370,14 @@ class EpgFileManager private constructor(private val context: Context) {
             val sourceDao = db.epgSourceDao()
             val indexer = EpgIndexer.getInstance(context)
 
-            val maxConcurrency = if (isFixedDevice()) 2 else 3
-            val semaphore = Semaphore(maxConcurrency)
+            val maxDownloadConcurrency = if (isFixedDevice()) 1 else 3
+            val downloadSemaphore = Semaphore(maxDownloadConcurrency)
             val completedStats = CopyOnWriteArrayList<SourceStats>()
             val activeLabels = CopyOnWriteArrayList<String>()
+            val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
+
+            // Channel: downloads produce, ingestion consumes
+            val ingestionQueue = Channel<DownloadedSource>(Channel.UNLIMITED)
 
             indexer.setIndexing()
 
@@ -360,29 +388,77 @@ class EpgFileManager private constructor(private val context: Context) {
             )
 
             val allStats = coroutineScope {
-                sources.map { source ->
+                // Consumer: ingest downloaded files one at a time (SQLite single-writer)
+                val ingestionJob = launch {
+                    for (downloaded in ingestionQueue) {
+                        activeProgress[downloaded.source.id] = ActiveSourceProgress(
+                            label = downloaded.label,
+                            phase = "Ingesting",
+                            downloadedBytes = downloaded.downloadedBytes,
+                            downloadTotalBytes = downloaded.downloadedBytes
+                        )
+                        updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+
+                        val stats = ingestDownloadedSource(
+                            downloaded, sourceDao, indexer, activeProgress
+                        ) {
+                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                        }
+
+                        activeLabels.remove(downloaded.label)
+                        activeProgress.remove(downloaded.source.id)
+                        completedStats.add(stats)
+                        updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                    }
+                }
+
+                // Producers: download sources concurrently
+                val downloadJobs = sources.map { source ->
                     async {
                         val label = source.label.ifBlank { extractLabel(source.url) }
-                        semaphore.withPermit {
+                        downloadSemaphore.withPermit {
                             activeLabels.add(label)
-                            updateAggregateProgress(completedStats, activeLabels, sources.size)
-                            val stats = processSourceParallel(source, label, sourceDao, indexer)
-                            activeLabels.remove(label)
-                            completedStats.add(stats)
-                            updateAggregateProgress(completedStats, activeLabels, sources.size)
-                            stats
+                            activeProgress[source.id] = ActiveSourceProgress(label, "Downloading")
+                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+
+                            val result = downloadSource(source, label, sourceDao, activeProgress) {
+                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                            }
+
+                            if (result != null) {
+                                // Success — send to ingestion pipeline
+                                ingestionQueue.send(result)
+                            } else {
+                                // Download failed — record and clean up
+                                activeLabels.remove(label)
+                                activeProgress.remove(source.id)
+                                completedStats.add(SourceStats(source.id, label, error = "Download failed"))
+                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                            }
                         }
                     }
-                }.map { it.await() }
-            }
+                }
 
-            // Single FTS rebuild + vacuum after ALL sources complete
-            indexer.rebuildFtsAndUpdateState()
-            indexer.incrementalVacuum()
+                // Wait for all downloads, then close the ingestion queue
+                downloadJobs.forEach { it.await() }
+                ingestionQueue.close()
+
+                // Wait for ingestion to drain
+                ingestionJob.join()
+
+                completedStats.toList()
+            }
 
             val totalChannels = allStats.sumOf { it.channelsIngested }
             val totalProgrammes = allStats.sumOf { it.programmesIngested }
             val totalBytes = allStats.sumOf { it.downloadBytes }
+
+            // Only rebuild FTS + vacuum if at least one source ingested data
+            val anyIngested = allStats.any { it.error == null && (it.channelsIngested > 0 || it.programmesIngested > 0) }
+            if (anyIngested) {
+                indexer.rebuildFtsAndUpdateState()
+                indexer.incrementalVacuum()
+            }
 
             _state.value = MultiSourceState.Completed(
                 sourcesProcessed = sources.size,
@@ -403,15 +479,18 @@ class EpgFileManager private constructor(private val context: Context) {
     private fun updateAggregateProgress(
         completedStats: List<SourceStats>,
         activeLabels: List<String>,
+        activeProgress: Map<Long, ActiveSourceProgress>,
         totalSources: Int
     ) {
+        val activeList = activeProgress.values.toList()
         _state.value = MultiSourceState.Processing(
             completedCount = completedStats.size,
             totalSources = totalSources,
             activeSourceLabels = activeLabels.toList(),
-            totalChannels = completedStats.sumOf { it.channelsIngested },
-            totalProgrammes = completedStats.sumOf { it.programmesIngested },
-            totalDownloadedBytes = completedStats.sumOf { it.downloadBytes },
+            activeProgress = activeList,
+            totalChannels = completedStats.sumOf { it.channelsIngested } + activeList.sumOf { it.channels },
+            totalProgrammes = completedStats.sumOf { it.programmesIngested } + activeList.sumOf { it.programmes },
+            totalDownloadedBytes = completedStats.sumOf { it.downloadBytes } + activeList.sumOf { it.downloadedBytes },
             completedSourceStats = completedStats.toList()
         )
     }
@@ -428,17 +507,52 @@ class EpgFileManager private constructor(private val context: Context) {
             val label = source.label.ifBlank { extractLabel(source.url) }
 
             indexer.setIndexing()
+            val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
             _state.value = MultiSourceState.Processing(
                 completedCount = 0,
                 totalSources = 1,
                 activeSourceLabels = listOf(label)
             )
 
-            val stats = processSourceParallel(source, label, sourceDao, indexer)
+            fun updateSingleProgress() {
+                val activeList = activeProgress.values.toList()
+                _state.value = MultiSourceState.Processing(
+                    completedCount = 0,
+                    totalSources = 1,
+                    activeSourceLabels = listOf(label),
+                    activeProgress = activeList,
+                    totalChannels = activeList.sumOf { it.channels },
+                    totalProgrammes = activeList.sumOf { it.programmes },
+                    totalDownloadedBytes = activeList.sumOf { it.downloadedBytes }
+                )
+            }
 
-            // Rebuild FTS
-            indexer.rebuildFtsAndUpdateState()
-            indexer.incrementalVacuum()
+            // Download phase
+            activeProgress[source.id] = ActiveSourceProgress(label, "Downloading")
+            updateSingleProgress()
+
+            val downloaded = downloadSource(source, label, sourceDao, activeProgress) { updateSingleProgress() }
+
+            val stats = if (downloaded != null) {
+                // Ingest phase
+                activeProgress[source.id] = ActiveSourceProgress(
+                    label = label, phase = "Ingesting",
+                    downloadedBytes = downloaded.downloadedBytes,
+                    downloadTotalBytes = downloaded.downloadedBytes
+                )
+                updateSingleProgress()
+
+                ingestDownloadedSource(downloaded, sourceDao, indexer, activeProgress) { updateSingleProgress() }
+            } else {
+                // Download failed — error already logged
+                SourceStats(source.id, label, error = "Download failed")
+            }
+
+            // Only rebuild FTS if source actually ingested data
+            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+                indexer.rebuildFtsAndUpdateState()
+                indexer.incrementalVacuum()
+            }
 
             _state.value = MultiSourceState.Completed(
                 sourcesProcessed = 1,
@@ -467,158 +581,100 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Process a single source for parallel ingestion. Thread-safe: no singleton mutation.
-     * Dispatches to streaming (TV) or download (mobile) path.
+     * Cancel all running and queued EPG refresh processing.
+     * Cancels the coroutine job which causes all downloads and ingestion to stop.
      */
-    private suspend fun processSourceParallel(
-        source: EpgSourceEntity,
-        label: String,
-        sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
-        indexer: EpgIndexer
-    ): SourceStats {
-        val isGzip = source.url.endsWith(".gz", ignoreCase = true)
-
-        return if (isFixedDevice()) {
-            processSourceStreamParallel(source, label, isGzip, sourceDao, indexer)
-        } else {
-            processSourceDownloadParallel(source, label, isGzip, sourceDao, indexer)
+    fun cancelProcessing() {
+        processJob?.cancel()
+        processJob = null
+        scope.launch {
+            RefreshQueue.cancelAll()
         }
+        Log.d(TAG, "Processing cancelled by user")
+        _state.value = MultiSourceState.Idle
     }
 
     /**
-     * TV path (parallel-safe): stream directly from network to database.
-     * No XmltvParser.timezoneOverrideHours mutation — passes tz as parameter.
+     * Cancel all processing, then clear all EPG data.
+     * Runs entirely on this manager's scope (survives ViewModel destruction).
      */
-    private suspend fun processSourceStreamParallel(
-        source: EpgSourceEntity,
-        label: String,
-        isGzip: Boolean,
-        sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
-        indexer: EpgIndexer
-    ): SourceStats {
-        var lastError: String? = null
-
-        for (attempt in 1..MAX_RETRIES) {
+    fun launchClearAllData(onComplete: (suspend () -> Unit)? = null) {
+        processJob?.cancel()
+        processJob = null
+        _state.value = MultiSourceState.Clearing
+        scope.launch {
             try {
-                Log.d(TAG, "Streaming EPG from: ${source.url} (attempt $attempt/$MAX_RETRIES)")
-
-                val request = Request.Builder().url(source.url).build()
-                okHttpClient.newCall(request).execute().use { response ->
-                    val statusCode = response.code
-                    if (!response.isSuccessful) {
-                        lastError = "server returned HTTP $statusCode"
-                        Log.w(TAG, "EPG streaming: $lastError (attempt $attempt)")
-                        return@use
-                    }
-
-                    val body = response.body ?: throw java.io.IOException("Empty response body")
-                    val rawStream = body.byteStream()
-                    val buffered = BufferedInputStream(rawStream, STREAM_BUFFER_SIZE)
-                    val stream = if (isGzip) GZIPInputStream(buffered, STREAM_BUFFER_SIZE) else buffered
-
-                    val ingestionStats = stream.use {
-                        indexer.ingestFromStream(it, sourceId = source.id, timezoneOverrideHours = source.timezoneOffsetHours)
-                    }
-
-                    sourceDao.markIngested(
-                        id = source.id,
-                        timestamp = System.currentTimeMillis(),
-                        channels = ingestionStats.channelsIngested,
-                        programmes = ingestionStats.programmesIngested,
-                        downloadBytes = 0,
-                        ingestMethod = "STREAMED"
-                    )
-                    Log.d(TAG, "Source streamed: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
-
-                    lastError = null
-                }
-
-                if (lastError == null) {
-                    val ingestionStats = indexer.lastIngestionStats
-                    return SourceStats(
-                        sourceId = source.id,
-                        label = label,
-                        channelsIngested = ingestionStats.channelsIngested,
-                        programmesIngested = ingestionStats.programmesIngested
-                    )
-                }
-
-                if (lastError?.contains("HTTP 4") == true) break
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-
-            } catch (e: java.net.UnknownHostException) {
-                lastError = "DNS lookup failed for ${e.message ?: "host"}"
-                Log.w(TAG, "EPG streaming DNS failure (attempt $attempt): $lastError", e)
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-            } catch (e: OutOfMemoryError) {
-                System.gc()
-                lastError = "out of memory during streaming"
-                Log.e(TAG, "OOM during EPG streaming (attempt $attempt)", e)
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-            } catch (e: java.net.SocketTimeoutException) {
-                lastError = "connection timed out"
-                Log.w(TAG, "EPG streaming timeout (attempt $attempt)", e)
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-            } catch (e: org.xmlpull.v1.XmlPullParserException) {
-                lastError = "Invalid XMLTV data: ${e.message}"
-                Log.e(TAG, "EPG streaming parse error: $lastError", e)
-                break
-            } catch (e: java.io.IOException) {
-                lastError = e.message ?: "I/O error"
-                Log.w(TAG, "EPG streaming I/O error (attempt $attempt): $lastError", e)
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                RefreshQueue.cancelAll()
+                // Small delay to let cancelled tasks finish their catch blocks
+                delay(100)
+                EpgIndexer.getInstance(context).clearAll()
+                Log.d(TAG, "All EPG data cleared successfully")
             } catch (e: Exception) {
-                lastError = e.message ?: "unknown error"
-                Log.w(TAG, "EPG streaming error (attempt $attempt): $lastError", e)
-                if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                Log.e(TAG, "Clear all data failed: ${e.message}", e)
+            } finally {
+                _state.value = MultiSourceState.Idle
+                onComplete?.invoke()
             }
         }
-
-        val error = lastError ?: "Streaming failed"
-        sourceDao.markError(source.id, error)
-        return SourceStats(source.id, label, error = error)
     }
 
     /**
-     * Mobile path (parallel-safe): download to cache file, then ingest.
-     * No XmltvParser.timezoneOverrideHours mutation — passes tz as parameter.
+     * Download a source to a cache file with progress tracking.
+     * Returns [DownloadedSource] on success, null on failure (error recorded in sourceDao).
      */
-    private suspend fun processSourceDownloadParallel(
+    private suspend fun downloadSource(
         source: EpgSourceEntity,
         label: String,
-        isGzip: Boolean,
         sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
-        indexer: EpgIndexer
-    ): SourceStats {
+        activeProgress: ConcurrentHashMap<Long, ActiveSourceProgress>,
+        onProgressUpdate: () -> Unit
+    ): DownloadedSource? {
         val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
         var downloadedBytes = 0L
         var lastError: String? = null
 
         try {
-            // Download to cache file
             for (attempt in 1..MAX_RETRIES) {
                 try {
                     Log.d(TAG, "Downloading EPG to cache: ${source.url} (attempt $attempt/$MAX_RETRIES)")
 
                     val request = Request.Builder().url(source.url).build()
                     okHttpClient.newCall(request).execute().use { response ->
-                        val statusCode = response.code
                         if (!response.isSuccessful) {
-                            lastError = "server returned HTTP $statusCode"
+                            lastError = "server returned HTTP ${response.code}"
                             Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
                             return@use
                         }
 
                         val body = response.body ?: throw java.io.IOException("Empty response body")
+                        val contentLength = body.contentLength()
 
                         tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
                             val input = body.byteStream()
-                            input.copyTo(output, STREAM_BUFFER_SIZE)
+                            val buffer = ByteArray(STREAM_BUFFER_SIZE)
+                            var totalRead = 0L
+                            var lastReportedBytes = 0L
+                            var read: Int
+                            while (input.read(buffer).also { read = it } != -1) {
+                                output.write(buffer, 0, read)
+                                totalRead += read
+                                // Throttle UI updates to every 512KB
+                                if (totalRead - lastReportedBytes >= 524288) {
+                                    lastReportedBytes = totalRead
+                                    val pct = if (contentLength > 0) ((totalRead * 100) / contentLength).toInt().coerceIn(0, 100) else -1
+                                    activeProgress[source.id] = ActiveSourceProgress(
+                                        label = label,
+                                        phase = "Downloading",
+                                        progressPercent = pct,
+                                        downloadedBytes = totalRead,
+                                        downloadTotalBytes = contentLength
+                                    )
+                                    onProgressUpdate()
+                                }
+                            }
                             output.flush()
                         }
-                        if (tmpFile.exists()) {
-                            downloadedBytes = tmpFile.length()
-                        }
+                        downloadedBytes = tmpFile.length()
                         lastError = null
                     }
 
@@ -652,15 +708,60 @@ class EpgFileManager private constructor(private val context: Context) {
 
             if (lastError != null) {
                 sourceDao.markError(source.id, lastError!!)
-                return SourceStats(source.id, label, downloadBytes = downloadedBytes, error = lastError)
+                tmpFile.delete()
+                return null
             }
 
-            // Ingest from file
-            val bufferedStream = BufferedInputStream(tmpFile.inputStream(), STREAM_BUFFER_SIZE)
+            Log.d(TAG, "Downloaded: $label (${downloadedBytes / 1024}KB)")
+            return DownloadedSource(source, label, tmpFile, downloadedBytes)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error downloading source: $label", e)
+            sourceDao.markError(source.id, e.message ?: "Unknown error")
+            tmpFile.delete()
+            return null
+        }
+    }
+
+    /**
+     * Ingest a previously downloaded source file into the index.
+     * Deletes the temp file when done.
+     */
+    private suspend fun ingestDownloadedSource(
+        downloaded: DownloadedSource,
+        sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
+        indexer: EpgIndexer,
+        activeProgress: ConcurrentHashMap<Long, ActiveSourceProgress>,
+        onProgressUpdate: () -> Unit
+    ): SourceStats {
+        val source = downloaded.source
+        val label = downloaded.label
+        val isGzip = source.url.endsWith(".gz", ignoreCase = true)
+
+        try {
+            val fileSize = downloaded.tmpFile.length()
+            val countingStream = CountingInputStream(downloaded.tmpFile.inputStream())
+            val bufferedStream = BufferedInputStream(countingStream, STREAM_BUFFER_SIZE)
             val stream = if (isGzip) GZIPInputStream(bufferedStream, STREAM_BUFFER_SIZE) else bufferedStream
 
             val ingestionStats = stream.use {
-                indexer.ingestFromStream(it, sourceId = source.id, timezoneOverrideHours = source.timezoneOffsetHours)
+                indexer.ingestFromStream(
+                    it,
+                    sourceId = source.id,
+                    timezoneOverrideHours = source.timezoneOffsetHours
+                ) { channels, programmes ->
+                    val pct = if (fileSize > 0) ((countingStream.bytesRead * 100) / fileSize).toInt().coerceIn(0, 100) else -1
+                    activeProgress[source.id] = ActiveSourceProgress(
+                        label = label,
+                        phase = "Ingesting",
+                        progressPercent = pct,
+                        downloadedBytes = downloaded.downloadedBytes,
+                        downloadTotalBytes = downloaded.downloadedBytes,
+                        channels = channels,
+                        programmes = programmes
+                    )
+                    onProgressUpdate()
+                }
             }
 
             sourceDao.markIngested(
@@ -668,25 +769,25 @@ class EpgFileManager private constructor(private val context: Context) {
                 timestamp = System.currentTimeMillis(),
                 channels = ingestionStats.channelsIngested,
                 programmes = ingestionStats.programmesIngested,
-                downloadBytes = downloadedBytes,
+                downloadBytes = downloaded.downloadedBytes,
                 ingestMethod = "DOWNLOADED"
             )
-            Log.d(TAG, "Source downloaded+ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg, ${downloadedBytes / 1024}KB)")
+            Log.d(TAG, "Ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
 
             return SourceStats(
                 sourceId = source.id,
                 label = label,
-                downloadBytes = downloadedBytes,
+                downloadBytes = downloaded.downloadedBytes,
                 channelsIngested = ingestionStats.channelsIngested,
                 programmesIngested = ingestionStats.programmesIngested
             )
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error processing source: $label", e)
+            Log.e(TAG, "Error ingesting source: $label", e)
             sourceDao.markError(source.id, e.message ?: "Unknown error")
-            return SourceStats(source.id, label, downloadBytes = downloadedBytes, error = e.message ?: "Unknown error")
+            return SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = e.message ?: "Unknown error")
         } finally {
-            tmpFile.delete()
+            downloaded.tmpFile.delete()
         }
     }
 
@@ -775,6 +876,29 @@ class EpgFileManager private constructor(private val context: Context) {
             Log.w(TAG, "Cleanup failed", e)
             return CleanupResult(0, 0)
         }
+    }
+
+    /**
+     * InputStream wrapper that tracks total bytes read.
+     */
+    private class CountingInputStream(private val wrapped: java.io.InputStream) : java.io.InputStream() {
+        @Volatile var bytesRead: Long = 0L
+            private set
+
+        override fun read(): Int {
+            val b = wrapped.read()
+            if (b != -1) bytesRead++
+            return b
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            val n = wrapped.read(b, off, len)
+            if (n > 0) bytesRead += n
+            return n
+        }
+
+        override fun close() = wrapped.close()
+        override fun available() = wrapped.available()
     }
 
 }

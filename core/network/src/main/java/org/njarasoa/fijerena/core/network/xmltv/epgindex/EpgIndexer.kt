@@ -372,14 +372,33 @@ class EpgIndexer private constructor(private val context: Context) {
      */
     suspend fun clearAll() = withContext(Dispatchers.IO) {
         try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
-            dao.deleteAllProgrammes()
-            dao.deleteAllChannels()
-            dao.deleteAllMetadata()
-            incrementalVacuum()
+            // Save sources before destroying DB — they're user config, not EPG data
+            val oldDb = EpgIndexDatabase.getInstance(context)
+            val savedSources = oldDb.epgSourceDao().getAllSourcesOnce()
+            Log.d(TAG, "Clearing EPG: saved ${savedSources.size} sources, destroying database...")
+
+            // Close DB and delete file — instant regardless of data size
+            EpgIndexDatabase.destroy(context)
+
+            // Reopen: Room recreates all tables from schema
+            val newDb = EpgIndexDatabase.getInstance(context)
+            Log.d(TAG, "Clearing EPG: database recreated, restoring sources...")
+
+            // Restore sources with stats reset
+            for (source in savedSources) {
+                newDb.epgSourceDao().insertSource(
+                    source.copy(
+                        lastIngestedAtMs = 0,
+                        lastChannels = 0,
+                        lastProgrammes = 0,
+                        lastDownloadBytes = 0,
+                        lastError = null
+                    )
+                )
+            }
+
             _state.value = EpgIndexState.NotIndexed
-            Log.d(TAG, "All EPG data cleared")
+            Log.d(TAG, "All EPG data cleared successfully (${savedSources.size} sources restored)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to clear EPG data: ${e.message}", e)
         }
