@@ -257,7 +257,7 @@ fun PlayerScreen(
                 contentAlignment = Alignment.TopEnd
             ) {
                 Text(
-                    text = TimeFormat.formatClockTime(Date()),
+                    text = TimeFormat.formatClockTime(Date(tick)),
                     style = MaterialTheme.typography.displaySmall,
                     color = Color.White.copy(alpha = CinemaAlpha.textDisabled),
                     modifier = Modifier.height(screenHeight * 0.1f)

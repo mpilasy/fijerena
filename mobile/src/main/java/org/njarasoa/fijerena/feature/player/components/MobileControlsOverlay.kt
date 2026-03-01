@@ -375,7 +375,7 @@ private fun ClockDisplay() {
     @Suppress("UNUSED_VARIABLE")
     val ignored = tick
     Text(
-        text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date()),
+        text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date(tick)),
         style = MaterialTheme.typography.titleMedium,
         color = Color.White
     )

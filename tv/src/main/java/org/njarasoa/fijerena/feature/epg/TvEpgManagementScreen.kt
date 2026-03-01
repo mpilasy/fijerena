@@ -87,6 +87,8 @@ fun TvEpgManagementScreen(
     val hasStrayFiles by viewModel.hasStrayFiles.collectAsStateWithLifecycle()
     val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsStateWithLifecycle()
 
+    val nowMs = remember { System.currentTimeMillis() }
+
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
             android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
@@ -323,7 +325,7 @@ fun TvEpgManagementScreen(
                             val dotColor = when {
                                 !source.enabled -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                 source.lastError != null -> CinemaError
-                                source.lastIngestedAtMs > 0 && (System.currentTimeMillis() - source.lastIngestedAtMs) < 24 * 3600 * 1000 -> CinemaAccent
+                                source.lastIngestedAtMs > 0 && (nowMs - source.lastIngestedAtMs) < 24 * 3600 * 1000 -> CinemaAccent
                                 source.lastIngestedAtMs > 0 -> androidx.compose.ui.graphics.Color(0xFFFFAB40) // stale yellow
                                 else -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                             }
@@ -480,7 +482,7 @@ fun TvEpgManagementScreen(
                         }
                         if (viewModel.isDevMode) {
                             val hasFailed = sources.any { it.enabled && it.lastError != null }
-                            val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (System.currentTimeMillis() - it.lastIngestedAtMs) > 24 * 3600 * 1000) }
+                            val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 24 * 3600 * 1000) }
                             if (hasFailed || hasOutdated) {
                                 Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                                 Row(

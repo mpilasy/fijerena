@@ -101,6 +101,44 @@ fun SubtitleSelectorDialog(
                     fontWeight = FontWeight.Bold
                 )
 
+                val defaultColors = ButtonDefaults.colors(
+                    containerColor = CinemaSurfaceVariant,
+                    contentColor = CinemaTextPrimary,
+                    focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                    focusedContentColor = CinemaTextPrimary
+                )
+                val selectedColors = ButtonDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint),
+                    contentColor = CinemaTextPrimary,
+                    focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                    focusedContentColor = CinemaTextPrimary
+                )
+                val focusedBorder = ButtonDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(
+                            width = TvDimensions.borderFocused,
+                            color = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(CinemaCornerRadius.small)
+                    )
+                )
+                val selectedBorder = ButtonDefaults.border(
+                    border = Border(
+                        border = BorderStroke(
+                            width = TvDimensions.borderFocused,
+                            color = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(CinemaCornerRadius.small)
+                    ),
+                    focusedBorder = Border(
+                        border = BorderStroke(
+                            width = TvDimensions.borderFocused,
+                            color = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(CinemaCornerRadius.small)
+                    )
+                )
+
                 // "Off" option
                 val isOffSelected = selectedIndex == -1
                 Button(
@@ -117,29 +155,8 @@ fun SubtitleSelectorDialog(
                                 selectedIndex = -1
                             }
                         },
-                    colors = ButtonDefaults.colors(
-                        containerColor = if (isOffSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
-                        else CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                        focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                        focusedContentColor = CinemaTextPrimary
-                    ),
-                    border = ButtonDefaults.border(
-                        border = Border(
-                            border = BorderStroke(
-                                width = if (isOffSelected) TvDimensions.borderFocused else 0.dp,
-                                color = if (isOffSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                            ),
-                            shape = RoundedCornerShape(CinemaCornerRadius.small)
-                        ),
-                        focusedBorder = Border(
-                            border = BorderStroke(
-                                width = TvDimensions.borderFocused,
-                                color = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(CinemaCornerRadius.small)
-                        )
-                    )
+                    colors = if (isOffSelected) selectedColors else defaultColors,
+                    border = if (isOffSelected) selectedBorder else focusedBorder
                 ) {
                     Row(
                         modifier = Modifier
@@ -188,29 +205,8 @@ fun SubtitleSelectorDialog(
                                         selectedIndex = index
                                     }
                                 },
-                            colors = ButtonDefaults.colors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
-                                else CinemaSurfaceVariant,
-                                contentColor = CinemaTextPrimary,
-                                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                                focusedContentColor = CinemaTextPrimary
-                            ),
-                            border = ButtonDefaults.border(
-                                border = Border(
-                                    border = BorderStroke(
-                                        width = if (isSelected) TvDimensions.borderFocused else 0.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                                    ),
-                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
-                                ),
-                                focusedBorder = Border(
-                                    border = BorderStroke(
-                                        width = TvDimensions.borderFocused,
-                                        color = MaterialTheme.colorScheme.primary
-                                    ),
-                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
-                                )
-                            )
+                            colors = if (isSelected) selectedColors else defaultColors,
+                            border = if (isSelected) selectedBorder else focusedBorder
                         ) {
                             Column(
                                 modifier = Modifier

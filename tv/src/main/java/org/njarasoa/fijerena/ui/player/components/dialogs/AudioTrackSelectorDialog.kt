@@ -114,6 +114,28 @@ fun AudioTrackSelectorDialog(
                         Text("Close")
                     }
                 } else {
+                    val defaultColors = ButtonDefaults.colors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary,
+                        focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                        focusedContentColor = CinemaTextPrimary
+                    )
+                    val selectedColors = ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint),
+                        contentColor = CinemaTextPrimary,
+                        focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                        focusedContentColor = CinemaTextPrimary
+                    )
+                    val focusedBorder = ButtonDefaults.border(
+                        focusedBorder = Border(
+                            border = BorderStroke(
+                                width = TvDimensions.borderFocused,
+                                color = MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(CinemaCornerRadius.small)
+                        )
+                    )
+
                     // Track list
                     audioTracks.forEachIndexed { index, track ->
                         val isSelected = index == selectedIndex
@@ -131,18 +153,12 @@ fun AudioTrackSelectorDialog(
                                         selectedIndex = index
                                     }
                                 },
-                            colors = ButtonDefaults.colors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
-                                else CinemaSurfaceVariant,
-                                contentColor = CinemaTextPrimary,
-                                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                                focusedContentColor = CinemaTextPrimary
-                            ),
-                            border = ButtonDefaults.border(
+                            colors = if (isSelected) selectedColors else defaultColors,
+                            border = if (isSelected) ButtonDefaults.border(
                                 border = Border(
                                     border = BorderStroke(
-                                        width = if (isSelected) TvDimensions.borderFocused else 0.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                                        width = TvDimensions.borderFocused,
+                                        color = MaterialTheme.colorScheme.primary
                                     ),
                                     shape = RoundedCornerShape(CinemaCornerRadius.small)
                                 ),
@@ -153,7 +169,7 @@ fun AudioTrackSelectorDialog(
                                     ),
                                     shape = RoundedCornerShape(CinemaCornerRadius.small)
                                 )
-                            )
+                            ) else focusedBorder
                         ) {
                             Column(
                                 modifier = Modifier
