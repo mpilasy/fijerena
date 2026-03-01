@@ -170,7 +170,7 @@ fun MobileEpgManagementScreen(
                             if (progress.progressPercent in 0..100) {
                                 append(" ${progress.progressPercent}%")
                             }
-                            if (progress.phase == "Downloading") {
+                            if (progress.phase == "Downloading" || progress.phase == "Awaiting Ingestion") {
                                 append(" (${formatBytes(progress.downloadedBytes)}")
                                 if (progress.downloadTotalBytes > 0) {
                                     append("/${formatBytes(progress.downloadTotalBytes)}")
