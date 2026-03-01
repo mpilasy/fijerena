@@ -101,10 +101,13 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ---
 
 ## 📡 EPG & Indexing System
-- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion.
-- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room) using FTS4.
+- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently (coroutine per source), but ingestion into the DB is sequential via an `UNLIMITED` Channel queue. Tasks are submitted through `RefreshQueue`.
+- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 8) using FTS4. The `ingest_method` column tracks how each source was ingested.
 - **Search:** Two-tier strategy: SQLite **FTS4 MATCH** (primary) -> **LIKE** (fallback).
 - **Timezone:** Per-source `timezoneOffsetHours` override applied at parse time.
+- **State Machine:** `MultiSourceState` sealed interface: `Idle` -> `Processing` -> `Completed`/`Error`, plus `Clearing` state for clear-all operations. Per-source progress tracked via `ActiveSourceProgress(label, phase, channels, programmes)`.
+- **Clear All Data:** Uses DB `destroy()` + `getInstance()` (recreate) instead of `DELETE FROM` — critical for performance on large databases (4M+ rows). Cancel in-flight work via `RefreshQueue.cancelAll()`.
+- **ViewModel Resilience:** `EpgManagementViewModel` uses a `db()` function (always calls `EpgIndexDatabase.getInstance()`) and `_dbGeneration` StateFlow counter. After DB destroy/recreate, bumping the generation causes `flatMapLatest` to re-subscribe all Room Flows to the new DB instance.
 - **Management:** Multi-source EPG management in `Screen.EpgManagement`.
 
 ---
@@ -188,3 +191,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ### 2026-02-27 - contentHash self-referential hash bug in XtreamContentManager
 **Learning:** `XtreamContentManager` computes `base.hashCode()` on a data class that includes the `contentHash` field (defaulting to 0). The stored entity has a non-zero `contentHash`, so `hashCode()` never matches on re-fetch — causing spurious DB re-inserts on every sync.
 **Action:** When using `hashCode()` for change detection on data classes, exclude the hash field itself from computation.
+
+### 2026-03-01 - Clear All EPG Data takes 10+ minutes on Shield TV with DELETE FROM
+**Learning:** The EPG index database can grow to 4M+ rows (channels + programmes across multiple sources). Using `DELETE FROM` to clear all data on an NVIDIA Shield TV took over 10 minutes due to SQLite journaling overhead on the low-IOPS flash storage. The UI appeared frozen with no feedback.
+**Action:** Replace row-level deletion with DB `destroy()` + `getInstance()` (recreate). This deletes the database file and creates a fresh empty one — completing in under a second regardless of database size. The ViewModel must handle the DB instance changing: use a `db()` function that always calls `getInstance()` and a `_dbGeneration` counter to re-subscribe Room Flows after recreation. Always prefer file-level operations over row-level bulk deletes for large databases on constrained hardware.
