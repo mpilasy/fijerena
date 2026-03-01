@@ -140,12 +140,17 @@ fun MobilePlayerScreen(
     var liveDuration by remember { mutableLongStateOf(0L) }
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
+    val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
 
-    LaunchedEffect(playbackState) {
-        if (playbackState is PlaybackState.Error) {
-            android.util.Log.e("MobilePlayerScreen", "Playback Error: ${playbackState.message}")
+    // Capture delegated properties into local variables for stable smart casting
+    val currentPs = playbackState
+    val currentMeta = currentMetadata
+
+    LaunchedEffect(currentPs) {
+        if (currentPs is PlaybackState.Error) {
+            android.util.Log.e("MobilePlayerScreen", "Playback Error: ${currentPs.message}")
         }
-        if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused) {
+        if (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused) {
             while (true) {
                 StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
                     livePosition = player.currentPosition
@@ -169,11 +174,9 @@ fun MobilePlayerScreen(
     var showSubtitleSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
 
-    val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
-
     // Track when video first starts playing so we stop showing the center spinner
-    LaunchedEffect(playbackState) {
-        if (playbackState is PlaybackState.Playing) {
+    LaunchedEffect(currentPs) {
+        if (currentPs is PlaybackState.Playing) {
             hasStartedPlaying = true
         }
     }
@@ -354,7 +357,7 @@ fun MobilePlayerScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    when (playbackState) {
+                    when (currentPs) {
                         PlaybackState.Buffering -> {
                             if (!hasStartedPlaying) {
                                 CircularProgressIndicator(color = Color.White)
@@ -362,8 +365,8 @@ fun MobilePlayerScreen(
                         }
                         is PlaybackState.Error -> {
                             ErrorOverlay(
-                                error = playbackState,
-                                onRetry = { viewModel.playStream(currentMetadata) },
+                                error = currentPs,
+                                onRetry = { viewModel.playStream(currentMeta) },
                                 onBack = onBack
                             )
                         }
@@ -373,13 +376,13 @@ fun MobilePlayerScreen(
 
                 // Touch controls overlay
                 AnimatedVisibility(
-                    visible = showControls && !showStats && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused),
+                    visible = showControls && !showStats && (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused),
                     enter = fadeIn(),
                     exit = fadeOut()
                 ) {
                     MobileControlsOverlay(
-                        playbackState = playbackState,
-                        metadata = currentMetadata,
+                        playbackState = currentPs,
+                        metadata = currentMeta,
                         viewModel = viewModel,
                         isLive = isLiveContent,
                         isDeveloperMode = appSettings.isDevMode,
@@ -389,7 +392,7 @@ fun MobilePlayerScreen(
                         currentEpgProgram = state.currentEpgProgram,
                         nextEpgProgram = state.nextEpgProgram,
                         onPlayPause = {
-                            if (playbackState is PlaybackState.Paused) {
+                            if (currentPs is PlaybackState.Paused) {
                                 viewModel.resume()
                             } else {
                                 viewModel.pause()
@@ -435,8 +438,8 @@ fun MobilePlayerScreen(
                     exit = fadeOut()
                 ) {
                     MobileStatsOverlay(
-                        playbackState = playbackState,
-                        metadata = currentMetadata,
+                        playbackState = currentPs,
+                        metadata = currentMeta,
                         onClose = { showStats = false }
                     )
                 }
