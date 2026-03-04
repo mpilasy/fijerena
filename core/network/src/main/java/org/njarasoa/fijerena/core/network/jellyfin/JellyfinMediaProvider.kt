@@ -259,16 +259,21 @@ class JellyfinMediaProvider(
         contentType: String,
         episodeId: String?,
         extension: String?
-    ): Result<PlayableStream> {
-        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+    ): Result<PlayableStream> = coroutineScope {
+        if (!ensureConnected()) return@coroutineScope Result.failure(Exception("Not connected"))
 
         val streamItemId = episodeId ?: itemId
-        val userId = api.getUserId() ?: return Result.failure(Exception("Not authenticated"))
+        val userId = api.getUserId() ?: return@coroutineScope Result.failure(Exception("Not authenticated"))
         val token = api.getAccessToken()
         val headers = if (token != null) mapOf("X-Emby-Token" to token) else emptyMap()
 
+        val playbackInfoDeferred = async { api.getPlaybackInfo(streamItemId, userId) }
+        val itemDeferred = async { api.getItemById(streamItemId) }
+
         // Ask Jellyfin whether to direct-play or transcode based on our DeviceProfile
-        val playbackInfo = api.getPlaybackInfo(streamItemId, userId)
+        val playbackInfo = playbackInfoDeferred.await()
+        val item = itemDeferred.await().getOrNull()
+        val itemTitle = item?.name ?: ""
 
         if (playbackInfo.isSuccess) {
             val info = playbackInfo.getOrThrow()
@@ -300,26 +305,23 @@ class JellyfinMediaProvider(
                 else -> api.buildStreamUrl(streamItemId)
             }
 
-            return Result.success(
-                PlayableStream(uri = streamUrl, headers = headers, isLive = false, title = "")
+            return@coroutineScope Result.success(
+                PlayableStream(uri = streamUrl, headers = headers, isLive = false, title = itemTitle)
             )
         }
 
         // PlaybackInfo failed — fall back to legacy static direct play
-        val rawContainer = extension ?: run {
-            api.getItemById(streamItemId).getOrNull()
-                ?.let { it.container ?: it.mediaSources.firstOrNull()?.container }
-        }
+        val rawContainer = extension ?: item?.let { it.container ?: it.mediaSources.firstOrNull()?.container }
         val container = rawContainer?.split(",")?.firstOrNull { ext ->
             ext.trim().lowercase() in setOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd")
         }?.trim() ?: rawContainer?.split(",")?.firstOrNull()?.trim()
 
-        return Result.success(
+        return@coroutineScope Result.success(
             PlayableStream(
                 uri = api.buildStreamUrl(streamItemId, container),
                 headers = headers,
                 isLive = false,
-                title = ""
+                title = itemTitle
             )
         )
     }
