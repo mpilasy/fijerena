@@ -195,3 +195,17 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ### 2026-03-01 - Clear All EPG Data takes 10+ minutes on Shield TV with DELETE FROM
 **Learning:** The EPG index database can grow to 4M+ rows (channels + programmes across multiple sources). Using `DELETE FROM` to clear all data on an NVIDIA Shield TV took over 10 minutes due to SQLite journaling overhead on the low-IOPS flash storage. The UI appeared frozen with no feedback.
 **Action:** Replace row-level deletion with DB `destroy()` + `getInstance()` (recreate). This deletes the database file and creates a fresh empty one — completing in under a second regardless of database size. The ViewModel must handle the DB instance changing: use a `db()` function that always calls `getInstance()` and a `_dbGeneration` counter to re-subscribe Room Flows after recreation. Always prefer file-level operations over row-level bulk deletes for large databases on constrained hardware.
+
+### 2026-03-01 - EPG pipeline lacked feedback between download completion and ingestion start
+**Learning:** The Channel-based producer-consumer pipeline decouples downloads from ingestion. A large source could finish downloading (progress reaches 100%) but then sit silently in the queue waiting for the single ingestion consumer to drain earlier sources. Users saw the progress jump to 100% and then nothing — appearing frozen.
+**Action:** Add an explicit `AwaitingIngestion` phase emitted immediately after a source is sent to the ingestion channel and before the consumer picks it up. Display downloaded bytes in the UI during both the `Downloading` and `AwaitingIngestion` phases so the user understands the source is queued and not stalled.
+
+### 2026-03-01 - Compose recomposition hotspots from un-hoisted allocations
+**Learning:** Several recurring patterns caused unnecessary allocations and recompositions:
+1. `collectAsState()` instead of `collectAsStateWithLifecycle()` kept flows active when the app was backgrounded, causing redundant recompositions on return.
+2. `Color.copy()` called inside `GlassPanel` on every recompose allocated a new Color object each frame.
+3. Unnecessary `.toList()` call in `EpgIndexer` batch insert converted a sequence that was already iterable.
+4. `System.currentTimeMillis()` and `Date()` called inside composable bodies (not remembered) recalculated on every recompose.
+5. `Brush.verticalGradient(...)`, `ButtonDefaults.colors()`, and `FilterChipDefaults.filterChipColors()` allocated inside composables instead of being hoisted outside.
+6. `AppSettings` deserialized inside the `while(true)` loop in `EpgFileManager`, causing repeated SharedPreferences JSON parsing on every EPG refresh cycle.
+**Action:** Always hoist allocations that don't depend on recomposition-variable state to `remember {}` blocks or to the composable's outer scope. Prefer `collectAsStateWithLifecycle()` for all Flow collection in Composables. Move SharedPreferences reads outside tight loops — treat deserialization as expensive even for small payloads.
