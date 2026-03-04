@@ -19,7 +19,7 @@ class M3uParserOptimizationTest {
             http://example.com/espn.m3u8
         """.trimIndent()
 
-        val entries = M3uParser.parse(content)
+        val entries = M3uParser.parse(content.reader().buffered()).toList()
 
         assertEquals(3, entries.size)
 
@@ -57,7 +57,7 @@ class M3uParserOptimizationTest {
             http://example.com/1.m3u8
         """.trimIndent()
 
-        val entries = M3uParser.parse(content)
+        val entries = M3uParser.parse(content.reader().buffered()).toList()
         assertEquals(1, entries.size)
         assertEquals("channel 1", entries[0].tvgId)
         assertEquals("My Group", entries[0].groupTitle)
@@ -75,11 +75,11 @@ class M3uParserOptimizationTest {
         val content = sb.toString()
 
         // Warmup
-        repeat(5) { M3uParser.parse(content) }
+        repeat(5) { M3uParser.parse(content.reader().buffered()).toList() }
 
         val time = measureTimeMillis {
             repeat(10) {
-                M3uParser.parse(content)
+                M3uParser.parse(content.reader().buffered()).toList()
             }
         }
     }
