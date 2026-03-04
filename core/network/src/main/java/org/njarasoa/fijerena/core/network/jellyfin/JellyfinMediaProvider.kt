@@ -73,12 +73,13 @@ class JellyfinMediaProvider(
     override suspend fun getCategories(contentType: String): Result<List<MediaCategory>> {
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
+        val jellyfinType = contentTypeToJellyfinType(contentType)
         return withAutoReconnect {
             api.getLibraries().map { libraries ->
                 libraries.filter { library ->
-                    when (contentType) {
-                        ContentType.MOVIES -> library.collectionType == "movies"
-                        ContentType.TV_SHOWS -> library.collectionType == "tvshows"
+                    when (jellyfinType) {
+                        "Movie" -> library.collectionType == "movies"
+                        "Series" -> library.collectionType == "tvshows"
                         else -> true
                     }
                 }.map { library ->
@@ -94,11 +95,7 @@ class JellyfinMediaProvider(
     override suspend fun getItems(categoryId: String, contentType: String): Result<List<MediaItem>> {
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
-        val includeTypes = when (contentType) {
-            ContentType.MOVIES -> "Movie"
-            ContentType.TV_SHOWS -> "Series"
-            else -> null
-        }
+        val includeTypes = contentTypeToJellyfinType(contentType)
 
         return withAutoReconnect {
             api.getItems(parentId = categoryId, includeItemTypes = includeTypes).map { items ->
@@ -117,11 +114,8 @@ class JellyfinMediaProvider(
         val categoryIds = categories.map { it.id }.toSet()
 
         // 2. Fetch all items recursively from root, including Folders/BoxSets for tree traversal
-        val includeTypes = when (contentType) {
-            "MOVIES" -> "Movie,Folder,BoxSet"
-            "TV_SHOWS" -> "Series,Folder,BoxSet"
-            else -> null
-        }
+        val baseType = contentTypeToJellyfinType(contentType)
+        val includeTypes = baseType?.let { "$it,Folder,BoxSet" }
 
         return withAutoReconnect {
             api.getItems(parentId = null, includeItemTypes = includeTypes).map { items ->
@@ -129,11 +123,7 @@ class JellyfinMediaProvider(
                 val parentMap = items.associate { it.id to it.parentId }
 
                 // 4. Filter for actual content items (Movie, Series)
-                val targetType = when (contentType) {
-                    "MOVIES" -> "Movie"
-                    "TV_SHOWS" -> "Series"
-                    else -> ""
-                }
+                val targetType = contentTypeToJellyfinType(contentType) ?: ""
                 val contentItems = items.filter { it.type == targetType }
 
                 // 5. Map items to their Library ID
@@ -166,11 +156,7 @@ class JellyfinMediaProvider(
     override suspend fun search(query: String, contentType: String): Result<List<MediaItem>> {
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
-        val includeTypes = when (contentType) {
-            ContentType.MOVIES -> "Movie"
-            ContentType.TV_SHOWS -> "Series"
-            else -> null
-        }
+        val includeTypes = contentTypeToJellyfinType(contentType)
 
         return withAutoReconnect {
             api.searchItems(query = query, includeItemTypes = includeTypes).map { items ->
