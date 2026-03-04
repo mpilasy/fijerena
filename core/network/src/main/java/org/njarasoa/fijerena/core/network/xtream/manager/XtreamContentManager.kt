@@ -408,7 +408,7 @@ class XtreamContentManager(
                      }
 
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     android.util.Log.e("XtreamContentManager", "Error syncing data", e)
                  }
             }
         }
@@ -485,7 +485,7 @@ class XtreamContentManager(
                      }
 
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     android.util.Log.e("XtreamContentManager", "Error syncing data", e)
                  }
             }
         }
@@ -562,7 +562,7 @@ class XtreamContentManager(
                      }
 
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     android.util.Log.e("XtreamContentManager", "Error syncing data", e)
                  }
             }
         }
