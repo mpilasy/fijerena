@@ -371,7 +371,9 @@ class JellyfinApiService(
                     mediaSourceId = mediaSourceId
                 ))
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            android.util.Log.e("JellyfinApiService", "Failed to report playback progress", e)
+        }
     }
 
     suspend fun reportPlaybackStart(
@@ -388,7 +390,9 @@ class JellyfinApiService(
                     mediaSourceId = mediaSourceId
                 ))
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            android.util.Log.e("JellyfinApiService", "Failed to report playback start", e)
+        }
     }
 
     suspend fun reportPlaybackStopped(
@@ -407,7 +411,9 @@ class JellyfinApiService(
                     mediaSourceId = mediaSourceId
                 ))
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            android.util.Log.e("JellyfinApiService", "Failed to report playback stopped", e)
+        }
     }
 
     suspend fun addFavorite(itemId: String): Result<Unit> {

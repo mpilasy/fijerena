@@ -111,7 +111,9 @@ class EpgBrowserViewModel(
                     if (liveStreams.isNotEmpty()) {
                         channelMatcher = EpgChannelMatcher(liveStreams)
                     }
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    android.util.Log.e("EpgBrowserViewModel", "Failed to load live streams for channel matching", e)
+                }
             }
         }
     }
@@ -123,7 +125,9 @@ class EpgBrowserViewModel(
                     val db = EpgIndexDatabase.getInstance(context)
                     val sources = db.epgSourceDao().getAllSourcesOnce()
                     _sourceLabels.value = sources.associate { it.id to it.label }
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    android.util.Log.e("EpgBrowserViewModel", "Failed to load EPG source labels", e)
+                }
             }
         }
     }
