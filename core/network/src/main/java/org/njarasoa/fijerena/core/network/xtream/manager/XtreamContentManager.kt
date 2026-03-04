@@ -295,7 +295,6 @@ class XtreamContentManager(
             val seriesInfo = service.getSeriesInfo(seriesId)
             val fetchTime = System.currentTimeMillis() - startTime
             metricsManager.trackFetchTime("series_$seriesId", fetchTime)
-            metricsManager.trackPayloadSize("series_$seriesId", seriesInfo)
             seriesInfo
         }
     }
@@ -308,7 +307,6 @@ class XtreamContentManager(
             val vodInfo = service.getVodInfo(vodId)
             val fetchTime = System.currentTimeMillis() - startTime
             metricsManager.trackFetchTime("vod_$vodId", fetchTime)
-            metricsManager.trackPayloadSize("vod_$vodId", vodInfo)
             vodInfo
         }
     }
