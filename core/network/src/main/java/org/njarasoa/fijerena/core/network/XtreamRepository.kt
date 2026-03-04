@@ -207,9 +207,7 @@ class XtreamRepository(
     suspend fun clearCategoriesCache(contentType: String) = statsManager.clearCategoriesCache(contentType)
 
 
-    // Metrics (Delegated partially via getFetchTime/Formatted/PayloadSize)
-
-    fun getPayloadSize(key: String): String? = metricsManager.getPayloadSize(key)
+    // Metrics (Delegated partially via getFetchTime/Formatted)
 
     fun getFetchTime(key: String): Long? = metricsManager.getFetchTime(key)
 
