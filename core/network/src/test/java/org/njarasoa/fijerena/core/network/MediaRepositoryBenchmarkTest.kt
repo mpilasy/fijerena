@@ -37,8 +37,8 @@ class MediaRepositoryBenchmarkTest {
         context = mockk(relaxed = true)
         sharedPreferences = mockk(relaxed = true)
 
-        mockkStatic(Looper::class)
-        every { Looper.getMainLooper() } returns mockk(relaxed = true)
+        io.mockk.mockkStatic(android.os.Looper::class)
+        every { android.os.Looper.getMainLooper() } returns mockk(relaxed = true)
 
         // Mock SharedPreferences
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
