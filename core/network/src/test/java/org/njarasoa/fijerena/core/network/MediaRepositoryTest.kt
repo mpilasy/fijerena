@@ -8,6 +8,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import io.mockk.mockkStatic
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -30,6 +31,14 @@ class MediaRepositoryTest {
 
     @Before
     fun setup() {
+        mockkStatic(android.os.Looper::class)
+        val mainLooper = mockk<android.os.Looper>(relaxed = true)
+        every { android.os.Looper.getMainLooper() } returns mainLooper
+
+        io.mockk.mockkConstructor(android.os.Handler::class)
+        every { anyConstructed<android.os.Handler>().postDelayed(any(), any()) } returns true
+        every { anyConstructed<android.os.Handler>().removeCallbacks(any()) } returns Unit
+
         context = mockk(relaxed = true)
         sharedPreferences = mockk(relaxed = true)
         editor = mockk(relaxed = true)
