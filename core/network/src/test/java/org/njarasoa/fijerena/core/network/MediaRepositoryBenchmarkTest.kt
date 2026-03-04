@@ -10,6 +10,8 @@ import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import io.mockk.mockkStatic
+import android.os.Looper
 import kotlin.system.measureNanoTime
 
 class MediaRepositoryBenchmarkTest {
@@ -25,6 +27,9 @@ class MediaRepositoryBenchmarkTest {
     fun setup() {
         context = mockk(relaxed = true)
         sharedPreferences = mockk(relaxed = true)
+
+        mockkStatic(Looper::class)
+        every { Looper.getMainLooper() } returns mockk(relaxed = true)
 
         // Mock SharedPreferences
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences

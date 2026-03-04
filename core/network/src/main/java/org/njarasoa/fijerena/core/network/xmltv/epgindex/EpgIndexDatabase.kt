@@ -7,9 +7,10 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 
 @Database(
     entities = [
@@ -58,9 +59,9 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                 .addMigrations(MIGRATION_7_8)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(object : RoomDatabase.Callback() {
+                    @OptIn(DelicateCoroutinesApi::class)
                     override fun onOpen(db: SupportSQLiteDatabase) {
-                        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
-                        scope.launch {
+                        GlobalScope.launch(Dispatchers.IO) {
                             try {
                                 // Optimize for performance
                                 db.execSQL("PRAGMA synchronous = NORMAL")
