@@ -145,12 +145,13 @@ class XtreamMediaProvider(
         val streamId = itemId.toIntOrNull() ?: return kotlin.Result.failure(
             Exception("Invalid stream ID: $itemId")
         )
+        val streamName = repository.getStreamName(streamId, contentType) ?: ""
         return when (val result = repository.buildStreamUrl(streamId, contentType, extension)) {
             is Result.Success ->
                 kotlin.Result.success(PlayableStream(
                     uri = result.data,
                     isLive = isLive,
-                    title = ""
+                    title = streamName
                 ))
             is Result.Error ->
                 kotlin.Result.failure(result.exception)

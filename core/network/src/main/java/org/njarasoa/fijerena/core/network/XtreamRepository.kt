@@ -140,6 +140,9 @@ class XtreamRepository(
     fun buildEpisodeStreamUrl(episodeId: String, extension: String): Result<String> =
         contentManager.buildEpisodeStreamUrl(episodeId, extension)
 
+    suspend fun getStreamName(streamId: Int, contentType: String): String? =
+        contentManager.getStreamName(streamId, contentType)
+
     suspend fun getSeriesInfo(seriesId: Int): Result<SeriesInfo> = contentManager.getSeriesInfo(seriesId)
 
     suspend fun getVodInfo(vodId: Int): Result<VodInfo> = contentManager.getVodInfo(vodId)
