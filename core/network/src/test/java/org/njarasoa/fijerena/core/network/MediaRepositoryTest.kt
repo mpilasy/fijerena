@@ -62,6 +62,12 @@ class MediaRepositoryTest {
         every { anyConstructed<Handler>().removeCallbacks(any()) } returns Unit
         every { anyConstructed<Handler>().post(any()) } returns true
 
+        io.mockk.mockkStatic(android.os.Looper::class)
+        every { android.os.Looper.getMainLooper() } returns mockk(relaxed = true)
+        io.mockk.mockkConstructor(android.os.Handler::class)
+        every { anyConstructed<android.os.Handler>().removeCallbacks(any()) } returns Unit
+        every { anyConstructed<android.os.Handler>().postDelayed(any(), any()) } returns true
+
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
         every { sharedPreferences.edit() } returns editor
         every { editor.putString(any(), any()) } returns editor
