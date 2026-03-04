@@ -160,6 +160,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 4. **Use design tokens** for visual attributes.
 5. **Fulfill the Directive:** Only perform modifications when explicitly instructed.
 6. **Lint Check:** Run `./gradlew lintDebug` after changes to verify no regressions.
+7. **Build Verification:** Jules' jobs should not be considered done unless a build was run and succeeded.
 
 # Agent Instructions
 
