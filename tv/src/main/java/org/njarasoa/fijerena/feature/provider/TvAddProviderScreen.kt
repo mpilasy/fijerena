@@ -138,7 +138,9 @@ fun TvAddProviderScreen(
                         val json = org.json.JSONObject(provider.config)
                         host = json.optString("host", "")
                         shareName = json.optString("share", "")
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        android.util.Log.e("TvAddProviderScreen", "Failed to parse SMB provider config", e)
+                    }
                 }
             }
         }
