@@ -410,7 +410,11 @@ class ProviderViewModel(
                 try {
                     val provider = MediaProviderFactory.create(tempEntity, context, password)
                     val result = provider.connect()
-                    try { provider.disconnect() } catch (_: Exception) {}
+                    try {
+                        provider.disconnect()
+                    } catch (e: Exception) {
+                        android.util.Log.e("ProviderViewModel", "Error disconnecting provider", e)
+                    }
                     result
                 } catch (e: Exception) {
                     Result.failure(e)

@@ -131,7 +131,9 @@ class SearchViewModel(
                             semaphore.withPermit {
                                 try {
                                     repo.getItemsForSearch(category.id, type)
-                                } catch (_: Exception) { }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("SearchViewModel", "Failed to get items for search category ${category.id}", e)
+                                }
                             }
                         }
                     }
