@@ -140,6 +140,9 @@ class XtreamRepository(
     fun buildEpisodeStreamUrl(episodeId: String, extension: String): Result<String> =
         contentManager.buildEpisodeStreamUrl(episodeId, extension)
 
+    suspend fun getStreamName(streamId: Int, contentType: String): String? =
+        contentManager.getStreamName(streamId, contentType)
+
     suspend fun getSeriesInfo(seriesId: Int): Result<SeriesInfo> = contentManager.getSeriesInfo(seriesId)
 
     suspend fun getVodInfo(vodId: Int): Result<VodInfo> = contentManager.getVodInfo(vodId)
@@ -204,9 +207,7 @@ class XtreamRepository(
     suspend fun clearCategoriesCache(contentType: String) = statsManager.clearCategoriesCache(contentType)
 
 
-    // Metrics (Delegated partially via getFetchTime/Formatted/PayloadSize)
-
-    fun getPayloadSize(key: String): String? = metricsManager.getPayloadSize(key)
+    // Metrics (Delegated partially via getFetchTime/Formatted)
 
     fun getFetchTime(key: String): Long? = metricsManager.getFetchTime(key)
 

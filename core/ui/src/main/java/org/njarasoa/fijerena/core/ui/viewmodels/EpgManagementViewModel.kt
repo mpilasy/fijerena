@@ -173,7 +173,16 @@ class EpgManagementViewModel(
                 return@launch
             }
 
-            epgFileManager.launchProcessAllSources(
+            val enabledSources = withContext(Dispatchers.IO) { db().epgSourceDao().getEnabledSources() }
+            val sourcesToRefresh = enabledSources.filter { !queued.contains("epg_refresh_source_${it.id}") }
+
+            if (sourcesToRefresh.isEmpty()) {
+                return@launch
+            }
+
+            epgFileManager.launchProcessSources(
+                sources = sourcesToRefresh,
+                taskId = "epg_refresh_all",
                 onComplete = {
                     refreshDbStats()
                     _cellularDialog.value = CellularConfirmDialog.Hidden
@@ -181,10 +190,22 @@ class EpgManagementViewModel(
                 onCellularConfirm = {
                     _cellularDialog.value = CellularConfirmDialog.RefreshAll(
                         onConfirm = {
-                            epgFileManager.launchProcessAllSources(onComplete = {
-                                refreshDbStats()
+                            val currentQueued = RefreshQueue.queuedTaskIds.value
+                            val retrySources = withContext(Dispatchers.IO) { db().epgSourceDao().getEnabledSources() }
+                                .filter { !currentQueued.contains("epg_refresh_source_${it.id}") }
+
+                            if (retrySources.isNotEmpty()) {
+                                epgFileManager.launchProcessSources(
+                                    sources = retrySources,
+                                    taskId = "epg_refresh_all",
+                                    onComplete = {
+                                        refreshDbStats()
+                                        _cellularDialog.value = CellularConfirmDialog.Hidden
+                                    }
+                                )
+                            } else {
                                 _cellularDialog.value = CellularConfirmDialog.Hidden
-                            })
+                            }
                         },
                         onDismiss = { _cellularDialog.value = CellularConfirmDialog.Hidden }
                     )

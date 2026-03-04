@@ -10,20 +10,6 @@ class XtreamMetricsManager(
     private val fetchTimes = ConcurrentHashMap<String, Long>()
 
     /**
-     * Track payload size for dev mode (No-op after DB migration)
-     */
-    inline fun <reified T> trackPayloadSize(key: String, data: T) {
-        // No-op
-    }
-
-    /**
-     * Get payload size for a specific key in human-readable format
-     */
-    fun getPayloadSize(key: String): String? {
-        return null
-    }
-
-    /**
      * Track fetch time for a specific key
      */
     fun trackFetchTime(key: String, timeMs: Long) {
