@@ -330,6 +330,17 @@ class XtreamContentManager(
         service.buildEpisodeStreamUrl(episodeId, extension)
     }
 
+    suspend fun getStreamName(streamId: Int, contentType: String): String? = withContext(Dispatchers.IO) {
+        try {
+            when (contentType) {
+                ContentType.TV_SHOWS -> seriesDao.getSeriesById(providerId, streamId)?.name
+                else -> streamDao.getStreamById(providerId, streamId)?.name
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** Returns streams for a category from the database. */
     fun getStreamsCached(categoryId: String): List<XtreamStream>? {
         return try {
