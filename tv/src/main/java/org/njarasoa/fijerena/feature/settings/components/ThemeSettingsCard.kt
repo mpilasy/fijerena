@@ -8,11 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -50,11 +46,8 @@ fun ThemeSettingsCard(
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-            val selectedThemeFocusRequester = remember { FocusRequester() }
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRestorer { selectedThemeFocusRequester },
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
             ) {
                 AllPalettes.chunked(2).forEachIndexed { rowIndex, rowPalettes ->
@@ -68,12 +61,7 @@ fun ThemeSettingsCard(
                                 CinemaPrimaryButton(
                                     onClick = { },
                                     text = palette.displayName,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .then(
-                                            if (rowIndex == 0) Modifier.focusRequester(selectedThemeFocusRequester)
-                                            else Modifier
-                                        )
+                                    modifier = Modifier.weight(1f)
                                 )
                             } else {
                                 CinemaSecondaryButton(
