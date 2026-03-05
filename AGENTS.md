@@ -101,7 +101,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ---
 
 ## 📡 EPG & Indexing System
-- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently (coroutine per source), but ingestion into the DB is sequential via an `UNLIMITED` Channel queue. Tasks are submitted through `RefreshQueue`.
+- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently, and ingestion into the DB is parallelized (2 workers) via an `UNLIMITED` Channel queue. Tasks are submitted through `RefreshQueue`.
 - **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 8) using FTS4. The `ingest_method` column tracks how each source was ingested.
 - **Search:** Two-tier strategy: SQLite **FTS4 MATCH** (primary) -> **LIKE** (fallback).
 - **Timezone:** Per-source `timezoneOffsetHours` override applied at parse time.
