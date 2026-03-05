@@ -32,7 +32,6 @@ fun ProviderSettingsCard(
     subscriptionIsTrial: Boolean = false,
     subscriptionStatus: String? = null,
     onManageProviders: () -> Unit,
-    initialFocusRequester: FocusRequester,
     scale: Float
 ) {
     val bodySmallStyle = MaterialTheme.typography.bodySmall.copy(
@@ -96,8 +95,7 @@ fun ProviderSettingsCard(
                 }
                 CinemaSecondaryButton(
                     onClick = onManageProviders,
-                    text = "Manage Providers",
-                    modifier = Modifier.focusRequester(initialFocusRequester)
+                    text = "Manage Providers"
                 )
             }
         }
