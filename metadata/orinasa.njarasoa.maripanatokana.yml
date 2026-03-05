@@ -1,0 +1,46 @@
+Categories:
+  - Science & Education
+License: MIT
+AuthorName: Orinasa Njarasoa
+AuthorWebSite: https://github.com/mpilasy
+SourceCode: https://github.com/mpilasy/maripanaTokana
+IssueTracker: https://github.com/mpilasy/maripanaTokana/issues
+
+AutoName: maripànaTokana
+Description: |-
+  A lightweight weather application built with Kotlin and Jetpack Compose.
+  Displays current weather conditions and forecasts without requiring Google Play Services.
+  Supports 8 languages: Arabic, English, Spanish, French, Hindi, Malagasy, Nepali, and Chinese.
+
+RepoType: git
+Repo: https://github.com/mpilasy/maripanaTokana.git
+
+Builds:
+  - versionName: 1.0.3
+    versionCode: 4
+    commit: v1.0.3
+    subdir: app
+    gradle:
+      - fdroid
+    prebuild: sed -i -e '/foojay/d' ../settings.gradle.kts
+
+  - versionName: 1.0.4
+    versionCode: 5
+    commit: v1.0.4
+    subdir: app
+    gradle:
+      - fdroid
+    prebuild: sed -i -e '/foojay/d' ../settings.gradle.kts
+
+  - versionName: 1.0.5
+    versionCode: 6
+    commit: d62d6a913e975ec2c1b436609864b48a2e0a9686
+    subdir: app
+    gradle:
+      - fdroid
+    prebuild: sed -i -e '/foojay/d' ../settings.gradle.kts
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.0.5
+CurrentVersionCode: 6
