@@ -82,7 +82,7 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 - Download-ingest-delete pipeline: XML downloaded to temp, parsed into SQLite, file deleted immediately
 - TV/fixed devices: stream directly from network to DB (zero disk I/O)
 - Mobile: download to cache dir first, then ingest
-- Parallel ingestion: sources download concurrently (3 on mobile, 1 on TV); ingestion into SQLite is sequential
+- Parallel ingestion: sources download concurrently (3 on mobile, 2 on TV); ingestion into SQLite uses 2 parallel workers
 - Per-source progress: shows download % and ingestion % with channel/programme counts
 - Cancel button: running or queued EPG refreshes can be cancelled mid-operation
 - Auto-refresh on startup and 24h periodic WorkManager background sync

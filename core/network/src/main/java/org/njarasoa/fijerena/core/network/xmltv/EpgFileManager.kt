@@ -338,7 +338,7 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Process all enabled sources: ingest each sequentially.
+     * Process all enabled sources: ingest using 2 parallel workers.
      * Append-only: database stays searchable throughout.
      *
      * Must be called via [launchProcessAllSources] to ensure proper job tracking.
@@ -370,8 +370,9 @@ class EpgFileManager private constructor(private val context: Context) {
             val sourceDao = db.epgSourceDao()
             val indexer = EpgIndexer.getInstance(context)
 
-            val maxDownloadConcurrency = if (isFixedDevice()) 1 else 3
+            val maxDownloadConcurrency = if (isFixedDevice()) 2 else 3
             val downloadSemaphore = Semaphore(maxDownloadConcurrency)
+            val maxIngestionConcurrency = 2
             val completedStats = CopyOnWriteArrayList<SourceStats>()
             val activeLabels = CopyOnWriteArrayList<String>()
             val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
@@ -388,27 +389,29 @@ class EpgFileManager private constructor(private val context: Context) {
             )
 
             val allStats = coroutineScope {
-                // Consumer: ingest downloaded files one at a time (SQLite single-writer)
-                val ingestionJob = launch {
-                    for (downloaded in ingestionQueue) {
-                        activeProgress[downloaded.source.id] = ActiveSourceProgress(
-                            label = downloaded.label,
-                            phase = "Ingesting",
-                            downloadedBytes = downloaded.downloadedBytes,
-                            downloadTotalBytes = downloaded.downloadedBytes
-                        )
-                        updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                // Consumer: ingest downloaded files in parallel (SQLite handles locking)
+                val ingestionJobs = (1..maxIngestionConcurrency).map {
+                    launch {
+                        for (downloaded in ingestionQueue) {
+                            activeProgress[downloaded.source.id] = ActiveSourceProgress(
+                                label = downloaded.label,
+                                phase = "Ingesting",
+                                downloadedBytes = downloaded.downloadedBytes,
+                                downloadTotalBytes = downloaded.downloadedBytes
+                            )
+                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
 
-                        val stats = ingestDownloadedSource(
-                            downloaded, sourceDao, indexer, activeProgress
-                        ) {
+                            val stats = ingestDownloadedSource(
+                                downloaded, sourceDao, indexer, activeProgress
+                            ) {
+                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                            }
+
+                            activeLabels.remove(downloaded.label)
+                            activeProgress.remove(downloaded.source.id)
+                            completedStats.add(stats)
                             updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                         }
-
-                        activeLabels.remove(downloaded.label)
-                        activeProgress.remove(downloaded.source.id)
-                        completedStats.add(stats)
-                        updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                     }
                 }
 
@@ -451,7 +454,7 @@ class EpgFileManager private constructor(private val context: Context) {
                 ingestionQueue.close()
 
                 // Wait for ingestion to drain
-                ingestionJob.join()
+                ingestionJobs.forEach { it.join() }
 
                 completedStats.toList()
             }
