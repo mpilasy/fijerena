@@ -25,8 +25,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
+
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -96,6 +98,8 @@ fun MobileEpgManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var autoRefreshEnabled by remember { mutableStateOf(viewModel.autoRefreshEnabled) }
+    var epgRefreshTime by remember { mutableStateOf(viewModel.epgRefreshTime) }
+    var showTimeDialog by remember { mutableStateOf(false) }
     var showCleanupConfirm by remember { mutableStateOf(false) }
     var showPurgeConfirm by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
@@ -375,6 +379,20 @@ fun MobileEpgManagementScreen(
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Refresh Time",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    OutlinedButton(onClick = { showTimeDialog = true }) {
+                        Text(epgRefreshTime)
+                    }
+                }
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
                 ) {
                     Button(
@@ -498,6 +516,18 @@ fun MobileEpgManagementScreen(
         )
     }
 
+    if (showTimeDialog) {
+        MobileTimeDialog(
+            currentTime = epgRefreshTime,
+            onDismiss = { showTimeDialog = false },
+            onSave = { newTime ->
+                epgRefreshTime = newTime
+                viewModel.setEpgRefreshTime(newTime)
+                showTimeDialog = false
+            }
+        )
+    }
+
     if (showCleanupConfirm) {
         AlertDialog(
             onDismissRequest = { showCleanupConfirm = false },
@@ -607,6 +637,73 @@ fun MobileEpgManagementScreen(
             }
         }
     }
+}
+
+    )
+}
+
+@Composable
+private fun MobileTimeDialog(
+    currentTime: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    val initialHour = currentTime.substringBefore(":").toIntOrNull() ?: 2
+    val initialMinute = currentTime.substringAfter(":").toIntOrNull() ?: 0
+    var hour by remember { mutableIntStateOf(initialHour) }
+    var minute by remember { mutableIntStateOf(initialMinute) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("EPG Refresh Time") },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = { hour = (hour + 1) % 24 }) {
+                        Icon(androidx.compose.material.icons.filled.KeyboardArrowUp, "Hour Up")
+                    }
+                    Text(
+                        text = "%02d".format(hour),
+                        style = MaterialTheme.typography.displayMedium
+                    )
+                    IconButton(onClick = { hour = if (hour == 0) 23 else hour - 1 }) {
+                        Icon(androidx.compose.material.icons.filled.KeyboardArrowDown, "Hour Down")
+                    }
+                }
+                Text(
+                    text = ":",
+                    style = MaterialTheme.typography.displayMedium,
+                    modifier = Modifier.padding(horizontal = CinemaSpacing.md)
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = { minute = (minute + 1) % 60 }) {
+                        Icon(androidx.compose.material.icons.filled.KeyboardArrowUp, "Minute Up")
+                    }
+                    Text(
+                        text = "%02d".format(minute),
+                        style = MaterialTheme.typography.displayMedium
+                    )
+                    IconButton(onClick = { minute = if (minute == 0) 59 else minute - 1 }) {
+                        Icon(androidx.compose.material.icons.filled.KeyboardArrowDown, "Minute Down")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave("%02d:%02d".format(hour, minute)) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
