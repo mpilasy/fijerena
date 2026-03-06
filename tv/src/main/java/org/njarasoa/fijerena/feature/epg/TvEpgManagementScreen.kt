@@ -50,13 +50,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckBox
-import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
@@ -779,7 +773,7 @@ private fun TimeDialog(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CinemaIconButton(
                         onClick = { hour = (hour + 1) % 24 },
-                        icon = { Icon(androidx.compose.material.icons.filled.KeyboardArrowUp, "Hour Up") }
+                        icon = { Icon(Icons.Default.KeyboardArrowUp, "Hour Up") }
                     )
                     Text(
                         text = "%02d".format(hour),
@@ -788,7 +782,7 @@ private fun TimeDialog(
                     )
                     CinemaIconButton(
                         onClick = { hour = if (hour == 0) 23 else hour - 1 },
-                        icon = { Icon(androidx.compose.material.icons.filled.KeyboardArrowDown, "Hour Down") }
+                        icon = { Icon(Icons.Default.KeyboardArrowDown, "Hour Down") }
                     )
                 }
                 Text(
@@ -800,7 +794,7 @@ private fun TimeDialog(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CinemaIconButton(
                         onClick = { minute = (minute + 1) % 60 },
-                        icon = { Icon(androidx.compose.material.icons.filled.KeyboardArrowUp, "Minute Up") }
+                        icon = { Icon(Icons.Default.KeyboardArrowUp, "Minute Up") }
                     )
                     Text(
                         text = "%02d".format(minute),
@@ -809,7 +803,7 @@ private fun TimeDialog(
                     )
                     CinemaIconButton(
                         onClick = { minute = if (minute == 0) 59 else minute - 1 },
-                        icon = { Icon(androidx.compose.material.icons.filled.KeyboardArrowDown, "Minute Down") }
+                        icon = { Icon(Icons.Default.KeyboardArrowDown, "Minute Down") }
                     )
                 }
             }
