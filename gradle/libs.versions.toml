@@ -1,6 +1,6 @@
 [versions]
 # Core Build Tools
-agp = "9.0.1"
+agp = "9.1.0"
 kotlin = "2.3.0"
 
 # Core Android
