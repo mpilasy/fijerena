@@ -32,25 +32,44 @@ data class XtreamSeriesEntity(
     val backdropPath: String? = null, // Comma separated URLs
     val contentHash: Int = 0
 ) {
-    /** Hash of content fields only, excluding [contentHash] itself to avoid self-referential comparison. */
-    fun computeContentHash(): Int {
-        var result = seriesId
-        result = 31 * result + providerId.hashCode()
-        result = 31 * result + (num ?: 0)
-        result = 31 * result + name.hashCode()
-        result = 31 * result + (cover?.hashCode() ?: 0)
-        result = 31 * result + (plot?.hashCode() ?: 0)
-        result = 31 * result + (cast?.hashCode() ?: 0)
-        result = 31 * result + (director?.hashCode() ?: 0)
-        result = 31 * result + (genre?.hashCode() ?: 0)
-        result = 31 * result + (releaseDate?.hashCode() ?: 0)
-        result = 31 * result + (lastModified?.hashCode() ?: 0)
-        result = 31 * result + (rating?.hashCode() ?: 0)
-        result = 31 * result + (rating5based?.hashCode() ?: 0)
-        result = 31 * result + (youtubeTrailer?.hashCode() ?: 0)
-        result = 31 * result + (episodeRunTime?.hashCode() ?: 0)
-        result = 31 * result + categoryId.hashCode()
-        result = 31 * result + (backdropPath?.hashCode() ?: 0)
-        return result
+    companion object {
+        fun computeHash(
+            seriesId: Int,
+            providerId: Long,
+            num: Int?,
+            name: String,
+            cover: String?,
+            plot: String?,
+            cast: String?,
+            director: String?,
+            genre: String?,
+            releaseDate: String?,
+            lastModified: String?,
+            rating: String?,
+            rating5based: Double?,
+            youtubeTrailer: String?,
+            episodeRunTime: String?,
+            categoryId: String,
+            backdropPath: String?
+        ): Int {
+            var result = seriesId
+            result = 31 * result + providerId.hashCode()
+            result = 31 * result + (num ?: 0)
+            result = 31 * result + name.hashCode()
+            result = 31 * result + (cover?.hashCode() ?: 0)
+            result = 31 * result + (plot?.hashCode() ?: 0)
+            result = 31 * result + (cast?.hashCode() ?: 0)
+            result = 31 * result + (director?.hashCode() ?: 0)
+            result = 31 * result + (genre?.hashCode() ?: 0)
+            result = 31 * result + (releaseDate?.hashCode() ?: 0)
+            result = 31 * result + (lastModified?.hashCode() ?: 0)
+            result = 31 * result + (rating?.hashCode() ?: 0)
+            result = 31 * result + (rating5based?.hashCode() ?: 0)
+            result = 31 * result + (youtubeTrailer?.hashCode() ?: 0)
+            result = 31 * result + (episodeRunTime?.hashCode() ?: 0)
+            result = 31 * result + categoryId.hashCode()
+            result = 31 * result + (backdropPath?.hashCode() ?: 0)
+            return result
+        }
     }
 }

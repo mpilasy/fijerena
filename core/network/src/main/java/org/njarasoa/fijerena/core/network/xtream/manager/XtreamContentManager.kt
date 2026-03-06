@@ -379,15 +379,21 @@ class XtreamContentManager(
                      }
 
                      val entities = apiCategories.map {
-                         val base = XtreamCategoryEntity(
+                         val contentHash = XtreamCategoryEntity.computeHash(
+                             categoryId = it.categoryId,
+                             providerId = providerId,
+                             categoryName = it.categoryName,
+                             parentId = it.parentId,
+                             type = type
+                         )
+                         XtreamCategoryEntity(
                              categoryId = it.categoryId,
                              providerId = providerId,
                              categoryName = it.categoryName,
                              parentId = it.parentId,
                              type = type,
-                             contentHash = 0
+                             contentHash = contentHash
                          )
-                         base.copy(contentHash = base.computeContentHash())
                      }
 
                      val currentHashes = categoryDao.getCategoryHashes(providerId, type)
@@ -439,7 +445,23 @@ class XtreamContentManager(
                          val seenIds = mutableSetOf<Int>()
 
                          val onStreamItem: suspend (XtreamStream) -> Unit = { it ->
-                             val base = XtreamStreamEntity(
+                             val contentHash = XtreamStreamEntity.computeHash(
+                                 streamId = it.streamId,
+                                 providerId = providerId,
+                                 type = type,
+                                 num = it.num,
+                                 name = it.name,
+                                 streamType = it.streamType,
+                                 streamIcon = it.streamIcon,
+                                 epgChannelId = it.epgChannelId,
+                                 added = it.added,
+                                 categoryId = it.categoryId,
+                                 customSid = it.customSid,
+                                 tvArchive = it.tvArchive,
+                                 directSource = it.directSource,
+                                 tvArchiveDuration = it.tvArchiveDuration
+                             )
+                             val entity = XtreamStreamEntity(
                                  streamId = it.streamId,
                                  providerId = providerId,
                                  type = type,
@@ -454,9 +476,8 @@ class XtreamContentManager(
                                  tvArchive = it.tvArchive,
                                  directSource = it.directSource,
                                  tvArchiveDuration = it.tvArchiveDuration,
-                                 contentHash = 0
+                                 contentHash = contentHash
                              )
-                             val entity = base.copy(contentHash = base.computeContentHash())
                              seenIds.add(entity.streamId)
 
                              val oldHash = currentHashes[entity.streamId]
@@ -516,7 +537,8 @@ class XtreamContentManager(
                          val seenIds = mutableSetOf<Int>()
 
                          val onSeriesItem: suspend (XtreamSeries) -> Unit = { it ->
-                             val base = XtreamSeriesEntity(
+                             val backdropPathStr = it.backdropPath?.joinToString(",")
+                             val contentHash = XtreamSeriesEntity.computeHash(
                                  seriesId = it.seriesId,
                                  providerId = providerId,
                                  num = it.num,
@@ -533,10 +555,28 @@ class XtreamContentManager(
                                  youtubeTrailer = it.youtubeTrailer,
                                  episodeRunTime = it.episodeRunTime,
                                  categoryId = it.categoryId,
-                                 backdropPath = it.backdropPath?.joinToString(","),
-                                 contentHash = 0
+                                 backdropPath = backdropPathStr
                              )
-                             val entity = base.copy(contentHash = base.computeContentHash())
+                             val entity = XtreamSeriesEntity(
+                                 seriesId = it.seriesId,
+                                 providerId = providerId,
+                                 num = it.num,
+                                 name = it.name,
+                                 cover = it.cover,
+                                 plot = it.plot,
+                                 cast = it.cast,
+                                 director = it.director,
+                                 genre = it.genre,
+                                 releaseDate = it.releaseDate,
+                                 lastModified = it.lastModified,
+                                 rating = it.rating,
+                                 rating5based = it.rating5based,
+                                 youtubeTrailer = it.youtubeTrailer,
+                                 episodeRunTime = it.episodeRunTime,
+                                 categoryId = it.categoryId,
+                                 backdropPath = backdropPathStr,
+                                 contentHash = contentHash
+                             )
                              seenIds.add(entity.seriesId)
 
                              val oldHash = currentHashes[entity.seriesId]
