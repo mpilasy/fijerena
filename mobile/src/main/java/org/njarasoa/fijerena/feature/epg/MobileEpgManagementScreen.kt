@@ -16,20 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.CheckBox
-import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Refresh
-
-import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -639,9 +627,6 @@ fun MobileEpgManagementScreen(
     }
 }
 
-    )
-}
-
 @Composable
 private fun MobileTimeDialog(
     currentTime: String,
@@ -664,14 +649,14 @@ private fun MobileTimeDialog(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     IconButton(onClick = { hour = (hour + 1) % 24 }) {
-                        Icon(androidx.compose.material.icons.filled.KeyboardArrowUp, "Hour Up")
+                        Icon(Icons.Default.KeyboardArrowUp, "Hour Up")
                     }
                     Text(
                         text = "%02d".format(hour),
                         style = MaterialTheme.typography.displayMedium
                     )
                     IconButton(onClick = { hour = if (hour == 0) 23 else hour - 1 }) {
-                        Icon(androidx.compose.material.icons.filled.KeyboardArrowDown, "Hour Down")
+                        Icon(Icons.Default.KeyboardArrowDown, "Hour Down")
                     }
                 }
                 Text(
@@ -681,14 +666,14 @@ private fun MobileTimeDialog(
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     IconButton(onClick = { minute = (minute + 1) % 60 }) {
-                        Icon(androidx.compose.material.icons.filled.KeyboardArrowUp, "Minute Up")
+                        Icon(Icons.Default.KeyboardArrowUp, "Minute Up")
                     }
                     Text(
                         text = "%02d".format(minute),
                         style = MaterialTheme.typography.displayMedium
                     )
                     IconButton(onClick = { minute = if (minute == 0) 59 else minute - 1 }) {
-                        Icon(androidx.compose.material.icons.filled.KeyboardArrowDown, "Minute Down")
+                        Icon(Icons.Default.KeyboardArrowDown, "Minute Down")
                     }
                 }
             }
