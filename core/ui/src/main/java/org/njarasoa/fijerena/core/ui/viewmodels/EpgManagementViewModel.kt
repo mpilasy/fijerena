@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
@@ -23,6 +24,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class EpgManagementViewModel(
     private val context: Context
 ) : ViewModel() {
@@ -52,12 +54,19 @@ class EpgManagementViewModel(
 
     val autoRefreshEnabled: Boolean get() = appSettings.epgAutoRefreshEnabled
 
+    val epgRefreshTime: String get() = appSettings.epgRefreshTime
+
     fun cancelProcessing() {
         epgFileManager.cancelProcessing()
     }
 
     fun setAutoRefreshEnabled(enabled: Boolean) {
         appSettings.epgAutoRefreshEnabled = enabled
+        epgFileManager.updateAutoRefreshSchedule()
+    }
+
+    fun setEpgRefreshTime(time: String) {
+        appSettings.epgRefreshTime = time
         epgFileManager.updateAutoRefreshSchedule()
     }
 
@@ -173,7 +182,16 @@ class EpgManagementViewModel(
                 return@launch
             }
 
-            epgFileManager.launchProcessAllSources(
+            val enabledSources = withContext(Dispatchers.IO) { db().epgSourceDao().getEnabledSources() }
+            val sourcesToRefresh = enabledSources.filter { !queued.contains("epg_refresh_source_${it.id}") }
+
+            if (sourcesToRefresh.isEmpty()) {
+                return@launch
+            }
+
+            epgFileManager.launchProcessSources(
+                sources = sourcesToRefresh,
+                taskId = "epg_refresh_all",
                 onComplete = {
                     refreshDbStats()
                     _cellularDialog.value = CellularConfirmDialog.Hidden
@@ -181,10 +199,22 @@ class EpgManagementViewModel(
                 onCellularConfirm = {
                     _cellularDialog.value = CellularConfirmDialog.RefreshAll(
                         onConfirm = {
-                            epgFileManager.launchProcessAllSources(onComplete = {
-                                refreshDbStats()
+                            val currentQueued = RefreshQueue.queuedTaskIds.value
+                            val retrySources = withContext(Dispatchers.IO) { db().epgSourceDao().getEnabledSources() }
+                                .filter { !currentQueued.contains("epg_refresh_source_${it.id}") }
+
+                            if (retrySources.isNotEmpty()) {
+                                epgFileManager.launchProcessSources(
+                                    sources = retrySources,
+                                    taskId = "epg_refresh_all",
+                                    onComplete = {
+                                        refreshDbStats()
+                                        _cellularDialog.value = CellularConfirmDialog.Hidden
+                                    }
+                                )
+                            } else {
                                 _cellularDialog.value = CellularConfirmDialog.Hidden
-                            })
+                            }
                         },
                         onDismiss = { _cellularDialog.value = CellularConfirmDialog.Hidden }
                     )

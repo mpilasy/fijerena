@@ -42,9 +42,39 @@ object LocalFileScanner {
             // Let's rely on try-catch around scanContentDirectory.
              return scanContentDirectory(context, rootUri)
         } catch (e: Exception) {
+            // Check if we can resolve the content URI to a direct file path
+            val resolvedFile = tryResolveToFile(context, rootUri)
+            if (resolvedFile != null && resolvedFile.isDirectory) {
+                return scanFileDirectory(Uri.fromFile(resolvedFile))
+            }
+
             // Fallback to DocumentFile implementation which handles various edge cases
             return scanDocumentFileDirectory(context, rootUri)
         }
+    }
+
+    private fun tryResolveToFile(context: Context, uri: Uri): File? {
+        if (uri.scheme == ContentResolver.SCHEME_FILE) {
+            return uri.path?.let { File(it) }
+        }
+        if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
+            try {
+                // _data column is deprecated in API 29+ but still widely used to get absolute paths
+                // for local media from older content providers
+                context.contentResolver.query(uri, arrayOf("_data"), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val path = cursor.getString(0)
+                        if (path != null) {
+                            val file = File(path)
+                            if (file.exists()) return file
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore and fall back
+            }
+        }
+        return null
     }
 
     // --- File Scheme Optimization ---

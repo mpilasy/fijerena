@@ -24,6 +24,7 @@ class AppSettings(context: Context) {
         private const val KEY_EPG_URL = "epg_url"
         private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
         private const val KEY_EPG_AUTO_REFRESH = "epg_auto_refresh"
+        private const val KEY_EPG_REFRESH_TIME = "epg_refresh_time"
         private const val KEY_CELLULAR_LIVE_MULTIPLIER = "cellular_live_multiplier"
         private const val KEY_CELLULAR_VOD_MULTIPLIER = "cellular_vod_multiplier"
         private const val KEY_HAS_PROVIDER_CACHE = "has_provider_cache"
@@ -36,6 +37,7 @@ class AppSettings(context: Context) {
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
         const val DEFAULT_UI_SCALE = 1.0f
         const val DEFAULT_EPG_URL = ""
+        const val DEFAULT_EPG_REFRESH_TIME = "02:00"
         const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
@@ -132,6 +134,14 @@ class AppSettings(context: Context) {
     var epgAutoRefreshEnabled: Boolean
         get() = prefs.getBoolean(KEY_EPG_AUTO_REFRESH, true)
         set(value) = prefs.edit().putBoolean(KEY_EPG_AUTO_REFRESH, value).apply()
+
+    /**
+     * EPG refresh start time (HH:mm format).
+     * Default: 02:00
+     */
+    var epgRefreshTime: String
+        get() = prefs.getString(KEY_EPG_REFRESH_TIME, DEFAULT_EPG_REFRESH_TIME) ?: DEFAULT_EPG_REFRESH_TIME
+        set(value) = prefs.edit().putString(KEY_EPG_REFRESH_TIME, value).apply()
 
     var epgTimezoneOffsetHours: Int
         get() = prefs.getInt(KEY_EPG_TIMEZONE_OFFSET, 0)

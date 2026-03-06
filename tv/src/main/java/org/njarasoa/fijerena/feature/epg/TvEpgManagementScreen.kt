@@ -50,11 +50,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckBox
-import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
@@ -98,6 +94,8 @@ fun TvEpgManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var autoRefreshEnabled by remember { mutableStateOf(viewModel.autoRefreshEnabled) }
+    var epgRefreshTime by remember { mutableStateOf(viewModel.epgRefreshTime) }
+    var showTimeDialog by remember { mutableStateOf(false) }
     var showCleanupConfirm by remember { mutableStateOf(false) }
     var showPurgeConfirm by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
@@ -449,6 +447,22 @@ fun TvEpgManagementScreen(
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Refresh Time",
+                                style = scaledBodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            CinemaSecondaryButton(
+                                onClick = { showTimeDialog = true },
+                                text = epgRefreshTime
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                         ) {
                             CinemaPrimaryButton(
@@ -528,6 +542,18 @@ fun TvEpgManagementScreen(
                 }
                 showAddDialog = false
                 editingSource = null
+            }
+        )
+    }
+
+    if (showTimeDialog) {
+        TimeDialog(
+            currentTime = epgRefreshTime,
+            onDismiss = { showTimeDialog = false },
+            onSave = { newTime ->
+                epgRefreshTime = newTime
+                viewModel.setEpgRefreshTime(newTime)
+                showTimeDialog = false
             }
         )
     }
@@ -713,6 +739,88 @@ fun TvEpgManagementScreen(
     }
 
     } // End CompositionLocalProvider
+}
+
+@Composable
+private fun TimeDialog(
+    currentTime: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    val initialHour = currentTime.substringBefore(":").toIntOrNull() ?: 2
+    val initialMinute = currentTime.substringAfter(":").toIntOrNull() ?: 0
+    var hour by remember { mutableIntStateOf(initialHour) }
+    var minute by remember { mutableIntStateOf(initialMinute) }
+    val scale = LocalUiScale.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CinemaSurface,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
+        title = {
+            Text(
+                text = "EPG Refresh Time",
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale))
+            )
+        },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CinemaIconButton(
+                        onClick = { hour = (hour + 1) % 24 },
+                        icon = { Icon(Icons.Default.KeyboardArrowUp, "Hour Up") }
+                    )
+                    Text(
+                        text = "%02d".format(hour),
+                        style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)),
+                        color = CinemaTextPrimary
+                    )
+                    CinemaIconButton(
+                        onClick = { hour = if (hour == 0) 23 else hour - 1 },
+                        icon = { Icon(Icons.Default.KeyboardArrowDown, "Hour Down") }
+                    )
+                }
+                Text(
+                    text = ":",
+                    style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)),
+                    color = CinemaTextPrimary,
+                    modifier = Modifier.padding(horizontal = Spacing.md.scaled(scale))
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CinemaIconButton(
+                        onClick = { minute = (minute + 1) % 60 },
+                        icon = { Icon(Icons.Default.KeyboardArrowUp, "Minute Up") }
+                    )
+                    Text(
+                        text = "%02d".format(minute),
+                        style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)),
+                        color = CinemaTextPrimary
+                    )
+                    CinemaIconButton(
+                        onClick = { minute = if (minute == 0) 59 else minute - 1 },
+                        icon = { Icon(Icons.Default.KeyboardArrowDown, "Minute Down") }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            CinemaPrimaryButton(
+                onClick = { onSave("%02d:%02d".format(hour, minute)) },
+                text = "Save"
+            )
+        },
+        dismissButton = {
+            CinemaSecondaryButton(
+                onClick = onDismiss,
+                text = "Cancel"
+            )
+        }
+    )
 }
 
 @Composable

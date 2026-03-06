@@ -32,7 +32,7 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
                  │   (singleton)            │
                  │  → Channel pipeline      │
                  │  → concurrent downloads  │
-                 │  → sequential ingestion  │
+                 │  → parallel ingestion    │
                  └────────────┬─────────────┘
                               │
                  ┌────────────▼────────────┐
@@ -70,11 +70,11 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
 
 **Channel-based producer-consumer pipeline:**
 
-Downloads and ingestion are decoupled via a Kotlin `Channel<DownloadedSource>`. Downloads run concurrently as producers, while a single consumer ingests files sequentially (SQLite single-writer constraint).
+Downloads and ingestion are decoupled via a Kotlin `Channel<DownloadedSource>`. Downloads run concurrently as producers, while 2 parallel workers ingest files into SQLite.
 
-- **Concurrency:** Up to 3 concurrent downloads on mobile (controlled by `Semaphore`), 1 on TV/fixed devices
+- **Concurrency:** Up to 3 concurrent downloads on mobile (controlled by `Semaphore`), 2 on TV/fixed devices
 - **Download phase:** Each source is downloaded to a cache file (`xmltv_source_<id>_tmp`). On success, the `DownloadedSource` is sent to the ingestion channel.
-- **Ingestion phase:** A single coroutine reads from the channel and ingests each file sequentially into SQLite via `EpgIndexer.ingestFromStream()`.
+- **Ingestion phase:** 2 parallel workers read from the channel and ingest files into SQLite via `EpgIndexer.ingestFromStream()`.
 - **Completion:** After all download coroutines finish, the channel is closed. The ingestion coroutine drains remaining items, then the pipeline completes.
 
 **Progress tracking (`ActiveSourceProgress`):**

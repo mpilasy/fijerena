@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.theme.*
@@ -247,10 +248,10 @@ private fun ProviderList(
                             Icon(Icons.Default.Edit, contentDescription = "Edit", tint = CinemaAccent)
                         }
                     )
-                    CinemaIconButton(
+                    CinemaDangerIconButton(
                         onClick = { onDelete(provider) },
                         icon = {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = CinemaError)
+                            Icon(Icons.Default.Delete, contentDescription = "Delete")
                         }
                     )
                 }

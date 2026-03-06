@@ -31,7 +31,7 @@ class XtreamSyncWorker(
                          }
                      }
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     android.util.Log.e("XtreamSyncWorker", "Error during sync", e)
                  }
              }
         }
