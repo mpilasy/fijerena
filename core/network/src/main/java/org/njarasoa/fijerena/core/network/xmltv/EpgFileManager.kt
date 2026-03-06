@@ -167,17 +167,21 @@ class EpgFileManager private constructor(private val context: Context) {
 
             // Schedule WorkManager periodic sync on mobile only
             if (!isFixedDevice()) {
+                val appSettings = AppSettings(context)
                 val constraints = Constraints.Builder()
                     .setRequiredNetworkType(WorkNetworkType.CONNECTED)
                     .build()
+                val initialDelay = calculateDelayUntil(appSettings.epgRefreshTime)
                 val request = PeriodicWorkRequestBuilder<EpgSyncWorker>(24, TimeUnit.HOURS)
                     .setConstraints(constraints)
+                    .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
                     .build()
                 WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                     "epg_sync",
-                    ExistingPeriodicWorkPolicy.KEEP,
+                    ExistingPeriodicWorkPolicy.REPLACE, // REPLACE so change in refresh time is applied
                     request
                 )
+                Log.d(TAG, "WorkManager sync scheduled in ${initialDelay / 1000 / 60} minutes")
             }
         }
     }
@@ -664,7 +668,7 @@ class EpgFileManager private constructor(private val context: Context) {
                             return@use
                         }
 
-                        val body = response.body ?: throw java.io.IOException("Empty response body")
+                        val body = response.body
                         val contentLength = body.contentLength()
 
                         tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
@@ -697,7 +701,7 @@ class EpgFileManager private constructor(private val context: Context) {
                     }
 
                     if (lastError == null) break
-                    if (lastError?.contains("HTTP 4") == true) break
+                    if (lastError.contains("HTTP 4")) break
                     if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
 
                 } catch (e: java.net.UnknownHostException) {
@@ -725,7 +729,7 @@ class EpgFileManager private constructor(private val context: Context) {
             }
 
             if (lastError != null) {
-                sourceDao.markError(source.id, lastError!!)
+                sourceDao.markError(source.id, lastError)
                 tmpFile.delete()
                 return null
             }
@@ -809,14 +813,17 @@ class EpgFileManager private constructor(private val context: Context) {
         }
     }
 
-    private suspend fun autoRefreshIfStale() {
+    /**
+     * Refresh all enabled sources that are considered stale (last ingested > 24h ago).
+     */
+    suspend fun refreshOutdatedSources() {
         val db = EpgIndexDatabase.getInstance(context)
         val sourceDao = db.epgSourceDao()
         val sources = sourceDao.getEnabledSources()
         if (sources.isEmpty()) return
 
         if (_state.value is MultiSourceState.Processing) {
-            Log.d(TAG, "Auto-refresh skipped: already processing")
+            Log.d(TAG, "Refresh outdated sources skipped: already processing")
             return
         }
 
@@ -826,7 +833,7 @@ class EpgFileManager private constructor(private val context: Context) {
         }
 
         if (staleSources.isNotEmpty()) {
-            Log.d(TAG, "Auto-refresh: ${staleSources.size} of ${sources.size} sources stale, refreshing those")
+            Log.d(TAG, "Refreshing ${staleSources.size} of ${sources.size} sources (stale)")
             val task = object : RefreshTask {
                 override val id = "epg_auto_refresh"
                 override val priority = RefreshPriority.MEDIUM
@@ -836,7 +843,30 @@ class EpgFileManager private constructor(private val context: Context) {
             }
             RefreshQueue.submit(task)
         } else {
-            Log.d(TAG, "Auto-refresh: all sources fresh, skipping")
+            Log.d(TAG, "All sources fresh, skipping")
+        }
+    }
+
+    private fun calculateDelayUntil(time: String): Long {
+        try {
+            val now = java.util.Calendar.getInstance()
+            val target = java.util.Calendar.getInstance()
+            val parts = time.split(":")
+            if (parts.size != 2) return 0
+            val hour = parts[0].toInt()
+            val minute = parts[1].toInt()
+            target.set(java.util.Calendar.HOUR_OF_DAY, hour)
+            target.set(java.util.Calendar.MINUTE, minute)
+            target.set(java.util.Calendar.SECOND, 0)
+            target.set(java.util.Calendar.MILLISECOND, 0)
+
+            if (target.before(now)) {
+                target.add(java.util.Calendar.DAY_OF_YEAR, 1)
+            }
+            return target.timeInMillis - now.timeInMillis
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to calculate delay for $time", e)
+            return 0
         }
     }
 
@@ -846,13 +876,19 @@ class EpgFileManager private constructor(private val context: Context) {
             val appSettings = AppSettings(context)
             while (true) {
                 if (appSettings.epgAutoRefreshEnabled) {
+                    val delayMs = calculateDelayUntil(appSettings.epgRefreshTime)
+                    Log.d(TAG, "Next auto-refresh scheduled in ${delayMs / 1000 / 60} minutes (at ${appSettings.epgRefreshTime})")
+                    delay(delayMs)
                     try {
-                        autoRefreshIfStale()
+                        refreshOutdatedSources()
                     } catch (e: Exception) {
                         Log.w(TAG, "Auto-refresh failed", e)
                     }
+                    // Wait at least 1 minute before scheduling next one to avoid double-triggering
+                    delay(60000)
+                } else {
+                    delay(AUTO_REFRESH_CHECK_INTERVAL_MS)
                 }
-                delay(AUTO_REFRESH_CHECK_INTERVAL_MS)
             }
         }
     }
@@ -861,6 +897,23 @@ class EpgFileManager private constructor(private val context: Context) {
         autoRefreshJob?.cancel()
         scope.launch {
             scheduleAutoRefresh()
+            if (!isFixedDevice()) {
+                val appSettings = AppSettings(context)
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(WorkNetworkType.CONNECTED)
+                    .build()
+                val initialDelay = calculateDelayUntil(appSettings.epgRefreshTime)
+                val request = PeriodicWorkRequestBuilder<EpgSyncWorker>(24, TimeUnit.HOURS)
+                    .setConstraints(constraints)
+                    .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+                    .build()
+                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                    "epg_sync",
+                    ExistingPeriodicWorkPolicy.REPLACE,
+                    request
+                )
+                Log.d(TAG, "WorkManager sync rescheduled in ${initialDelay / 1000 / 60} minutes")
+            }
         }
     }
 

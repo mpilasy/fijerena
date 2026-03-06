@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
@@ -23,6 +24,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class EpgManagementViewModel(
     private val context: Context
 ) : ViewModel() {
@@ -52,12 +54,19 @@ class EpgManagementViewModel(
 
     val autoRefreshEnabled: Boolean get() = appSettings.epgAutoRefreshEnabled
 
+    val epgRefreshTime: String get() = appSettings.epgRefreshTime
+
     fun cancelProcessing() {
         epgFileManager.cancelProcessing()
     }
 
     fun setAutoRefreshEnabled(enabled: Boolean) {
         appSettings.epgAutoRefreshEnabled = enabled
+        epgFileManager.updateAutoRefreshSchedule()
+    }
+
+    fun setEpgRefreshTime(time: String) {
+        appSettings.epgRefreshTime = time
         epgFileManager.updateAutoRefreshSchedule()
     }
 
