@@ -14,6 +14,9 @@ interface XtreamStreamDao {
     @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type ORDER BY num ASC")
     fun getAllStreams(providerId: Long, type: String): List<XtreamStreamEntity>
 
+    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND streamId = :streamId LIMIT 1")
+    fun getStreamById(providerId: Long, streamId: Int): XtreamStreamEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(streams: List<XtreamStreamEntity>)
 

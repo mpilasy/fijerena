@@ -14,6 +14,9 @@ interface XtreamSeriesDao {
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId ORDER BY name ASC")
     fun getAllSeries(providerId: Long): List<XtreamSeriesEntity>
 
+    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND seriesId = :seriesId LIMIT 1")
+    fun getSeriesById(providerId: Long, seriesId: Int): XtreamSeriesEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(series: List<XtreamSeriesEntity>)
 

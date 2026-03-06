@@ -18,12 +18,9 @@ class EpgSyncWorker(
 
     override suspend fun doWork(): Result {
         val fileManager = EpgFileManager.getInstance(applicationContext)
-        val db = EpgIndexDatabase.getInstance(applicationContext)
-        val sources = db.epgSourceDao().getEnabledSources()
-        if (sources.isEmpty()) return Result.success()
 
         return try {
-            fileManager.processAllSources(sources)
+            fileManager.refreshOutdatedSources()
             Result.success()
         } catch (e: Exception) {
             Result.retry()

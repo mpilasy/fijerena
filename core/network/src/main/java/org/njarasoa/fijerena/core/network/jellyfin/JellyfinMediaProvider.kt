@@ -73,12 +73,13 @@ class JellyfinMediaProvider(
     override suspend fun getCategories(contentType: String): Result<List<MediaCategory>> {
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
+        val jellyfinType = contentTypeToJellyfinType(contentType)
         return withAutoReconnect {
             api.getLibraries().map { libraries ->
                 libraries.filter { library ->
-                    when (contentType) {
-                        ContentType.MOVIES -> library.collectionType == "movies"
-                        ContentType.TV_SHOWS -> library.collectionType == "tvshows"
+                    when (jellyfinType) {
+                        "Movie" -> library.collectionType == "movies"
+                        "Series" -> library.collectionType == "tvshows"
                         else -> true
                     }
                 }.map { library ->
@@ -94,11 +95,7 @@ class JellyfinMediaProvider(
     override suspend fun getItems(categoryId: String, contentType: String): Result<List<MediaItem>> {
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
-        val includeTypes = when (contentType) {
-            ContentType.MOVIES -> "Movie"
-            ContentType.TV_SHOWS -> "Series"
-            else -> null
-        }
+        val includeTypes = contentTypeToJellyfinType(contentType)
 
         return withAutoReconnect {
             api.getItems(parentId = categoryId, includeItemTypes = includeTypes).map { items ->
@@ -117,11 +114,8 @@ class JellyfinMediaProvider(
         val categoryIds = categories.map { it.id }.toSet()
 
         // 2. Fetch all items recursively from root, including Folders/BoxSets for tree traversal
-        val includeTypes = when (contentType) {
-            "MOVIES" -> "Movie,Folder,BoxSet"
-            "TV_SHOWS" -> "Series,Folder,BoxSet"
-            else -> null
-        }
+        val baseType = contentTypeToJellyfinType(contentType)
+        val includeTypes = baseType?.let { "$it,Folder,BoxSet" }
 
         return withAutoReconnect {
             api.getItems(parentId = null, includeItemTypes = includeTypes).map { items ->
@@ -129,11 +123,7 @@ class JellyfinMediaProvider(
                 val parentMap = items.associate { it.id to it.parentId }
 
                 // 4. Filter for actual content items (Movie, Series)
-                val targetType = when (contentType) {
-                    "MOVIES" -> "Movie"
-                    "TV_SHOWS" -> "Series"
-                    else -> ""
-                }
+                val targetType = contentTypeToJellyfinType(contentType) ?: ""
                 val contentItems = items.filter { it.type == targetType }
 
                 // 5. Map items to their Library ID
@@ -166,11 +156,7 @@ class JellyfinMediaProvider(
     override suspend fun search(query: String, contentType: String): Result<List<MediaItem>> {
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
-        val includeTypes = when (contentType) {
-            ContentType.MOVIES -> "Movie"
-            ContentType.TV_SHOWS -> "Series"
-            else -> null
-        }
+        val includeTypes = contentTypeToJellyfinType(contentType)
 
         return withAutoReconnect {
             api.searchItems(query = query, includeItemTypes = includeTypes).map { items ->
@@ -273,16 +259,21 @@ class JellyfinMediaProvider(
         contentType: String,
         episodeId: String?,
         extension: String?
-    ): Result<PlayableStream> {
-        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+    ): Result<PlayableStream> = coroutineScope {
+        if (!ensureConnected()) return@coroutineScope Result.failure(Exception("Not connected"))
 
         val streamItemId = episodeId ?: itemId
-        val userId = api.getUserId() ?: return Result.failure(Exception("Not authenticated"))
+        val userId = api.getUserId() ?: return@coroutineScope Result.failure(Exception("Not authenticated"))
         val token = api.getAccessToken()
         val headers = if (token != null) mapOf("X-Emby-Token" to token) else emptyMap()
 
+        val playbackInfoDeferred = async { api.getPlaybackInfo(streamItemId, userId) }
+        val itemDeferred = async { api.getItemById(streamItemId) }
+
         // Ask Jellyfin whether to direct-play or transcode based on our DeviceProfile
-        val playbackInfo = api.getPlaybackInfo(streamItemId, userId)
+        val playbackInfo = playbackInfoDeferred.await()
+        val item = itemDeferred.await().getOrNull()
+        val itemTitle = item?.name ?: ""
 
         if (playbackInfo.isSuccess) {
             val info = playbackInfo.getOrThrow()
@@ -314,26 +305,23 @@ class JellyfinMediaProvider(
                 else -> api.buildStreamUrl(streamItemId)
             }
 
-            return Result.success(
-                PlayableStream(uri = streamUrl, headers = headers, isLive = false, title = "")
+            return@coroutineScope Result.success(
+                PlayableStream(uri = streamUrl, headers = headers, isLive = false, title = itemTitle)
             )
         }
 
         // PlaybackInfo failed — fall back to legacy static direct play
-        val rawContainer = extension ?: run {
-            api.getItemById(streamItemId).getOrNull()
-                ?.let { it.container ?: it.mediaSources.firstOrNull()?.container }
-        }
+        val rawContainer = extension ?: item?.let { it.container ?: it.mediaSources.firstOrNull()?.container }
         val container = rawContainer?.split(",")?.firstOrNull { ext ->
             ext.trim().lowercase() in setOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd")
         }?.trim() ?: rawContainer?.split(",")?.firstOrNull()?.trim()
 
-        return Result.success(
+        return@coroutineScope Result.success(
             PlayableStream(
                 uri = api.buildStreamUrl(streamItemId, container),
                 headers = headers,
                 isLive = false,
-                title = ""
+                title = itemTitle
             )
         )
     }

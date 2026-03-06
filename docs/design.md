@@ -269,8 +269,8 @@ epg_index.db
 
 Channel-based producer-consumer architecture:
 
-1. **Download phase (producers):** Sources download concurrently, bounded by `Semaphore` (3 on mobile, 1 on TV). Each download produces a `DownloadedSource` object (source metadata + temp file + byte count) and sends it to a `Channel<DownloadedSource>(UNLIMITED)`.
-2. **Ingestion phase (consumer):** A single coroutine consumes from the channel sequentially (SQLite single-writer constraint). Each `DownloadedSource` is ingested via `EpgIndexer.ingestFromStream()`.
+1. **Download phase (producers):** Sources download concurrently, bounded by `Semaphore` (3 on mobile, 2 on TV). Each download produces a `DownloadedSource` object (source metadata + temp file + byte count) and sends it to a `Channel<DownloadedSource>(UNLIMITED)`.
+2. **Ingestion phase (workers):** 2 parallel workers consume from the channel. Each `DownloadedSource` is ingested via `EpgIndexer.ingestFromStream()`.
 3. `XmltvParser` performs streaming XML parse with 128KB buffers
 4. `EpgIndexer` does 500-row batch INSERTs wrapped in Room `withTransaction`
 5. Date filter: programmes ending before yesterday (current time - 24h) are skipped during ingestion

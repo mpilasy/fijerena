@@ -59,13 +59,17 @@ class XtreamMediaProvider(
         }
     }
 
-    override suspend fun getItems(categoryId: String, contentType: String): kotlin.Result<List<MediaItem>> {
-        val mediaType = when (contentType) {
-            ContentType.LIVE_TV -> MediaType.LIVE_CHANNEL
-            ContentType.MOVIES -> MediaType.MOVIE
-            ContentType.TV_SHOWS -> MediaType.SERIES
+    private fun getMediaType(contentType: String): MediaType {
+        return when (contentType) {
+            ContentType.LIVE_TV, "LIVE_TV" -> MediaType.LIVE_CHANNEL
+            ContentType.MOVIES, "MOVIES" -> MediaType.MOVIE
+            ContentType.TV_SHOWS, "TV_SHOWS" -> MediaType.SERIES
             else -> MediaType.LIVE_CHANNEL
         }
+    }
+
+    override suspend fun getItems(categoryId: String, contentType: String): kotlin.Result<List<MediaItem>> {
+        val mediaType = getMediaType(contentType)
         val result = when (contentType) {
             ContentType.LIVE_TV -> repository.getStreams(categoryId)
             ContentType.MOVIES -> repository.getVodStreams(categoryId)
@@ -81,12 +85,7 @@ class XtreamMediaProvider(
     }
 
     override suspend fun getAllItems(contentType: String): kotlin.Result<List<MediaItem>> {
-        val mediaType = when (contentType) {
-            "LIVE_TV" -> MediaType.LIVE_CHANNEL
-            "MOVIES" -> MediaType.MOVIE
-            "TV_SHOWS" -> MediaType.SERIES
-            else -> MediaType.LIVE_CHANNEL
-        }
+        val mediaType = getMediaType(contentType)
         // Use repository.getAllStreams which handles caching and fetching all streams
         val result = repository.getAllStreams(contentType)
         return when (result) {
@@ -145,12 +144,13 @@ class XtreamMediaProvider(
         val streamId = itemId.toIntOrNull() ?: return kotlin.Result.failure(
             Exception("Invalid stream ID: $itemId")
         )
+        val streamName = repository.getStreamName(streamId, contentType) ?: ""
         return when (val result = repository.buildStreamUrl(streamId, contentType, extension)) {
             is Result.Success ->
                 kotlin.Result.success(PlayableStream(
                     uri = result.data,
                     isLive = isLive,
-                    title = ""
+                    title = streamName
                 ))
             is Result.Error ->
                 kotlin.Result.failure(result.exception)
@@ -158,12 +158,7 @@ class XtreamMediaProvider(
     }
 
     override fun getItemsIfCached(categoryId: String, contentType: String): List<MediaItem>? {
-        val mediaType = when (contentType) {
-            ContentType.LIVE_TV -> MediaType.LIVE_CHANNEL
-            ContentType.MOVIES -> MediaType.MOVIE
-            ContentType.TV_SHOWS -> MediaType.SERIES
-            else -> MediaType.LIVE_CHANNEL
-        }
+        val mediaType = getMediaType(contentType)
         val cached = when (contentType) {
             ContentType.LIVE_TV -> repository.getStreamsCached(categoryId)
             ContentType.MOVIES -> repository.getVodStreamsCached(categoryId)

@@ -29,10 +29,6 @@ object M3uParser {
         val tvgId: String?
     )
 
-    fun parse(content: String): List<M3uEntry> {
-        return parse(content.reader().buffered()).toList()
-    }
-
     fun parse(reader: BufferedReader): Sequence<M3uEntry> = sequence {
         val iterator = reader.lineSequence().iterator()
 

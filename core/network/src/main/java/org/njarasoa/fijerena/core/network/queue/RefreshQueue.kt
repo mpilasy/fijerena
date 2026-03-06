@@ -105,7 +105,7 @@ object RefreshQueue {
                     queuedTask.deferred.complete(Unit)
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("RefreshQueue", "Error processing task", e)
                 queuedTask.deferred.completeExceptionally(e)
             } finally {
                 currentJob = null

@@ -295,7 +295,6 @@ class XtreamContentManager(
             val seriesInfo = service.getSeriesInfo(seriesId)
             val fetchTime = System.currentTimeMillis() - startTime
             metricsManager.trackFetchTime("series_$seriesId", fetchTime)
-            metricsManager.trackPayloadSize("series_$seriesId", seriesInfo)
             seriesInfo
         }
     }
@@ -308,7 +307,6 @@ class XtreamContentManager(
             val vodInfo = service.getVodInfo(vodId)
             val fetchTime = System.currentTimeMillis() - startTime
             metricsManager.trackFetchTime("vod_$vodId", fetchTime)
-            metricsManager.trackPayloadSize("vod_$vodId", vodInfo)
             vodInfo
         }
     }
@@ -328,6 +326,17 @@ class XtreamContentManager(
         val service = sessionManager.apiService
             ?: throw Exception("Not authenticated. Please login first.")
         service.buildEpisodeStreamUrl(episodeId, extension)
+    }
+
+    suspend fun getStreamName(streamId: Int, contentType: String): String? = withContext(Dispatchers.IO) {
+        try {
+            when (contentType) {
+                ContentType.TV_SHOWS -> seriesDao.getSeriesById(providerId, streamId)?.name
+                else -> streamDao.getStreamById(providerId, streamId)?.name
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /** Returns streams for a category from the database. */
@@ -408,7 +417,7 @@ class XtreamContentManager(
                      }
 
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     android.util.Log.e("XtreamContentManager", "Error syncing data", e)
                  }
             }
         }
@@ -485,7 +494,7 @@ class XtreamContentManager(
                      }
 
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     android.util.Log.e("XtreamContentManager", "Error syncing data", e)
                  }
             }
         }
@@ -562,7 +571,7 @@ class XtreamContentManager(
                      }
 
                  } catch (e: Exception) {
-                     e.printStackTrace()
+                     android.util.Log.e("XtreamContentManager", "Error syncing data", e)
                  }
             }
         }
