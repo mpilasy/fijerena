@@ -16,19 +16,24 @@ data class XtreamCategoryEntity(
     val type: String, // LIVE, VOD, SERIES
     val contentHash: Int = 0
 ) {
-    /** Hash of content fields only, excluding [contentHash] itself to avoid self-referential comparison. */
-    fun computeContentHash(): Int {
-        var result = categoryId.hashCode()
-        result = 31 * result + providerId.hashCode()
-        result = 31 * result + categoryName.hashCode()
-        result = 31 * result + parentId
-        result = 31 * result + type.hashCode()
-        return result
-    }
-
     companion object {
         const val TYPE_LIVE = "LIVE"
         const val TYPE_VOD = "VOD"
         const val TYPE_SERIES = "SERIES"
+
+        fun computeHash(
+            categoryId: String,
+            providerId: Long,
+            categoryName: String,
+            parentId: Int,
+            type: String
+        ): Int {
+            var result = categoryId.hashCode()
+            result = 31 * result + providerId.hashCode()
+            result = 31 * result + categoryName.hashCode()
+            result = 31 * result + parentId
+            result = 31 * result + type.hashCode()
+            return result
+        }
     }
 }
