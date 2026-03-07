@@ -38,6 +38,11 @@ class EpgBrowserViewModel(
     private val context: Context
 ) : ViewModel() {
 
+    enum class SearchMode {
+        PROGRAMME,
+        CHANNEL
+    }
+
     sealed interface UiState {
         data object Idle : UiState
         data object NoEpgFile : UiState
@@ -65,6 +70,13 @@ class EpgBrowserViewModel(
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    private val _searchMode = MutableStateFlow(SearchMode.PROGRAMME)
+    val searchMode: StateFlow<SearchMode> = _searchMode.asStateFlow()
+
+    fun setSearchMode(mode: SearchMode) {
+        _searchMode.value = mode
+    }
 
     /** Indexer state exposed for UI (progress banner, settings display). */
     val indexState: StateFlow<EpgIndexState> = EpgIndexer.getInstance(context).state
@@ -158,8 +170,12 @@ class EpgBrowserViewModel(
             _uiState.value = UiState.Searching
             try {
                 val startTime = System.currentTimeMillis()
+                val mode = _searchMode.value
                 val result = withContext(Dispatchers.IO) {
-                    searchService.search(query)
+                    when (mode) {
+                        SearchMode.PROGRAMME -> searchService.search(query)
+                        SearchMode.CHANNEL -> searchService.searchByChannel(query)
+                    }
                 }
                 val elapsed = System.currentTimeMillis() - startTime
 
