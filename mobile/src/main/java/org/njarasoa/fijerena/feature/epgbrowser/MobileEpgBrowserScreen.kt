@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -82,6 +84,7 @@ fun MobileEpgBrowserScreen(
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
+    val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
     val isDevMode = viewModel.isDevMode
@@ -117,14 +120,48 @@ fun MobileEpgBrowserScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Search mode radio buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.md, vertical = CinemaSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                EpgBrowserViewModel.SearchMode.entries.forEach { mode ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clickable { viewModel.setSearchMode(mode) }
+                            .padding(end = Spacing.md)
+                    ) {
+                        RadioButton(
+                            selected = searchMode == mode,
+                            onClick = { viewModel.setSearchMode(mode) }
+                        )
+                        Text(
+                            text = when (mode) {
+                                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Programme"
+                                EpgBrowserViewModel.SearchMode.CHANNEL -> "What's on"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = CinemaSpacing.xxs)
+                        )
+                    }
+                }
+            }
+
             // Search bar
+            val placeholderText = when (searchMode) {
+                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles..."
+                EpgBrowserViewModel.SearchMode.CHANNEL -> "Search channel names..."
+            }
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(Spacing.md),
-                placeholder = { Text("Search programme titles...") },
+                placeholder = { Text(placeholderText) },
                 leadingIcon = {
                     IconButton(onClick = {
                         if (searchQuery.isNotBlank()) {
@@ -198,8 +235,12 @@ fun MobileEpgBrowserScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
+                        val hintText = when (searchMode) {
+                            EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles in your local EPG data"
+                            EpgBrowserViewModel.SearchMode.CHANNEL -> "Search by channel name to see what's on in the next 6 hours"
+                        }
                         Text(
-                            text = "Search programme titles in your local EPG data",
+                            text = hintText,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -241,6 +282,7 @@ fun MobileEpgBrowserScreen(
                         nowEpoch = nowEpoch,
                         isDevMode = isDevMode,
                         sourceLabels = sourceLabels,
+                        searchMode = searchMode,
                         onNavigateToPlayer = onNavigateToPlayer
                     )
                 }
@@ -268,8 +310,26 @@ private fun MobileResultsContent(
     nowEpoch: Long,
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
+    searchMode: EpgBrowserViewModel.SearchMode = EpgBrowserViewModel.SearchMode.PROGRAMME,
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
+    var hideUnmatched by remember { mutableStateOf(false) }
+
+    // Filter date groups when hiding unmatched channels
+    val displayDateGroups = if (hideUnmatched && searchMode == EpgBrowserViewModel.SearchMode.PROGRAMME) {
+        results.dateGroups.mapNotNull { group ->
+            val filteredPrograms = group.programs.mapNotNull { program ->
+                val matchedAirings = program.airings.filter { it.matchedStream != null }
+                if (matchedAirings.isEmpty()) null
+                else program.copy(airings = matchedAirings)
+            }
+            if (filteredPrograms.isEmpty()) null
+            else group.copy(programs = filteredPrograms)
+        }
+    } else {
+        results.dateGroups
+    }
+
     Column {
         // Stats row
         val timeStr = "%.1f".format(results.searchTimeMs / 1000.0)
@@ -285,13 +345,34 @@ private fun MobileResultsContent(
             )
         )
 
-        if (results.dateGroups.isEmpty()) {
+        // Hide unmatched channels checkbox (only for programme search)
+        if (searchMode == EpgBrowserViewModel.SearchMode.PROGRAMME) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable { hideUnmatched = !hideUnmatched }
+                    .padding(horizontal = Spacing.md)
+            ) {
+                Checkbox(
+                    checked = hideUnmatched,
+                    onCheckedChange = { hideUnmatched = it }
+                )
+                Text(
+                    text = "Hide unmatched channels",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(start = CinemaSpacing.xxs)
+                )
+            }
+        }
+
+        if (displayDateGroups.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No results found for '${results.query}'",
+                    text = if (hideUnmatched) "No matched results for '${results.query}'"
+                           else "No results found for '${results.query}'",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -303,13 +384,13 @@ private fun MobileResultsContent(
                     .fillMaxSize()
                     .padding(horizontal = Spacing.md)
             ) {
-                results.dateGroups.forEach { dateGroup ->
-                    stickyHeader(key = "date::${dateGroup.dayStartEpoch}", contentType = "header") {
+                displayDateGroups.forEach { dateGroup ->
+                    stickyHeader(key = "date::${dateGroup.dayStartEpoch}::$hideUnmatched", contentType = "header") {
                         MobileDateHeader(dateLabel = dateGroup.dateLabel)
                     }
                     items(
                         dateGroup.programs,
-                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}" },
+                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}::$hideUnmatched" },
                         contentType = { "program" }
                     ) { program ->
                         MobileProgramCard(

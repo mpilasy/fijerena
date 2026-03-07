@@ -144,6 +144,15 @@ interface EpgIndexDao {
 
     // --------------- Channel queries ---------------
 
+    @Query(
+        """
+        SELECT * FROM epg_channel
+        WHERE LOWER(display_name) LIKE '%' || :queryLower || '%'
+        ORDER BY display_name ASC
+        """
+    )
+    suspend fun searchChannelsByName(queryLower: String): List<EpgChannelEntity>
+
     @Query("SELECT * FROM epg_channel")
     suspend fun getAllChannels(): List<EpgChannelEntity>
 
