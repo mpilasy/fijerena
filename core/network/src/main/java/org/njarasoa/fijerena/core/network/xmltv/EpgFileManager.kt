@@ -106,6 +106,7 @@ class EpgFileManager private constructor(private val context: Context) {
     )
 
     data class ActiveSourceProgress(
+        val sourceId: Long,
         val label: String,
         val phase: String, // "Downloading" or "Ingesting"
         val progressPercent: Int = -1, // 0-100, or -1 if unknown
@@ -121,16 +122,16 @@ class EpgFileManager private constructor(private val context: Context) {
             val completedCount: Int,
             val totalSources: Int,
             val activeSourceLabels: List<String>,
-            val activeProgress: List<ActiveSourceProgress> = emptyList(),
+            val activeProgress: Map<Long, ActiveSourceProgress> = emptyMap(),
             val totalChannels: Int = 0,
             val totalProgrammes: Int = 0,
             val totalDownloadedBytes: Long = 0,
-            val completedSourceStats: List<SourceStats> = emptyList()
+            val completedSourceStats: Map<Long, SourceStats> = emptyMap()
         ) : MultiSourceState
         data class Completed(
             val sourcesProcessed: Int,
             val errors: Int,
-            val sourceStats: List<SourceStats> = emptyList(),
+            val sourceStats: Map<Long, SourceStats> = emptyMap(),
             val totalChannels: Int = 0,
             val totalProgrammes: Int = 0,
             val totalDownloadBytes: Long = 0
@@ -398,6 +399,7 @@ class EpgFileManager private constructor(private val context: Context) {
                     launch {
                         for (downloaded in ingestionQueue) {
                             activeProgress[downloaded.source.id] = ActiveSourceProgress(
+                                sourceId = downloaded.source.id,
                                 label = downloaded.label,
                                 phase = "Ingesting",
                                 downloadedBytes = downloaded.downloadedBytes,
@@ -425,7 +427,7 @@ class EpgFileManager private constructor(private val context: Context) {
                         val label = source.label.ifBlank { extractLabel(source.url) }
                         downloadSemaphore.withPermit {
                             activeLabels.add(label)
-                            activeProgress[source.id] = ActiveSourceProgress(label, "Downloading")
+                            activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
                             updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
 
                             val result = downloadSource(source, label, sourceDao, activeProgress) {
@@ -435,6 +437,7 @@ class EpgFileManager private constructor(private val context: Context) {
                             if (result != null) {
                                 // Success — send to ingestion pipeline
                                 activeProgress[source.id] = ActiveSourceProgress(
+                                    sourceId = source.id,
                                     label = label,
                                     phase = "Awaiting Ingestion",
                                     downloadedBytes = result.downloadedBytes,
@@ -477,7 +480,7 @@ class EpgFileManager private constructor(private val context: Context) {
             _state.value = MultiSourceState.Completed(
                 sourcesProcessed = sources.size,
                 errors = allStats.count { it.error != null },
-                sourceStats = allStats,
+                sourceStats = allStats.associateBy { it.sourceId },
                 totalChannels = totalChannels,
                 totalProgrammes = totalProgrammes,
                 totalDownloadBytes = totalBytes
@@ -496,16 +499,15 @@ class EpgFileManager private constructor(private val context: Context) {
         activeProgress: Map<Long, ActiveSourceProgress>,
         totalSources: Int
     ) {
-        val activeList = activeProgress.values.toList()
         _state.value = MultiSourceState.Processing(
             completedCount = completedStats.size,
             totalSources = totalSources,
             activeSourceLabels = activeLabels.toList(),
-            activeProgress = activeList,
-            totalChannels = completedStats.sumOf { it.channelsIngested } + activeList.sumOf { it.channels },
-            totalProgrammes = completedStats.sumOf { it.programmesIngested } + activeList.sumOf { it.programmes },
-            totalDownloadedBytes = completedStats.sumOf { it.downloadBytes } + activeList.sumOf { it.downloadedBytes },
-            completedSourceStats = completedStats.toList()
+            activeProgress = activeProgress.toMap(),
+            totalChannels = completedStats.sumOf { it.channelsIngested } + activeProgress.values.sumOf { it.channels },
+            totalProgrammes = completedStats.sumOf { it.programmesIngested } + activeProgress.values.sumOf { it.programmes },
+            totalDownloadedBytes = completedStats.sumOf { it.downloadBytes } + activeProgress.values.sumOf { it.downloadedBytes },
+            completedSourceStats = completedStats.associateBy { it.sourceId }
         )
     }
 
@@ -529,20 +531,19 @@ class EpgFileManager private constructor(private val context: Context) {
             )
 
             fun updateSingleProgress() {
-                val activeList = activeProgress.values.toList()
                 _state.value = MultiSourceState.Processing(
                     completedCount = 0,
                     totalSources = 1,
                     activeSourceLabels = listOf(label),
-                    activeProgress = activeList,
-                    totalChannels = activeList.sumOf { it.channels },
-                    totalProgrammes = activeList.sumOf { it.programmes },
-                    totalDownloadedBytes = activeList.sumOf { it.downloadedBytes }
+                    activeProgress = activeProgress.toMap(),
+                    totalChannels = activeProgress.values.sumOf { it.channels },
+                    totalProgrammes = activeProgress.values.sumOf { it.programmes },
+                    totalDownloadedBytes = activeProgress.values.sumOf { it.downloadedBytes }
                 )
             }
 
             // Download phase
-            activeProgress[source.id] = ActiveSourceProgress(label, "Downloading")
+            activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
             updateSingleProgress()
 
             val downloaded = downloadSource(source, label, sourceDao, activeProgress) { updateSingleProgress() }
@@ -550,6 +551,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val stats = if (downloaded != null) {
                 // Buffer state between phases
                 activeProgress[source.id] = ActiveSourceProgress(
+                    sourceId = source.id,
                     label = label, phase = "Awaiting Ingestion",
                     downloadedBytes = downloaded.downloadedBytes,
                     downloadTotalBytes = downloaded.downloadedBytes
@@ -558,6 +560,7 @@ class EpgFileManager private constructor(private val context: Context) {
 
                 // Ingest phase
                 activeProgress[source.id] = ActiveSourceProgress(
+                    sourceId = source.id,
                     label = label, phase = "Ingesting",
                     downloadedBytes = downloaded.downloadedBytes,
                     downloadTotalBytes = downloaded.downloadedBytes
@@ -579,7 +582,7 @@ class EpgFileManager private constructor(private val context: Context) {
             _state.value = MultiSourceState.Completed(
                 sourcesProcessed = 1,
                 errors = if (stats.error != null) 1 else 0,
-                sourceStats = listOf(stats),
+                sourceStats = mapOf(stats.sourceId to stats),
                 totalChannels = stats.channelsIngested,
                 totalProgrammes = stats.programmesIngested,
                 totalDownloadBytes = stats.downloadBytes
@@ -685,6 +688,7 @@ class EpgFileManager private constructor(private val context: Context) {
                                     lastReportedBytes = totalRead
                                     val pct = if (contentLength > 0) ((totalRead * 100) / contentLength).toInt().coerceIn(0, 100) else -1
                                     activeProgress[source.id] = ActiveSourceProgress(
+                                        sourceId = source.id,
                                         label = label,
                                         phase = "Downloading",
                                         progressPercent = pct,
@@ -774,6 +778,7 @@ class EpgFileManager private constructor(private val context: Context) {
                 ) { channels, programmes ->
                     val pct = if (fileSize > 0) ((countingStream.bytesRead * 100) / fileSize).toInt().coerceIn(0, 100) else -1
                     activeProgress[source.id] = ActiveSourceProgress(
+                        sourceId = source.id,
                         label = label,
                         phase = "Ingesting",
                         progressPercent = pct,

@@ -191,47 +191,12 @@ fun TvEpgManagementScreen(
                                     Text("Cancel", style = scaledLabelSmall, color = CinemaError)
                                 }
                             }
-                            // Per-source active progress
-                            procState.activeProgress.forEach { progress ->
-                                val progressText = buildString {
-                                    append(progress.label)
-                                    append(": ")
-                                    append(progress.phase)
-                                    if (progress.progressPercent in 0..100) {
-                                        append(" ${progress.progressPercent}%")
-                                    }
-                                    if (progress.phase == "Downloading" || progress.phase == "Awaiting Ingestion") {
-                                        append(" (${formatBytes(progress.downloadedBytes)}")
-                                        if (progress.downloadTotalBytes > 0) {
-                                            append("/${formatBytes(progress.downloadTotalBytes)}")
-                                        }
-                                        append(")")
-                                    } else if (progress.programmes > 0) {
-                                        append(" (${formatCount(progress.channels)}ch, ${formatCount(progress.programmes)}prg)")
-                                    }
-                                }
-                                Text(
-                                    text = progressText,
-                                    style = scaledLabelSmall,
-                                    color = CinemaTextSecondary
-                                )
-                            }
                             if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
                                 Text(
                                     text = "Total: ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
                                     style = scaledLabelSmall,
                                     color = CinemaTextSecondary
                                 )
-                            }
-                            if (viewModel.isDevMode && procState.completedSourceStats.isNotEmpty()) {
-                                procState.completedSourceStats.forEach { stat ->
-                                    Text(
-                                        text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
-                                            (stat.error?.let { " [$it]" } ?: ""),
-                                        style = scaledLabelSmall,
-                                        color = if (stat.error != null) CinemaError else CinemaTextSecondary
-                                    )
-                                }
                             }
                         }
                         if (procState is EpgFileManager.MultiSourceState.Completed) {
@@ -248,14 +213,6 @@ fun TvEpgManagementScreen(
                                     style = scaledLabelSmall,
                                     color = CinemaTextSecondary
                                 )
-                                procState.sourceStats.forEach { stat ->
-                                    Text(
-                                        text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
-                                            (stat.error?.let { " [$it]" } ?: ""),
-                                        style = scaledLabelSmall,
-                                        color = if (stat.error != null) CinemaError else CinemaTextSecondary
-                                    )
-                                }
                             }
                         }
                         if (procState is EpgFileManager.MultiSourceState.Error) {
@@ -371,6 +328,64 @@ fun TvEpgManagementScreen(
                                         maxLines = 1
                                     )
                                 }
+
+                                // In-progress or completed stats from current processing
+                                val procState = processingState
+                                if (procState is EpgFileManager.MultiSourceState.Processing) {
+                                    val progress = procState.activeProgress[source.id]
+                                    val completedStat = procState.completedSourceStats[source.id]
+
+                                    if (progress != null) {
+                                        val progressText = buildString {
+                                            append(progress.phase)
+                                            if (progress.progressPercent in 0..100) {
+                                                append(" ${progress.progressPercent}%")
+                                            }
+                                            if (progress.phase == "Downloading") {
+                                                append(" (${formatBytes(progress.downloadedBytes)}")
+                                                if (progress.downloadTotalBytes > 0) {
+                                                    append("/${formatBytes(progress.downloadTotalBytes)}")
+                                                }
+                                                append(")")
+                                            } else if (progress.phase == "Awaiting Ingestion") {
+                                                append(" (${formatBytes(progress.downloadedBytes)})")
+                                            } else if (progress.programmes > 0) {
+                                                append(" (${formatCount(progress.channels)}ch, ${formatCount(progress.programmes)}prg)")
+                                            }
+                                        }
+                                        Text(
+                                            text = progressText,
+                                            style = scaledLabelSmall,
+                                            color = CinemaAccent
+                                        )
+                                    } else if (completedStat != null) {
+                                        val statText = buildString {
+                                            append("Completed")
+                                            append(" (${formatBytes(completedStat.downloadBytes)}, ${formatCount(completedStat.channelsIngested)}ch, ${formatCount(completedStat.programmesIngested)}prg)")
+                                            if (completedStat.error != null) append(" [${completedStat.error}]")
+                                        }
+                                        Text(
+                                            text = statText,
+                                            style = scaledLabelSmall,
+                                            color = if (completedStat.error != null) CinemaError else CinemaAccent
+                                        )
+                                    }
+                                } else if (procState is EpgFileManager.MultiSourceState.Completed) {
+                                    val stat = procState.sourceStats[source.id]
+                                    if (stat != null) {
+                                        val statText = buildString {
+                                            append("Finished")
+                                            append(" (${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg)")
+                                            if (stat.error != null) append(" [${stat.error}]")
+                                        }
+                                        Text(
+                                            text = statText,
+                                            style = scaledLabelSmall,
+                                            color = if (stat.error != null) CinemaError else CinemaAccent
+                                        )
+                                    }
+                                }
+
                                 if (viewModel.isDevMode && source.lastIngestedAtMs > 0) {
                                     val sizeStr = if (source.ingestMethod != "STREAMED") {
                                         ", ${formatBytes(source.lastDownloadBytes)}"
