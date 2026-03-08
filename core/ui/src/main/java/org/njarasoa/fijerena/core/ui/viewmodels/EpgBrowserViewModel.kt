@@ -84,6 +84,7 @@ class EpgBrowserViewModel(
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
     private var channelMatcher: EpgChannelMatcher? = null
+    @Volatile private var lastMatcherProviderId: Long? = null
 
     // Cache AppSettings instance to avoid constructing a new object on every property read
     private val appSettings = AppSettings(context)
@@ -109,23 +110,26 @@ class EpgBrowserViewModel(
             _uiState.value = UiState.NoEpgFile
         }
         loadSourceLabels()
-        loadChannelMatcher()
+        viewModelScope.launch { ensureChannelMatcherCurrent() }
     }
 
-    private fun loadChannelMatcher() {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    val provider = ProviderDatabase.getInstance(context)
-                        .providerDao().getActiveProvider() ?: return@withContext
-                    val liveStreams = XtreamDatabase.getInstance(context)
-                        .streamDao().getAllStreams(provider.id, XtreamStreamEntity.TYPE_LIVE)
-                    if (liveStreams.isNotEmpty()) {
-                        channelMatcher = EpgChannelMatcher(liveStreams)
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("EpgBrowserViewModel", "Failed to load live streams for channel matching", e)
-                }
+    /**
+     * Loads (or refreshes) [channelMatcher] for the currently active provider.
+     * If the active provider hasn't changed since the last load, this is a no-op.
+     * Must be called from a coroutine; runs its DB work on [Dispatchers.IO].
+     */
+    private suspend fun ensureChannelMatcherCurrent() {
+        withContext(Dispatchers.IO) {
+            try {
+                val provider = ProviderDatabase.getInstance(context)
+                    .providerDao().getActiveProvider() ?: return@withContext
+                if (provider.id == lastMatcherProviderId) return@withContext
+                val liveStreams = XtreamDatabase.getInstance(context)
+                    .streamDao().getAllStreams(provider.id, XtreamStreamEntity.TYPE_LIVE)
+                channelMatcher = if (liveStreams.isNotEmpty()) EpgChannelMatcher(liveStreams) else null
+                lastMatcherProviderId = provider.id
+            } catch (e: Exception) {
+                android.util.Log.e("EpgBrowserViewModel", "Failed to load live streams for channel matching", e)
             }
         }
     }
@@ -169,6 +173,7 @@ class EpgBrowserViewModel(
         searchJob = viewModelScope.launch {
             _uiState.value = UiState.Searching
             try {
+                ensureChannelMatcherCurrent()
                 val startTime = System.currentTimeMillis()
                 val mode = _searchMode.value
                 val result = withContext(Dispatchers.IO) {
