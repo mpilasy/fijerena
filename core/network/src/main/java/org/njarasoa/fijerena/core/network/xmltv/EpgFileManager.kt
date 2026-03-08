@@ -102,6 +102,7 @@ class EpgFileManager private constructor(private val context: Context) {
         val downloadBytes: Long = 0,
         val channelsIngested: Int = 0,
         val programmesIngested: Int = 0,
+        val durationMs: Long = 0,
         val error: String? = null
     )
 
@@ -387,6 +388,7 @@ class EpgFileManager private constructor(private val context: Context) {
 
             // Channel: downloads produce, ingestion consumes
             val ingestionQueue = Channel<DownloadedSource>(Channel.UNLIMITED)
+            val sourceStartTimeMap = ConcurrentHashMap<Long, Long>()
 
             indexer.setIndexing()
 
@@ -416,9 +418,13 @@ class EpgFileManager private constructor(private val context: Context) {
                                 updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                             }
 
+                            val sourceId = downloaded.source.id
+                            val sourceDuration = sourceStartTimeMap[sourceId]?.let { System.currentTimeMillis() - it } ?: 0
+                            val finalStats = stats.copy(durationMs = sourceDuration)
+
                             activeLabels.remove(downloaded.label)
-                            activeProgress.remove(downloaded.source.id)
-                            completedStats.add(stats)
+                            activeProgress.remove(sourceId)
+                            completedStats.add(finalStats)
                             updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                         }
                     }
@@ -427,6 +433,7 @@ class EpgFileManager private constructor(private val context: Context) {
                 // Producers: download sources concurrently
                 val downloadJobs = sources.map { source ->
                     async {
+                        sourceStartTimeMap[source.id] = System.currentTimeMillis()
                         val label = source.label.ifBlank { extractLabel(source.url) }
                         downloadSemaphore.withPermit {
                             activeLabels.add(label)
@@ -450,9 +457,10 @@ class EpgFileManager private constructor(private val context: Context) {
                                 ingestionQueue.send(result)
                             } else {
                                 // Download failed — record and clean up
+                                val sourceDuration = sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
                                 activeLabels.remove(label)
                                 activeProgress.remove(source.id)
-                                completedStats.add(SourceStats(source.id, label, error = "Download failed"))
+                                completedStats.add(SourceStats(source.id, label, durationMs = sourceDuration, error = "Download failed"))
                                 updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                             }
                         }
@@ -495,8 +503,6 @@ class EpgFileManager private constructor(private val context: Context) {
             Log.e(TAG, "processAllSources failed: ${e.message}", e)
             _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
         }
-
-        scheduleIdleReset()
     }
 
     private fun updateAggregateProgress(
@@ -590,7 +596,7 @@ class EpgFileManager private constructor(private val context: Context) {
             _state.value = MultiSourceState.Completed(
                 sourcesProcessed = 1,
                 errors = if (stats.error != null) 1 else 0,
-                sourceStats = mapOf(stats.sourceId to stats),
+                sourceStats = mapOf(stats.copy(durationMs = endTime - startTime).sourceId to stats.copy(durationMs = endTime - startTime)),
                 totalChannels = stats.channelsIngested,
                 totalProgrammes = stats.programmesIngested,
                 totalDownloadBytes = stats.downloadBytes,
@@ -600,18 +606,6 @@ class EpgFileManager private constructor(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "processSingleSource failed: ${e.message}", e)
             _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
-        }
-
-        scheduleIdleReset()
-    }
-
-    private fun scheduleIdleReset() {
-        scope.launch {
-            delay(10000)
-            val current = _state.value
-            if (current is MultiSourceState.Completed || current is MultiSourceState.Error) {
-                _state.value = MultiSourceState.Idle
-            }
         }
     }
 

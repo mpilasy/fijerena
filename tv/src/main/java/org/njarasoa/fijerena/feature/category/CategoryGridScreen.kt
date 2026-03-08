@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.feature.category.components.ErrorScreen
 import org.njarasoa.fijerena.feature.category.components.LoadingScreen
 import org.njarasoa.fijerena.feature.category.components.TwoColumnLayout
@@ -212,7 +213,7 @@ private fun CategoryGridContent(
                         if (contentType == ContentType.LIVE_TV) {
                             when (val epg = epgIndexState) {
                                 is EpgIndexState.Indexed -> {
-                                    put("EPG Index", "${epg.programmeCount} progs, ${epg.channelCount} ch")
+                                    put("EPG Index", "${NumberUtils.formatCount(epg.programmeCount)} progs, ${NumberUtils.formatCount(epg.channelCount)} ch")
                                 }
                                 is EpgIndexState.Indexing -> {
                                     put("EPG Index", "Indexing ${epg.progressPercent}%")

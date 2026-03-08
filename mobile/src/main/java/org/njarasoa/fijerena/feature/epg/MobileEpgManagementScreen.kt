@@ -53,6 +53,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -124,7 +125,7 @@ fun MobileEpgManagementScreen(
                 val statusText = when (val state = indexState) {
                     is EpgIndexState.NotIndexed -> "No EPG data"
                     is EpgIndexState.Indexing -> "Indexing: ${state.progressPercent}%"
-                    is EpgIndexState.Indexed -> "${formatCount(state.channelCount)} channels, ${formatCount(state.programmeCount)} programmes"
+                    is EpgIndexState.Indexed -> "${NumberUtils.formatCount(state.channelCount)} channels, ${NumberUtils.formatCount(state.programmeCount)} programmes"
                     is EpgIndexState.Failed -> "Failed: ${state.reason}"
                 }
                 Text(
@@ -155,7 +156,7 @@ fun MobileEpgManagementScreen(
                     }
                     if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
                         Text(
-                            text = "Total: ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
+                            text = "Total: ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -171,12 +172,12 @@ fun MobileEpgManagementScreen(
                     )
                     if (viewModel.isDevMode) {
                         Text(
-                            text = "Last update: ${formatTimestamp(context, procState.updatedAtMs)} (took ${formatDuration(procState.durationMs)})",
+                            text = "Last update: ${NumberUtils.formatTimestamp(context, procState.updatedAtMs)} (took ${NumberUtils.formatDuration(procState.durationMs)})",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Total: ${formatBytes(procState.totalDownloadBytes)}, ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
+                            text = "Total: ${NumberUtils.formatBytes(procState.totalDownloadBytes)}, ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -252,7 +253,7 @@ fun MobileEpgManagementScreen(
                             }
                             Text(
                                 text = "TZ: $tzLabel" +
-                                    (if (source.lastIngestedAtMs > 0) " | ${formatTimestamp(context, source.lastIngestedAtMs)}" else "") +
+                                    (if (source.lastIngestedAtMs > 0) " | ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}" else "") +
                                     (if (!source.enabled) " | DISABLED" else ""),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
@@ -279,15 +280,15 @@ fun MobileEpgManagementScreen(
                                             append(" ${progress.progressPercent}%")
                                         }
                                         if (progress.phase == "Downloading") {
-                                            append(" (${formatBytes(progress.downloadedBytes)}")
+                                            append(" (${NumberUtils.formatBytes(progress.downloadedBytes)}")
                                             if (progress.downloadTotalBytes > 0) {
-                                                append("/${formatBytes(progress.downloadTotalBytes)}")
+                                                append("/${NumberUtils.formatBytes(progress.downloadTotalBytes)}")
                                             }
                                             append(")")
                                         } else if (progress.phase == "Awaiting Ingestion") {
-                                            append(" (${formatBytes(progress.downloadedBytes)})")
+                                            append(" (${NumberUtils.formatBytes(progress.downloadedBytes)})")
                                         } else if (progress.programmes > 0) {
-                                            append(" (${formatCount(progress.channels)}ch, ${formatCount(progress.programmes)}prg)")
+                                            append(" (${NumberUtils.formatCount(progress.channels)}ch, ${NumberUtils.formatCount(progress.programmes)}prg)")
                                         }
                                     }
                                     Text(
@@ -298,7 +299,10 @@ fun MobileEpgManagementScreen(
                                 } else if (completedStat != null) {
                                     val statText = buildString {
                                         append("Completed")
-                                        append(" (${formatBytes(completedStat.downloadBytes)}, ${formatCount(completedStat.channelsIngested)}ch, ${formatCount(completedStat.programmesIngested)}prg)")
+                                        append(" (${NumberUtils.formatBytes(completedStat.downloadBytes)}, ${NumberUtils.formatCount(completedStat.channelsIngested)}ch, ${NumberUtils.formatCount(completedStat.programmesIngested)}prg)")
+                                        if (completedStat.durationMs > 0) {
+                                            append(" in ${NumberUtils.formatDuration(completedStat.durationMs)}")
+                                        }
                                         if (completedStat.error != null) append(" [${completedStat.error}]")
                                     }
                                     Text(
@@ -312,7 +316,10 @@ fun MobileEpgManagementScreen(
                                 if (stat != null) {
                                     val statText = buildString {
                                         append("Finished")
-                                        append(" (${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg)")
+                                        append(" (${NumberUtils.formatBytes(stat.downloadBytes)}, ${NumberUtils.formatCount(stat.channelsIngested)}ch, ${NumberUtils.formatCount(stat.programmesIngested)}prg)")
+                                        if (stat.durationMs > 0) {
+                                            append(" in ${NumberUtils.formatDuration(stat.durationMs)}")
+                                        }
                                         if (stat.error != null) append(" [${stat.error}]")
                                     }
                                     Text(
@@ -325,12 +332,12 @@ fun MobileEpgManagementScreen(
 
                             if (viewModel.isDevMode && source.lastIngestedAtMs > 0) {
                                 val sizeStr = if (source.ingestMethod != "STREAMED") {
-                                    ", ${formatBytes(source.lastDownloadBytes)}"
+                                    ", ${NumberUtils.formatBytes(source.lastDownloadBytes)}"
                                 } else {
                                     ""
                                 }
                                 Text(
-                                    text = "${formatCount(source.lastChannels)}ch, ${formatCount(source.lastProgrammes)}prg$sizeStr",
+                                    text = "${NumberUtils.formatCount(source.lastChannels)}ch, ${NumberUtils.formatCount(source.lastProgrammes)}prg$sizeStr",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                                 )
@@ -340,7 +347,7 @@ fun MobileEpgManagementScreen(
                                 }
                                 latestTime?.let { epoch ->
                                     Text(
-                                        text = "Latest: ${formatEpochDate(context, epoch)}",
+                                        text = "Latest: ${NumberUtils.formatEpochDate(context, epoch)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                                     )
@@ -789,39 +796,4 @@ private fun MobileSourceDialog(
             OutlinedButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
-}
-
-private fun formatDuration(durationMs: Long): String {
-    val totalSeconds = durationMs / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
-}
-
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes >= 1_073_741_824 -> "%.1fGB".format(bytes / 1_073_741_824.0)
-        bytes >= 1_048_576 -> "%.1fMB".format(bytes / 1_048_576.0)
-        bytes >= 1_024 -> "%.1fKB".format(bytes / 1_024.0)
-        else -> "${bytes}B"
-    }
-}
-
-private fun formatCount(count: Int): String {
-    return when {
-        count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
-        count >= 1_000 -> "%.1fK".format(count / 1_000.0)
-        else -> count.toString()
-    }
-}
-
-private fun formatTimestamp(context: android.content.Context, millis: Long): String {
-    val dateFormat = android.text.format.DateFormat.getMediumDateFormat(context)
-    val timeFormat = android.text.format.DateFormat.getTimeFormat(context)
-    val date = java.util.Date(millis)
-    return "${dateFormat.format(date)}, ${timeFormat.format(date)}"
-}
-
-private fun formatEpochDate(context: android.content.Context, epochSeconds: Long): String {
-    return formatTimestamp(context, epochSeconds * 1000L)
 }
