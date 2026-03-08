@@ -659,9 +659,31 @@ class EpgFileManager private constructor(private val context: Context) {
         var lastError: String? = null
 
         try {
-            for (attempt in 1..MAX_RETRIES) {
+            // DNS Pre-flight check
+            try {
+                val host = URL(source.url).host
+                var resolved = false
+                for (dnsAttempt in 1..3) {
+                    try {
+                        java.net.InetAddress.getByName(host)
+                        resolved = true
+                        break
+                    } catch (e: Exception) {
+                        Log.w(TAG, "DNS pre-flight failed for $host (attempt $dnsAttempt/3)")
+                        delay(2000L * dnsAttempt)
+                    }
+                }
+                if (!resolved) {
+                    sourceDao.markError(source.id, "DNS lookup failed for $host")
+                    return null
+                }
+            } catch (e: Exception) {
+                // Ignore URL parsing errors here, let OkHttp handle it
+            }
+
+            for (attempt in 1..5) {
                 try {
-                    Log.d(TAG, "Downloading EPG to cache: ${source.url} (attempt $attempt/$MAX_RETRIES)")
+                    Log.d(TAG, "Downloading EPG to cache: ${source.url} (attempt $attempt/5)")
 
                     val request = Request.Builder().url(source.url).build()
                     okHttpClient.newCall(request).execute().use { response ->
@@ -706,29 +728,29 @@ class EpgFileManager private constructor(private val context: Context) {
 
                     if (lastError == null) break
                     if (lastError.contains("HTTP 4")) break
-                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                    if (attempt < 5) { 
+                        val backoff = (5000L * (1 shl (attempt - 1))).coerceAtMost(60000L)
+                        Log.d(TAG, "Retrying download in ${backoff/1000}s...")
+                        delay(backoff)
+                        continue 
+                    }
 
                 } catch (e: java.net.UnknownHostException) {
                     lastError = "DNS lookup failed for ${e.message ?: "host"}"
                     Log.w(TAG, "EPG download DNS failure (attempt $attempt): $lastError", e)
-                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-                } catch (e: OutOfMemoryError) {
-                    System.gc()
-                    lastError = "out of memory during download"
-                    Log.e(TAG, "OOM during EPG download (attempt $attempt)", e)
-                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-                } catch (e: java.net.SocketTimeoutException) {
-                    lastError = "connection timed out"
-                    Log.w(TAG, "EPG download timeout (attempt $attempt)", e)
-                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
-                } catch (e: java.io.IOException) {
-                    lastError = e.message ?: "I/O error"
-                    Log.w(TAG, "EPG download I/O error (attempt $attempt): $lastError", e)
-                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                    if (attempt < 5) { 
+                        val backoff = (5000L * (1 shl (attempt - 1))).coerceAtMost(60000L)
+                        delay(backoff)
+                        continue 
+                    }
                 } catch (e: Exception) {
                     lastError = e.message ?: "unknown error"
                     Log.w(TAG, "EPG download error (attempt $attempt): $lastError", e)
-                    if (attempt < MAX_RETRIES) { delay(RETRY_DELAY_MS * attempt); continue }
+                    if (attempt < 5) { 
+                        val backoff = (5000L * (1 shl (attempt - 1))).coerceAtMost(60000L)
+                        delay(backoff)
+                        continue 
+                    }
                 }
             }
 
@@ -820,16 +842,17 @@ class EpgFileManager private constructor(private val context: Context) {
 
     /**
      * Refresh all enabled sources that are considered stale (last ingested > 24h ago).
+     * Returns true if refresh was started (stale sources found), false otherwise.
      */
-    suspend fun refreshOutdatedSources() {
+    suspend fun refreshOutdatedSources(): Boolean {
         val db = EpgIndexDatabase.getInstance(context)
         val sourceDao = db.epgSourceDao()
         val sources = sourceDao.getEnabledSources()
-        if (sources.isEmpty()) return
+        if (sources.isEmpty()) return false
 
         if (_state.value is MultiSourceState.Processing) {
             Log.d(TAG, "Refresh outdated sources skipped: already processing")
-            return
+            return true // Treat as success/active
         }
 
         val now = System.currentTimeMillis()
@@ -837,7 +860,7 @@ class EpgFileManager private constructor(private val context: Context) {
             source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > STALE_THRESHOLD_MS
         }
 
-        if (staleSources.isNotEmpty()) {
+        return if (staleSources.isNotEmpty()) {
             Log.d(TAG, "Refreshing ${staleSources.size} of ${sources.size} sources (stale)")
             val task = object : RefreshTask {
                 override val id = "epg_auto_refresh"
@@ -847,8 +870,10 @@ class EpgFileManager private constructor(private val context: Context) {
                 }
             }
             RefreshQueue.submit(task)
+            true
         } else {
             Log.d(TAG, "All sources fresh, skipping")
+            false
         }
     }
 
