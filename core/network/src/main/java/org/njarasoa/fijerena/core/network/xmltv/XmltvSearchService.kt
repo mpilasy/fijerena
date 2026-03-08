@@ -34,7 +34,7 @@ class XmltvSearchService(private val context: Context) {
         }
 
         val now = System.currentTimeMillis() / 1000L
-        val sixHoursLater = now + 6 * 3600L
+        val twoHoursLater = now + 2 * 3600L
 
         return try {
             val db = EpgIndexDatabase.getInstance(context)
@@ -47,7 +47,7 @@ class XmltvSearchService(private val context: Context) {
             }
 
             val channelIds = matchedChannels.map { it.xmltvId }
-            val rows = dao.getProgrammesForChannels(channelIds, now, sixHoursLater)
+            val rows = dao.getProgrammesForChannels(channelIds, now, twoHoursLater)
             rowsToSearchResult(rows, searchedFromIndex = true)
         } catch (e: Exception) {
             Log.w(TAG, "Channel search failed", e)

@@ -863,7 +863,7 @@ class EpgFileManager private constructor(private val context: Context) {
             if (target.before(now)) {
                 target.add(java.util.Calendar.DAY_OF_YEAR, 1)
             }
-            return target.timeInMillis - now.timeInMillis
+            return (target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to calculate delay for $time", e)
             return 0
