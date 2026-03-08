@@ -209,6 +209,11 @@ fun TvEpgManagementScreen(
                             )
                             if (viewModel.isDevMode) {
                                 Text(
+                                    text = "Last update: ${formatTimestamp(context, procState.updatedAtMs)} (took ${formatDuration(procState.durationMs)})",
+                                    style = scaledLabelSmall,
+                                    color = CinemaTextSecondary
+                                )
+                                Text(
                                     text = "Total: ${formatBytes(procState.totalDownloadBytes)}, ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
                                     style = scaledLabelSmall,
                                     color = CinemaTextSecondary
@@ -945,6 +950,13 @@ private fun formatCount(count: Int): String {
         count >= 1_000 -> "%.1fK".format(count / 1_000.0)
         else -> count.toString()
     }
+}
+
+private fun formatDuration(durationMs: Long): String {
+    val totalSeconds = durationMs / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
 }
 
 private fun formatBytes(bytes: Long): String {

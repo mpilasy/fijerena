@@ -134,7 +134,9 @@ class EpgFileManager private constructor(private val context: Context) {
             val sourceStats: Map<Long, SourceStats> = emptyMap(),
             val totalChannels: Int = 0,
             val totalProgrammes: Int = 0,
-            val totalDownloadBytes: Long = 0
+            val totalDownloadBytes: Long = 0,
+            val updatedAtMs: Long = System.currentTimeMillis(),
+            val durationMs: Long = 0
         ) : MultiSourceState
         data class Error(val reason: String) : MultiSourceState
         data object Clearing : MultiSourceState
@@ -370,6 +372,7 @@ class EpgFileManager private constructor(private val context: Context) {
             return
         }
 
+        val startTime = System.currentTimeMillis()
         try {
             val db = EpgIndexDatabase.getInstance(context)
             val sourceDao = db.epgSourceDao()
@@ -477,13 +480,16 @@ class EpgFileManager private constructor(private val context: Context) {
                 indexer.incrementalVacuum()
             }
 
+            val endTime = System.currentTimeMillis()
             _state.value = MultiSourceState.Completed(
                 sourcesProcessed = sources.size,
                 errors = allStats.count { it.error != null },
                 sourceStats = allStats.associateBy { it.sourceId },
                 totalChannels = totalChannels,
                 totalProgrammes = totalProgrammes,
-                totalDownloadBytes = totalBytes
+                totalDownloadBytes = totalBytes,
+                updatedAtMs = endTime,
+                durationMs = endTime - startTime
             )
         } catch (e: Exception) {
             Log.e(TAG, "processAllSources failed: ${e.message}", e)
@@ -512,6 +518,7 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     private suspend fun processSingleSourceInternal(sourceId: Long) {
+        val startTime = System.currentTimeMillis()
         try {
             val db = EpgIndexDatabase.getInstance(context)
             val sourceDao = db.epgSourceDao()
@@ -579,13 +586,16 @@ class EpgFileManager private constructor(private val context: Context) {
                 indexer.incrementalVacuum()
             }
 
+            val endTime = System.currentTimeMillis()
             _state.value = MultiSourceState.Completed(
                 sourcesProcessed = 1,
                 errors = if (stats.error != null) 1 else 0,
                 sourceStats = mapOf(stats.sourceId to stats),
                 totalChannels = stats.channelsIngested,
                 totalProgrammes = stats.programmesIngested,
-                totalDownloadBytes = stats.downloadBytes
+                totalDownloadBytes = stats.downloadBytes,
+                updatedAtMs = endTime,
+                durationMs = endTime - startTime
             )
         } catch (e: Exception) {
             Log.e(TAG, "processSingleSource failed: ${e.message}", e)

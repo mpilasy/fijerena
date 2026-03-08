@@ -171,6 +171,11 @@ fun MobileEpgManagementScreen(
                     )
                     if (viewModel.isDevMode) {
                         Text(
+                            text = "Last update: ${formatTimestamp(context, procState.updatedAtMs)} (took ${formatDuration(procState.durationMs)})",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
                             text = "Total: ${formatBytes(procState.totalDownloadBytes)}, ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -784,6 +789,13 @@ private fun MobileSourceDialog(
             OutlinedButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+private fun formatDuration(durationMs: Long): String {
+    val totalSeconds = durationMs / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
 }
 
 private fun formatBytes(bytes: Long): String {
