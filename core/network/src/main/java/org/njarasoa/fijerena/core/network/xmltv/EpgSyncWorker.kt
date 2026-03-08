@@ -20,10 +20,10 @@ class EpgSyncWorker(
         val fileManager = EpgFileManager.getInstance(applicationContext)
 
         return try {
-            fileManager.refreshOutdatedSources()
-            Result.success()
+            val started = fileManager.refreshOutdatedSources()
+            if (started) Result.success() else Result.failure()
         } catch (e: Exception) {
-            Result.retry()
+            if (runAttemptCount < 3) Result.retry() else Result.failure()
         }
     }
 }
