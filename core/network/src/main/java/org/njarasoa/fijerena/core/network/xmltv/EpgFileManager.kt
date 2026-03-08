@@ -30,7 +30,9 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
+import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType as WorkNetworkType
@@ -159,6 +161,13 @@ class EpgFileManager private constructor(private val context: Context) {
     private fun isFixedDevice(): Boolean {
         val type = DeviceDetector.detect().deviceType
         return type != DeviceType.GENERIC_MOBILE
+    }
+
+    @OptIn(androidx.media3.common.util.UnstableApi::class)
+    private fun isPlaybackActive(): Boolean {
+        val svc = StreamingPlaybackService.getInstance() ?: return false
+        val state = svc.playbackState.value
+        return state is PlaybackState.Playing || state is PlaybackState.Buffering
     }
 
     fun initialize() {
@@ -374,12 +383,14 @@ class EpgFileManager private constructor(private val context: Context) {
         }
 
         val startTime = System.currentTimeMillis()
+        val fixedDevice = isFixedDevice()
+        val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
         try {
             val db = EpgIndexDatabase.getInstance(context)
             val sourceDao = db.epgSourceDao()
             val indexer = EpgIndexer.getInstance(context)
 
-            val maxDownloadConcurrency = if (isFixedDevice()) 2 else 3
+            val maxDownloadConcurrency = if (fixedDevice) 2 else 3
             val downloadSemaphore = Semaphore(maxDownloadConcurrency)
             val maxIngestionConcurrency = 2
             val completedStats = CopyOnWriteArrayList<SourceStats>()
@@ -391,6 +402,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val sourceStartTimeMap = ConcurrentHashMap<Long, Long>()
 
             indexer.setIndexing()
+            indexer.beginBulkIngestion()
 
             _state.value = MultiSourceState.Processing(
                 completedCount = 0,
@@ -413,7 +425,9 @@ class EpgFileManager private constructor(private val context: Context) {
                             updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
 
                             val stats = ingestDownloadedSource(
-                                downloaded, sourceDao, indexer, activeProgress
+                                downloaded, sourceDao, indexer, activeProgress,
+                                batchSize = batchSize,
+                                isPlaybackActive = ::isPlaybackActive
                             ) {
                                 updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                             }
@@ -481,6 +495,9 @@ class EpgFileManager private constructor(private val context: Context) {
             val totalProgrammes = allStats.sumOf { it.programmesIngested }
             val totalBytes = allStats.sumOf { it.downloadBytes }
 
+            // Restore triggers + synchronous before the FTS rebuild
+            indexer.endBulkIngestion()
+
             // Only rebuild FTS + vacuum if at least one source ingested data
             val anyIngested = allStats.any { it.error == null && (it.channelsIngested > 0 || it.programmesIngested > 0) }
             if (anyIngested) {
@@ -501,6 +518,7 @@ class EpgFileManager private constructor(private val context: Context) {
             )
         } catch (e: Exception) {
             Log.e(TAG, "processAllSources failed: ${e.message}", e)
+            EpgIndexer.getInstance(context).endBulkIngestion()
             _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
         }
     }
@@ -525,6 +543,7 @@ class EpgFileManager private constructor(private val context: Context) {
 
     private suspend fun processSingleSourceInternal(sourceId: Long) {
         val startTime = System.currentTimeMillis()
+        val batchSize = if (isFixedDevice()) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
         try {
             val db = EpgIndexDatabase.getInstance(context)
             val sourceDao = db.epgSourceDao()
@@ -536,6 +555,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val label = source.label.ifBlank { extractLabel(source.url) }
 
             indexer.setIndexing()
+            indexer.beginBulkIngestion()
             val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
             _state.value = MultiSourceState.Processing(
                 completedCount = 0,
@@ -580,11 +600,18 @@ class EpgFileManager private constructor(private val context: Context) {
                 )
                 updateSingleProgress()
 
-                ingestDownloadedSource(downloaded, sourceDao, indexer, activeProgress) { updateSingleProgress() }
+                ingestDownloadedSource(
+                    downloaded, sourceDao, indexer, activeProgress,
+                    batchSize = batchSize,
+                    isPlaybackActive = ::isPlaybackActive
+                ) { updateSingleProgress() }
             } else {
                 // Download failed — error already logged
                 SourceStats(source.id, label, error = "Download failed")
             }
+
+            // Restore triggers + synchronous before the FTS rebuild
+            indexer.endBulkIngestion()
 
             // Only rebuild FTS if source actually ingested data
             if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
@@ -605,6 +632,7 @@ class EpgFileManager private constructor(private val context: Context) {
             )
         } catch (e: Exception) {
             Log.e(TAG, "processSingleSource failed: ${e.message}", e)
+            EpgIndexer.getInstance(context).endBulkIngestion()
             _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
         }
     }
@@ -784,6 +812,8 @@ class EpgFileManager private constructor(private val context: Context) {
         sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
         indexer: EpgIndexer,
         activeProgress: ConcurrentHashMap<Long, ActiveSourceProgress>,
+        batchSize: Int = EpgIndexer.BATCH_SIZE_MOBILE,
+        isPlaybackActive: () -> Boolean = { false },
         onProgressUpdate: () -> Unit
     ): SourceStats {
         val source = downloaded.source
@@ -800,7 +830,9 @@ class EpgFileManager private constructor(private val context: Context) {
                 indexer.ingestFromStream(
                     it,
                     sourceId = source.id,
-                    timezoneOverrideHours = source.timezoneOffsetHours
+                    timezoneOverrideHours = source.timezoneOffsetHours,
+                    batchSize = batchSize,
+                    isPlaybackActive = isPlaybackActive
                 ) { channels, programmes ->
                     val pct = if (fileSize > 0) ((countingStream.bytesRead * 100) / fileSize).toInt().coerceIn(0, 100) else -1
                     activeProgress[source.id] = ActiveSourceProgress(

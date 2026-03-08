@@ -33,8 +33,28 @@ class EpgIndexer private constructor(private val context: Context) {
 
     companion object {
         private const val TAG = "EpgIndexer"
-        private const val BATCH_SIZE = 500
+        const val BATCH_SIZE_MOBILE = 500
+        const val BATCH_SIZE_TV = 2000
+        private const val BATCH_SIZE = BATCH_SIZE_MOBILE
         private const val STREAM_BUFFER_SIZE = 65536
+
+        // Room-generated FTS content-sync trigger names for epg_programme_fts.
+        // These are created in onCreate and kept alive in the SQLite file.
+        // We drop them before bulk ingestion and recreate afterwards so that
+        // per-row FTS maintenance is skipped entirely; a single rebuild() at
+        // the end of the session is cheaper than millions of incremental updates.
+        private val FTS_TRIGGER_NAMES = listOf(
+            "room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE",
+            "room_fts_content_sync_epg_programme_fts_BEFORE_DELETE",
+            "room_fts_content_sync_epg_programme_fts_AFTER_UPDATE",
+            "room_fts_content_sync_epg_programme_fts_AFTER_INSERT"
+        )
+        private val FTS_TRIGGER_DDL = listOf(
+            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE` BEFORE UPDATE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `docid`=OLD.`rowid`; END",
+            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `docid`=OLD.`rowid`; END",
+            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END",
+            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END"
+        )
 
         @Volatile
         private var instance: EpgIndexer? = null
@@ -110,6 +130,8 @@ class EpgIndexer private constructor(private val context: Context) {
         inputStream: InputStream,
         sourceId: Long = 0,
         timezoneOverrideHours: Int = 0,
+        batchSize: Int = BATCH_SIZE,
+        isPlaybackActive: () -> Boolean = { false },
         onProgress: ((channels: Int, programmes: Int) -> Unit)? = null
     ): IngestionStats = withContext(Dispatchers.IO) {
         Log.d(TAG, "Ingesting from stream (sourceId=$sourceId, tz=$timezoneOverrideHours)")
@@ -142,15 +164,15 @@ class EpgIndexer private constructor(private val context: Context) {
                                 channelBatch.add(it)
                                 channelCount++
 
-                                if (channelBatch.size >= BATCH_SIZE) {
+                                if (channelBatch.size >= batchSize) {
                                     writeMutex.withLock {
                                         db.withTransaction {
                                             dao.insertChannelsIgnore(channelBatch)
                                         }
                                     }
                                     channelBatch.clear()
-                                    // Yield CPU briefly to other tasks (like video playback)
-                                    delay(5)
+                                    // Yield CPU briefly only when video is actively decoding
+                                    if (isPlaybackActive()) delay(5)
                                 }
                             }
                         }
@@ -171,7 +193,7 @@ class EpgIndexer private constructor(private val context: Context) {
                                 programmeCount++
                                 itemsSinceLastProgressUpdate++
 
-                                if (programmeBatch.size >= BATCH_SIZE) {
+                                if (programmeBatch.size >= batchSize) {
                                     writeMutex.withLock {
                                         db.withTransaction {
                                             dao.insertProgrammes(programmeBatch)
@@ -185,8 +207,10 @@ class EpgIndexer private constructor(private val context: Context) {
                                         itemsSinceLastProgressUpdate = 0
                                     }
 
-                                    // Yield CPU more aggressively to other tasks (like video decoding)
-                                    delay(100)
+                                    // Only yield when video is actively playing; skip the sleep entirely
+                                    // when the Shield is idle to avoid the multi-hour ingestion caused
+                                    // by accumulated 100ms sleeps across millions of programme rows.
+                                    if (isPlaybackActive()) delay(100)
                                 }
                             }
                         }
@@ -392,6 +416,52 @@ class EpgIndexer private constructor(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
             _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild failed")
+        }
+    }
+
+    /**
+     * Prepare the database for a bulk ingestion session:
+     *  - Drop Room's per-row FTS sync triggers so that millions of inserts don't
+     *    each update the FTS shadow table. A single rebuild() at the end is far
+     *    cheaper than incremental maintenance.
+     *  - Set synchronous=OFF to skip WAL fsync overhead during ingestion.
+     *    Safe because EPG data is re-downloadable on crash.
+     *
+     * Always call endBulkIngestion() in a finally block to restore state.
+     */
+    suspend fun beginBulkIngestion() = withContext(Dispatchers.IO) {
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            db.openHelper.writableDatabase.apply {
+                FTS_TRIGGER_NAMES.forEach { name ->
+                    execSQL("DROP TRIGGER IF EXISTS `$name`")
+                }
+                execSQL("PRAGMA synchronous = OFF")
+            }
+            Log.d(TAG, "Bulk ingestion mode: FTS triggers disabled, synchronous=OFF")
+        } catch (e: Exception) {
+            Log.w(TAG, "beginBulkIngestion setup failed (non-fatal): ${e.message}", e)
+        }
+    }
+
+    /**
+     * Restore the database after a bulk ingestion session:
+     *  - Recreate the Room FTS sync triggers that were dropped in beginBulkIngestion().
+     *  - Restore synchronous=NORMAL.
+     *
+     * Call this before rebuildFtsAndUpdateState() so the triggers are in place
+     * for all incremental updates after the session completes.
+     */
+    suspend fun endBulkIngestion() = withContext(Dispatchers.IO) {
+        try {
+            val db = EpgIndexDatabase.getInstance(context)
+            db.openHelper.writableDatabase.apply {
+                execSQL("PRAGMA synchronous = NORMAL")
+                FTS_TRIGGER_DDL.forEach { ddl -> execSQL(ddl) }
+            }
+            Log.d(TAG, "Bulk ingestion mode: FTS triggers restored, synchronous=NORMAL")
+        } catch (e: Exception) {
+            Log.w(TAG, "endBulkIngestion teardown failed (non-fatal): ${e.message}", e)
         }
     }
 
