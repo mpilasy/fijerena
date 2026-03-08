@@ -20,7 +20,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
         EpgIndexMetadata::class,
         EpgSourceEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class EpgIndexDatabase : RoomDatabase() {
@@ -48,6 +48,14 @@ abstract class EpgIndexDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE epg_source ADD COLUMN last_download_duration_ms INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
         @Volatile
         private var INSTANCE: EpgIndexDatabase? = null
 
@@ -64,7 +72,7 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                 DB_NAME
             )
                 .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_7_8, MIGRATION_8_9)
+                .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(object : RoomDatabase.Callback() {
                     @OptIn(DelicateCoroutinesApi::class)

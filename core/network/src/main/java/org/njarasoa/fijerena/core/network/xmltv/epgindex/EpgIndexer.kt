@@ -366,7 +366,7 @@ class EpgIndexer private constructor(private val context: Context) {
                     programmes = totalProgrammes,
                     downloadBytes = 0,
                     ingestMethod = "XTREAM_API",
-                    durationMs = System.currentTimeMillis() - ingestStartMs
+                    ingestionDurationMs = System.currentTimeMillis() - ingestStartMs
                 )
             }
 
@@ -494,7 +494,8 @@ class EpgIndexer private constructor(private val context: Context) {
                             lastProgrammes = 0,
                             lastDownloadBytes = 0,
                             lastError = null,
-                            lastIngestionDurationMs = 0
+                            lastIngestionDurationMs = 0,
+                            lastDownloadDurationMs = 0
                         )
                     )
                 }
