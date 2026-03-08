@@ -153,47 +153,12 @@ fun MobileEpgManagementScreen(
                             Text("Cancel", style = MaterialTheme.typography.labelSmall, color = CinemaError)
                         }
                     }
-                    // Per-source active progress
-                    procState.activeProgress.forEach { progress ->
-                        val progressText = buildString {
-                            append(progress.label)
-                            append(": ")
-                            append(progress.phase)
-                            if (progress.progressPercent in 0..100) {
-                                append(" ${progress.progressPercent}%")
-                            }
-                            if (progress.phase == "Downloading" || progress.phase == "Awaiting Ingestion") {
-                                append(" (${formatBytes(progress.downloadedBytes)}")
-                                if (progress.downloadTotalBytes > 0) {
-                                    append("/${formatBytes(progress.downloadTotalBytes)}")
-                                }
-                                append(")")
-                            } else if (progress.programmes > 0) {
-                                append(" (${formatCount(progress.channels)}ch, ${formatCount(progress.programmes)}prg)")
-                            }
-                        }
-                        Text(
-                            text = progressText,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                     if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
                         Text(
                             text = "Total: ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                    if (viewModel.isDevMode && procState.completedSourceStats.isNotEmpty()) {
-                        procState.completedSourceStats.forEach { stat ->
-                            Text(
-                                text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
-                                    (stat.error?.let { " [$it]" } ?: ""),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (stat.error != null) CinemaError else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
                 if (procState is EpgFileManager.MultiSourceState.Completed) {
@@ -210,14 +175,6 @@ fun MobileEpgManagementScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        procState.sourceStats.forEach { stat ->
-                            Text(
-                                text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
-                                    (stat.error?.let { " [$it]" } ?: ""),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (stat.error != null) CinemaError else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
                 if (procState is EpgFileManager.MultiSourceState.Error) {
@@ -303,6 +260,64 @@ fun MobileEpgManagementScreen(
                                     maxLines = 1
                                 )
                             }
+
+                            // In-progress or completed stats from current processing
+                            val procState = processingState
+                            if (procState is EpgFileManager.MultiSourceState.Processing) {
+                                val progress = procState.activeProgress[source.id]
+                                val completedStat = procState.completedSourceStats[source.id]
+
+                                if (progress != null) {
+                                    val progressText = buildString {
+                                        append(progress.phase)
+                                        if (progress.progressPercent in 0..100) {
+                                            append(" ${progress.progressPercent}%")
+                                        }
+                                        if (progress.phase == "Downloading") {
+                                            append(" (${formatBytes(progress.downloadedBytes)}")
+                                            if (progress.downloadTotalBytes > 0) {
+                                                append("/${formatBytes(progress.downloadTotalBytes)}")
+                                            }
+                                            append(")")
+                                        } else if (progress.phase == "Awaiting Ingestion") {
+                                            append(" (${formatBytes(progress.downloadedBytes)})")
+                                        } else if (progress.programmes > 0) {
+                                            append(" (${formatCount(progress.channels)}ch, ${formatCount(progress.programmes)}prg)")
+                                        }
+                                    }
+                                    Text(
+                                        text = progressText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else if (completedStat != null) {
+                                    val statText = buildString {
+                                        append("Completed")
+                                        append(" (${formatBytes(completedStat.downloadBytes)}, ${formatCount(completedStat.channelsIngested)}ch, ${formatCount(completedStat.programmesIngested)}prg)")
+                                        if (completedStat.error != null) append(" [${completedStat.error}]")
+                                    }
+                                    Text(
+                                        text = statText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (completedStat.error != null) CinemaError else MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            } else if (procState is EpgFileManager.MultiSourceState.Completed) {
+                                val stat = procState.sourceStats[source.id]
+                                if (stat != null) {
+                                    val statText = buildString {
+                                        append("Finished")
+                                        append(" (${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg)")
+                                        if (stat.error != null) append(" [${stat.error}]")
+                                    }
+                                    Text(
+                                        text = statText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (stat.error != null) CinemaError else MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
                             if (viewModel.isDevMode && source.lastIngestedAtMs > 0) {
                                 val sizeStr = if (source.ingestMethod != "STREAMED") {
                                     ", ${formatBytes(source.lastDownloadBytes)}"
