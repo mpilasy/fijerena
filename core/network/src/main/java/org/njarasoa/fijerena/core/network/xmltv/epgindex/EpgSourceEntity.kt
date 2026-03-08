@@ -38,5 +38,8 @@ data class EpgSourceEntity(
     val lastDownloadBytes: Long = 0,
 
     @ColumnInfo(name = "ingest_method", defaultValue = "DOWNLOADED")
-    val ingestMethod: String = "DOWNLOADED"  // "STREAMED" or "DOWNLOADED"
+    val ingestMethod: String = "DOWNLOADED",  // "STREAMED" or "DOWNLOADED"
+
+    @ColumnInfo(name = "last_ingestion_duration_ms", defaultValue = "0")
+    val lastIngestionDurationMs: Long = 0
 )

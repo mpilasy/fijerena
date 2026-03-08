@@ -821,6 +821,7 @@ class EpgFileManager private constructor(private val context: Context) {
         val isGzip = source.url.endsWith(".gz", ignoreCase = true)
 
         try {
+            val ingestStartMs = System.currentTimeMillis()
             val fileSize = downloaded.tmpFile.length()
             val countingStream = CountingInputStream(downloaded.tmpFile.inputStream())
             val bufferedStream = BufferedInputStream(countingStream, STREAM_BUFFER_SIZE)
@@ -855,7 +856,8 @@ class EpgFileManager private constructor(private val context: Context) {
                 channels = ingestionStats.channelsIngested,
                 programmes = ingestionStats.programmesIngested,
                 downloadBytes = downloaded.downloadedBytes,
-                ingestMethod = "DOWNLOADED"
+                ingestMethod = "DOWNLOADED",
+                durationMs = System.currentTimeMillis() - ingestStartMs
             )
             Log.d(TAG, "Ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
 

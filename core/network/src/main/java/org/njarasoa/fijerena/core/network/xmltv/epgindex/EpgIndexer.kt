@@ -272,6 +272,7 @@ class EpgIndexer private constructor(private val context: Context) {
         if (epgByStreamId.isEmpty()) return@withContext
 
         Log.d(TAG, "Ingesting Xtream EPG: ${epgByStreamId.size} streams for provider $providerId")
+        val ingestStartMs = System.currentTimeMillis()
 
         try {
             val db = EpgIndexDatabase.getInstance(context)
@@ -364,7 +365,8 @@ class EpgIndexer private constructor(private val context: Context) {
                     channels = channelEntities.size,
                     programmes = totalProgrammes,
                     downloadBytes = 0,
-                    ingestMethod = "XTREAM_API"
+                    ingestMethod = "XTREAM_API",
+                    durationMs = System.currentTimeMillis() - ingestStartMs
                 )
             }
 
@@ -491,7 +493,8 @@ class EpgIndexer private constructor(private val context: Context) {
                             lastChannels = 0,
                             lastProgrammes = 0,
                             lastDownloadBytes = 0,
-                            lastError = null
+                            lastError = null,
+                            lastIngestionDurationMs = 0
                         )
                     )
                 }

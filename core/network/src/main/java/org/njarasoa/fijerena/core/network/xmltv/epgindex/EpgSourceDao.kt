@@ -37,8 +37,8 @@ interface EpgSourceDao {
     @Query("DELETE FROM epg_source")
     suspend fun deleteAllSources()
 
-    @Query("UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_channels = :channels, last_programmes = :programmes, last_download_bytes = :downloadBytes, ingest_method = :ingestMethod WHERE id = :id")
-    suspend fun markIngested(id: Long, timestamp: Long, channels: Int, programmes: Int, downloadBytes: Long, ingestMethod: String = "DOWNLOADED")
+    @Query("UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_channels = :channels, last_programmes = :programmes, last_download_bytes = :downloadBytes, ingest_method = :ingestMethod, last_ingestion_duration_ms = :durationMs WHERE id = :id")
+    suspend fun markIngested(id: Long, timestamp: Long, channels: Int, programmes: Int, downloadBytes: Long, ingestMethod: String = "DOWNLOADED", durationMs: Long = 0)
 
     @Query("UPDATE epg_source SET last_error = :error WHERE id = :id")
     suspend fun markError(id: Long, error: String)
@@ -52,6 +52,6 @@ interface EpgSourceDao {
     @Query("SELECT COUNT(*) FROM epg_source")
     suspend fun getSourceCount(): Int
 
-    @Query("UPDATE epg_source SET last_ingested_at_ms = 0, last_channels = 0, last_programmes = 0, last_download_bytes = 0, last_error = NULL")
+    @Query("UPDATE epg_source SET last_ingested_at_ms = 0, last_channels = 0, last_programmes = 0, last_download_bytes = 0, last_error = NULL, last_ingestion_duration_ms = 0")
     suspend fun resetAllIngestionState()
 }

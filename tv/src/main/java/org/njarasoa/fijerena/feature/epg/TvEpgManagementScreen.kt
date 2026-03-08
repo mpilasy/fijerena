@@ -320,6 +320,9 @@ fun TvEpgManagementScreen(
                                     if (source.lastIngestedAtMs > 0) {
                                         append(" | Last: ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}")
                                     }
+                                    if (source.lastIngestionDurationMs > 0) {
+                                        append(" | ${NumberUtils.formatDuration(source.lastIngestionDurationMs)}")
+                                    }
                                     if (!source.enabled) append(" | DISABLED")
                                 }
                                 Text(

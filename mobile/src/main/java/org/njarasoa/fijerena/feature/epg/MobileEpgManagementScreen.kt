@@ -254,6 +254,7 @@ fun MobileEpgManagementScreen(
                             Text(
                                 text = "TZ: $tzLabel" +
                                     (if (source.lastIngestedAtMs > 0) " | ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}" else "") +
+                                    (if (source.lastIngestionDurationMs > 0) " | ${NumberUtils.formatDuration(source.lastIngestionDurationMs)}" else "") +
                                     (if (!source.enabled) " | DISABLED" else ""),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
