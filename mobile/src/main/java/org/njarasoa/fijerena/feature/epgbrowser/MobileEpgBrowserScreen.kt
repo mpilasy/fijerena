@@ -57,6 +57,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Close
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
@@ -85,14 +87,22 @@ fun MobileEpgBrowserScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
+    val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(searchMode) {
+        searchQuery = ""
+    }
+
     val keyboardController = LocalSoftwareKeyboardController.current
     val isDevMode = viewModel.isDevMode
     val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
     val epgDbStats = when (val idx = indexState) {
-        is EpgIndexState.Indexed -> "${idx.programmeCount} progs, ${idx.channelCount} channels"
+        is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
         else -> null
     }
+
+    var matchedOnly by remember { mutableStateOf(true) }
 
     // Shared time tick to keep "On Air" status fresh
     var nowEpoch by remember { mutableStateOf(System.currentTimeMillis() / 1000L) }
@@ -106,7 +116,22 @@ fun MobileEpgBrowserScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("EPG Browser") },
+                title = {
+                    Column {
+                        Text(
+                            if (activeProviderName != null) "EPG Browser — $activeProviderName"
+                            else "EPG Browser",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        if (isDevMode && epgDbStats != null) {
+                            Text(
+                                text = "EPG Index: $epgDbStats",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -120,56 +145,83 @@ fun MobileEpgBrowserScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Search mode radio buttons
+            // Filters row: Radio buttons + Matched only checkbox
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Spacing.md, vertical = CinemaSpacing.xs),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = Spacing.md, vertical = 0.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                EpgBrowserViewModel.SearchMode.entries.forEach { mode ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clickable { viewModel.setSearchMode(mode) }
-                            .padding(end = Spacing.md)
-                    ) {
-                        RadioButton(
-                            selected = searchMode == mode,
-                            onClick = { viewModel.setSearchMode(mode) }
-                        )
-                        Text(
-                            text = when (mode) {
-                                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Programme"
-                                EpgBrowserViewModel.SearchMode.CHANNEL -> "What's on"
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(start = CinemaSpacing.xxs)
-                        )
+                // Radio buttons
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    EpgBrowserViewModel.SearchMode.entries.forEach { mode ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable { viewModel.setSearchMode(mode) }
+                                .padding(end = Spacing.sm)
+                        ) {
+                            RadioButton(
+                                selected = searchMode == mode,
+                                onClick = { viewModel.setSearchMode(mode) },
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Text(
+                                text = when (mode) {
+                                    EpgBrowserViewModel.SearchMode.PROGRAMME -> "Prog."
+                                    EpgBrowserViewModel.SearchMode.CHANNEL -> "Chan."
+                                },
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
                     }
+                }
+
+                // Matched only checkbox
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { matchedOnly = !matchedOnly }
+                ) {
+                    Checkbox(
+                        checked = matchedOnly,
+                        onCheckedChange = { matchedOnly = it },
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Text(
+                        text = "Matched",
+                        style = MaterialTheme.typography.labelMedium
+                    )
                 }
             }
 
             // Search bar
             val placeholderText = when (searchMode) {
-                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles..."
-                EpgBrowserViewModel.SearchMode.CHANNEL -> "Search channel names..."
+                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search titles..."
+                EpgBrowserViewModel.SearchMode.CHANNEL -> "Search channels..."
             }
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(Spacing.md),
+                    .padding(horizontal = Spacing.md, vertical = CinemaSpacing.xs),
                 placeholder = { Text(placeholderText) },
                 leadingIcon = {
-                    IconButton(onClick = {
-                        if (searchQuery.isNotBlank()) {
-                            viewModel.performSearch(searchQuery)
-                            keyboardController?.hide()
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { 
+                            searchQuery = "" 
+                            viewModel.performSearch("") // Or clear results
+                        }) {
+                            Icon(Icons.Default.Close, "Clear", modifier = Modifier.size(20.dp))
                         }
-                    }) {
-                        Icon(Icons.Default.Search, "Search")
                     }
                 },
                 singleLine = true,
@@ -181,18 +233,9 @@ fun MobileEpgBrowserScreen(
                             keyboardController?.hide()
                         }
                     }
-                )
+                ),
+                shape = RoundedCornerShape(CinemaCornerRadius.medium)
             )
-
-            // Dev mode: show EPG DB stats
-            if (isDevMode && epgDbStats != null) {
-                Text(
-                    text = "EPG: $epgDbStats",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = Spacing.md)
-                )
-            }
 
             // Indexing progress banner
             val currentIndexState = indexState
@@ -201,7 +244,7 @@ fun MobileEpgBrowserScreen(
                 Column(
                     modifier = Modifier.padding(
                         horizontal = Spacing.md,
-                        vertical = CinemaSpacing.xs
+                        vertical = CinemaSpacing.xxs
                     )
                 ) {
                     Row(
@@ -209,13 +252,13 @@ fun MobileEpgBrowserScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Building search index...",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = "Indexing...",
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "${idx.progressPercent}% (${formatCount(idx.programmesIndexed)} programmes)",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = "${idx.progressPercent}% (${formatCount(idx.programmesIndexed)})",
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -223,7 +266,8 @@ fun MobileEpgBrowserScreen(
                         progress = { idx.progressPercent / 100f },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = CinemaSpacing.xxs)
+                            .height(2.dp)
+                            .padding(top = 2.dp)
                     )
                 }
             }
@@ -236,8 +280,8 @@ fun MobileEpgBrowserScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         val hintText = when (searchMode) {
-                            EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles in your local EPG data"
-                            EpgBrowserViewModel.SearchMode.CHANNEL -> "Search by channel name to see what's on in the next 6 hours"
+                            EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles"
+                            EpgBrowserViewModel.SearchMode.CHANNEL -> "Search by channel name"
                         }
                         Text(
                             text = hintText,
@@ -283,6 +327,8 @@ fun MobileEpgBrowserScreen(
                         isDevMode = isDevMode,
                         sourceLabels = sourceLabels,
                         searchMode = searchMode,
+                        matchedOnly = matchedOnly,
+                        onMatchedOnlyChange = { matchedOnly = it },
                         onNavigateToPlayer = onNavigateToPlayer
                     )
                 }
@@ -311,12 +357,12 @@ private fun MobileResultsContent(
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
     searchMode: EpgBrowserViewModel.SearchMode = EpgBrowserViewModel.SearchMode.PROGRAMME,
+    matchedOnly: Boolean = true,
+    onMatchedOnlyChange: (Boolean) -> Unit = {},
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
-    var hideUnmatched by remember { mutableStateOf(false) }
-
     // Filter date groups when hiding unmatched channels
-    val displayDateGroups = if (hideUnmatched && searchMode == EpgBrowserViewModel.SearchMode.PROGRAMME) {
+    val displayDateGroups = if (matchedOnly) {
         results.dateGroups.mapNotNull { group ->
             val filteredPrograms = group.programs.mapNotNull { program ->
                 val matchedAirings = program.airings.filter { it.matchedStream != null }
@@ -341,29 +387,9 @@ private fun MobileResultsContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(
                 horizontal = Spacing.md,
-                vertical = Spacing.xs
+                vertical = CinemaSpacing.xxs
             )
         )
-
-        // Hide unmatched channels checkbox (only for programme search)
-        if (searchMode == EpgBrowserViewModel.SearchMode.PROGRAMME) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clickable { hideUnmatched = !hideUnmatched }
-                    .padding(horizontal = Spacing.md)
-            ) {
-                Checkbox(
-                    checked = hideUnmatched,
-                    onCheckedChange = { hideUnmatched = it }
-                )
-                Text(
-                    text = "Hide unmatched channels",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(start = CinemaSpacing.xxs)
-                )
-            }
-        }
 
         if (displayDateGroups.isEmpty()) {
             Box(
@@ -371,7 +397,7 @@ private fun MobileResultsContent(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (hideUnmatched) "No matched results for '${results.query}'"
+                    text = if (matchedOnly) "No matched results for '${results.query}'"
                            else "No results found for '${results.query}'",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -385,12 +411,12 @@ private fun MobileResultsContent(
                     .padding(horizontal = Spacing.md)
             ) {
                 displayDateGroups.forEach { dateGroup ->
-                    stickyHeader(key = "date::${dateGroup.dayStartEpoch}::$hideUnmatched", contentType = "header") {
+                    stickyHeader(key = "date::${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::$matchedOnly", contentType = "header") {
                         MobileDateHeader(dateLabel = dateGroup.dateLabel)
                     }
                     items(
                         dateGroup.programs,
-                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}::$hideUnmatched" },
+                        key = { "${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::${it.title}::${it.description}::${it.airings.first().startEpoch}::$matchedOnly" },
                         contentType = { "program" }
                     ) { program ->
                         MobileProgramCard(

@@ -95,10 +95,11 @@ fun EpgBrowserScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
+    val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
     val isDevMode = viewModel.isDevMode
     val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
     val epgDbStats = when (val idx = indexState) {
-        is EpgIndexState.Indexed -> "${idx.programmeCount} progs, ${idx.channelCount} channels"
+        is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
         else -> null
     }
 
@@ -127,15 +128,27 @@ fun EpgBrowserScreen(
                 )
         ) {
             // Header
-            Text(
-                text = "EPG Browser",
-                style = MaterialTheme.typography.displaySmall.copy(
-                    fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "EPG Browser",
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (activeProviderName != null) {
+                    Text(
+                        text = " — $activeProviderName",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
+                        ),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale), start = Spacing.xs.scaled(scale))
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
             when (val state = uiState) {
                 is EpgBrowserViewModel.UiState.NoEpgFile -> {
@@ -201,12 +214,17 @@ private fun EpgBrowserContent(
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     var localQuery by remember { mutableStateOf("") }
+    var matchedOnly by remember { mutableStateOf(true) }
     val scale = LocalUiScale.current
+
+    LaunchedEffect(searchMode) {
+        localQuery = ""
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Search field
         GlassPanel {
-            Column {
+            Column(modifier = Modifier.padding(Spacing.sm.scaled(scale))) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
@@ -230,66 +248,91 @@ private fun EpgBrowserContent(
                                     EpgBrowserViewModel.SearchMode.PROGRAMME -> "Programme"
                                     EpgBrowserViewModel.SearchMode.CHANNEL -> "What's on"
                                 },
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = MaterialTheme.typography.labelMedium.fontSize.scaled(scale)
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontSize = MaterialTheme.typography.labelLarge.fontSize.scaled(scale)
                                 ),
                                 color = if (searchMode == mode) CinemaTextPrimary else CinemaTextSecondary
                             )
                         }
                     }
-                }
-                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
-            ) {
-                val labelText = when (searchMode) {
-                    EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programmes"
-                    EpgBrowserViewModel.SearchMode.CHANNEL -> "Search channels"
-                }
-                val placeholderText = when (searchMode) {
-                    EpgBrowserViewModel.SearchMode.PROGRAMME -> "Enter programme title..."
-                    EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
-                }
-                OutlinedTextField(
-                    value = localQuery,
-                    onValueChange = { localQuery = it },
-                    label = { Text(labelText) },
-                    placeholder = { Text(placeholderText) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .width(TvDimensions.formFieldWidth.scaled(scale))
-                        .focusRequester(searchFocusRequester),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextSecondary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        focusedPlaceholderColor = CinemaTextSecondary,
-                        unfocusedPlaceholderColor = CinemaTextSecondary
-                    ),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Search
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onSearch = { onSearch(localQuery) }
-                    )
-                )
-                CinemaIconButton(
-                    onClick = { onSearch(localQuery) },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale))
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Matched only checkbox
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.Checkbox(
+                            checked = matchedOnly,
+                            onCheckedChange = { matchedOnly = it },
+                            colors = androidx.compose.material3.CheckboxDefaults.colors(
+                                checkedColor = CinemaAccent,
+                                uncheckedColor = CinemaTextSecondary
+                            )
+                        )
+                        Text(
+                            text = "Matched only",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontSize = MaterialTheme.typography.labelLarge.fontSize.scaled(scale)
+                            ),
+                            color = CinemaTextPrimary
                         )
                     }
-                )
-            }
+                }
+
+                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
+                ) {
+                    val labelText = when (searchMode) {
+                        EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programmes"
+                        EpgBrowserViewModel.SearchMode.CHANNEL -> "Search channels"
+                    }
+                    val placeholderText = when (searchMode) {
+                        EpgBrowserViewModel.SearchMode.PROGRAMME -> "Enter programme title..."
+                        EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
+                    }
+                    OutlinedTextField(
+                        value = localQuery,
+                        onValueChange = { localQuery = it },
+                        label = { Text(labelText) },
+                        placeholder = { Text(placeholderText) },
+                        singleLine = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(searchFocusRequester),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            cursorColor = CinemaAccent,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaTextSecondary,
+                            focusedLabelColor = CinemaAccent,
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            focusedPlaceholderColor = CinemaTextSecondary,
+                            unfocusedPlaceholderColor = CinemaTextSecondary
+                        ),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Search
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onSearch = { onSearch(localQuery) }
+                        )
+                    )
+                    CinemaIconButton(
+                        onClick = { onSearch(localQuery) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale))
+                            )
+                        }
+                    )
+                }
             }
         }
 
@@ -396,6 +439,7 @@ private fun EpgBrowserContent(
                     isDevMode = isDevMode,
                     sourceLabels = sourceLabels,
                     searchMode = searchMode,
+                    matchedOnly = matchedOnly,
                     onNavigateToPlayer = onNavigateToPlayer
                 )
             }
@@ -411,13 +455,13 @@ private fun ResultsContent(
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
     searchMode: EpgBrowserViewModel.SearchMode = EpgBrowserViewModel.SearchMode.PROGRAMME,
+    matchedOnly: Boolean = true,
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
     val scale = LocalUiScale.current
-    var hideUnmatched by remember { mutableStateOf(false) }
 
     // Filter date groups when hiding unmatched channels
-    val displayDateGroups = if (hideUnmatched && searchMode == EpgBrowserViewModel.SearchMode.PROGRAMME) {
+    val displayDateGroups = if (matchedOnly) {
         results.dateGroups.mapNotNull { group ->
             val filteredPrograms = group.programs.mapNotNull { program ->
                 val matchedAirings = program.airings.filter { it.matchedStream != null }
@@ -445,37 +489,13 @@ private fun ResultsContent(
             modifier = Modifier.padding(bottom = Spacing.sm.scaled(scale))
         )
 
-        // Hide unmatched channels checkbox (only for programme search)
-        if (searchMode == EpgBrowserViewModel.SearchMode.PROGRAMME) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = Spacing.sm.scaled(scale))
-            ) {
-                androidx.compose.material3.Checkbox(
-                    checked = hideUnmatched,
-                    onCheckedChange = { hideUnmatched = it },
-                    colors = androidx.compose.material3.CheckboxDefaults.colors(
-                        checkedColor = CinemaAccent,
-                        uncheckedColor = CinemaTextSecondary
-                    )
-                )
-                Text(
-                    text = "Hide unmatched channels",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = MaterialTheme.typography.labelMedium.fontSize.scaled(scale)
-                    ),
-                    color = CinemaTextPrimary
-                )
-            }
-        }
-
         if (displayDateGroups.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (hideUnmatched) "No matched results for '${results.query}'"
+                    text = if (matchedOnly) "No matched results for '${results.query}'"
                            else "No results found for '${results.query}'",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
@@ -489,12 +509,12 @@ private fun ResultsContent(
                 modifier = Modifier.fillMaxSize()
             ) {
                 displayDateGroups.forEach { dateGroup ->
-                    item(key = "date::${dateGroup.dayStartEpoch}::$hideUnmatched", contentType = "header") {
+                    item(key = "date::${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::$matchedOnly", contentType = "header") {
                         DateHeader(dateLabel = dateGroup.dateLabel)
                     }
                     items(
                         dateGroup.programs,
-                        key = { "${dateGroup.dayStartEpoch}::${it.title}::${it.description}::$hideUnmatched" },
+                        key = { "${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::${it.title}::${it.description}::${it.airings.first().startEpoch}::$matchedOnly" },
                         contentType = { "program" }
                     ) { program ->
                         ProgramCard(
