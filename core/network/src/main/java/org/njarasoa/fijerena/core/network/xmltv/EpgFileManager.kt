@@ -373,7 +373,8 @@ class EpgFileManager private constructor(private val context: Context) {
         val source: EpgSourceEntity,
         val label: String,
         val tmpFile: File,
-        val downloadedBytes: Long
+        val downloadedBytes: Long,
+        val downloadDurationMs: Long
     )
 
     private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) {
@@ -427,7 +428,8 @@ class EpgFileManager private constructor(private val context: Context) {
                             val stats = ingestDownloadedSource(
                                 downloaded, sourceDao, indexer, activeProgress,
                                 batchSize = batchSize,
-                                isPlaybackActive = ::isPlaybackActive
+                                isPlaybackActive = ::isPlaybackActive,
+                                downloadDurationMs = downloaded.downloadDurationMs
                             ) {
                                 updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                             }
@@ -579,6 +581,7 @@ class EpgFileManager private constructor(private val context: Context) {
             activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
             updateSingleProgress()
 
+            val downloadStartTime = System.currentTimeMillis()
             val downloaded = downloadSource(source, label, sourceDao, activeProgress) { updateSingleProgress() }
 
             val stats = if (downloaded != null) {
@@ -603,7 +606,8 @@ class EpgFileManager private constructor(private val context: Context) {
                 ingestDownloadedSource(
                     downloaded, sourceDao, indexer, activeProgress,
                     batchSize = batchSize,
-                    isPlaybackActive = ::isPlaybackActive
+                    isPlaybackActive = ::isPlaybackActive,
+                    downloadDurationMs = downloaded.downloadDurationMs
                 ) { updateSingleProgress() }
             } else {
                 // Download failed — error already logged
@@ -686,6 +690,7 @@ class EpgFileManager private constructor(private val context: Context) {
         activeProgress: ConcurrentHashMap<Long, ActiveSourceProgress>,
         onProgressUpdate: () -> Unit
     ): DownloadedSource? {
+        val downloadStart = System.currentTimeMillis()
         val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
         var downloadedBytes = 0L
         var lastError: String? = null
@@ -793,7 +798,8 @@ class EpgFileManager private constructor(private val context: Context) {
             }
 
             Log.d(TAG, "Downloaded: $label (${downloadedBytes / 1024}KB)")
-            return DownloadedSource(source, label, tmpFile, downloadedBytes)
+            val downloadDuration = System.currentTimeMillis() - downloadStart
+            return DownloadedSource(source, label, tmpFile, downloadedBytes, downloadDuration)
 
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading source: $label", e)
@@ -814,6 +820,7 @@ class EpgFileManager private constructor(private val context: Context) {
         activeProgress: ConcurrentHashMap<Long, ActiveSourceProgress>,
         batchSize: Int = EpgIndexer.BATCH_SIZE_MOBILE,
         isPlaybackActive: () -> Boolean = { false },
+        downloadDurationMs: Long,
         onProgressUpdate: () -> Unit
     ): SourceStats {
         val source = downloaded.source
@@ -821,6 +828,7 @@ class EpgFileManager private constructor(private val context: Context) {
         val isGzip = source.url.endsWith(".gz", ignoreCase = true)
 
         try {
+            val parseStart = System.currentTimeMillis()
             val fileSize = downloaded.tmpFile.length()
             val countingStream = CountingInputStream(downloaded.tmpFile.inputStream())
             val bufferedStream = BufferedInputStream(countingStream, STREAM_BUFFER_SIZE)
@@ -849,13 +857,16 @@ class EpgFileManager private constructor(private val context: Context) {
                 }
             }
 
+            val parseDuration = System.currentTimeMillis() - parseStart
             sourceDao.markIngested(
                 id = source.id,
                 timestamp = System.currentTimeMillis(),
                 channels = ingestionStats.channelsIngested,
                 programmes = ingestionStats.programmesIngested,
                 downloadBytes = downloaded.downloadedBytes,
-                ingestMethod = "DOWNLOADED"
+                ingestMethod = "DOWNLOADED",
+                downloadDurationMs = downloadDurationMs,
+                parseDurationMs = parseDuration
             )
             Log.d(TAG, "Ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
 

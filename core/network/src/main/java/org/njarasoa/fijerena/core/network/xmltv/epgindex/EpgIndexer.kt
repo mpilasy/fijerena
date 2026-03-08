@@ -274,6 +274,7 @@ class EpgIndexer private constructor(private val context: Context) {
         Log.d(TAG, "Ingesting Xtream EPG: ${epgByStreamId.size} streams for provider $providerId")
 
         try {
+            val ingestStartTime = System.currentTimeMillis()
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
             val sourceDao = db.epgSourceDao()
@@ -358,13 +359,16 @@ class EpgIndexer private constructor(private val context: Context) {
 
             // Update source stats
             writeMutex.withLock {
+                val parseDuration = System.currentTimeMillis() - ingestStartTime
                 sourceDao.markIngested(
                     id = sourceId,
                     timestamp = System.currentTimeMillis(),
                     channels = channelEntities.size,
                     programmes = totalProgrammes,
                     downloadBytes = 0,
-                    ingestMethod = "XTREAM_API"
+                    ingestMethod = "XTREAM_API",
+                    downloadDurationMs = 0L,
+                    parseDurationMs = parseDuration
                 )
             }
 

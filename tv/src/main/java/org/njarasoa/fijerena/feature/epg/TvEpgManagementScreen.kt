@@ -318,7 +318,15 @@ fun TvEpgManagementScreen(
                                 val infoLine = buildString {
                                     append("TZ: $tzLabel")
                                     if (source.lastIngestedAtMs > 0) {
-                                        append(" | Last: ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}")
+                                        val durationStr = if (source.lastDownloadDurationMs > 0 || source.lastParseDurationMs > 0) {
+                                            val parts = mutableListOf<String>()
+                                            if (source.lastDownloadDurationMs > 0) parts.add("DL: ${NumberUtils.formatDuration(source.lastDownloadDurationMs)}")
+                                            if (source.lastParseDurationMs > 0) parts.add("Parse: ${NumberUtils.formatDuration(source.lastParseDurationMs)}")
+                                            " (${parts.joinToString(", ")})"
+                                        } else {
+                                            ""
+                                        }
+                                        append(" | Last: ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}$durationStr")
                                     }
                                     if (!source.enabled) append(" | DISABLED")
                                 }

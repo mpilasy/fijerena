@@ -251,9 +251,17 @@ fun MobileEpgManagementScreen(
                                 val sign = if (source.timezoneOffsetHours >= 0) "+" else ""
                                 "UTC${sign}${source.timezoneOffsetHours}"
                             }
+                            val durationStr = if (source.lastDownloadDurationMs > 0 || source.lastParseDurationMs > 0) {
+                                val parts = mutableListOf<String>()
+                                if (source.lastDownloadDurationMs > 0) parts.add("DL: ${NumberUtils.formatDuration(source.lastDownloadDurationMs)}")
+                                if (source.lastParseDurationMs > 0) parts.add("Parse: ${NumberUtils.formatDuration(source.lastParseDurationMs)}")
+                                " (${parts.joinToString(", ")})"
+                            } else {
+                                ""
+                            }
                             Text(
                                 text = "TZ: $tzLabel" +
-                                    (if (source.lastIngestedAtMs > 0) " | ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}" else "") +
+                                    (if (source.lastIngestedAtMs > 0) " | ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}$durationStr" else "") +
                                     (if (!source.enabled) " | DISABLED" else ""),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
