@@ -60,6 +60,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _rebufferCount = MutableStateFlow(0)
     val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
 
+    private val _exhaustionRebufferCount = MutableStateFlow(0)
+    val exhaustionRebufferCount: StateFlow<Int> = _exhaustionRebufferCount.asStateFlow()
+
     private val _totalRebufferTimeMs = MutableStateFlow(0L)
     val totalRebufferTimeMs: StateFlow<Long> = _totalRebufferTimeMs.asStateFlow()
 
@@ -187,6 +190,9 @@ class StreamingPlaybackService : MediaSessionService() {
                 _rebufferCount.value = count
                 _totalRebufferTimeMs.value = totalTimeMs
             },
+            onExhaustionRebuffer = { count ->
+                _exhaustionRebufferCount.value = count
+            },
             onBandwidthUpdate = { bitrateEstimate ->
                 _bandwidthEstimate.value = bitrateEstimate
             },
@@ -218,6 +224,7 @@ class StreamingPlaybackService : MediaSessionService() {
         liveRetryCount = 0
         _streamRetryCount.value = 0
         _rebufferCount.value = 0
+        _exhaustionRebufferCount.value = 0
         _totalRebufferTimeMs.value = 0L
         _bandwidthEstimate.value = 0L
         _qualitySwitchCount.value = 0
@@ -618,15 +625,18 @@ class StreamingPlaybackService : MediaSessionService() {
     private class PerformanceAnalyticsListener(
         private val onMetricsUpdate: (droppedFrames: Long, totalFrames: Long) -> Unit,
         private val onRebuffer: (count: Int, totalTimeMs: Long) -> Unit,
+        private val onExhaustionRebuffer: (count: Int) -> Unit,
         private val onBandwidthUpdate: (bitrateEstimate: Long) -> Unit,
         private val onQualitySwitch: (count: Int) -> Unit
     ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
         private var droppedFrames = 0L
         private var totalFrames = 0L
         private var rebufferCount = 0
+        private var exhaustionRebufferCount = 0
         private var totalRebufferTimeMs = 0L
         private var rebufferStartTimeMs = 0L
         private var wasPlaying = false
+        private var seekPending = false
         private var qualitySwitchCount = 0
         private var lastVideoHeight = -1
 
@@ -647,6 +657,17 @@ class StreamingPlaybackService : MediaSessionService() {
             onMetricsUpdate(this.droppedFrames, totalFrames)
         }
 
+        override fun onPositionDiscontinuity(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int
+        ) {
+            if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+                seekPending = true
+            }
+        }
+
         override fun onPlaybackStateChanged(
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
             state: Int
@@ -656,9 +677,15 @@ class StreamingPlaybackService : MediaSessionService() {
                     if (wasPlaying) {
                         rebufferCount++
                         rebufferStartTimeMs = SystemClock.elapsedRealtime()
+                        if (!seekPending) {
+                            exhaustionRebufferCount++
+                            onExhaustionRebuffer(exhaustionRebufferCount)
+                        }
                     }
+                    seekPending = false
                 }
                 Player.STATE_READY -> {
+                    seekPending = false
                     if (rebufferStartTimeMs > 0) {
                         totalRebufferTimeMs += SystemClock.elapsedRealtime() - rebufferStartTimeMs
                         rebufferStartTimeMs = 0L
@@ -668,6 +695,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 }
                 Player.STATE_IDLE, Player.STATE_ENDED -> {
                     wasPlaying = false
+                    seekPending = false
                     rebufferStartTimeMs = 0L
                 }
             }
