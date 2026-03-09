@@ -218,13 +218,13 @@ fun MobileEpgManagementScreen(
                         }
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
 
-                        val isQueued = queuedTaskIds.contains("epg_refresh_source_${source.id}") || queuedTaskIds.contains("epg_refresh_all")
+                        val isQueued = queuedTaskIds.contains("epg_refresh_source_${source.id}") || queuedTaskIds.contains("epg_refresh_stale")
 
                         val dotColor = when {
                             isQueued -> androidx.compose.ui.graphics.Color.Yellow
                             !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                             source.lastError != null -> CinemaError
-                            source.lastIngestedAtMs > 0 && (nowMs - source.lastIngestedAtMs) < 24 * 3600 * 1000 -> MaterialTheme.colorScheme.primary
+                            source.lastIngestedAtMs > 0 && (nowMs - source.lastIngestedAtMs) < 6 * 3600 * 1000 -> MaterialTheme.colorScheme.primary
                             source.lastIngestedAtMs > 0 -> androidx.compose.ui.graphics.Color(0xFFFFAB40)
                             else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                         }
@@ -413,13 +413,13 @@ fun MobileEpgManagementScreen(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
                 ) {
                     Button(
-                        onClick = { viewModel.refreshAll() },
+                        onClick = { viewModel.refreshStale() },
                         enabled = sources.isNotEmpty(),
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                        Text("Refresh All")
+                        Text("Refresh Stale")
                     }
                     if (selectedSourceIds.isNotEmpty()) {
                         Button(
@@ -437,7 +437,7 @@ fun MobileEpgManagementScreen(
                 }
                 if (viewModel.isDevMode) {
                     val hasFailed = sources.any { it.enabled && it.lastError != null }
-                    val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 24 * 3600 * 1000) }
+                    val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 6 * 3600 * 1000) }
                     if (hasFailed || hasOutdated) {
                         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                         Row(
