@@ -69,6 +69,7 @@ fun MobileEpgManagementScreen(
     )
 
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
+    val hasStaleSources by viewModel.hasStaleSources.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val dbStats by viewModel.dbStats.collectAsStateWithLifecycle()
@@ -412,14 +413,16 @@ fun MobileEpgManagementScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
                 ) {
-                    Button(
-                        onClick = { viewModel.refreshStale() },
-                        enabled = sources.isNotEmpty(),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                        Text("Refresh Stale")
+                    if (hasStaleSources) {
+                        Button(
+                            onClick = { viewModel.refreshStale() },
+                            enabled = sources.isNotEmpty(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Refresh Stale")
+                        }
                     }
                     if (selectedSourceIds.isNotEmpty()) {
                         Button(
@@ -427,7 +430,7 @@ fun MobileEpgManagementScreen(
                                 viewModel.refreshSelected(selectedSourceIds)
                                 selectedSourceIds = emptySet()
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(if (hasStaleSources) 1f else 2f)
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
