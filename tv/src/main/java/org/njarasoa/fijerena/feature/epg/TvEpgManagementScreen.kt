@@ -81,7 +81,8 @@ fun TvEpgManagementScreen(
     )
 
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
-    val hasStaleSources by viewModel.hasStaleSources.collectAsStateWithLifecycle()
+    val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val dbStats by viewModel.dbStats.collectAsStateWithLifecycle()
@@ -498,11 +499,11 @@ fun TvEpgManagementScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                         ) {
-                            if (hasStaleSources) {
+                            if (staleSourceCount > 0) {
                                 CinemaPrimaryButton(
                                     onClick = { viewModel.refreshStale() },
                                     enabled = sources.isNotEmpty(),
-                                    text = "Refresh Stale"
+                                    text = "Refresh Stale ($staleSourceCount)"
                                 )
                             }
                             if (selectedSourceIds.isNotEmpty()) {
@@ -511,7 +512,7 @@ fun TvEpgManagementScreen(
                                         viewModel.refreshSelected(selectedSourceIds)
                                         selectedSourceIds = emptySet()
                                     },
-                                    text = "Selected (${selectedSourceIds.size})"
+                                    text = "Refresh Selected (${selectedSourceIds.size})"
                                 )
                             }
                             CinemaSecondaryButton(
@@ -530,7 +531,7 @@ fun TvEpgManagementScreen(
                             )
                         }
                         if (viewModel.isDevMode) {
-                            val hasFailed = sources.any { it.enabled && it.lastError != null }
+                            val hasFailed = failedSourceCount > 0
                             val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 6 * 3600 * 1000) }
                             if (hasFailed || hasOutdated) {
                                 Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -541,7 +542,7 @@ fun TvEpgManagementScreen(
                                     if (hasFailed) {
                                         CinemaSecondaryButton(
                                             onClick = { viewModel.refreshFailed() },
-                                            text = "Refresh Failed"
+                                            text = "Refresh Failed ($failedSourceCount)"
                                         )
                                     }
                                     if (hasOutdated) {

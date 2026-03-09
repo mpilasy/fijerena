@@ -47,12 +47,16 @@ class EpgManagementViewModel(
         db().epgSourceDao().getAllSources().distinctUntilChanged()
     }
 
-    val hasStaleSources: StateFlow<Boolean> = sources
+    val staleSourceCount: StateFlow<Int> = sources
         .map { list -> 
             val threshold = System.currentTimeMillis() - STALE_THRESHOLD_MS
-            list.any { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
+            list.count { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val failedSourceCount: StateFlow<Int> = sources
+        .map { list -> list.count { it.enabled && it.lastError != null } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val processingState: StateFlow<EpgFileManager.MultiSourceState> = epgFileManager.state
 

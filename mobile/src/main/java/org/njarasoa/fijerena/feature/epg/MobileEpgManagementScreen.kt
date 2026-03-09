@@ -69,7 +69,8 @@ fun MobileEpgManagementScreen(
     )
 
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
-    val hasStaleSources by viewModel.hasStaleSources.collectAsStateWithLifecycle()
+    val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val dbStats by viewModel.dbStats.collectAsStateWithLifecycle()
@@ -413,7 +414,7 @@ fun MobileEpgManagementScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
                 ) {
-                    if (hasStaleSources) {
+                    if (staleSourceCount > 0) {
                         Button(
                             onClick = { viewModel.refreshStale() },
                             enabled = sources.isNotEmpty(),
@@ -421,7 +422,7 @@ fun MobileEpgManagementScreen(
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                            Text("Refresh Stale")
+                            Text("Refresh Stale ($staleSourceCount)")
                         }
                     }
                     if (selectedSourceIds.isNotEmpty()) {
@@ -430,16 +431,16 @@ fun MobileEpgManagementScreen(
                                 viewModel.refreshSelected(selectedSourceIds)
                                 selectedSourceIds = emptySet()
                             },
-                            modifier = Modifier.weight(if (hasStaleSources) 1f else 2f)
+                            modifier = Modifier.weight(if (staleSourceCount > 0) 1f else 2f)
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                            Text("Selected (${selectedSourceIds.size})")
+                            Text("Refresh Selected (${selectedSourceIds.size})")
                         }
                     }
                 }
                 if (viewModel.isDevMode) {
-                    val hasFailed = sources.any { it.enabled && it.lastError != null }
+                    val hasFailed = failedSourceCount > 0
                     val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 6 * 3600 * 1000) }
                     if (hasFailed || hasOutdated) {
                         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -454,7 +455,7 @@ fun MobileEpgManagementScreen(
                                 ) {
                                     Icon(Icons.Default.ErrorOutline, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                     Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                    Text("Failed")
+                                    Text("Refresh Failed ($failedSourceCount)")
                                 }
                             }
                             if (hasOutdated) {
