@@ -11,7 +11,8 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 
 class XtreamSessionManager(
     private val accountManager: AccountManager,
-    private val onClearCache: suspend () -> Unit
+    private val onClearCache: suspend () -> Unit,
+    private val streamOutputFormat: String = "m3u8"
 ) {
     var apiService: XtreamApiService? = null
         private set
@@ -23,7 +24,7 @@ class XtreamSessionManager(
         rememberMe: Boolean
     ): Result<XtreamAuthResponse> = withContext(Dispatchers.IO) {
         suspendResultOf {
-            val service = XtreamApiService(url, username, password)
+            val service = XtreamApiService(url, username, password, streamOutputFormat)
             val authResponse = service.authenticate()
 
             // Validate authentication response
@@ -53,7 +54,7 @@ class XtreamSessionManager(
             val password = credentials.password
                 ?: throw Exception("Password not stored. Please login again.")
 
-            val service = XtreamApiService(credentials.url, credentials.username, password)
+            val service = XtreamApiService(credentials.url, credentials.username, password, streamOutputFormat)
             val authResponse = service.authenticate()
 
             // Validate authentication response
@@ -99,7 +100,7 @@ class XtreamSessionManager(
             accountManager.updateUrl(newUrl)
 
             // Create new API service with updated URL
-            val service = XtreamApiService(newUrl, credentials.username, password)
+            val service = XtreamApiService(newUrl, credentials.username, password, streamOutputFormat)
             val authResponse = service.authenticate()
 
             // Validate authentication response
@@ -139,7 +140,7 @@ class XtreamSessionManager(
         password: String
     ): Result<XtreamAuthResponse> = withContext(Dispatchers.IO) {
         suspendResultOf {
-            val service = XtreamApiService(url, username, password)
+            val service = XtreamApiService(url, username, password, streamOutputFormat)
             val authResponse = service.authenticate()
 
             if (authResponse.userInfo.auth != 1) {
