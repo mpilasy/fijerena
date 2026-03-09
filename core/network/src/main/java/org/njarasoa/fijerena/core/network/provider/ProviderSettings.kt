@@ -27,7 +27,10 @@ data class ProviderSettings(
     val categoryFilters: CategoryFilters = CategoryFilters(),
 
     /** External XMLTV EPG URL for this provider (empty = use provider's native EPG) */
-    val epgUrl: String = ""
+    val epgUrl: String = "",
+
+    /** Stream output format for live streams: "m3u8" (HLS) or "ts" (MPEG-TS) */
+    val streamOutputFormat: String = "m3u8"
 ) {
     /** Cache expiry time in milliseconds */
     val cacheExpiryMs: Long get() = cacheExpiryHours.toLong() * 60 * 60 * 1000

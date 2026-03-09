@@ -67,9 +67,11 @@ class XtreamRepository(
     // StatsManager (needs to be initialized early for onClearCache callback if needed, but here onClearCache is just a lambda)
     private val statsManager = XtreamStatsManager(database, cache, metricsManager, providerId)
 
-    private val sessionManager = XtreamSessionManager(accountManager) {
-        statsManager.clearCache()
-    }
+    private val sessionManager = XtreamSessionManager(
+        accountManager,
+        { statsManager.clearCache() },
+        providerSettings.streamOutputFormat
+    )
 
     private val contentManager = XtreamContentManager(
         sessionManager, database, cache, providerSettings, metricsManager, providerId

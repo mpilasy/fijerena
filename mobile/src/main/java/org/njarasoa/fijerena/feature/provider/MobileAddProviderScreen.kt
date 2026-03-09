@@ -94,6 +94,7 @@ fun MobileAddProviderScreen(
     var url by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var streamOutputFormat by remember { mutableStateOf("m3u8") }
     var passwordVisible by remember { mutableStateOf(false) }
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
@@ -266,6 +267,7 @@ fun MobileAddProviderScreen(
                                 url = parsed.baseUrl
                                 parsed.username?.let { username = it }
                                 parsed.password?.let { password = it }
+                                parsed.streamOutputFormat?.let { streamOutputFormat = it }
                             } else {
                                 url = newValue
                             }
@@ -976,7 +978,8 @@ fun MobileAddProviderScreen(
                             password = password.trim(),
                             type = selectedType.name,
                             config = saveConfig,
-                            onComplete = onSuccess
+                            onComplete = onSuccess,
+                            initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat)
                         )
                     }
                 },
@@ -1019,7 +1022,8 @@ fun MobileAddProviderScreen(
                                     password = password.trim(),
                                     type = selectedType.name,
                                     config = saveConfig,
-                                    onComplete = onSuccess
+                                    onComplete = onSuccess,
+                                    initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat)
                                 )
                             }
                         ) {

@@ -33,11 +33,13 @@ import java.util.concurrent.TimeUnit
  * @param baseUrl The Xtream API base URL (e.g., "http://example.com:8080")
  * @param username The Xtream account username
  * @param password The Xtream account password
+ * @param streamOutputFormat The output format for live stream URLs: "m3u8" (HLS) or "ts" (MPEG-TS)
  */
 class XtreamApiService(
     private val baseUrl: String,
     private val username: String,
-    private val password: String
+    private val password: String,
+    private val streamOutputFormat: String = "m3u8"
 ) {
     private val json = Json {
         prettyPrint = true
@@ -279,17 +281,17 @@ class XtreamApiService(
     /**
      * Builds a playable stream URL for a given stream ID.
      *
-     * Format: http://url:port/live/username/password/streamId.m3u8
+     * Format: http://url:port/live/username/password/streamId.[format]
      *
-     * Uses HLS format for live streams. Each HLS segment starts at a keyframe
-     * boundary enabling fast startup and accurate bandwidth measurement.
+     * The output format is determined by [streamOutputFormat] (e.g., "m3u8" for HLS
+     * or "ts" for MPEG-TS, as specified by the Xtream server's `output` parameter).
      *
      * @param streamId The stream ID to build the URL for
-     * @return The formatted stream URL in HLS format
+     * @return The formatted stream URL
      */
     fun buildStreamUrl(streamId: Int): String {
         val normalizedUrl = normalizeBaseUrl(baseUrl)
-        return "$normalizedUrl/live/${encode(username)}/${encode(password)}/$streamId.m3u8"
+        return "$normalizedUrl/live/${encode(username)}/${encode(password)}/$streamId.$streamOutputFormat"
     }
 
     /**

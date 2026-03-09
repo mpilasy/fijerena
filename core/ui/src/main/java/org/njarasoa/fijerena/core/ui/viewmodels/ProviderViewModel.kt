@@ -16,12 +16,15 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
 
 data class ParsedUrlCredentials(
     val baseUrl: String,
     val username: String?,
-    val password: String?
+    val password: String?,
+    val streamOutputFormat: String? = null,
+    val playlistType: String? = null
 )
 
 /**
@@ -43,6 +46,9 @@ fun parseUrlCredentials(input: String): ParsedUrlCredentials? {
 
         if (username == null && password == null) return null
 
+        val streamOutputFormat = uri.getQueryParameter("output")?.takeIf { it.isNotEmpty() }
+        val playlistType = uri.getQueryParameter("type")?.takeIf { it.isNotEmpty() }
+
         val builder = uri.buildUpon().clearQuery().fragment(null)
 
         // Strip known API endpoint paths (e.g., /get.php, /player_api.php)
@@ -55,7 +61,7 @@ fun parseUrlCredentials(input: String): ParsedUrlCredentials? {
 
         val baseUrl = builder.build().toString().trimEnd('/')
 
-        return ParsedUrlCredentials(baseUrl, username, password)
+        return ParsedUrlCredentials(baseUrl, username, password, streamOutputFormat, playlistType)
     } catch (_: Exception) {
         return null
     }
@@ -229,17 +235,18 @@ class ProviderViewModel(
         password: String,
         type: String,
         config: String,
-        onComplete: () -> Unit
+        onComplete: () -> Unit,
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT
     ) {
         viewModelScope.launch {
             if (type == "LOCAL") {
-                performSave(id, name, url, username, password, type, config, onComplete)
+                performSave(id, name, url, username, password, type, config, onComplete, initialSettings)
                 return@launch
             }
             _saveState.value = SaveState.Validating
             val result = testConnection(type, url, username, password, config)
             if (result.isSuccess) {
-                performSave(id, name, url, username, password, type, config, onComplete)
+                performSave(id, name, url, username, password, type, config, onComplete, initialSettings)
             } else {
                 _saveState.value = SaveState.ValidationFailed(
                     result.exceptionOrNull()?.message ?: "Connection failed"
@@ -256,10 +263,11 @@ class ProviderViewModel(
         password: String,
         type: String,
         config: String,
-        onComplete: () -> Unit
+        onComplete: () -> Unit,
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT
     ) {
         viewModelScope.launch {
-            performSave(id, name, url, username, password, type, config, onComplete)
+            performSave(id, name, url, username, password, type, config, onComplete, initialSettings)
         }
     }
 
@@ -327,14 +335,15 @@ class ProviderViewModel(
         password: String,
         type: String,
         config: String,
-        onComplete: () -> Unit
+        onComplete: () -> Unit,
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT
     ) {
         _saveState.value = SaveState.Saving
         try {
             if (id != null) {
                 providerRepository.updateProvider(id, name, url, username, password, type, config)
             } else {
-                providerRepository.addProvider(name, url, username, password, type, config)
+                providerRepository.addProvider(name, url, username, password, type, config, initialSettings)
             }
             loadProviders()
             _saveState.value = SaveState.Idle

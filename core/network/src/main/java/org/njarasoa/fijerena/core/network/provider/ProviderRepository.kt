@@ -48,15 +48,18 @@ class ProviderRepository(private val context: Context) {
         username: String,
         password: String,
         type: String = "XTREAM",
-        config: String = ""
+        config: String = "",
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT
     ): Long {
         dao.deactivateAll()
+        val settingsJson = json.encodeToString(initialSettings)
         val entity = ProviderEntity(
             name = name,
             url = url,
             username = username,
             type = type,
             config = config,
+            providerSettings = settingsJson,
             isActive = true
         )
         val id = dao.insertProvider(entity)

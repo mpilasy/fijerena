@@ -20,7 +20,8 @@ fun XtreamForm(
     onUsernameChange: (String) -> Unit,
     password: String,
     onPasswordChange: (String) -> Unit,
-    onErrorChange: (String?) -> Unit
+    onErrorChange: (String?) -> Unit,
+    onOutputFormatChange: (String) -> Unit = {}
 ) {
     val scale = LocalUiScale.current
 
@@ -34,6 +35,7 @@ fun XtreamForm(
                 onUrlChange(parsed.baseUrl)
                 parsed.username?.let { onUsernameChange(it) }
                 parsed.password?.let { onPasswordChange(it) }
+                parsed.streamOutputFormat?.let { onOutputFormatChange(it) }
             } else {
                 onUrlChange(newValue)
             }
