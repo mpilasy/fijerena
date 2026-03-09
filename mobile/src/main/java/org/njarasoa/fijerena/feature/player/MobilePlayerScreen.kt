@@ -116,18 +116,18 @@ fun MobilePlayerScreen(
     // Auto-show stats on repeated buffer exhaustion (dev mode only)
     LaunchedEffect(appSettings.isDevMode) {
         if (!appSettings.isDevMode) return@LaunchedEffect
-        val rebufferTimestamps = mutableListOf<Long>()
+        val exhaustionTimestamps = mutableListOf<Long>()
         var lastSeenCount = 0
         while (true) {
-            val currentCount = StreamingPlaybackService.getInstance()?.rebufferCount?.value ?: 0
+            val currentCount = StreamingPlaybackService.getInstance()?.exhaustionRebufferCount?.value ?: 0
             if (currentCount > lastSeenCount) {
                 val now = System.currentTimeMillis()
                 repeat(currentCount - lastSeenCount) {
-                    rebufferTimestamps.add(now)
+                    exhaustionTimestamps.add(now)
                 }
                 lastSeenCount = currentCount
-                rebufferTimestamps.removeAll { now - it > 30_000L }
-                if (rebufferTimestamps.size >= 3 && !showStats) {
+                exhaustionTimestamps.removeAll { now - it > 30_000L }
+                if (exhaustionTimestamps.size >= 3 && !showStats) {
                     showStats = true
                 }
             }
@@ -468,6 +468,7 @@ fun MobilePlayerScreen(
                     title = "Category Channels",
                     streams = remember(state.categoryStreams) { ImmutableMediaList(state.categoryStreams) },
                     panelAlignment = Alignment.CenterStart,
+                    currentStreamId = state.streamId,
                     onSelect = { item ->
                         showCategoryOverlay = false
                         loaderViewModel.loadStream(item)

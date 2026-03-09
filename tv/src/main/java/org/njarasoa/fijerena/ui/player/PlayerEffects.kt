@@ -20,20 +20,20 @@ fun PlayerEffects(
     // Auto-show stats on repeated buffer exhaustion (dev mode only)
     LaunchedEffect(isDeveloperMode) {
         if (!isDeveloperMode) return@LaunchedEffect
-        val rebufferTimestamps = mutableListOf<Long>()
+        val exhaustionTimestamps = mutableListOf<Long>()
         var lastSeenCount = 0
         while (true) {
-            val currentCount = StreamingPlaybackService.getInstance()?.rebufferCount?.value ?: 0
+            val currentCount = StreamingPlaybackService.getInstance()?.exhaustionRebufferCount?.value ?: 0
             if (currentCount > lastSeenCount) {
                 val now = System.currentTimeMillis()
                 repeat(currentCount - lastSeenCount) {
-                    rebufferTimestamps.add(now)
+                    exhaustionTimestamps.add(now)
                 }
                 lastSeenCount = currentCount
                 // Remove timestamps older than 30 seconds
-                rebufferTimestamps.removeAll { now - it > 30_000L }
-                // Show stats if 3+ rebuffers in 30s window
-                if (rebufferTimestamps.size >= 3 && !state.showStats) {
+                exhaustionTimestamps.removeAll { now - it > 30_000L }
+                // Show stats if 3+ buffer exhaustions in 30s window
+                if (exhaustionTimestamps.size >= 3 && !state.showStats) {
                     state.showStats = true
                 }
             }
