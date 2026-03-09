@@ -34,7 +34,7 @@ class EpgIndexer private constructor(private val context: Context) {
     companion object {
         private const val TAG = "EpgIndexer"
         const val BATCH_SIZE_MOBILE = 500
-        const val BATCH_SIZE_TV = 2000
+        const val BATCH_SIZE_TV = 5000
         private const val BATCH_SIZE = BATCH_SIZE_MOBILE
         private const val STREAM_BUFFER_SIZE = 65536
 
@@ -54,6 +54,26 @@ class EpgIndexer private constructor(private val context: Context) {
             "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `docid`=OLD.`rowid`; END",
             "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END",
             "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END"
+        )
+
+        // Query-only indexes on epg_programme that are dropped during bulk
+        // ingestion and rebuilt afterwards.  The dedup unique index is kept
+        // because INSERT … REPLACE needs it for conflict resolution.
+        private val BULK_DROP_INDEX_NAMES = listOf(
+            "idx_programme_start",
+            "idx_programme_end",
+            "idx_programme_time_range",
+            "idx_programme_channel",
+            "idx_programme_title_lower",
+            "idx_programme_source"
+        )
+        private val BULK_DROP_INDEX_DDL = listOf(
+            "CREATE INDEX IF NOT EXISTS `idx_programme_start` ON `epg_programme` (`start_epoch`)",
+            "CREATE INDEX IF NOT EXISTS `idx_programme_end` ON `epg_programme` (`end_epoch`)",
+            "CREATE INDEX IF NOT EXISTS `idx_programme_time_range` ON `epg_programme` (`start_epoch`, `end_epoch`)",
+            "CREATE INDEX IF NOT EXISTS `idx_programme_channel` ON `epg_programme` (`channel_id`)",
+            "CREATE INDEX IF NOT EXISTS `idx_programme_title_lower` ON `epg_programme` (`title_lowercase`)",
+            "CREATE INDEX IF NOT EXISTS `idx_programme_source` ON `epg_programme` (`source_id`)"
         )
 
         @Volatile
@@ -438,9 +458,14 @@ class EpgIndexer private constructor(private val context: Context) {
                 FTS_TRIGGER_NAMES.forEach { name ->
                     execSQL("DROP TRIGGER IF EXISTS `$name`")
                 }
+                BULK_DROP_INDEX_NAMES.forEach { name ->
+                    execSQL("DROP INDEX IF EXISTS `$name`")
+                }
                 execSQL("PRAGMA synchronous = OFF")
+                execSQL("PRAGMA temp_store = MEMORY")
+                execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
             }
-            Log.d(TAG, "Bulk ingestion mode: FTS triggers disabled, synchronous=OFF")
+            Log.d(TAG, "Bulk ingestion mode: FTS triggers disabled, indexes dropped, synchronous=OFF")
         } catch (e: Exception) {
             Log.w(TAG, "beginBulkIngestion setup failed (non-fatal): ${e.message}", e)
         }
@@ -458,10 +483,14 @@ class EpgIndexer private constructor(private val context: Context) {
         try {
             val db = EpgIndexDatabase.getInstance(context)
             db.openHelper.writableDatabase.apply {
+                // Rebuild query indexes before restoring normal mode
+                BULK_DROP_INDEX_DDL.forEach { ddl -> execSQL(ddl) }
                 execSQL("PRAGMA synchronous = NORMAL")
+                execSQL("PRAGMA temp_store = DEFAULT")
+                execSQL("PRAGMA cache_size = -8000") // restore 8 MB
                 FTS_TRIGGER_DDL.forEach { ddl -> execSQL(ddl) }
             }
-            Log.d(TAG, "Bulk ingestion mode: FTS triggers restored, synchronous=NORMAL")
+            Log.d(TAG, "Bulk ingestion mode: indexes rebuilt, FTS triggers restored, synchronous=NORMAL")
         } catch (e: Exception) {
             Log.w(TAG, "endBulkIngestion teardown failed (non-fatal): ${e.message}", e)
         }
