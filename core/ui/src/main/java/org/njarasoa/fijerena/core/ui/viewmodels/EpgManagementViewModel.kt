@@ -145,7 +145,7 @@ class EpgManagementViewModel(
         db().epgIndexDao().getLatestProgrammeEndTimeForSource(sourceId)
     }
 
-    fun addSource(url: String, label: String, timezoneOffsetHours: Int) {
+    fun addSource(url: String, label: String, timezoneOffsetHours: Int, ingestMethod: String = "DOWNLOADED", enabled: Boolean = true) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val urls = url.split("\n", ",", " ")
@@ -162,7 +162,9 @@ class EpgManagementViewModel(
                         EpgSourceEntity(
                             url = u,
                             label = finalLabel,
-                            timezoneOffsetHours = timezoneOffsetHours
+                            timezoneOffsetHours = timezoneOffsetHours,
+                            ingestMethod = ingestMethod,
+                            enabled = enabled
                         )
                     )
                 }

@@ -523,13 +523,19 @@ fun MobileEpgManagementScreen(
                 showAddDialog = false
                 editingSource = null
             },
-            onSave = { url, label, tz ->
+            onSave = { url, label, tz, ingestMethod, enabled ->
                 if (editingSource != null) {
                     viewModel.updateSource(
-                        editingSource!!.copy(url = url, label = label, timezoneOffsetHours = tz)
+                        editingSource!!.copy(
+                            url = url,
+                            label = label,
+                            timezoneOffsetHours = tz,
+                            ingestMethod = ingestMethod,
+                            enabled = enabled
+                        )
                     )
                 } else {
-                    viewModel.addSource(url, label, tz)
+                    viewModel.addSource(url, label, tz, ingestMethod, enabled)
                 }
                 showAddDialog = false
                 editingSource = null
@@ -746,11 +752,13 @@ private fun SettingsSection(
 private fun MobileSourceDialog(
     source: EpgSourceEntity?,
     onDismiss: () -> Unit,
-    onSave: (url: String, label: String, tz: Int) -> Unit
+    onSave: (url: String, label: String, tz: Int, ingestMethod: String, enabled: Boolean) -> Unit
 ) {
     var url by remember { mutableStateOf(source?.url ?: "") }
     var label by remember { mutableStateOf(source?.label ?: "") }
     var tzOffset by remember { mutableIntStateOf(source?.timezoneOffsetHours ?: 0) }
+    var ingestMethod by remember { mutableStateOf(source?.ingestMethod ?: "DOWNLOADED") }
+    var enabled by remember { mutableStateOf(source?.enabled ?: true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -774,6 +782,7 @@ private fun MobileSourceDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Timezone:",
@@ -790,11 +799,35 @@ private fun MobileSourceDialog(
                         Text(tzLabel)
                     }
                 }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Ingest Method:",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.width(CinemaSpacing.sm))
+                    OutlinedButton(onClick = {
+                        ingestMethod = if (ingestMethod == "DOWNLOADED") "STREAMED" else "DOWNLOADED"
+                    }) {
+                        Text(ingestMethod.lowercase().replaceFirstChar { it.uppercase() })
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Status:",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.width(CinemaSpacing.sm))
+                    OutlinedButton(onClick = { enabled = !enabled }) {
+                        Text(if (enabled) "Enabled" else "Disabled")
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSave(url, label, tzOffset) },
+                onClick = { onSave(url, label, tzOffset, ingestMethod, enabled) },
                 enabled = url.isNotBlank()
             ) { Text("Save") }
         },
