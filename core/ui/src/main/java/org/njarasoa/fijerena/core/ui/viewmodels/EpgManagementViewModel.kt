@@ -8,11 +8,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,6 +46,13 @@ class EpgManagementViewModel(
     val sources: Flow<List<EpgSourceEntity>> = _dbGeneration.flatMapLatest {
         db().epgSourceDao().getAllSources().distinctUntilChanged()
     }
+
+    val hasStaleSources: StateFlow<Boolean> = sources
+        .map { list -> 
+            val threshold = System.currentTimeMillis() - STALE_THRESHOLD_MS
+            list.any { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val processingState: StateFlow<EpgFileManager.MultiSourceState> = epgFileManager.state
 

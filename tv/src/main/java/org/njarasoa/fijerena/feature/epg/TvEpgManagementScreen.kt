@@ -81,6 +81,7 @@ fun TvEpgManagementScreen(
     )
 
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
+    val hasStaleSources by viewModel.hasStaleSources.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val dbStats by viewModel.dbStats.collectAsStateWithLifecycle()
@@ -497,11 +498,13 @@ fun TvEpgManagementScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                         ) {
-                            CinemaPrimaryButton(
-                                onClick = { viewModel.refreshStale() },
-                                enabled = sources.isNotEmpty(),
-                                text = "Refresh Stale"
-                            )
+                            if (hasStaleSources) {
+                                CinemaPrimaryButton(
+                                    onClick = { viewModel.refreshStale() },
+                                    enabled = sources.isNotEmpty(),
+                                    text = "Refresh Stale"
+                                )
+                            }
                             if (selectedSourceIds.isNotEmpty()) {
                                 CinemaPrimaryButton(
                                     onClick = {
