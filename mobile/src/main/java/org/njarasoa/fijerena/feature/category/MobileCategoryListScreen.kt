@@ -44,7 +44,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -96,6 +99,14 @@ fun MobileCategoryListScreen(
     val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode = remember { appSettings.isDevMode }
+
+    // Refresh last played item when returning from player
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.refreshLastPlayedItem()
+        }
+    }
 
     // Long-press favorite menu state
     var favoriteMenuTarget by remember { mutableStateOf<MobileFavoriteMenuTarget?>(null) }
@@ -258,6 +269,7 @@ fun MobileCategoryListScreen(
                                 items = state.streams,
                                 streamsLoading = state.streamsLoading,
                                 selectedCategoryId = state.selectedCategoryId,
+                                lastPlayedItemId = state.lastPlayedItemId,
                                 nowPlaying = nowPlaying,
                                 onItemSelected = { itemId, itemName, categoryId ->
                                     android.util.Log.d("MobileCategoryListScreen", "onItemSelected: id=$itemId, name=$itemName, cat=$categoryId")
@@ -441,10 +453,22 @@ private fun StreamsList(
     items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
     streamsLoading: Boolean,
     selectedCategoryId: String?,
+    lastPlayedItemId: String? = null,
     nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
     onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
     onItemLongPress: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {}
 ) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(items, lastPlayedItemId) {
+        if (!items.isNullOrEmpty() && lastPlayedItemId != null) {
+            val index = items.indexOfFirst { it.id == lastPlayedItemId }
+            if (index > 0) {
+                // +1 to account for the header item
+                listState.animateScrollToItem(index + 1)
+            }
+        }
+    }
     when {
         selectedCategoryId == null -> {
             Box(
@@ -488,6 +512,7 @@ private fun StreamsList(
         }
         else -> {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
