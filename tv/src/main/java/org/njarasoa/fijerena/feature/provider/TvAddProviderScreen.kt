@@ -84,6 +84,7 @@ fun TvAddProviderScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var streamOutputFormat by remember { mutableStateOf("m3u8") }
+    var playlistType by remember { mutableStateOf("m3u_plus") }
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
@@ -121,6 +122,8 @@ fun TvAddProviderScreen(
             cacheStats = providerRepo.getCacheStatsForProvider(editId)
             val ps = providerRepo.getProviderSettings(editId)
             providerSettings = ps
+            streamOutputFormat = ps.streamOutputFormat
+            playlistType = ps.playlistType
         }
     }
 
@@ -212,7 +215,8 @@ fun TvAddProviderScreen(
                             password = password,
                             onPasswordChange = { password = it },
                             onErrorChange = { error = it },
-                            onOutputFormatChange = { streamOutputFormat = it }
+                            onOutputFormatChange = { streamOutputFormat = it },
+                            onPlaylistTypeChange = { playlistType = it }
                         )
                     }
 
@@ -269,6 +273,8 @@ fun TvAddProviderScreen(
                             coroutineScope.launch {
                                 providerRepo.updateProviderSettings(editId, newSettings)
                                 providerSettings = newSettings
+                                streamOutputFormat = newSettings.streamOutputFormat
+                                playlistType = newSettings.playlistType
                                 syncManager.syncProviderSettings(editId)
                             }
                         },
@@ -366,7 +372,7 @@ fun TvAddProviderScreen(
                                     type = selectedType.name,
                                     config = saveConfig,
                                     onComplete = onSuccess,
-                                    initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat)
+                                    initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat, playlistType = playlistType)
                                 )
                             }
                         },
@@ -413,7 +419,7 @@ fun TvAddProviderScreen(
                                         type = selectedType.name,
                                         config = saveConfig,
                                         onComplete = onSuccess,
-                                        initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat)
+                                        initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat, playlistType = playlistType)
                                     )
                                 },
                                 text = "Save Anyway"

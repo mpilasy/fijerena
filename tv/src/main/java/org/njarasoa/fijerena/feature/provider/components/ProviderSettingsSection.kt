@@ -170,6 +170,83 @@ fun ProviderSettingsSection(
         )
     }
 
+    // Xtream-only settings
+    if (providerType == ProviderType.XTREAM) {
+        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+        // Stream Output Format
+        Column {
+            Text(
+                text = "Stream Output Format",
+                style = styles.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Format used for live stream URLs (m3u8 = HLS, ts = MPEG-TS)",
+                style = styles.bodySmall,
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+            ) {
+                val currentFormat = providerSettings.streamOutputFormat
+                listOf("m3u8", "ts").forEach { format ->
+                    if (format == currentFormat) {
+                        CinemaPrimaryButton(
+                            onClick = {},
+                            text = format
+                        )
+                    } else {
+                        CinemaSecondaryButton(
+                            onClick = {
+                                onUpdateSettings(providerSettings.copy(streamOutputFormat = format))
+                            },
+                            text = format
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+        // Playlist Type
+        Column {
+            Text(
+                text = "Playlist Type",
+                style = styles.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Playlist format (m3u_plus = extended with EPG, simple = basic)",
+                style = styles.bodySmall,
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+            ) {
+                val currentType = providerSettings.playlistType
+                listOf("m3u_plus", "simple").forEach { type ->
+                    if (type == currentType) {
+                        CinemaPrimaryButton(
+                            onClick = {},
+                            text = type
+                        )
+                    } else {
+                        CinemaSecondaryButton(
+                            onClick = {
+                                onUpdateSettings(providerSettings.copy(playlistType = type))
+                            },
+                            text = type
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     // Category Filters (Xtream only)
     if (providerType == ProviderType.XTREAM) {
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))

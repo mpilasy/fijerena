@@ -95,6 +95,7 @@ fun MobileAddProviderScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var streamOutputFormat by remember { mutableStateOf("m3u8") }
+    var playlistType by remember { mutableStateOf("m3u_plus") }
     var passwordVisible by remember { mutableStateOf(false) }
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
@@ -150,6 +151,8 @@ fun MobileAddProviderScreen(
             favoritesMaxSize = ps.favoritesMaxSize.toString()
             cachingEnabled = ps.cachingEnabled
             categoryFilters = ps.categoryFilters
+            streamOutputFormat = ps.streamOutputFormat
+            playlistType = ps.playlistType
         }
     }
 
@@ -268,6 +271,7 @@ fun MobileAddProviderScreen(
                                 parsed.username?.let { username = it }
                                 parsed.password?.let { password = it }
                                 parsed.streamOutputFormat?.let { streamOutputFormat = it }
+                                parsed.playlistType?.let { playlistType = it }
                             } else {
                                 url = newValue
                             }
@@ -682,6 +686,69 @@ fun MobileAddProviderScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Clear All Progress") }
 
+                    // Xtream-only settings
+                    if (selectedType == ProviderType.XTREAM) {
+                        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
+                        // Stream Output Format
+                        Text(text = "Stream Output Format", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            text = "Format used for live stream URLs (m3u8 = HLS, ts = MPEG-TS)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        )
+                        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                        ) {
+                            listOf("m3u8", "ts").forEach { format ->
+                                FilterChip(
+                                    selected = streamOutputFormat == format,
+                                    onClick = {
+                                        streamOutputFormat = format
+                                        coroutineScope.launch {
+                                            val newSettings = providerSettings.copy(streamOutputFormat = format)
+                                            providerRepo.updateProviderSettings(editId, newSettings)
+                                            providerSettings = newSettings
+                                            syncManager.syncProviderSettings(editId)
+                                        }
+                                    },
+                                    label = { Text(format) }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
+                        // Playlist Type
+                        Text(text = "Playlist Type", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            text = "Playlist format (m3u_plus = extended with EPG, simple = basic)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        )
+                        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                        ) {
+                            listOf("m3u_plus", "simple").forEach { type ->
+                                FilterChip(
+                                    selected = playlistType == type,
+                                    onClick = {
+                                        playlistType = type
+                                        coroutineScope.launch {
+                                            val newSettings = providerSettings.copy(playlistType = type)
+                                            providerRepo.updateProviderSettings(editId, newSettings)
+                                            providerSettings = newSettings
+                                            syncManager.syncProviderSettings(editId)
+                                        }
+                                    },
+                                    label = { Text(type) }
+                                )
+                            }
+                        }
+                    }
+
                     // Category Filters (Xtream only)
                     if (selectedType == ProviderType.XTREAM) {
                         Spacer(modifier = Modifier.height(CinemaSpacing.md))
@@ -979,7 +1046,7 @@ fun MobileAddProviderScreen(
                             type = selectedType.name,
                             config = saveConfig,
                             onComplete = onSuccess,
-                            initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat)
+                            initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat, playlistType = playlistType)
                         )
                     }
                 },
@@ -1023,7 +1090,7 @@ fun MobileAddProviderScreen(
                                     type = selectedType.name,
                                     config = saveConfig,
                                     onComplete = onSuccess,
-                                    initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat)
+                                    initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat, playlistType = playlistType)
                                 )
                             }
                         ) {
