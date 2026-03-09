@@ -148,6 +148,7 @@ fun TvPlayerScreen(
         is StreamLoaderViewModel.StreamState.Success -> {
             PlayerScreen(
                 viewModel = playbackViewModel,
+                currentStreamId = state.streamId,
                 onBack = {
                     // Save position before stopping (stop sets state to Idle)
                     if (!state.isLive) {

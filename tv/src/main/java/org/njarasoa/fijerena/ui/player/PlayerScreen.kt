@@ -69,6 +69,7 @@ fun PlayerScreen(
     onToggleFavorite: (() -> Unit)? = null,
     currentEpgProgram: EpgProgram? = null,
     nextEpgProgram: EpgProgram? = null,
+    currentStreamId: String? = null,
     categoryStreams: ImmutableMediaList = ImmutableMediaList(),
     lastWatchedStreams: ImmutableMediaList = ImmutableMediaList(),
     onStreamSelected: ((MediaItem) -> Unit)? = null
@@ -292,6 +293,7 @@ fun PlayerScreen(
                 title = "Category Channels",
                 streams = categoryStreams,
                 panelAlignment = Alignment.CenterStart,
+                currentStreamId = currentStreamId,
                 onSelect = { item ->
                     state.showCategoryOverlay = false
                     onStreamSelected?.invoke(item)

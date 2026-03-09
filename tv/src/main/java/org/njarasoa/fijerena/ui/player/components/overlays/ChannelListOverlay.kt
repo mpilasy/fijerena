@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
+import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -44,12 +45,20 @@ fun ChannelListOverlay(
     onSelect: (MediaItem) -> Unit,
     onDismiss: () -> Unit,
     panelAlignment: Alignment = Alignment.CenterStart,
-    emptyMessage: String = "No channels"
+    emptyMessage: String = "No channels",
+    currentStreamId: String? = null
 ) {
-    val firstItemFocusRequester = remember { FocusRequester() }
+    val targetFocusRequester = remember { FocusRequester() }
+    val listState = rememberTvLazyListState()
 
-    LaunchedEffect(streams) {
-        if (streams.isNotEmpty()) firstItemFocusRequester.requestFocus()
+    LaunchedEffect(streams, currentStreamId) {
+        if (streams.isNotEmpty()) {
+            val targetIndex = if (currentStreamId != null) {
+                streams.indexOfFirst { it.id == currentStreamId }.coerceAtLeast(0)
+            } else 0
+            if (targetIndex > 0) listState.scrollToItem(targetIndex)
+            targetFocusRequester.requestFocus()
+        }
     }
 
     Box(
@@ -94,6 +103,7 @@ fun ChannelListOverlay(
                     )
                 } else {
                     TvLazyColumn(
+                        state = listState,
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs)
                     ) {
@@ -101,12 +111,17 @@ fun ChannelListOverlay(
                             items = streams,
                             key = { _, stream -> stream.id }
                         ) { index, stream ->
+                            val isTarget = if (currentStreamId != null) {
+                                stream.id == currentStreamId
+                            } else {
+                                index == 0
+                            }
                             Button(
                                 onClick = { onSelect(stream) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .then(
-                                        if (index == 0) Modifier.focusRequester(firstItemFocusRequester)
+                                        if (isTarget) Modifier.focusRequester(targetFocusRequester)
                                         else Modifier
                                     )
                             ) {

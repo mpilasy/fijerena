@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -40,8 +42,17 @@ fun MobileChannelListSheet(
     streams: ImmutableMediaList,
     onSelect: (MediaItem) -> Unit,
     onDismiss: () -> Unit,
-    panelAlignment: Alignment = Alignment.CenterStart
+    panelAlignment: Alignment = Alignment.CenterStart,
+    currentStreamId: String? = null
 ) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(streams, currentStreamId) {
+        if (streams.isNotEmpty() && currentStreamId != null) {
+            val targetIndex = streams.indexOfFirst { it.id == currentStreamId }
+            if (targetIndex > 0) listState.scrollToItem(targetIndex)
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -91,14 +102,20 @@ fun MobileChannelListSheet(
                     )
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
                     ) {
                         items(streams, key = { it.id }, contentType = { "channel" }) { stream ->
+                            val isCurrentStream = stream.id == currentStreamId
                             Surface(
                                 onClick = { onSelect(stream) },
                                 modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CinemaAlpha.glass),
+                                color = if (isCurrentStream) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.glass)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CinemaAlpha.glass)
+                                },
                                 shape = MaterialTheme.shapes.small
                             ) {
                                 Text(
