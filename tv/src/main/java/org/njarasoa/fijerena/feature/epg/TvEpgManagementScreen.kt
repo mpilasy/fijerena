@@ -568,13 +568,19 @@ fun TvEpgManagementScreen(
                 showAddDialog = false
                 editingSource = null
             },
-            onSave = { url, label, tz ->
+            onSave = { url, label, tz, ingestMethod, enabled ->
                 if (editingSource != null) {
                     viewModel.updateSource(
-                        editingSource!!.copy(url = url, label = label, timezoneOffsetHours = tz)
+                        editingSource!!.copy(
+                            url = url,
+                            label = label,
+                            timezoneOffsetHours = tz,
+                            ingestMethod = ingestMethod,
+                            enabled = enabled
+                        )
                     )
                 } else {
-                    viewModel.addSource(url, label, tz)
+                    viewModel.addSource(url, label, tz, ingestMethod, enabled)
                 }
                 showAddDialog = false
                 editingSource = null
@@ -863,11 +869,13 @@ private fun TimeDialog(
 private fun SourceDialog(
     source: EpgSourceEntity?,
     onDismiss: () -> Unit,
-    onSave: (url: String, label: String, tz: Int) -> Unit
+    onSave: (url: String, label: String, tz: Int, ingestMethod: String, enabled: Boolean) -> Unit
 ) {
     var url by remember { mutableStateOf(source?.url ?: "") }
     var label by remember { mutableStateOf(source?.label ?: "") }
     var tzOffset by remember { mutableIntStateOf(source?.timezoneOffsetHours ?: 0) }
+    var ingestMethod by remember { mutableStateOf(source?.ingestMethod ?: "DOWNLOADED") }
+    var enabled by remember { mutableStateOf(source?.enabled ?: true) }
     val scale = LocalUiScale.current
 
     AlertDialog(
@@ -924,29 +932,63 @@ private fun SourceDialog(
                         unfocusedPlaceholderColor = CinemaTextSecondary
                     )
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Timezone:",
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
-                        color = CinemaTextSecondary
-                    )
-                    Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                    val tzLabel = if (tzOffset == 0) "Auto (from data)" else {
-                        val sign = if (tzOffset >= 0) "+" else ""
-                        "UTC${sign}${tzOffset}"
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Timezone:",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                            color = CinemaTextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        val tzLabel = if (tzOffset == 0) "Auto (from data)" else {
+                            val sign = if (tzOffset >= 0) "+" else ""
+                            "UTC${sign}${tzOffset}"
+                        }
+                        CinemaSecondaryButton(
+                            onClick = {
+                                tzOffset = (tzOffset + 1).let { if (it > 14) -12 else it }
+                            },
+                            text = tzLabel
+                        )
                     }
-                    CinemaSecondaryButton(
-                        onClick = {
-                            tzOffset = (tzOffset + 1).let { if (it > 14) -12 else it }
-                        },
-                        text = tzLabel
-                    )
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Ingest Method:",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                            color = CinemaTextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        CinemaSecondaryButton(
+                            onClick = {
+                                ingestMethod = if (ingestMethod == "DOWNLOADED") "STREAMED" else "DOWNLOADED"
+                            },
+                            text = ingestMethod.lowercase().replaceFirstChar { it.uppercase() }
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Status:",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                            color = CinemaTextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        CinemaSecondaryButton(
+                            onClick = { enabled = !enabled },
+                            text = if (enabled) "Enabled" else "Disabled"
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
             CinemaPrimaryButton(
-                onClick = { onSave(url, label, tzOffset) },
+                onClick = { onSave(url, label, tzOffset, ingestMethod, enabled) },
                 enabled = url.isNotBlank(),
                 text = "Save"
             )
