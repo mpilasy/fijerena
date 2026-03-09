@@ -83,6 +83,7 @@ fun TvAddProviderScreen(
     var url by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var streamOutputFormat by remember { mutableStateOf("m3u8") }
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
@@ -210,7 +211,8 @@ fun TvAddProviderScreen(
                             onUsernameChange = { username = it },
                             password = password,
                             onPasswordChange = { password = it },
-                            onErrorChange = { error = it }
+                            onErrorChange = { error = it },
+                            onOutputFormatChange = { streamOutputFormat = it }
                         )
                     }
 
@@ -363,7 +365,8 @@ fun TvAddProviderScreen(
                                     password = savePassword,
                                     type = selectedType.name,
                                     config = saveConfig,
-                                    onComplete = onSuccess
+                                    onComplete = onSuccess,
+                                    initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat)
                                 )
                             }
                         },
@@ -409,7 +412,8 @@ fun TvAddProviderScreen(
                                         password = password.trim(),
                                         type = selectedType.name,
                                         config = saveConfig,
-                                        onComplete = onSuccess
+                                        onComplete = onSuccess,
+                                        initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat)
                                     )
                                 },
                                 text = "Save Anyway"
