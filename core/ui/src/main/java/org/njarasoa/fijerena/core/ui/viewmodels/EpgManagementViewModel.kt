@@ -80,7 +80,7 @@ class EpgManagementViewModel(
 
     sealed interface CellularConfirmDialog {
         data object Hidden : CellularConfirmDialog
-        data class RefreshAll(val onConfirm: suspend () -> Unit, val onDismiss: () -> Unit) : CellularConfirmDialog
+        data class RefreshStale(val onConfirm: suspend () -> Unit, val onDismiss: () -> Unit) : CellularConfirmDialog
         data class RefreshSource(val sourceId: Long, val onConfirm: suspend () -> Unit, val onDismiss: () -> Unit) : CellularConfirmDialog
     }
 
@@ -174,16 +174,18 @@ class EpgManagementViewModel(
         }
     }
 
-    fun refreshAll() {
+    fun refreshStale() {
         viewModelScope.launch {
             val queued = RefreshQueue.queuedTaskIds.value
 
-            if (queued.contains("epg_refresh_all")) {
+            if (queued.contains("epg_refresh_stale")) {
                 return@launch
             }
 
-            val enabledSources = withContext(Dispatchers.IO) { db().epgSourceDao().getEnabledSources() }
-            val sourcesToRefresh = enabledSources.filter { !queued.contains("epg_refresh_source_${it.id}") }
+            val thresholdMs = System.currentTimeMillis() - STALE_THRESHOLD_MS
+            val sourcesToRefresh = withContext(Dispatchers.IO) { 
+                db().epgSourceDao().getStaleSources(thresholdMs) 
+            }.filter { !queued.contains("epg_refresh_source_${it.id}") }
 
             if (sourcesToRefresh.isEmpty()) {
                 return@launch
@@ -191,22 +193,23 @@ class EpgManagementViewModel(
 
             epgFileManager.launchProcessSources(
                 sources = sourcesToRefresh,
-                taskId = "epg_refresh_all",
+                taskId = "epg_refresh_stale",
                 onComplete = {
                     refreshDbStats()
                     _cellularDialog.value = CellularConfirmDialog.Hidden
                 },
                 onCellularConfirm = {
-                    _cellularDialog.value = CellularConfirmDialog.RefreshAll(
+                    _cellularDialog.value = CellularConfirmDialog.RefreshStale(
                         onConfirm = {
                             val currentQueued = RefreshQueue.queuedTaskIds.value
-                            val retrySources = withContext(Dispatchers.IO) { db().epgSourceDao().getEnabledSources() }
+                            val t = System.currentTimeMillis() - STALE_THRESHOLD_MS
+                            val retrySources = withContext(Dispatchers.IO) { db().epgSourceDao().getStaleSources(t) }
                                 .filter { !currentQueued.contains("epg_refresh_source_${it.id}") }
 
                             if (retrySources.isNotEmpty()) {
                                 epgFileManager.launchProcessSources(
                                     sources = retrySources,
-                                    taskId = "epg_refresh_all",
+                                    taskId = "epg_refresh_stale",
                                     onComplete = {
                                         refreshDbStats()
                                         _cellularDialog.value = CellularConfirmDialog.Hidden
@@ -237,7 +240,7 @@ class EpgManagementViewModel(
                     _cellularDialog.value = CellularConfirmDialog.Hidden
                 },
                 onCellularConfirm = {
-                    _cellularDialog.value = CellularConfirmDialog.RefreshAll(
+                    _cellularDialog.value = CellularConfirmDialog.RefreshStale(
                         onConfirm = {
                             val retryFailed = withContext(Dispatchers.IO) { db().epgSourceDao().getFailedSources() }
                             epgFileManager.launchProcessSources(
@@ -259,7 +262,7 @@ class EpgManagementViewModel(
 
     fun refreshOutdated() {
         viewModelScope.launch {
-            val thresholdMs = System.currentTimeMillis() - 24 * 3600 * 1000
+            val thresholdMs = System.currentTimeMillis() - STALE_THRESHOLD_MS
             val sources = withContext(Dispatchers.IO) { db().epgSourceDao().getStaleSources(thresholdMs) }
             if (sources.isEmpty()) return@launch
 
@@ -271,9 +274,9 @@ class EpgManagementViewModel(
                     _cellularDialog.value = CellularConfirmDialog.Hidden
                 },
                 onCellularConfirm = {
-                    _cellularDialog.value = CellularConfirmDialog.RefreshAll(
+                    _cellularDialog.value = CellularConfirmDialog.RefreshStale(
                         onConfirm = {
-                            val threshold = System.currentTimeMillis() - 24 * 3600 * 1000
+                            val threshold = System.currentTimeMillis() - STALE_THRESHOLD_MS
                             val retrySources = withContext(Dispatchers.IO) { db().epgSourceDao().getStaleSources(threshold) }
                             epgFileManager.launchProcessSources(
                                 sources = retrySources,
@@ -307,7 +310,7 @@ class EpgManagementViewModel(
                     _cellularDialog.value = CellularConfirmDialog.Hidden
                 },
                 onCellularConfirm = {
-                    _cellularDialog.value = CellularConfirmDialog.RefreshAll(
+                    _cellularDialog.value = CellularConfirmDialog.RefreshStale(
                         onConfirm = {
                             val retrySelected = withContext(Dispatchers.IO) {
                                 db().epgSourceDao().getAllSourcesOnce().filter { it.id in selectedIds }
@@ -399,6 +402,8 @@ class EpgManagementViewModel(
     }
 
     companion object {
+        private const val STALE_THRESHOLD_MS = 6L * 3600 * 1000
+
         private fun formatBytes(bytes: Long): String = when {
             bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
             bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)

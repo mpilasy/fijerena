@@ -63,7 +63,7 @@ class EpgFileManager private constructor(private val context: Context) {
         private const val STREAM_BUFFER_SIZE = 131072 // 128KB
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 5000L
-        private const val STALE_THRESHOLD_MS = 24L * 3600 * 1000
+        private const val STALE_THRESHOLD_MS = 6L * 3600 * 1000
         private const val AUTO_REFRESH_CHECK_INTERVAL_MS = 4L * 3600 * 1000 // Check every 4 hours
 
         @Volatile
@@ -882,7 +882,7 @@ class EpgFileManager private constructor(private val context: Context) {
     }
 
     /**
-     * Refresh all enabled sources that are considered stale (last ingested > 24h ago).
+     * Refresh all enabled sources that are considered stale (last ingested > 6h ago).
      * Returns true if refresh was started (stale sources found), false otherwise.
      */
     suspend fun refreshOutdatedSources(): Boolean {

@@ -58,12 +58,14 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
-import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
-import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaOrange
+import org.njarasoa.fijerena.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -82,6 +84,7 @@ fun TvEpgManagementScreen(
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val dbStats by viewModel.dbStats.collectAsStateWithLifecycle()
+    val queuedTaskIds by viewModel.queuedTaskIds.collectAsStateWithLifecycle()
     val hasStrayFiles by viewModel.hasStrayFiles.collectAsStateWithLifecycle()
     val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsStateWithLifecycle()
 
@@ -119,14 +122,6 @@ fun TvEpgManagementScreen(
 
     CompositionLocalProvider(LocalUiScale provides uiScale) {
     val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val scaledDisplaySmall = remember(scale) { typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale)) }
-    val scaledTitleLarge = remember(scale) { typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale)) }
-    val scaledTitleMedium = remember(scale) { typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale)) }
-    val scaledBodyLarge = remember(scale) { typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale)) }
-    val scaledBodyMedium = remember(scale) { typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale)) }
-    val scaledBodySmall = remember(scale) { typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale)) }
-    val scaledLabelSmall = remember(scale) { typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale)) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -137,7 +132,7 @@ fun TvEpgManagementScreen(
     ) {
         Text(
             text = "EPG Management",
-            style = scaledDisplaySmall,
+            style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -155,7 +150,7 @@ fun TvEpgManagementScreen(
                     Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Text(
                             text = "Status",
-                            style = scaledTitleMedium,
+                            style = MaterialTheme.typography.titleMedium,
                             color = CinemaAccent
                         )
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -168,7 +163,7 @@ fun TvEpgManagementScreen(
                         }
                         Text(
                             text = statusText,
-                            style = scaledBodyMedium,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = when (indexState) {
                                 is EpgIndexState.Indexed -> CinemaAccent
                                 is EpgIndexState.Failed -> CinemaError
@@ -185,18 +180,18 @@ fun TvEpgManagementScreen(
                             ) {
                                 Text(
                                     text = "${procState.completedCount}/${procState.totalSources} sources",
-                                    style = scaledBodySmall,
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = CinemaTextSecondary,
                                     modifier = Modifier.weight(1f)
                                 )
                                 androidx.compose.material3.TextButton(onClick = { viewModel.cancelProcessing() }) {
-                                    Text("Cancel", style = scaledLabelSmall, color = CinemaError)
+                                    Text("Cancel", style = MaterialTheme.typography.labelSmall, color = CinemaError)
                                 }
                             }
                             if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
                                 Text(
                                     text = "Total: ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
-                                    style = scaledLabelSmall,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = CinemaTextSecondary
                                 )
                             }
@@ -206,18 +201,18 @@ fun TvEpgManagementScreen(
                             Text(
                                 text = "Completed: ${procState.sourcesProcessed} sources" +
                                     if (procState.errors > 0) " (${procState.errors} errors)" else "",
-                                style = scaledBodySmall,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = if (procState.errors > 0) CinemaError else CinemaAccent
                             )
                             if (viewModel.isDevMode) {
                                 Text(
                                     text = "Last update: ${NumberUtils.formatTimestamp(context, procState.updatedAtMs)} (took ${NumberUtils.formatDuration(procState.durationMs)})",
-                                    style = scaledLabelSmall,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = CinemaTextSecondary
                                 )
                                 Text(
                                     text = "Total: ${NumberUtils.formatBytes(procState.totalDownloadBytes)}, ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
-                                    style = scaledLabelSmall,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = CinemaTextSecondary
                                 )
                             }
@@ -226,7 +221,7 @@ fun TvEpgManagementScreen(
                             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                             Text(
                                 text = procState.reason,
-                                style = scaledBodySmall,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = CinemaError
                             )
                         }
@@ -245,7 +240,7 @@ fun TvEpgManagementScreen(
                         ) {
                             Text(
                                 text = "Sources (${sources.size})",
-                                style = scaledTitleMedium,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = CinemaAccent
                             )
                             CinemaPrimaryButton(
@@ -284,11 +279,14 @@ fun TvEpgManagementScreen(
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
 
                             // Status dot
+                            val isQueued = queuedTaskIds.contains("epg_refresh_source_${source.id}") || queuedTaskIds.contains("epg_refresh_stale")
+
                             val dotColor = when {
+                                isQueued -> CinemaWarning
                                 !source.enabled -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                 source.lastError != null -> CinemaError
-                                source.lastIngestedAtMs > 0 && (nowMs - source.lastIngestedAtMs) < 24 * 3600 * 1000 -> CinemaAccent
-                                source.lastIngestedAtMs > 0 -> androidx.compose.ui.graphics.Color(0xFFFFAB40) // stale yellow
+                                source.lastIngestedAtMs > 0 && (nowMs - source.lastIngestedAtMs) < 6 * 3600 * 1000 -> CinemaAccent
+                                source.lastIngestedAtMs > 0 -> CinemaOrange
                                 else -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                             }
                             Surface(
@@ -302,12 +300,12 @@ fun TvEpgManagementScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = source.label.ifBlank { EpgFileManager.extractLabel(source.url) },
-                                    style = scaledBodyLarge,
+                                    style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = source.url,
-                                    style = scaledBodySmall,
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                                     maxLines = 1
                                 )
@@ -330,13 +328,13 @@ fun TvEpgManagementScreen(
                                 }
                                 Text(
                                     text = infoLine,
-                                    style = scaledLabelSmall,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                 )
                                 source.lastError?.let { error ->
                                     Text(
                                         text = error,
-                                        style = scaledLabelSmall,
+                                        style = MaterialTheme.typography.labelSmall,
                                         color = CinemaError,
                                         maxLines = 1
                                     )
@@ -368,7 +366,7 @@ fun TvEpgManagementScreen(
                                         }
                                         Text(
                                             text = progressText,
-                                            style = scaledLabelSmall,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = CinemaAccent
                                         )
                                     } else if (completedStat != null) {
@@ -382,7 +380,7 @@ fun TvEpgManagementScreen(
                                         }
                                         Text(
                                             text = statText,
-                                            style = scaledLabelSmall,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = if (completedStat.error != null) CinemaError else CinemaAccent
                                         )
                                     }
@@ -399,7 +397,7 @@ fun TvEpgManagementScreen(
                                         }
                                         Text(
                                             text = statText,
-                                            style = scaledLabelSmall,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = if (stat.error != null) CinemaError else CinemaAccent
                                         )
                                     }
@@ -413,7 +411,7 @@ fun TvEpgManagementScreen(
                                     }
                                     Text(
                                         text = "${NumberUtils.formatCount(source.lastChannels)}ch, ${NumberUtils.formatCount(source.lastProgrammes)}prg$sizeStr",
-                                        style = scaledLabelSmall,
+                                        style = MaterialTheme.typography.labelSmall,
                                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                     )
                                     var latestTime by remember { mutableStateOf<Long?>(null) }
@@ -423,7 +421,7 @@ fun TvEpgManagementScreen(
                                     latestTime?.let { epoch ->
                                         Text(
                                             text = "Latest: ${NumberUtils.formatEpochDate(context, epoch)}",
-                                            style = scaledLabelSmall,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                         )
                                     }
@@ -456,7 +454,7 @@ fun TvEpgManagementScreen(
                     Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                         Text(
                             text = "Actions",
-                            style = scaledTitleMedium,
+                            style = MaterialTheme.typography.titleMedium,
                             color = CinemaAccent
                         )
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -467,7 +465,7 @@ fun TvEpgManagementScreen(
                         ) {
                             Text(
                                 text = "Auto-refresh (every 24h)",
-                                style = scaledBodyMedium,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             CinemaSecondaryButton(
@@ -486,7 +484,7 @@ fun TvEpgManagementScreen(
                         ) {
                             Text(
                                 text = "Refresh Time",
-                                style = scaledBodyMedium,
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             CinemaSecondaryButton(
@@ -500,9 +498,9 @@ fun TvEpgManagementScreen(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
                         ) {
                             CinemaPrimaryButton(
-                                onClick = { viewModel.refreshAll() },
+                                onClick = { viewModel.refreshStale() },
                                 enabled = sources.isNotEmpty(),
-                                text = "Refresh All"
+                                text = "Refresh Stale"
                             )
                             if (selectedSourceIds.isNotEmpty()) {
                                 CinemaPrimaryButton(
@@ -530,7 +528,7 @@ fun TvEpgManagementScreen(
                         }
                         if (viewModel.isDevMode) {
                             val hasFailed = sources.any { it.enabled && it.lastError != null }
-                            val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 24 * 3600 * 1000) }
+                            val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 6 * 3600 * 1000) }
                             if (hasFailed || hasOutdated) {
                                 Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                                 Row(
@@ -602,13 +600,13 @@ fun TvEpgManagementScreen(
             title = {
                 Text(
                     text = "Cleanup Files",
-                    style = scaledTitleLarge
+                    style = MaterialTheme.typography.titleLarge
                 )
             },
             text = {
                 Text(
                     text = "This will delete any downloaded EPG files that are no longer associated with a source. The indexed data in the database is not affected.",
-                    style = scaledBodyMedium
+                    style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
@@ -639,13 +637,13 @@ fun TvEpgManagementScreen(
             title = {
                 Text(
                     text = "Purge Old Programmes",
-                    style = scaledTitleLarge
+                    style = MaterialTheme.typography.titleLarge
                 )
             },
             text = {
                 Text(
                     text = "This will permanently delete all programme data older than 2 days from the database. Channel entries are not affected.",
-                    style = scaledBodyMedium
+                    style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
@@ -676,13 +674,13 @@ fun TvEpgManagementScreen(
             title = {
                 Text(
                     text = "Clear All EPG Data",
-                    style = scaledTitleLarge
+                    style = MaterialTheme.typography.titleLarge
                 )
             },
             text = {
                 Text(
                     text = "This will delete all indexed programmes and channels. Sources will be kept.",
-                    style = scaledBodyMedium
+                    style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
@@ -713,13 +711,13 @@ fun TvEpgManagementScreen(
             title = {
                 Text(
                     text = "Delete Source",
-                    style = scaledTitleLarge
+                    style = MaterialTheme.typography.titleLarge
                 )
             },
             text = {
                 Text(
                     text = "Remove this EPG source?",
-                    style = scaledBodyMedium
+                    style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
@@ -759,13 +757,13 @@ fun TvEpgManagementScreen(
                 Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                 Text(
                     text = "Clearing all EPG data...",
-                    style = scaledTitleMedium,
+                    style = MaterialTheme.typography.titleMedium,
                     color = CinemaTextPrimary
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 Text(
                     text = "This may take a moment",
-                    style = scaledBodySmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextSecondary
                 )
             }
