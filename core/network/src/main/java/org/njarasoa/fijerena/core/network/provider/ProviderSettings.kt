@@ -30,7 +30,10 @@ data class ProviderSettings(
     val epgUrl: String = "",
 
     /** Stream output format for live streams: "m3u8" (HLS) or "ts" (MPEG-TS) */
-    val streamOutputFormat: String = "m3u8"
+    val streamOutputFormat: String = "m3u8",
+
+    /** Playlist type for Xtream API: "m3u_plus" (extended M3U with EPG) or "simple" (basic M3U) */
+    val playlistType: String = "m3u_plus"
 ) {
     /** Cache expiry time in milliseconds */
     val cacheExpiryMs: Long get() = cacheExpiryHours.toLong() * 60 * 60 * 1000
