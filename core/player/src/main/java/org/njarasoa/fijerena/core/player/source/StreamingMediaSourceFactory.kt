@@ -1,63 +1,22 @@
 package org.njarasoa.fijerena.core.player.source
 
 import android.content.Context
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.datasource.cronet.CronetDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
-import com.google.android.gms.net.CronetProviderInstaller
-import org.chromium.net.CronetEngine
 import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
-import java.util.concurrent.Executors
 
 @OptIn(UnstableApi::class)
 object StreamingMediaSourceFactory {
 
     private const val USER_AGENT = "MediaPlayer/1.0 (Linux; Android)"
 
-    @Volatile
-    private var cronetEngine: CronetEngine? = null
-    private val cronetExecutor = Executors.newSingleThreadExecutor()
-
-    /**
-     * Initialize Cronet engine. Call from service onCreate().
-     * Cronet provides QUIC/HTTP/3 support which can significantly improve
-     * streaming performance on cellular networks.
-     */
-    fun initCronet(context: Context) {
-        try {
-            CronetProviderInstaller.installProvider(context)
-            cronetEngine = CronetEngine.Builder(context)
-                .setUserAgent(USER_AGENT)
-                .enableQuic(true)
-                .enableHttp2(true)
-                .build()
-            Log.i("StreamingMedia", "Cronet engine initialized with QUIC+HTTP/2")
-        } catch (e: Exception) {
-            Log.w("StreamingMedia", "Cronet unavailable, falling back to DefaultHttpDataSource", e)
-            cronetEngine = null
-        }
-    }
-
-    /**
-     * Release Cronet engine. Call from service onDestroy().
-     */
-    fun releaseCronet() {
-        cronetEngine?.shutdown()
-        cronetEngine = null
-    }
-
-    /**
-     * Creates a [MediaSource] using Cronet (QUIC/HTTP/3) when available,
-     * falling back to [DefaultHttpDataSource] otherwise.
-     */
     fun createMediaSource(
         context: Context,
         streamUrl: String,
@@ -104,17 +63,6 @@ object StreamingMediaSourceFactory {
             putAll(headers)
         }
 
-        val engine = cronetEngine
-        if (engine != null) {
-            Log.i("StreamingMedia", "Using CronetDataSource (QUIC/HTTP/3)")
-            return CronetDataSource.Factory(engine, cronetExecutor)
-                .setConnectionTimeoutMs(connectTimeoutMs)
-                .setReadTimeoutMs(readTimeoutMs)
-                .setDefaultRequestProperties(allHeaders)
-        }
-
-        // Fallback to DefaultHttpDataSource if Cronet is unavailable
-        Log.w("StreamingMedia", "Cronet unavailable, using DefaultHttpDataSource")
         return DefaultHttpDataSource.Factory()
             .setUserAgent(USER_AGENT)
             .setConnectTimeoutMs(connectTimeoutMs)
