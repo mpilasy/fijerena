@@ -20,7 +20,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
         EpgIndexMetadata::class,
         EpgSourceEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class EpgIndexDatabase : RoomDatabase() {
@@ -56,6 +56,41 @@ abstract class EpgIndexDatabase : RoomDatabase() {
             }
         }
 
+        // Upgrade FTS4 → FTS5 (unicode61 tokenizer, rowid-based triggers).
+        // FTS5 rebuild is faster on large datasets and has better space efficiency.
+        // The index is empty after recreation; EpgIndexer will rebuild it in background.
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `epg_programme_fts`")
+                listOf(
+                    "room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE",
+                    "room_fts_content_sync_epg_programme_fts_BEFORE_DELETE",
+                    "room_fts_content_sync_epg_programme_fts_AFTER_UPDATE",
+                    "room_fts_content_sync_epg_programme_fts_AFTER_INSERT"
+                ).forEach { name -> db.execSQL("DROP TRIGGER IF EXISTS `$name`") }
+                db.execSQL(
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS `epg_programme_fts` " +
+                    "USING fts5(content=`epg_programme`, content_rowid=`id`, tokenize=\"unicode61\", `title`)"
+                )
+                db.execSQL(
+                    "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE` " +
+                    "BEFORE UPDATE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END"
+                )
+                db.execSQL(
+                    "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` " +
+                    "BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END"
+                )
+                db.execSQL(
+                    "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` " +
+                    "AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END"
+                )
+                db.execSQL(
+                    "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` " +
+                    "AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END"
+                )
+            }
+        }
+
         @Volatile
         private var INSTANCE: EpgIndexDatabase? = null
 
@@ -72,7 +107,7 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                 DB_NAME
             )
                 .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(object : RoomDatabase.Callback() {
                     @OptIn(DelicateCoroutinesApi::class)

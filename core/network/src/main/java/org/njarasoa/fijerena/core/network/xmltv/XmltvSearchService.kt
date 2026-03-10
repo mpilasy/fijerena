@@ -85,32 +85,39 @@ class XmltvSearchService(private val context: Context) {
     ): XmltvSearchResult? {
         val db = EpgIndexDatabase.getInstance(context)
         val dao = db.epgIndexDao()
+        val indexer = EpgIndexer.getInstance(context)
 
-        // 1. Try FTS phrase match ("word1 word2"*)
-        val rows: List<EpgSearchResultRow> = try {
-            val ftsQuery = buildFtsQuery(query)
-            dao.searchByTitleFts(ftsQuery, windowStart, windowEnd)
-        } catch (e: Exception) {
-            Log.d(TAG, "FTS phrase query failed ('$query'): ${e.message}")
-            emptyList()
-        }
-
-        if (rows.isNotEmpty()) {
-            return rowsToSearchResult(rows, searchedFromIndex = true)
-        }
-
-        // 2. Try FTS AND match (word1* word2* — each word independently, any order)
-        val andFtsQuery = buildFtsAndQuery(query)
-        if (andFtsQuery != null) {
-            val andRows = try {
-                dao.searchByTitleFts(andFtsQuery, windowStart, windowEnd)
+        // Skip FTS entirely when the index is being rebuilt in the background.
+        // The idx_programme_title_lower B-tree index makes LIKE queries fast enough.
+        if (!indexer.isFtsStale()) {
+            // 1. Try FTS phrase match ("word1 word2"*)
+            val rows: List<EpgSearchResultRow> = try {
+                val ftsQuery = buildFtsQuery(query)
+                dao.searchByTitleFts(ftsQuery, windowStart, windowEnd)
             } catch (e: Exception) {
-                Log.d(TAG, "FTS AND query failed ('$query'): ${e.message}")
+                Log.d(TAG, "FTS phrase query failed ('$query'): ${e.message}")
                 emptyList()
             }
-            if (andRows.isNotEmpty()) {
-                return rowsToSearchResult(andRows, searchedFromIndex = true)
+
+            if (rows.isNotEmpty()) {
+                return rowsToSearchResult(rows, searchedFromIndex = true)
             }
+
+            // 2. Try FTS AND match (word1* word2* — each word independently, any order)
+            val andFtsQuery = buildFtsAndQuery(query)
+            if (andFtsQuery != null) {
+                val andRows = try {
+                    dao.searchByTitleFts(andFtsQuery, windowStart, windowEnd)
+                } catch (e: Exception) {
+                    Log.d(TAG, "FTS AND query failed ('$query'): ${e.message}")
+                    emptyList()
+                }
+                if (andRows.isNotEmpty()) {
+                    return rowsToSearchResult(andRows, searchedFromIndex = true)
+                }
+            }
+        } else {
+            Log.d(TAG, "FTS index is stale — using LIKE fallback for '$query'")
         }
 
         // 3. Fall back to LIKE with full query

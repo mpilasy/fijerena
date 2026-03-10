@@ -187,6 +187,18 @@ fun MobileEpgManagementScreen(
                         )
                     }
                 }
+                if (procState is EpgFileManager.MultiSourceState.Finalizing) {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(CinemaSpacing.md))
+                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
+                        Text(
+                            text = procState.phase,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 if (procState is EpgFileManager.MultiSourceState.Completed) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.xs))
                     Text(
@@ -380,6 +392,7 @@ fun MobileEpgManagementScreen(
 
                         val dotColor = when {
                             !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                            procState is EpgFileManager.MultiSourceState.Finalizing -> CinemaSuccess // All sources done
                             progress != null -> {
                                 if (progress.phase == "Downloading" || progress.phase == "Ingesting") {
                                     CinemaWarning // Yellow
@@ -477,6 +490,12 @@ fun MobileEpgManagementScreen(
                                         color = if (completedStat.error != null) CinemaError else MaterialTheme.colorScheme.primary
                                     )
                                 }
+                            } else if (procState is EpgFileManager.MultiSourceState.Finalizing) {
+                                Text(
+                                    text = "Ingested",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             } else if (procState is EpgFileManager.MultiSourceState.Completed) {
                                 val stat = procState.sourceStats[source.id]
                                 if (stat != null) {
