@@ -437,6 +437,7 @@ object VideoInfoSerializer : KSerializer<VideoInfo?> {
         }
     }
 
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     override fun serialize(encoder: Encoder, value: VideoInfo?) {
         if (value != null) {
             encoder.encodeSerializableValue(VideoInfo.serializer(), value)
@@ -471,6 +472,7 @@ object AudioInfoSerializer : KSerializer<AudioInfo?> {
         }
     }
 
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     override fun serialize(encoder: Encoder, value: AudioInfo?) {
         if (value != null) {
             encoder.encodeSerializableValue(AudioInfo.serializer(), value)

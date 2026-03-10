@@ -1,9 +1,10 @@
-@file:OptIn(androidx.media3.common.util.UnstableApi::class)
-
 package org.njarasoa.fijerena.core.player.source
 
 import android.content.Context
+import android.util.Log
+import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.cronet.CronetDataSource
@@ -14,9 +15,9 @@ import org.chromium.net.CronetEngine
 import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
-import android.util.Log
 import java.util.concurrent.Executors
 
+@OptIn(UnstableApi::class)
 object StreamingMediaSourceFactory {
 
     private const val USER_AGENT = "MediaPlayer/1.0 (Linux; Android)"
