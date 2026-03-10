@@ -1,13 +1,14 @@
-@file:OptIn(androidx.media3.common.util.UnstableApi::class)
-
 package org.njarasoa.fijerena.core.player.config
 
 import android.content.Context
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
 
+@OptIn(UnstableApi::class)
 object PlayerConfigFactory {
     enum class ContentType {
         LIVE_TV,

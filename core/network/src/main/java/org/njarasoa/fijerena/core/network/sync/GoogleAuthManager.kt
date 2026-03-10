@@ -20,6 +20,7 @@ import kotlinx.coroutines.withContext
  * Manages Google Sign-In for Drive appDataFolder access.
  * Uses the drive.appdata scope which only allows access to app-specific hidden folder.
  */
+@Suppress("DEPRECATION")
 class GoogleAuthManager(private val context: Context) {
 
     companion object {

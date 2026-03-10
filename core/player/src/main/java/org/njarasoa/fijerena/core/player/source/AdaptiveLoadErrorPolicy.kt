@@ -1,8 +1,8 @@
-@file:OptIn(androidx.media3.common.util.UnstableApi::class)
-
 package org.njarasoa.fijerena.core.player.source
 
+import androidx.annotation.OptIn
 import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
 import org.njarasoa.fijerena.core.player.config.NetworkType
@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
  *
  * Reads [NetworkMonitor.currentNetworkType] at call time — no state to maintain.
  */
+@OptIn(UnstableApi::class)
 class AdaptiveLoadErrorPolicy(
     private val onRetry: (() -> Unit)? = null
 ) : LoadErrorHandlingPolicy {
