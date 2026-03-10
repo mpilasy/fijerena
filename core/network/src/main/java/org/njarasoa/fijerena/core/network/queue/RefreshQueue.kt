@@ -31,6 +31,9 @@ object RefreshQueue {
     private val _queuedTaskIds = MutableStateFlow<Set<String>>(emptySet())
     val queuedTaskIds = _queuedTaskIds.asStateFlow()
 
+    private val _activeTaskId = MutableStateFlow<String?>(null)
+    val activeTaskId = _activeTaskId.asStateFlow()
+
     private var currentJob: Job? = null
 
     private class QueuedTask(
@@ -93,6 +96,7 @@ object RefreshQueue {
             } ?: break
 
             _isProcessing.value = true
+            _activeTaskId.value = queuedTask.task.id
             try {
                 val job = scope.launch {
                     queuedTask.task.execute()
@@ -109,6 +113,7 @@ object RefreshQueue {
                 queuedTask.deferred.completeExceptionally(e)
             } finally {
                 currentJob = null
+                _activeTaskId.value = null
                 _isProcessing.value = false
             }
         }

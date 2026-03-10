@@ -221,7 +221,7 @@ private fun EpisodeListContent(
             val seasonKey = season.seasonNumber.toString()
             val episodes = sortedEpisodesBySeason[seasonKey] ?: continue
             for (episode in episodes) {
-                val watched = mediaRepository?.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
+                val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
                 if (watched == null || !watched.isCompleted) {
                     expandedSeasons = setOf(season.seasonNumber)
                     return@LaunchedEffect
@@ -336,7 +336,7 @@ private fun EpisodeDetailContent(
     var resumePositionMs by remember { mutableStateOf(0L) }
 
     LaunchedEffect(episode.id) {
-        val watched = mediaRepository?.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
+        val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
         if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
             val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
             if (progress in 2.0..95.0) {

@@ -2,7 +2,7 @@ package org.njarasoa.fijerena.core.network.xtream.db
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.MapInfo
+import androidx.room.MapColumn
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
@@ -26,9 +26,10 @@ interface XtreamSeriesDao {
     @Query("SELECT seriesId FROM xtream_series WHERE providerId = :providerId")
     fun getSeriesIds(providerId: Long): List<Int>
 
-    @MapInfo(keyColumn = "seriesId", valueColumn = "contentHash")
     @Query("SELECT seriesId, contentHash FROM xtream_series WHERE providerId = :providerId")
-    fun getSeriesHashes(providerId: Long): Map<Int, Int>
+    fun getSeriesHashes(
+        providerId: Long
+    ): Map<@MapColumn(columnName = "seriesId") Int, @MapColumn(columnName = "contentHash") Int>
 
     @Query("DELETE FROM xtream_series WHERE providerId = :providerId AND seriesId IN (:ids)")
     fun deleteByIds(providerId: Long, ids: List<Int>)

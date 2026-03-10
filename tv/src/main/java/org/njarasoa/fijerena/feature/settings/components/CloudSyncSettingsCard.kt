@@ -75,7 +75,7 @@ fun CloudSyncSettingsCard(
                             is DriveSettingsSyncManager.SyncStatus.Syncing -> "Syncing..."
                             is DriveSettingsSyncManager.SyncStatus.Synced -> "Synced"
                             is DriveSettingsSyncManager.SyncStatus.Error ->
-                                "Error: ${(syncStatus as DriveSettingsSyncManager.SyncStatus.Error).message}"
+                                "Error: ${syncStatus.message}"
                             else -> "Ready"
                         }
                         Text(

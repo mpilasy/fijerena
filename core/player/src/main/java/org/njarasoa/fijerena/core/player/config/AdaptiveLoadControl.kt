@@ -1,8 +1,8 @@
-@file:OptIn(androidx.media3.common.util.UnstableApi::class)
-
 package org.njarasoa.fijerena.core.player.config
 
+import androidx.annotation.OptIn
 import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.analytics.PlayerId
@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
  * when the network type changes, sharing a single [DefaultAllocator] across swaps
  * to avoid memory churn.
  */
+@OptIn(UnstableApi::class)
 class AdaptiveLoadControl(
     private val contentType: PlayerConfigFactory.ContentType,
     private val cellularLiveMultiplier: Float = 1.0f,
@@ -86,8 +87,11 @@ class AdaptiveLoadControl(
     // ── LoadControl implementation (FULL DELEGATION TO SATISFY 1.5.1 / 1.7.1 RUNTIME) ──
 
     // Basic lifecycle methods (required by 1.5.1 interface)
+    @Deprecated("Use onPrepared(PlayerId) instead")
     override fun onPrepared() { delegate.onPrepared() }
+    @Deprecated("Use onStopped(PlayerId) instead")
     override fun onStopped() { delegate.onStopped() }
+    @Deprecated("Use onReleased(PlayerId) instead")
     override fun onReleased() { delegate.onReleased() }
 
     // Analytics-aware lifecycle methods (often used by 1.7.1+ internal logic)
@@ -98,9 +102,11 @@ class AdaptiveLoadControl(
     // Allocator (signature varies, implemented both via override where possible)
     override fun getAllocator(): Allocator = delegate.allocator
 
+    @Deprecated("Use getBackBufferDurationUs(PlayerId) instead")
     override fun getBackBufferDurationUs(): Long = delegate.backBufferDurationUs
     override fun getBackBufferDurationUs(playerId: PlayerId): Long = delegate.getBackBufferDurationUs(playerId)
 
+    @Deprecated("Use retainBackBufferFromKeyframe(PlayerId) instead")
     override fun retainBackBufferFromKeyframe(): Boolean = delegate.retainBackBufferFromKeyframe()
     override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean = delegate.retainBackBufferFromKeyframe(playerId)
 

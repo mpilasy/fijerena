@@ -35,7 +35,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
@@ -59,8 +58,10 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaOrange
+import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
@@ -87,6 +88,8 @@ fun TvEpgManagementScreen(
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val dbStats by viewModel.dbStats.collectAsStateWithLifecycle()
     val queuedTaskIds by viewModel.queuedTaskIds.collectAsStateWithLifecycle()
+    val activeTaskId by viewModel.activeTaskId.collectAsStateWithLifecycle()
+    val taskSourceIds by viewModel.taskSourceIds.collectAsStateWithLifecycle()
     val hasStrayFiles by viewModel.hasStrayFiles.collectAsStateWithLifecycle()
     val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsStateWithLifecycle()
 
@@ -175,6 +178,23 @@ fun TvEpgManagementScreen(
 
                         // Processing state
                         val procState = processingState
+                        val hasQueuedTask = queuedTaskIds.any { it.startsWith("epg_refresh_") }
+                        if (procState is EpgFileManager.MultiSourceState.Pending || (procState is EpgFileManager.MultiSourceState.Idle && hasQueuedTask)) {
+                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                            Row(
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Queued...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaAccent,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                androidx.compose.material3.TextButton(onClick = { viewModel.cancelProcessing() }) {
+                                    Text("Cancel", style = MaterialTheme.typography.labelSmall, color = CinemaError)
+                                }
+                            }
+                        }
                         if (procState is EpgFileManager.MultiSourceState.Processing) {
                             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                             Row(
@@ -231,6 +251,108 @@ fun TvEpgManagementScreen(
                 }
             }
 
+            // Actions section
+            item(contentType = "actions_section") {
+                GlassPanel(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
+                        Text(
+                            text = "Actions",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = CinemaAccent
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Auto-refresh (every 24h)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            CinemaSecondaryButton(
+                                onClick = {
+                                    autoRefreshEnabled = !autoRefreshEnabled
+                                    viewModel.setAutoRefreshEnabled(autoRefreshEnabled)
+                                },
+                                text = if (autoRefreshEnabled) "ON" else "OFF"
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Refresh Time",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            CinemaSecondaryButton(
+                                onClick = { showTimeDialog = true },
+                                text = epgRefreshTime
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                        ) {
+                            if (staleSourceCount > 0) {
+                                CinemaPrimaryButton(
+                                    onClick = { viewModel.refreshStale() },
+                                    enabled = sources.isNotEmpty(),
+                                    text = "Refresh Stale ($staleSourceCount)"
+                                )
+                            }
+                            if (selectedSourceIds.isNotEmpty()) {
+                                CinemaPrimaryButton(
+                                    onClick = {
+                                        viewModel.refreshSelected(selectedSourceIds)
+                                        selectedSourceIds = emptySet()
+                                    },
+                                    text = "Refresh Selected (${selectedSourceIds.size})"
+                                )
+                            }
+                            CinemaSecondaryButton(
+                                onClick = { showCleanupConfirm = true },
+                                enabled = hasStrayFiles,
+                                text = "Cleanup Files"
+                            )
+                            CinemaSecondaryButton(
+                                onClick = { showPurgeConfirm = true },
+                                enabled = staleProgrammeCount > 0,
+                                text = "Purge >2 Days"
+                            )
+                            CinemaDangerButton(
+                                onClick = { showClearConfirm = true },
+                                text = "Clear All Data"
+                            )
+                        }
+                        if (viewModel.isDevMode) {
+                            val hasFailed = failedSourceCount > 0
+                            val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 6 * 3600 * 1000) }
+                            if (hasFailed || hasOutdated) {
+                                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                                ) {
+                                    if (hasFailed) {
+                                        CinemaSecondaryButton(
+                                            onClick = { viewModel.refreshFailed() },
+                                            text = "Refresh Failed ($failedSourceCount)"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Sources section
             item(contentType = "sources_header") {
                 GlassPanel(modifier = Modifier.fillMaxWidth()) {
@@ -281,15 +403,29 @@ fun TvEpgManagementScreen(
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
 
                             // Status dot
-                            val isQueued = queuedTaskIds.contains("epg_refresh_source_${source.id}") || queuedTaskIds.contains("epg_refresh_stale")
+                            val procState = processingState
+                            val progress = (procState as? EpgFileManager.MultiSourceState.Processing)?.activeProgress?.get(source.id)
+                            
+                            val isRunningOrQueued = taskSourceIds.entries.any { (tid, ids) -> 
+                                (tid == activeTaskId || queuedTaskIds.contains(tid)) && source.id in ids 
+                            }
+                            
+                            val threshold = 6 * 3600 * 1000L
+                            val isStale = source.lastIngestedAtMs == 0L || (nowMs - source.lastIngestedAtMs) > threshold
 
                             val dotColor = when {
-                                isQueued -> CinemaWarning
                                 !source.enabled -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
-                                source.lastError != null -> CinemaError
-                                source.lastIngestedAtMs > 0 && (nowMs - source.lastIngestedAtMs) < 6 * 3600 * 1000 -> CinemaAccent
-                                source.lastIngestedAtMs > 0 -> CinemaOrange
-                                else -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
+                                progress != null -> {
+                                    if (progress.phase == "Downloading" || progress.phase == "Ingesting") {
+                                        CinemaWarning // Yellow
+                                    } else {
+                                        CinemaAccentLight // Cyan-ish for "Awaiting Ingestion"
+                                    }
+                                }
+                                isRunningOrQueued -> CinemaAccentLight // Cyan-ish for "Queued"
+                                source.lastError != null -> CinemaError // Red
+                                isStale -> CinemaOrange // Orange
+                                else -> CinemaSuccess // Green
                             }
                             Surface(
                                 modifier = Modifier.size(Spacing.sm.scaled(scale)),
@@ -445,114 +581,6 @@ fun TvEpgManagementScreen(
                                 onClick = { showDeleteConfirm = source.id },
                                 icon = { Icon(Icons.Default.Delete, contentDescription = "Delete") }
                             )
-                        }
-                    }
-                }
-            }
-
-            // Actions section
-            item(contentType = "actions_section") {
-                GlassPanel(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-                        Text(
-                            text = "Actions",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = CinemaAccent
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Auto-refresh (every 24h)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            CinemaSecondaryButton(
-                                onClick = {
-                                    autoRefreshEnabled = !autoRefreshEnabled
-                                    viewModel.setAutoRefreshEnabled(autoRefreshEnabled)
-                                },
-                                text = if (autoRefreshEnabled) "ON" else "OFF"
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Refresh Time",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            CinemaSecondaryButton(
-                                onClick = { showTimeDialog = true },
-                                text = epgRefreshTime
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
-                        ) {
-                            if (staleSourceCount > 0) {
-                                CinemaPrimaryButton(
-                                    onClick = { viewModel.refreshStale() },
-                                    enabled = sources.isNotEmpty(),
-                                    text = "Refresh Stale ($staleSourceCount)"
-                                )
-                            }
-                            if (selectedSourceIds.isNotEmpty()) {
-                                CinemaPrimaryButton(
-                                    onClick = {
-                                        viewModel.refreshSelected(selectedSourceIds)
-                                        selectedSourceIds = emptySet()
-                                    },
-                                    text = "Refresh Selected (${selectedSourceIds.size})"
-                                )
-                            }
-                            CinemaSecondaryButton(
-                                onClick = { showCleanupConfirm = true },
-                                enabled = hasStrayFiles,
-                                text = "Cleanup Files"
-                            )
-                            CinemaSecondaryButton(
-                                onClick = { showPurgeConfirm = true },
-                                enabled = staleProgrammeCount > 0,
-                                text = "Purge >2 Days"
-                            )
-                            CinemaDangerButton(
-                                onClick = { showClearConfirm = true },
-                                text = "Clear All Data"
-                            )
-                        }
-                        if (viewModel.isDevMode) {
-                            val hasFailed = failedSourceCount > 0
-                            val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 6 * 3600 * 1000) }
-                            if (hasFailed || hasOutdated) {
-                                Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
-                                ) {
-                                    if (hasFailed) {
-                                        CinemaSecondaryButton(
-                                            onClick = { viewModel.refreshFailed() },
-                                            text = "Refresh Failed ($failedSourceCount)"
-                                        )
-                                    }
-                                    if (hasOutdated) {
-                                        CinemaSecondaryButton(
-                                            onClick = { viewModel.refreshOutdated() },
-                                            text = "Refresh Outdated"
-                                        )
-                                    }
-                                }
-                            }
                         }
                     }
                 }

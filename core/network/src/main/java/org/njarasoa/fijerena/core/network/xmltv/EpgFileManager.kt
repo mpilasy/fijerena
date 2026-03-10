@@ -3,6 +3,8 @@ package org.njarasoa.fijerena.core.network.xmltv
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import okhttp3.Request
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -121,6 +123,7 @@ class EpgFileManager private constructor(private val context: Context) {
 
     sealed interface MultiSourceState {
         data object Idle : MultiSourceState
+        data object Pending : MultiSourceState
         data class Processing(
             val completedCount: Int,
             val totalSources: Int,
@@ -163,7 +166,7 @@ class EpgFileManager private constructor(private val context: Context) {
         return type != DeviceType.GENERIC_MOBILE
     }
 
-    @OptIn(androidx.media3.common.util.UnstableApi::class)
+    @OptIn(UnstableApi::class)
     private fun isPlaybackActive(): Boolean {
         val svc = StreamingPlaybackService.getInstance() ?: return false
         val state = svc.playbackState.value
@@ -245,50 +248,16 @@ class EpgFileManager private constructor(private val context: Context) {
      * @param onCellularConfirm Callback invoked if user must confirm on cellular.
      *                          Return false to cancel processing.
      */
-    fun launchProcessAllSources(
-        onComplete: (suspend () -> Unit)? = null,
-        onCellularConfirm: (suspend () -> Boolean)? = null
-    ) {
-        processJob?.cancel()
-
-        processJob = scope.launch {
-            val networkType = NetworkMonitor.currentNetworkType
-            val shouldProceed = if (networkType == NetworkType.CELLULAR && onCellularConfirm != null) {
-                onCellularConfirm()
-            } else {
-                true
-            }
-
-            if (!shouldProceed) {
-                return@launch
-            }
-
-            val db = EpgIndexDatabase.getInstance(context)
-            val sources = db.epgSourceDao().getEnabledSources()
-
-            val task = object : RefreshTask {
-                override val id = "epg_refresh_all"
-                override val priority = RefreshPriority.MEDIUM
-                override suspend fun execute() {
-                    processAllSourcesInternal(sources)
-                    onComplete?.invoke()
-                }
-            }
-            RefreshQueue.submit(task)
-        }
-    }
-
-    /**
-     * Start processing a pre-filtered list of sources. Shows confirmation dialog on cellular.
-     * Same lifecycle guarantees as [launchProcessAllSources].
-     */
-    fun launchProcessSources(
-        sources: List<EpgSourceEntity>,
+    private fun launchGenericTask(
         taskId: String,
         onComplete: (suspend () -> Unit)? = null,
-        onCellularConfirm: (suspend () -> Boolean)? = null
+        onCellularConfirm: (suspend () -> Boolean)? = null,
+        dbQueryAndProcess: suspend () -> Unit
     ) {
         processJob?.cancel()
+        if (_state.value !is MultiSourceState.Processing) {
+            _state.value = MultiSourceState.Pending
+        }
 
         processJob = scope.launch {
             val networkType = NetworkMonitor.currentNetworkType
@@ -299,6 +268,9 @@ class EpgFileManager private constructor(private val context: Context) {
             }
 
             if (!shouldProceed) {
+                if (_state.value is MultiSourceState.Pending) {
+                    _state.value = MultiSourceState.Idle
+                }
                 return@launch
             }
 
@@ -306,51 +278,67 @@ class EpgFileManager private constructor(private val context: Context) {
                 override val id = taskId
                 override val priority = RefreshPriority.MEDIUM
                 override suspend fun execute() {
-                    processAllSourcesInternal(sources)
-                    onComplete?.invoke()
+                    try {
+                        dbQueryAndProcess()
+                    } finally {
+                        onComplete?.invoke()
+                    }
                 }
             }
             RefreshQueue.submit(task)
         }
     }
 
-    /**
-     * Start processing a single source. Shows confirmation dialog on cellular.
-     * Same lifecycle guarantees as [launchProcessAllSources].
-     *
-     * @param sourceId The source to refresh
-     * @param onComplete Callback invoked after processing completes (on WiFi or after confirmation).
-     * @param onCellularConfirm Callback invoked if user must confirm on cellular.
-     *                          Return false to cancel processing.
-     */
+    fun launchRefreshStale(onComplete: (suspend () -> Unit)? = null, onCellularConfirm: (suspend () -> Boolean)? = null) {
+        launchGenericTask("epg_refresh_stale", onComplete, onCellularConfirm) {
+            val db = EpgIndexDatabase.getInstance(context)
+            val thresholdMs = System.currentTimeMillis() - STALE_THRESHOLD_MS
+            val staleSources = db.epgSourceDao().getStaleSources(thresholdMs)
+            if (staleSources.isNotEmpty()) {
+                processAllSourcesInternal(staleSources)
+            } else {
+                if (_state.value is MultiSourceState.Pending) {
+                    _state.value = MultiSourceState.Idle
+                }
+            }
+        }
+    }
+
+    fun launchRefreshFailed(onComplete: (suspend () -> Unit)? = null, onCellularConfirm: (suspend () -> Boolean)? = null) {
+        launchGenericTask("epg_refresh_failed", onComplete, onCellularConfirm) {
+            val db = EpgIndexDatabase.getInstance(context)
+            val failedSources = db.epgSourceDao().getFailedSources()
+            if (failedSources.isNotEmpty()) {
+                processAllSourcesInternal(failedSources)
+            } else {
+                if (_state.value is MultiSourceState.Pending) {
+                    _state.value = MultiSourceState.Idle
+                }
+            }
+        }
+    }
+
+    fun launchRefreshSelected(selectedIds: Set<Long>, onComplete: (suspend () -> Unit)? = null, onCellularConfirm: (suspend () -> Boolean)? = null) {
+        launchGenericTask("epg_refresh_selected", onComplete, onCellularConfirm) {
+            val db = EpgIndexDatabase.getInstance(context)
+            val selectedSources = db.epgSourceDao().getAllSourcesOnce().filter { it.id in selectedIds }
+            if (selectedSources.isNotEmpty()) {
+                processAllSourcesInternal(selectedSources)
+            } else {
+                if (_state.value is MultiSourceState.Pending) {
+                    _state.value = MultiSourceState.Idle
+                }
+            }
+        }
+    }
+
     fun launchProcessSingleSource(
         sourceId: Long,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null
     ) {
-        processJob?.cancel()
-
-        processJob = scope.launch {
-            val networkType = NetworkMonitor.currentNetworkType
-            val shouldProceed = if (networkType == NetworkType.CELLULAR && onCellularConfirm != null) {
-                onCellularConfirm()
-            } else {
-                true
-            }
-
-            if (!shouldProceed) {
-                return@launch
-            }
-
-            val task = object : RefreshTask {
-                override val id = "epg_refresh_source_$sourceId"
-                override val priority = RefreshPriority.MEDIUM
-                override suspend fun execute() {
-                    processSingleSourceInternal(sourceId)
-                    onComplete?.invoke()
-                }
-            }
-            RefreshQueue.submit(task)
+        launchGenericTask("epg_refresh_source_$sourceId", onComplete, onCellularConfirm) {
+            processSingleSourceInternal(sourceId)
         }
     }
 
