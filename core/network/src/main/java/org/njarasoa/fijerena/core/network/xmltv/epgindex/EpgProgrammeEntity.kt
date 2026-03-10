@@ -2,7 +2,8 @@ package org.njarasoa.fijerena.core.network.xmltv.epgindex
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
-import androidx.room.Fts4
+import androidx.room.Fts5
+import androidx.room.FtsOptions
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -44,7 +45,7 @@ data class EpgProgrammeEntity(
     val sourceId: Long = 0
 )
 
-@Fts4(contentEntity = EpgProgrammeEntity::class, tokenizer = "unicode61")
+@Fts5(contentEntity = EpgProgrammeEntity::class, tokenizer = FtsOptions.TOKENIZER_UNICODE61)
 @Entity(tableName = "epg_programme_fts")
 data class EpgProgrammeFts(
     val title: String
