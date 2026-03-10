@@ -95,7 +95,6 @@ class XmltvSearchService(private val context: Context) {
                 val ftsQuery = buildFtsQuery(query)
                 dao.searchByTitleFts(ftsQuery, windowStart, windowEnd)
             } catch (e: Exception) {
-                Log.d(TAG, "FTS phrase query failed ('$query'): ${e.message}")
                 emptyList()
             }
 
@@ -109,7 +108,6 @@ class XmltvSearchService(private val context: Context) {
                 val andRows = try {
                     dao.searchByTitleFts(andFtsQuery, windowStart, windowEnd)
                 } catch (e: Exception) {
-                    Log.d(TAG, "FTS AND query failed ('$query'): ${e.message}")
                     emptyList()
                 }
                 if (andRows.isNotEmpty()) {
@@ -117,7 +115,7 @@ class XmltvSearchService(private val context: Context) {
                 }
             }
         } else {
-            Log.d(TAG, "FTS index is stale — using LIKE fallback for '$query'")
+            // FTS index is stale
         }
 
         // 3. Fall back to LIKE with full query

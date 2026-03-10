@@ -131,7 +131,7 @@ class EpgIndexer private constructor(private val context: Context) {
         val wasStale = stalePrefs.getBoolean("fts_stale", false)
         if (wasStale) {
             ftsStale.set(true)
-            Log.d(TAG, "FTS index is stale from previous session — background rebuild needed")
+
         }
         try {
             val db = EpgIndexDatabase.getInstance(context)
@@ -142,7 +142,6 @@ class EpgIndexer private constructor(private val context: Context) {
                     programmeCount = metadata.programmeCount,
                     indexedAtMs = metadata.indexedAtMs
                 )
-                Log.d(TAG, "Restored index: ${metadata.channelCount} channels, ${metadata.programmeCount} programmes")
             } else {
                 _state.value = EpgIndexState.NotIndexed
             }
@@ -182,7 +181,6 @@ class EpgIndexer private constructor(private val context: Context) {
         isPlaybackActive: () -> Boolean = { false },
         onProgress: ((channels: Int, programmes: Int) -> Unit)? = null
     ): IngestionStats = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Ingesting from stream (sourceId=$sourceId, tz=$timezoneOverrideHours)")
 
         val db = EpgIndexDatabase.getInstance(context)
         val dao = db.epgIndexDao()
@@ -281,7 +279,6 @@ class EpgIndexer private constructor(private val context: Context) {
 
             val stats = IngestionStats(channelCount, programmeCount)
             lastIngestionStats = stats
-            Log.d(TAG, "Stream ingestion complete: $channelCount channels, $programmeCount programmes")
             stats
 
         } catch (e: OutOfMemoryError) {
@@ -319,7 +316,6 @@ class EpgIndexer private constructor(private val context: Context) {
     ) = withContext(Dispatchers.IO) {
         if (epgByStreamId.isEmpty()) return@withContext
 
-        Log.d(TAG, "Ingesting Xtream EPG: ${epgByStreamId.size} streams for provider $providerId")
         val ingestStartMs = System.currentTimeMillis()
 
         try {
@@ -419,7 +415,6 @@ class EpgIndexer private constructor(private val context: Context) {
             }
 
             lastIngestionStats = IngestionStats(channelEntities.size, totalProgrammes)
-            Log.d(TAG, "Xtream EPG ingestion complete: ${channelEntities.size} channels, $totalProgrammes programmes")
 
             rebuildFtsAndUpdateState()
         } catch (e: Exception) {
@@ -435,7 +430,7 @@ class EpgIndexer private constructor(private val context: Context) {
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
 
-            Log.d(TAG, "Rebuilding FTS index...")
+
             writeMutex.withLock {
                 db.openHelper.writableDatabase.execSQL(
                     "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')"
@@ -461,7 +456,6 @@ class EpgIndexer private constructor(private val context: Context) {
                     programmeCount = finalProgrammeCount,
                     indexedAtMs = now
                 )
-                Log.d(TAG, "FTS rebuild complete: $finalChannelCount channels, $finalProgrammeCount programmes")
             }
         } catch (e: Exception) {
             Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
@@ -493,7 +487,6 @@ class EpgIndexer private constructor(private val context: Context) {
                 execSQL("PRAGMA temp_store = MEMORY")
                 execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
             }
-            Log.d(TAG, "Bulk ingestion mode: FTS triggers disabled, indexes dropped, synchronous=OFF")
         } catch (e: Exception) {
             Log.w(TAG, "beginBulkIngestion setup failed (non-fatal): ${e.message}", e)
         }
@@ -518,7 +511,6 @@ class EpgIndexer private constructor(private val context: Context) {
                 execSQL("PRAGMA cache_size = -8000") // restore 8 MB
                 FTS_TRIGGER_DDL.forEach { ddl -> execSQL(ddl) }
             }
-            Log.d(TAG, "Bulk ingestion mode: indexes rebuilt, FTS triggers restored, synchronous=NORMAL")
         } catch (e: Exception) {
             Log.w(TAG, "endBulkIngestion teardown failed (non-fatal): ${e.message}", e)
         }
@@ -533,14 +525,12 @@ class EpgIndexer private constructor(private val context: Context) {
                 // Save sources before destroying DB — they're user config, not EPG data
                 val oldDb = EpgIndexDatabase.getInstance(context)
                 val savedSources = oldDb.epgSourceDao().getAllSourcesOnce()
-                Log.d(TAG, "Clearing EPG: saved ${savedSources.size} sources, destroying database...")
 
                 // Close DB and delete file — instant regardless of data size
                 EpgIndexDatabase.destroy(context)
 
                 // Reopen: Room recreates all tables from schema
                 val newDb = EpgIndexDatabase.getInstance(context)
-                Log.d(TAG, "Clearing EPG: database recreated, restoring sources...")
 
                 // Restore sources with stats reset
                 for (source in savedSources) {
@@ -558,7 +548,6 @@ class EpgIndexer private constructor(private val context: Context) {
                 }
 
                 _state.value = EpgIndexState.NotIndexed
-                Log.d(TAG, "All EPG data cleared successfully (${savedSources.size} sources restored)")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to clear EPG data: ${e.message}", e)
@@ -612,7 +601,6 @@ class EpgIndexer private constructor(private val context: Context) {
                 }
 
                 incrementalVacuum()
-                Log.d(TAG, "Purge complete: $deleted deleted, $channelCount channels, $programmeCount programmes remaining")
                 deleted
             }
         } catch (e: Exception) {
@@ -645,7 +633,6 @@ class EpgIndexer private constructor(private val context: Context) {
             // Use query() instead of execSQL() — Android's SQLite wrapper rejects
             // execSQL for PRAGMAs that may return results.
             db.openHelper.writableDatabase.query("PRAGMA incremental_vacuum").close()
-            Log.d(TAG, "Incremental vacuum completed")
         } catch (e: Exception) {
             Log.w(TAG, "Incremental vacuum failed: ${e.message}", e)
         }

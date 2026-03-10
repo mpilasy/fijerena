@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -79,7 +78,6 @@ class EpgManagementViewModel(
     val epgRefreshTime: String get() = appSettings.epgRefreshTime
 
     fun cancelProcessing() {
-        Log.d("EpgManagementViewModel", "cancelProcessing clicked")
         epgFileManager.cancelProcessing()
         _cellularDialog.value = CellularConfirmDialog.Hidden
         _taskSourceIds.value = emptyMap()
@@ -202,7 +200,6 @@ class EpgManagementViewModel(
     }
 
     fun refreshStale() {
-        Log.d("EpgManagementViewModel", "refreshStale clicked")
         val taskId = "epg_refresh_stale"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
@@ -249,7 +246,6 @@ class EpgManagementViewModel(
     }
 
     fun refreshFailed() {
-        Log.d("EpgManagementViewModel", "refreshFailed clicked")
         val taskId = "epg_refresh_failed"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
@@ -291,7 +287,6 @@ class EpgManagementViewModel(
     }
 
     fun refreshSelected(selectedIds: Set<Long>) {
-        Log.d("EpgManagementViewModel", "refreshSelected clicked for $selectedIds")
         val taskId = "epg_refresh_selected"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
@@ -328,7 +323,6 @@ class EpgManagementViewModel(
     }
 
     fun refreshSource(sourceId: Long) {
-        Log.d("EpgManagementViewModel", "refreshSource clicked for $sourceId")
         val taskId = "epg_refresh_source_$sourceId"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {

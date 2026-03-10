@@ -111,10 +111,8 @@ class XmltvEpgService(
             // previous single-channel call would otherwise hide the current one.
             val allPresent = channels.all { cachedResult.containsKey(it.id) }
             if (allPresent) {
-                Log.d(TAG, "Returning cached XMLTV EPG for ${cachedResult.size} channels")
                 return@withContext cachedResult
             }
-            Log.d(TAG, "Cache miss: ${channels.size} requested, ${cachedResult.size} cached")
         }
 
         try {
@@ -122,7 +120,6 @@ class XmltvEpgService(
             val matchedIds = matchItems(channels, maps)
 
             if (matchedIds.isEmpty()) {
-                Log.d(TAG, "No XMLTV channel matches for ${channels.size} channels")
                 return@withContext emptyMap()
             }
 
@@ -159,7 +156,6 @@ class XmltvEpgService(
             // Merge fresh results into existing cache so previous channels aren't lost
             val merged = (cachedResult ?: emptyMap()) + result
             cacheEpg(merged)
-            Log.d(TAG, "Matched XMLTV EPG for ${result.size} of ${channels.size} channels (cache now ${merged.size})")
             merged
         } catch (e: Exception) {
             Log.e(TAG, "Failed to query XMLTV EPG from index: ${e.message}", e)
@@ -208,7 +204,6 @@ class XmltvEpgService(
                 )
             }
 
-            Log.d(TAG, "Now-playing from index: ${result.size} of ${items.size} items")
             result
         } catch (e: Exception) {
             Log.e(TAG, "Failed to query now-playing from index: ${e.message}", e)

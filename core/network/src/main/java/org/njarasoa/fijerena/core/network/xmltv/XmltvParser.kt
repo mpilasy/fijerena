@@ -65,7 +65,6 @@ object XmltvParser {
                         if (!filterResolved) {
                             wantedChannelIds = channelFilter!!.invoke(channels)
                             filterResolved = true
-                            Log.d(TAG, "Filter: keeping ${wantedChannelIds.size} of ${channels.size} channels")
                         }
 
                         // Read attributes from current START_TAG (does not advance parser)
@@ -103,7 +102,6 @@ object XmltvParser {
         }
 
         val kept = programmes.values.sumOf { it.size }
-        Log.d(TAG, "Parse complete: kept $kept programmes, skipped $skippedChannels (channel) + $skippedTime (time)")
 
         return XmltvData(channels = channels, programmes = programmes)
     }
@@ -308,7 +306,6 @@ object XmltvParser {
         // Return only channels that have matching programmes
         val resultChannels = allChannels.filterKeys { it in matchedChannelIds }
 
-        Log.d(TAG, "Search '$query': ${matchedProgrammes.size} matches from $totalScanned scanned, truncated=$truncated")
         return XmltvSearchResult(
             channels = resultChannels,
             programmes = matchedProgrammes,

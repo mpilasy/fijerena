@@ -93,7 +93,6 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                                 val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
                                 cursor.close()
                                 if (currentMode != 2) { // 2 = INCREMENTAL
-                                    Log.d(TAG, "Enabling incremental auto_vacuum (current mode=$currentMode)")
                                     db.execSQL("PRAGMA auto_vacuum = INCREMENTAL")
                                 }
                             } catch (e: Exception) {

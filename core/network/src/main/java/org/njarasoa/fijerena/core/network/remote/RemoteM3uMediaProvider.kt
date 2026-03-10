@@ -150,10 +150,8 @@ class RemoteM3uMediaProvider(
         if (cacheFile.exists()) {
             val age = System.currentTimeMillis() - cacheFile.lastModified()
             if (age < CACHE_TTL_MS) {
-                Log.d(TAG, "Using cached M3U (${age / 60000}min old, ${cacheFile.length() / 1024}KB)")
                 return cacheFile
             }
-            Log.d(TAG, "Cache stale (${age / 3600000}h old), re-downloading")
         }
 
         // Download with retries
@@ -167,7 +165,6 @@ class RemoteM3uMediaProvider(
         for (attempt in 1..MAX_RETRIES) {
             var connection: HttpURLConnection? = null
             try {
-                Log.d(TAG, "Downloading M3U from: $m3uUrl (attempt $attempt/$MAX_RETRIES)")
 
                 connection = (URL(m3uUrl).openConnection() as HttpURLConnection).apply {
                     connectTimeout = CONNECT_TIMEOUT_MS
@@ -214,7 +211,6 @@ class RemoteM3uMediaProvider(
                         tmpFile.copyTo(cacheFile, overwrite = true)
                         tmpFile.delete()
                     }
-                    Log.d(TAG, "M3U cached: ${cacheFile.length() / 1024}KB")
                     return
                 } finally {
                     if (tmpFile.exists()) tmpFile.delete()
