@@ -271,7 +271,6 @@ class XtreamApiService(
 
         // Some providers return an empty array [] instead of an object when VOD info is unavailable
         if (responseText.trim().startsWith("[")) {
-            println("XtreamApiService: VOD info returned array (likely empty), returning empty VodInfo")
             return VodInfo(info = null, movieData = null)
         }
 

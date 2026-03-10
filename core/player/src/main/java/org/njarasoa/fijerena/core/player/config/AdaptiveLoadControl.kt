@@ -49,7 +49,6 @@ class AdaptiveLoadControl(
         }
         
         if (currentProfile != newProfile) {
-            Log.d("AdaptiveLoadControl", "Swapping buffer profile: ${currentProfile.name} -> ${newProfile.name}")
             currentProfile = newProfile
         }
     }

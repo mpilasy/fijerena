@@ -303,7 +303,6 @@ class SettingsExportManager(private val context: Context) {
             context.contentResolver.openOutputStream(uri)?.use { output ->
                 output.write(jsonString.toByteArray(Charsets.UTF_8))
             }
-            Log.d(TAG, "Exported settings to $uri (${jsonString.length} bytes)")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Export failed", e)
@@ -498,15 +497,12 @@ class SettingsExportManager(private val context: Context) {
                 val existingSources = sourceDao.getAllSourcesOnce()
                 val existingUrls = existingSources.map { it.url }.toSet()
 
-                Log.d(TAG, "EPG import: ${exported.epgSources.size} sources in file, ${existingSources.size} existing in DB")
                 for (es in exported.epgSources) {
                     val exists = es.url in existingUrls
                     if (exists) {
-                        Log.d(TAG, "EPG source already exists, skipping: ${es.url}")
                         sourcesSkipped++
                         continue
                     }
-                    Log.d(TAG, "EPG source inserting: ${es.url} (label=${es.label})")
                     sourceDao.insertSource(
                         EpgSourceEntity(
                             url = es.url,
@@ -652,8 +648,7 @@ class SettingsExportManager(private val context: Context) {
                 }
             }
 
-            Log.d(TAG, "Import complete: $providersAdded added, $providersUpdated updated, $providersSkipped skipped, $sourcesAdded EPG sources added, $favoritesRestored favorites restored, $favoriteCategoriesRestored fav categories restored, $favoriteShowsRestored fav shows restored")
-
+            // No-op (Log.d removed)
             ImportResult(
                 providersAdded = providersAdded,
                 providersUpdated = providersUpdated,

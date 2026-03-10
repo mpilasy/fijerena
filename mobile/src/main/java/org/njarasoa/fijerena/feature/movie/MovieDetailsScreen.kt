@@ -243,7 +243,6 @@ private fun MovieDetailsContent(
             val resumeTimeText = formatMillis(resumePositionMs)
             Button(
                 onClick = {
-                    android.util.Log.d("MovieDetailsScreen", "Resume button clicked: id=$movieId")
                     onPlayMovie(movieId, movieDetail.name, extension, false)
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -253,7 +252,6 @@ private fun MovieDetailsContent(
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             OutlinedButton(
                 onClick = {
-                    android.util.Log.d("MovieDetailsScreen", "Start from Beginning button clicked: id=$movieId")
                     onPlayMovie(movieId, movieDetail.name, extension, true)
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -263,7 +261,6 @@ private fun MovieDetailsContent(
         } else {
             Button(
                 onClick = {
-                    android.util.Log.d("MovieDetailsScreen", "Play Movie button clicked: id=$movieId")
                     onPlayMovie(movieId, movieDetail.name, extension, false)
                 },
                 modifier = Modifier.fillMaxWidth()

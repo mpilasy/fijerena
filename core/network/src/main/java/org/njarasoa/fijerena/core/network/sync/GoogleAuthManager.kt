@@ -78,16 +78,13 @@ class GoogleAuthManager(private val context: Context) {
         try {
             // First check if we already have a valid account
             if (isSignedIn()) {
-                Log.d(TAG, "Already signed in")
                 return@withContext true
             }
 
             // Try silent sign-in
             val account = signInClient.silentSignIn().await()
-            Log.d(TAG, "Silent sign-in successful")
             true
         } catch (e: ApiException) {
-            Log.d(TAG, "Silent sign-in failed: ${e.statusCode}")
             false
         } catch (e: Exception) {
             Log.e(TAG, "Silent sign-in error")
@@ -111,7 +108,6 @@ class GoogleAuthManager(private val context: Context) {
         try {
             val task = GoogleSignIn.getSignedInAccountFromIntent(data)
             val account = task.await()
-            Log.d(TAG, "Sign-in successful")
             account
         } catch (e: ApiException) {
             Log.e(TAG, "Sign-in failed: ${e.statusCode}")
@@ -128,7 +124,6 @@ class GoogleAuthManager(private val context: Context) {
     suspend fun signOut() = withContext(Dispatchers.IO) {
         try {
             signInClient.signOut().await()
-            Log.d(TAG, "Signed out")
         } catch (e: Exception) {
             Log.e(TAG, "Sign out failed", e)
         }
@@ -140,7 +135,6 @@ class GoogleAuthManager(private val context: Context) {
     suspend fun revokeAccess() = withContext(Dispatchers.IO) {
         try {
             signInClient.revokeAccess().await()
-            Log.d(TAG, "Access revoked")
         } catch (e: Exception) {
             Log.e(TAG, "Revoke access failed", e)
         }

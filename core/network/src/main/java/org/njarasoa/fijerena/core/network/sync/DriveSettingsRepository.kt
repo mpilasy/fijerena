@@ -75,7 +75,6 @@ class DriveSettingsRepository(private val context: Context) {
             // Search for the settings file in appDataFolder
             val fileId = findSettingsFileId(driveService)
             if (fileId == null) {
-                Log.d(TAG, "Settings file not found in Drive")
                 return@withContext null
             }
 
@@ -85,7 +84,6 @@ class DriveSettingsRepository(private val context: Context) {
                 .executeMediaAndDownloadTo(outputStream)
 
             val content = outputStream.toString("UTF-8")
-            Log.d(TAG, "Downloaded settings from Drive (${content.length} bytes)")
 
             json.decodeFromString<SyncedSettings>(content)
         } catch (e: Exception) {
@@ -114,7 +112,6 @@ class DriveSettingsRepository(private val context: Context) {
                 // Update existing file
                 driveService.files().update(existingFileId, null, mediaContent)
                     .execute()
-                Log.d(TAG, "Updated settings in Drive")
             } else {
                 // Create new file in appDataFolder
                 val fileMetadata = File().apply {
@@ -124,7 +121,6 @@ class DriveSettingsRepository(private val context: Context) {
                 driveService.files().create(fileMetadata, mediaContent)
                     .setFields("id")
                     .execute()
-                Log.d(TAG, "Created settings file in Drive")
             }
 
             true
@@ -143,7 +139,6 @@ class DriveSettingsRepository(private val context: Context) {
             val fileId = findSettingsFileId(driveService)
             if (fileId != null) {
                 driveService.files().delete(fileId).execute()
-                Log.d(TAG, "Deleted settings file from Drive")
             }
             true
         } catch (e: Exception) {

@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.settings.components
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -186,7 +185,6 @@ private fun OptionRow(
     // Interactive TV Surface for D-pad focus
     androidx.tv.material3.Surface(
         onClick = {
-            Log.d("ImportDialog", "Toggling row: $label")
             onToggle()
         },
         modifier = modifier

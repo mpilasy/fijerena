@@ -91,7 +91,6 @@ class JellyfinApiService(
 
     suspend fun authenticate(username: String, password: String): Result<JellyfinAuthResponse> {
         return try {
-            Log.d(TAG, "Authenticating to $serverUrl")
             val response = client.post("$serverUrl/Users/AuthenticateByName") {
                 contentType(ContentType.Application.Json)
                 setBody(JellyfinAuthBody(username = username, password = password))
@@ -99,7 +98,6 @@ class JellyfinApiService(
             accessToken = response.accessToken
             userId = response.user.id
             serverId = response.serverId
-            Log.d(TAG, "Authentication successful")
             // Register client capabilities so Jellyfin knows what we can play
             postCapabilities()
             Result.success(response)
@@ -116,7 +114,6 @@ class JellyfinApiService(
             if (e.response.status.value == 500 && password.isNotBlank()) {
                 // AuthenticateByName endpoint is broken on this server — try the password
                 // as a direct API key (user can generate one from Jellyfin Dashboard → API Keys)
-                Log.d(TAG, "Falling back to API key auth")
                 return authenticateWithApiKey(password)
             }
             val message = if (password.isBlank()) {
@@ -137,7 +134,6 @@ class JellyfinApiService(
             accessToken = apiKey
             val user = client.get("$serverUrl/Users/Me").body<JellyfinUser>()
             userId = user.id
-            Log.d(TAG, "API key auth successful")
             postCapabilities()
             // Return a synthetic auth response so callers don't need to change
             Result.success(JellyfinAuthResponse(user = user, accessToken = apiKey))
@@ -163,7 +159,6 @@ class JellyfinApiService(
                 contentType(ContentType.Application.Json)
                 setBody(JellyfinClientCapabilities())
             }
-            Log.d(TAG, "Capabilities registered")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to post capabilities (non-fatal)", e)
         }
@@ -195,10 +190,6 @@ class JellyfinApiService(
                 parameter("UserId", userId)
                 setBody(request)
             }.body<JellyfinPlaybackInfoResponse>()
-            Log.d(TAG, "PlaybackInfo for $itemId: " +
-                    "${response.mediaSources.firstOrNull()?.run {
-                        "directPlay=$supportsDirectPlay transcoding=${transcodingUrl != null}"
-                    }}, sessionId=${response.playSessionId}")
             Result.success(response)
         } catch (e: Exception) {
             Log.e(TAG, "PlaybackInfo request failed for $itemId", e)
@@ -497,7 +488,6 @@ class JellyfinApiService(
             val result = client.post("$serverUrl/QuickConnect/Initiate") {
                 contentType(ContentType.Application.Json)
             }.body<JellyfinQuickConnectResult>()
-            Log.d(TAG, "Quick Connect initiated: code=${result.code}")
             Result.success(result)
         } catch (e: Exception) {
             Log.e(TAG, "Quick Connect initiate failed")
@@ -534,7 +524,6 @@ class JellyfinApiService(
             accessToken = response.accessToken
             userId = response.user.id
             serverId = response.serverId
-            Log.d(TAG, "Quick Connect auth successful")
             postCapabilities()
             Result.success(response)
         } catch (e: Exception) {

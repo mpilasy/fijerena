@@ -195,13 +195,11 @@ class EpgFileManager private constructor(private val context: Context) {
 
             // If a previous session was interrupted during background FTS rebuild, resume it.
             if (ftsWasStale) {
-                Log.d(TAG, "Resuming background FTS rebuild from previous session")
                 scope.launch(Dispatchers.IO) {
                     try {
                         indexer.rebuildFtsAndUpdateState()
                         indexer.markFtsClean()
                         indexer.incrementalVacuum()
-                        Log.d(TAG, "Resumed FTS rebuild + vacuum complete")
                     } catch (e: Exception) {
                         Log.e(TAG, "Resumed FTS rebuild failed: ${e.message}", e)
                     }
@@ -224,7 +222,6 @@ class EpgFileManager private constructor(private val context: Context) {
                     ExistingPeriodicWorkPolicy.REPLACE, // REPLACE so change in refresh time is applied
                     request
                 )
-                Log.d(TAG, "WorkManager sync scheduled in ${initialDelay / 1000 / 60} minutes")
             }
         }
     }
@@ -249,14 +246,12 @@ class EpgFileManager private constructor(private val context: Context) {
                             timezoneOffsetHours = oldTz
                         )
                     )
-                    Log.d(TAG, "Migrated old EPG URL to source entity: $oldUrl (tz=$oldTz)")
                 }
             }
 
             val oldFile = File(context.cacheDir, "xmltv_global.xml")
             if (oldFile.exists()) {
                 oldFile.delete()
-                Log.d(TAG, "Deleted legacy xmltv_global.xml")
             }
 
             prefs.edit().putBoolean(KEY_MIGRATED_TO_SOURCES, true).apply()
@@ -550,7 +545,6 @@ class EpgFileManager private constructor(private val context: Context) {
                         indexer.rebuildFtsAndUpdateState()
                         indexer.markFtsClean()
                         indexer.incrementalVacuum()
-                        Log.d(TAG, "Background FTS rebuild + vacuum complete")
                     } catch (e: Exception) {
                         Log.e(TAG, "Background FTS rebuild failed: ${e.message}", e)
                     }
@@ -683,7 +677,6 @@ class EpgFileManager private constructor(private val context: Context) {
                         indexer.rebuildFtsAndUpdateState()
                         indexer.markFtsClean()
                         indexer.incrementalVacuum()
-                        Log.d(TAG, "Background FTS rebuild + vacuum complete")
                     } catch (e: Exception) {
                         Log.e(TAG, "Background FTS rebuild failed: ${e.message}", e)
                     }
@@ -706,7 +699,6 @@ class EpgFileManager private constructor(private val context: Context) {
         scope.launch {
             RefreshQueue.cancelAll()
         }
-        Log.d(TAG, "Processing cancelled by user")
         _state.value = MultiSourceState.Idle
     }
 
@@ -724,7 +716,6 @@ class EpgFileManager private constructor(private val context: Context) {
                 // Small delay to let cancelled tasks finish their catch blocks
                 delay(100)
                 EpgIndexer.getInstance(context).clearAll()
-                Log.d(TAG, "All EPG data cleared successfully")
             } catch (e: Exception) {
                 Log.e(TAG, "Clear all data failed: ${e.message}", e)
             } finally {
@@ -775,7 +766,6 @@ class EpgFileManager private constructor(private val context: Context) {
 
             for (attempt in 1..5) {
                 try {
-                    Log.d(TAG, "Downloading EPG to cache: ${source.url} (attempt $attempt/5)")
 
                     val request = Request.Builder().url(source.url).build()
                     okHttpClient.newCall(request).execute().use { response ->
@@ -822,7 +812,6 @@ class EpgFileManager private constructor(private val context: Context) {
                     if (lastError.contains("HTTP 4")) break
                     if (attempt < 5) { 
                         val backoff = (5000L * (1 shl (attempt - 1))).coerceAtMost(60000L)
-                        Log.d(TAG, "Retrying download in ${backoff/1000}s...")
                         delay(backoff)
                         continue 
                     }
@@ -852,7 +841,6 @@ class EpgFileManager private constructor(private val context: Context) {
                 return null
             }
 
-            Log.d(TAG, "Downloaded: $label (${downloadedBytes / 1024}KB)")
             return DownloadedSource(source, label, tmpFile, downloadedBytes, System.currentTimeMillis() - downloadStartMs)
 
         } catch (e: Exception) {
@@ -920,7 +908,6 @@ class EpgFileManager private constructor(private val context: Context) {
                 ingestionDurationMs = System.currentTimeMillis() - ingestStartMs,
                 downloadDurationMs = downloaded.downloadDurationMs
             )
-            Log.d(TAG, "Ingested: $label (${ingestionStats.channelsIngested}ch, ${ingestionStats.programmesIngested}prg)")
 
             return SourceStats(
                 sourceId = source.id,
@@ -950,7 +937,6 @@ class EpgFileManager private constructor(private val context: Context) {
         if (sources.isEmpty()) return false
 
         if (_state.value is MultiSourceState.Processing) {
-            Log.d(TAG, "Refresh outdated sources skipped: already processing")
             return true // Treat as success/active
         }
 
@@ -960,7 +946,6 @@ class EpgFileManager private constructor(private val context: Context) {
         }
 
         return if (staleSources.isNotEmpty()) {
-            Log.d(TAG, "Refreshing ${staleSources.size} of ${sources.size} sources (stale)")
             val task = object : RefreshTask {
                 override val id = "epg_auto_refresh"
                 override val priority = RefreshPriority.MEDIUM
@@ -971,7 +956,6 @@ class EpgFileManager private constructor(private val context: Context) {
             RefreshQueue.submit(task)
             true
         } else {
-            Log.d(TAG, "All sources fresh, skipping")
             false
         }
     }
@@ -1006,7 +990,6 @@ class EpgFileManager private constructor(private val context: Context) {
             while (true) {
                 if (appSettings.epgAutoRefreshEnabled) {
                     val delayMs = calculateDelayUntil(appSettings.epgRefreshTime)
-                    Log.d(TAG, "Next auto-refresh scheduled in ${delayMs / 1000 / 60} minutes (at ${appSettings.epgRefreshTime})")
                     delay(delayMs)
                     try {
                         refreshOutdatedSources()
@@ -1041,7 +1024,6 @@ class EpgFileManager private constructor(private val context: Context) {
                     ExistingPeriodicWorkPolicy.REPLACE,
                     request
                 )
-                Log.d(TAG, "WorkManager sync rescheduled in ${initialDelay / 1000 / 60} minutes")
             }
         }
     }
@@ -1068,7 +1050,6 @@ class EpgFileManager private constructor(private val context: Context) {
                 if (file.delete()) {
                     bytesFreed += size
                     filesDeleted++
-                    Log.d(TAG, "Cleaned up stray file: ${file.name}")
                 }
             }
             return CleanupResult(filesDeleted, bytesFreed)

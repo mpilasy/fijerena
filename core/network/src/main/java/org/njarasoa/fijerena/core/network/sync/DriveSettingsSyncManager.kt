@@ -141,7 +141,6 @@ class DriveSettingsSyncManager(
                             providerData.providerId,
                             providerData.settings
                         )
-                        Log.d(TAG, "Applied settings for provider ${providerData.providerName}")
                     } catch (e: Exception) {
                         Log.w(TAG, "Could not apply settings for provider ${providerData.providerId}", e)
                     }
@@ -151,7 +150,6 @@ class DriveSettingsSyncManager(
                 return true
             } else {
                 // No remote settings yet - upload current settings
-                Log.d(TAG, "No remote settings found, uploading local settings")
                 return uploadAllSettings()
             }
         } catch (e: Exception) {
