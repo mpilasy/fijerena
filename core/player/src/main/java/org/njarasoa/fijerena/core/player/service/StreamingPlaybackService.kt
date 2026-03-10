@@ -86,7 +86,6 @@ class StreamingPlaybackService : MediaSessionService() {
         instance = this
         instanceReady.complete(this)
         NetworkMonitor.init(this)
-        StreamingMediaSourceFactory.initCronet(this)
         initializePlayer()
         acquireWakeLock()
         observeNetworkChanges()
@@ -471,7 +470,6 @@ class StreamingPlaybackService : MediaSessionService() {
         serviceScope = null
         adaptiveLoadControl = null
         NetworkMonitor.release()
-        StreamingMediaSourceFactory.releaseCronet()
         instance = null
         super.onDestroy()
     }

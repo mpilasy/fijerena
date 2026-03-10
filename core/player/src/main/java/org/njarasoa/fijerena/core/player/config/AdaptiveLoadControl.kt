@@ -2,10 +2,10 @@ package org.njarasoa.fijerena.core.player.config
 
 import androidx.annotation.OptIn
 import androidx.media3.common.C
-import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.LoadControl
-import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.analytics.PlayerId
 import androidx.media3.exoplayer.source.TrackGroupArray
 import androidx.media3.exoplayer.trackselection.ExoTrackSelection
 import androidx.media3.exoplayer.upstream.Allocator
@@ -13,110 +13,116 @@ import androidx.media3.exoplayer.upstream.DefaultAllocator
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
 /**
- * Adaptive LoadControl that swaps buffer profiles based on network type.
- * Optimized for low-latency starts on high-speed networks and deep buffers on cellular.
+ * A delegating [LoadControl] that swaps the inner [DefaultLoadControl] atomically
+ * when the network type changes, sharing a single [DefaultAllocator] across swaps
+ * to avoid memory churn.
  */
 @OptIn(UnstableApi::class)
 class AdaptiveLoadControl(
-    private val allocator: DefaultAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE),
-    private val contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD,
+    private val contentType: PlayerConfigFactory.ContentType,
     private val cellularLiveMultiplier: Float = 1.0f,
     private val cellularVodMultiplier: Float = 1.0f
 ) : LoadControl {
 
-    enum class BufferProfile(
-        val minBufferMs: Int,
-        val maxBufferMs: Int,
-        val bufferForPlaybackMs: Int,
-        val bufferForPlaybackAfterRebufferMs: Int
-    ) {
-        HighSpeed(15_000, 50_000, 2_500, 5_000),
-        Cellular(30_000, 100_000, 5_000, 10_000),
-        UltraLowLatency(5_000, 15_000, 1_000, 2_500)
-    }
+    private val sharedAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
 
-    private var currentProfile: BufferProfile = BufferProfile.HighSpeed
-    private var isBuffering = false
+    @Volatile
+    private var delegate: DefaultLoadControl = buildDelegate(NetworkMonitor.currentNetworkType)
 
     fun updateForNetwork(networkType: NetworkType) {
-        val newProfile = when (networkType) {
-            NetworkType.CELLULAR -> BufferProfile.Cellular
-            NetworkType.WIFI -> {
-                if (contentType == PlayerConfigFactory.ContentType.LIVE_TV) BufferProfile.UltraLowLatency 
-                else BufferProfile.HighSpeed
+        delegate = buildDelegate(networkType)
+    }
+
+    private fun buildDelegate(networkType: NetworkType): DefaultLoadControl {
+        val isWifi = networkType != NetworkType.CELLULAR
+        val isLive = contentType == PlayerConfigFactory.ContentType.LIVE_TV
+
+        val minBuffer: Int
+        val maxBuffer: Int
+        val playback: Int
+        val rebuffer: Int
+        val backBuffer: Int
+        val retainKeyframe: Boolean
+
+        if (isLive) {
+            if (isWifi) {
+                minBuffer = NetworkBufferProfile.WIFI_LIVE_MIN_BUFFER_MS
+                maxBuffer = NetworkBufferProfile.WIFI_LIVE_MAX_BUFFER_MS
+                playback = NetworkBufferProfile.WIFI_LIVE_PLAYBACK_MS
+                rebuffer = NetworkBufferProfile.WIFI_LIVE_REBUFFER_MS
+                backBuffer = NetworkBufferProfile.WIFI_LIVE_BACK_BUFFER_MS
+            } else {
+                minBuffer = NetworkBufferProfile.getCellularLiveMinBuffer(cellularLiveMultiplier)
+                maxBuffer = NetworkBufferProfile.getCellularLiveMaxBuffer(cellularLiveMultiplier)
+                playback = NetworkBufferProfile.getCellularLivePlayback(cellularLiveMultiplier)
+                rebuffer = NetworkBufferProfile.getCellularLiveRebuffer(cellularLiveMultiplier)
+                backBuffer = NetworkBufferProfile.CELLULAR_LIVE_BACK_BUFFER_MS
             }
-            else -> BufferProfile.HighSpeed
+            retainKeyframe = false
+        } else {
+            if (isWifi) {
+                minBuffer = NetworkBufferProfile.WIFI_VOD_MIN_BUFFER_MS
+                maxBuffer = NetworkBufferProfile.WIFI_VOD_MAX_BUFFER_MS
+                playback = NetworkBufferProfile.WIFI_VOD_PLAYBACK_MS
+                rebuffer = NetworkBufferProfile.WIFI_VOD_REBUFFER_MS
+                backBuffer = NetworkBufferProfile.WIFI_VOD_BACK_BUFFER_MS
+            } else {
+                minBuffer = NetworkBufferProfile.getCellularVodMinBuffer(cellularVodMultiplier)
+                maxBuffer = NetworkBufferProfile.getCellularVodMaxBuffer(cellularVodMultiplier)
+                playback = NetworkBufferProfile.getCellularVodPlayback(cellularVodMultiplier)
+                rebuffer = NetworkBufferProfile.getCellularVodRebuffer(cellularVodMultiplier)
+                backBuffer = NetworkBufferProfile.CELLULAR_VOD_BACK_BUFFER_MS
+            }
+            retainKeyframe = true
         }
-        
-        if (currentProfile != newProfile) {
-            currentProfile = newProfile
-        }
+
+        return DefaultLoadControl.Builder()
+            .setAllocator(sharedAllocator)
+            .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
+            .setBackBuffer(backBuffer, retainKeyframe)
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onPrepared() {
-        // No-op
+    // ── LoadControl implementation (FULL DELEGATION TO SATISFY 1.5.1 / 1.7.1 RUNTIME) ──
+
+    // Basic lifecycle methods (required by 1.5.1 interface)
+    @Deprecated("Use onPrepared(PlayerId) instead")
+    override fun onPrepared() { delegate.onPrepared() }
+    @Deprecated("Use onStopped(PlayerId) instead")
+    override fun onStopped() { delegate.onStopped() }
+    @Deprecated("Use onReleased(PlayerId) instead")
+    override fun onReleased() { delegate.onReleased() }
+
+    // Analytics-aware lifecycle methods (often used by 1.7.1+ internal logic)
+    override fun onPrepared(playerId: PlayerId) { delegate.onPrepared(playerId) }
+    override fun onStopped(playerId: PlayerId) { delegate.onStopped(playerId) }
+    override fun onReleased(playerId: PlayerId) { delegate.onReleased(playerId) }
+
+    // Allocator (signature varies, implemented both via override where possible)
+    override fun getAllocator(): Allocator = delegate.allocator
+
+    @Deprecated("Use getBackBufferDurationUs(PlayerId) instead")
+    override fun getBackBufferDurationUs(): Long = delegate.backBufferDurationUs
+    override fun getBackBufferDurationUs(playerId: PlayerId): Long = delegate.getBackBufferDurationUs(playerId)
+
+    @Deprecated("Use retainBackBufferFromKeyframe(PlayerId) instead")
+    override fun retainBackBufferFromKeyframe(): Boolean = delegate.retainBackBufferFromKeyframe()
+    override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean = delegate.retainBackBufferFromKeyframe(playerId)
+
+    override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
+        return delegate.shouldContinueLoading(parameters)
     }
 
-    @Deprecated("Deprecated in Java")
+    override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
+        return delegate.shouldStartPlayback(parameters)
+    }
+
     override fun onTracksSelected(
-        renderers: Array<out Renderer>,
+        parameters: LoadControl.Parameters,
         trackGroups: TrackGroupArray,
         trackSelections: Array<out ExoTrackSelection?>
     ) {
-        // No-op
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onStopped() {
-        // No-op
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onReleased() {
-        // No-op
-    }
-
-    override fun getAllocator(): Allocator = allocator
-
-    @Deprecated("Deprecated in Java")
-    override fun getBackBufferDurationUs(): Long = 0
-
-    @Deprecated("Deprecated in Java")
-    override fun retainBackBufferFromKeyframe(): Boolean = false
-
-    override fun shouldContinueLoading(
-        playbackPositionUs: Long,
-        bufferedDurationUs: Long,
-        playbackSpeed: Float
-    ): Boolean {
-        val multiplier = if (NetworkMonitor.currentNetworkType == NetworkType.CELLULAR) {
-            if (contentType == PlayerConfigFactory.ContentType.LIVE_TV) cellularLiveMultiplier else cellularVodMultiplier
-        } else 1.0f
-
-        val minBufferUs = (currentProfile.minBufferMs * 1000L * multiplier).toLong()
-        val maxBufferUs = (currentProfile.maxBufferMs * 1000L * multiplier).toLong()
-        
-        val targetBufferUs = if (isBuffering) maxBufferUs else minBufferUs
-        val shouldLoad = bufferedDurationUs < targetBufferUs
-        if (!shouldLoad) isBuffering = false
-        return shouldLoad
-    }
-
-    override fun shouldStartPlayback(
-        bufferedDurationUs: Long,
-        playbackSpeed: Float,
-        rebuffering: Boolean,
-        targetLiveOffsetUs: Long
-    ): Boolean {
-        val minBufferUs = if (rebuffering) {
-            currentProfile.bufferForPlaybackAfterRebufferMs * 1000L
-        } else {
-            currentProfile.bufferForPlaybackMs * 1000L
-        }
-        
-        val canStart = bufferedDurationUs >= minBufferUs
-        if (canStart) isBuffering = false
-        return canStart
+        delegate.onTracksSelected(parameters, trackGroups, trackSelections)
     }
 }
