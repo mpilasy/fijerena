@@ -29,7 +29,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                     context.applicationContext,
                     XtreamDatabase::class.java,
                     "xtream_v2.db"
-                ).fallbackToDestructiveMigration()
+                ).fallbackToDestructiveMigration(dropAllTables = true)
                 .build().also { INSTANCE = it }
             }
         }

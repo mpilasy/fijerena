@@ -417,6 +417,7 @@ data class AudioInfo(
  * Some APIs return empty arrays [] instead of null/object for missing video info
  */
 object VideoInfoSerializer : KSerializer<VideoInfo?> {
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("VideoInfo")
 
     override fun deserialize(decoder: Decoder): VideoInfo? {
@@ -424,7 +425,7 @@ object VideoInfoSerializer : KSerializer<VideoInfo?> {
         val element = jsonDecoder.decodeJsonElement()
 
         // If it's an array (empty or not), return null
-        return if (element is JsonElement && element.toString().startsWith("[")) {
+        return if (element.toString().startsWith("[")) {
             null
         } else {
             // Try to decode as VideoInfo object
@@ -450,6 +451,7 @@ object VideoInfoSerializer : KSerializer<VideoInfo?> {
  * Some APIs return empty arrays [] instead of null/object for missing audio info
  */
 object AudioInfoSerializer : KSerializer<AudioInfo?> {
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("AudioInfo")
 
     override fun deserialize(decoder: Decoder): AudioInfo? {
@@ -457,7 +459,7 @@ object AudioInfoSerializer : KSerializer<AudioInfo?> {
         val element = jsonDecoder.decodeJsonElement()
 
         // If it's an array (empty or not), return null
-        return if (element is JsonElement && element.toString().startsWith("[")) {
+        return if (element.toString().startsWith("[")) {
             null
         } else {
             // Try to decode as AudioInfo object

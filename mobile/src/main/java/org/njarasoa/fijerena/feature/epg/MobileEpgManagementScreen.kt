@@ -53,10 +53,14 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaOrange
+import org.njarasoa.fijerena.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
-import org.njarasoa.fijerena.ui.theme.CinemaError
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +79,8 @@ fun MobileEpgManagementScreen(
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val dbStats by viewModel.dbStats.collectAsStateWithLifecycle()
     val queuedTaskIds by viewModel.queuedTaskIds.collectAsStateWithLifecycle()
+    val activeTaskId by viewModel.activeTaskId.collectAsStateWithLifecycle()
+    val taskSourceIds by viewModel.taskSourceIds.collectAsStateWithLifecycle()
     val hasStrayFiles by viewModel.hasStrayFiles.collectAsStateWithLifecycle()
     val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsStateWithLifecycle()
 
@@ -141,6 +147,23 @@ fun MobileEpgManagementScreen(
                 )
 
                 val procState = processingState
+                val hasQueuedTask = queuedTaskIds.any { it.startsWith("epg_refresh_") }
+                if (procState is EpgFileManager.MultiSourceState.Pending || (procState is EpgFileManager.MultiSourceState.Idle && hasQueuedTask)) {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Queued...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { viewModel.cancelProcessing() }) {
+                            Text("Cancel", style = MaterialTheme.typography.labelSmall, color = CinemaError)
+                        }
+                    }
+                }
                 if (procState is EpgFileManager.MultiSourceState.Processing) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.xs))
                     Row(
@@ -195,6 +218,131 @@ fun MobileEpgManagementScreen(
                 }
             }
 
+            // Actions
+            SettingsSection(title = "Actions") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Auto-refresh (every 24h)",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Switch(
+                        checked = autoRefreshEnabled,
+                        onCheckedChange = {
+                            autoRefreshEnabled = it
+                            viewModel.setAutoRefreshEnabled(it)
+                        }
+                    )
+                }
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Refresh Time",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    OutlinedButton(onClick = { showTimeDialog = true }) {
+                        Text(epgRefreshTime)
+                    }
+                }
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                ) {
+                    if (staleSourceCount > 0) {
+                        Button(
+                            onClick = { viewModel.refreshStale() },
+                            enabled = sources.isNotEmpty(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Refresh Stale ($staleSourceCount)")
+                        }
+                    }
+                    if (selectedSourceIds.isNotEmpty()) {
+                        Button(
+                            onClick = {
+                                viewModel.refreshSelected(selectedSourceIds)
+                                selectedSourceIds = emptySet()
+                            },
+                            modifier = Modifier.weight(if (staleSourceCount > 0) 1f else 2f)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                            Text("Refresh Selected (${selectedSourceIds.size})")
+                        }
+                    }
+                }
+                if (viewModel.isDevMode) {
+                    val hasFailed = failedSourceCount > 0
+                    val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 6 * 3600 * 1000) }
+                    if (hasFailed || hasOutdated) {
+                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                        ) {
+                            if (hasFailed) {
+                                OutlinedButton(
+                                    onClick = { viewModel.refreshFailed() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.ErrorOutline, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                    Text("Refresh Failed ($failedSourceCount)")
+                                }
+                            }
+                        }
+                    }
+                }
+                if (hasStrayFiles || staleProgrammeCount > 0) {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                    ) {
+                        if (hasStrayFiles) {
+                            OutlinedButton(
+                                onClick = { showCleanupConfirm = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                Text("Cleanup")
+                            }
+                        }
+                        if (staleProgrammeCount > 0) {
+                            OutlinedButton(
+                                onClick = { showPurgeConfirm = true },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                Text("Purge >2d")
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Button(
+                    onClick = { showClearConfirm = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                    Text("Clear All Data")
+                }
+            }
+
             // Sources
             SettingsSection(title = "Sources (${sources.size})") {
                 sources.forEach { source ->
@@ -220,15 +368,29 @@ fun MobileEpgManagementScreen(
                         }
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
 
-                        val isQueued = queuedTaskIds.contains("epg_refresh_source_${source.id}") || queuedTaskIds.contains("epg_refresh_stale")
+                        val procState = processingState
+                        val progress = (procState as? EpgFileManager.MultiSourceState.Processing)?.activeProgress?.get(source.id)
+                        
+                        val isRunningOrQueued = taskSourceIds.entries.any { (tid, ids) -> 
+                            (tid == activeTaskId || queuedTaskIds.contains(tid)) && source.id in ids 
+                        }
+                        
+                        val threshold = 6 * 3600 * 1000L
+                        val isStale = source.lastIngestedAtMs == 0L || (nowMs - source.lastIngestedAtMs) > threshold
 
                         val dotColor = when {
-                            isQueued -> androidx.compose.ui.graphics.Color.Yellow
                             !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                            source.lastError != null -> CinemaError
-                            source.lastIngestedAtMs > 0 && (nowMs - source.lastIngestedAtMs) < 6 * 3600 * 1000 -> MaterialTheme.colorScheme.primary
-                            source.lastIngestedAtMs > 0 -> androidx.compose.ui.graphics.Color(0xFFFFAB40)
-                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                            progress != null -> {
+                                if (progress.phase == "Downloading" || progress.phase == "Ingesting") {
+                                    CinemaWarning // Yellow
+                                } else {
+                                    CinemaAccentLight // Cyan-ish for "Awaiting Ingestion"
+                                }
+                            }
+                            isRunningOrQueued -> CinemaAccentLight // Cyan-ish for "Queued"
+                            source.lastError != null -> CinemaError // Red
+                            isStale -> CinemaOrange // Orange
+                            else -> CinemaSuccess // Green
                         }
                         Surface(
                             modifier = Modifier.size(CinemaSpacing.sm),
@@ -373,141 +535,6 @@ fun MobileEpgManagementScreen(
                             Icon(Icons.Default.Delete, contentDescription = "Delete", tint = CinemaError)
                         }
                     }
-                }
-            }
-
-            // Actions
-            SettingsSection(title = "Actions") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Auto-refresh (every 24h)",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Switch(
-                        checked = autoRefreshEnabled,
-                        onCheckedChange = {
-                            autoRefreshEnabled = it
-                            viewModel.setAutoRefreshEnabled(it)
-                        }
-                    )
-                }
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Refresh Time",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    OutlinedButton(onClick = { showTimeDialog = true }) {
-                        Text(epgRefreshTime)
-                    }
-                }
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                ) {
-                    if (staleSourceCount > 0) {
-                        Button(
-                            onClick = { viewModel.refreshStale() },
-                            enabled = sources.isNotEmpty(),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                            Text("Refresh Stale ($staleSourceCount)")
-                        }
-                    }
-                    if (selectedSourceIds.isNotEmpty()) {
-                        Button(
-                            onClick = {
-                                viewModel.refreshSelected(selectedSourceIds)
-                                selectedSourceIds = emptySet()
-                            },
-                            modifier = Modifier.weight(if (staleSourceCount > 0) 1f else 2f)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                            Text("Refresh Selected (${selectedSourceIds.size})")
-                        }
-                    }
-                }
-                if (viewModel.isDevMode) {
-                    val hasFailed = failedSourceCount > 0
-                    val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 6 * 3600 * 1000) }
-                    if (hasFailed || hasOutdated) {
-                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                        ) {
-                            if (hasFailed) {
-                                OutlinedButton(
-                                    onClick = { viewModel.refreshFailed() },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.ErrorOutline, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                    Text("Refresh Failed ($failedSourceCount)")
-                                }
-                            }
-                            if (hasOutdated) {
-                                OutlinedButton(
-                                    onClick = { viewModel.refreshOutdated() },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.Update, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                    Text("Outdated")
-                                }
-                            }
-                        }
-                    }
-                }
-                if (hasStrayFiles || staleProgrammeCount > 0) {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                    ) {
-                        if (hasStrayFiles) {
-                            OutlinedButton(
-                                onClick = { showCleanupConfirm = true },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                Text("Cleanup")
-                            }
-                        }
-                        if (staleProgrammeCount > 0) {
-                            OutlinedButton(
-                                onClick = { showPurgeConfirm = true },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                Text("Purge >2d")
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Button(
-                    onClick = { showClearConfirm = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                    Text("Clear All Data")
                 }
             }
 
