@@ -120,7 +120,7 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 
 # Bundled SQLite (FTS5 guaranteed on all API levels)
-sqlite-android = { group = "io.requery", name = "sqlite-android", version.ref = "sqliteAndroid" }
+sqlite-android = { group = "com.github.requery", name = "sqlite-android", version.ref = "sqliteAndroid" }
 
 # Paging
 paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
