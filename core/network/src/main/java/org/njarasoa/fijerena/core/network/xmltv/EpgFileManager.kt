@@ -146,6 +146,18 @@ class EpgFileManager private constructor(private val context: Context) {
         ) : MultiSourceState
         data class Error(val reason: String) : MultiSourceState
         data object Clearing : MultiSourceState
+        /**
+         * Post-ingestion phase: index rebuild, FTS rebuild, or vacuum.
+         * Emitted after all sources are ingested so the UI can show a working
+         * indicator instead of appearing stuck at 100%.
+         */
+        data class Finalizing(
+            val phase: String,
+            val totalChannels: Int = 0,
+            val totalProgrammes: Int = 0,
+            val totalDownloadBytes: Long = 0,
+            val durationMs: Long = 0
+        ) : MultiSourceState
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -177,9 +189,24 @@ class EpgFileManager private constructor(private val context: Context) {
         scope.launch {
             migrateFromAppSettings()
             val indexer = EpgIndexer.getInstance(context)
-            indexer.initialize()
+            val ftsWasStale = indexer.initialize()
             cleanupStrayFiles()
             scheduleAutoRefresh()
+
+            // If a previous session was interrupted during background FTS rebuild, resume it.
+            if (ftsWasStale) {
+                Log.d(TAG, "Resuming background FTS rebuild from previous session")
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        indexer.rebuildFtsAndUpdateState()
+                        indexer.markFtsClean()
+                        indexer.incrementalVacuum()
+                        Log.d(TAG, "Resumed FTS rebuild + vacuum complete")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Resumed FTS rebuild failed: ${e.message}", e)
+                    }
+                }
+            }
 
             // Schedule WorkManager periodic sync on mobile only
             if (!isFixedDevice()) {
@@ -391,7 +418,6 @@ class EpgFileManager private constructor(private val context: Context) {
             val sourceStartTimeMap = ConcurrentHashMap<Long, Long>()
 
             indexer.setIndexing()
-            indexer.beginBulkIngestion()
 
             _state.value = MultiSourceState.Processing(
                 completedCount = 0,
@@ -400,9 +426,15 @@ class EpgFileManager private constructor(private val context: Context) {
             )
 
             val allStats = coroutineScope {
+                // Start bulk setup in parallel with downloads — downloads write to cache files
+                // and never touch the DB, so there is no ordering constraint here.
+                // Consumers await this before touching the DB.
+                val bulkReady = async(Dispatchers.IO) { indexer.beginBulkIngestion() }
+
                 // Consumer: ingest downloaded files in parallel (SQLite handles locking)
                 val ingestionJobs = (1..maxIngestionConcurrency).map {
                     launch {
+                        bulkReady.await() // Ensure indexes are dropped before first ingest
                         for (downloaded in ingestionQueue) {
                             activeProgress[downloaded.source.id] = ActiveSourceProgress(
                                 sourceId = downloaded.source.id,
@@ -484,15 +516,17 @@ class EpgFileManager private constructor(private val context: Context) {
             val totalProgrammes = allStats.sumOf { it.programmesIngested }
             val totalBytes = allStats.sumOf { it.downloadBytes }
 
-            // Restore triggers + synchronous before the FTS rebuild
+            // Finalizing: rebuild B-tree query indexes (fast compared to FTS rebuild).
+            // Show this phase so the UI doesn't appear stuck after ingestion completes.
+            _state.value = MultiSourceState.Finalizing(
+                phase = "Rebuilding indexes\u2026",
+                totalChannels = totalChannels,
+                totalProgrammes = totalProgrammes,
+                totalDownloadBytes = totalBytes
+            )
             indexer.endBulkIngestion()
 
-            // Only rebuild FTS + vacuum if at least one source ingested data
             val anyIngested = allStats.any { it.error == null && (it.channelsIngested > 0 || it.programmesIngested > 0) }
-            if (anyIngested) {
-                indexer.rebuildFtsAndUpdateState()
-                indexer.incrementalVacuum()
-            }
 
             val endTime = System.currentTimeMillis()
             _state.value = MultiSourceState.Completed(
@@ -505,6 +539,23 @@ class EpgFileManager private constructor(private val context: Context) {
                 updatedAtMs = endTime,
                 durationMs = endTime - startTime
             )
+
+            // FTS5 rebuild + vacuum are the heaviest post-ingestion operations.
+            // Run them in the background so the user sees Completed immediately.
+            // Search falls back to LIKE queries while the FTS index is stale.
+            if (anyIngested) {
+                indexer.markFtsStale()
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        indexer.rebuildFtsAndUpdateState()
+                        indexer.markFtsClean()
+                        indexer.incrementalVacuum()
+                        Log.d(TAG, "Background FTS rebuild + vacuum complete")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Background FTS rebuild failed: ${e.message}", e)
+                    }
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "processAllSources failed: ${e.message}", e)
             EpgIndexer.getInstance(context).endBulkIngestion()
@@ -544,7 +595,6 @@ class EpgFileManager private constructor(private val context: Context) {
             val label = source.label.ifBlank { extractLabel(source.url) }
 
             indexer.setIndexing()
-            indexer.beginBulkIngestion()
             val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
             _state.value = MultiSourceState.Processing(
                 completedCount = 0,
@@ -564,11 +614,16 @@ class EpgFileManager private constructor(private val context: Context) {
                 )
             }
 
+            // Start bulk setup in parallel with the download — same rationale as processAllSourcesInternal.
+            val bulkReady = scope.async(Dispatchers.IO) { indexer.beginBulkIngestion() }
+
             // Download phase
             activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
             updateSingleProgress()
 
             val downloaded = downloadSource(source, label, sourceDao, activeProgress) { updateSingleProgress() }
+
+            bulkReady.await() // Ensure indexes are dropped before ingesting
 
             val stats = if (downloaded != null) {
                 // Buffer state between phases
@@ -599,14 +654,14 @@ class EpgFileManager private constructor(private val context: Context) {
                 SourceStats(source.id, label, error = "Download failed")
             }
 
-            // Restore triggers + synchronous before the FTS rebuild
+            // Finalizing: rebuild B-tree query indexes.
+            _state.value = MultiSourceState.Finalizing(
+                phase = "Rebuilding indexes\u2026",
+                totalChannels = stats.channelsIngested,
+                totalProgrammes = stats.programmesIngested,
+                totalDownloadBytes = stats.downloadBytes
+            )
             indexer.endBulkIngestion()
-
-            // Only rebuild FTS if source actually ingested data
-            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
-                indexer.rebuildFtsAndUpdateState()
-                indexer.incrementalVacuum()
-            }
 
             val endTime = System.currentTimeMillis()
             _state.value = MultiSourceState.Completed(
@@ -619,6 +674,21 @@ class EpgFileManager private constructor(private val context: Context) {
                 updatedAtMs = endTime,
                 durationMs = endTime - startTime
             )
+
+            // FTS5 rebuild + vacuum in background — same as processAllSourcesInternal.
+            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+                indexer.markFtsStale()
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        indexer.rebuildFtsAndUpdateState()
+                        indexer.markFtsClean()
+                        indexer.incrementalVacuum()
+                        Log.d(TAG, "Background FTS rebuild + vacuum complete")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Background FTS rebuild failed: ${e.message}", e)
+                    }
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "processSingleSource failed: ${e.message}", e)
             EpgIndexer.getInstance(context).endBulkIngestion()

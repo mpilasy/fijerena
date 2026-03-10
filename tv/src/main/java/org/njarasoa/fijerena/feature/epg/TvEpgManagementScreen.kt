@@ -218,6 +218,21 @@ fun TvEpgManagementScreen(
                                 )
                             }
                         }
+                        if (procState is EpgFileManager.MultiSourceState.Finalizing) {
+                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(Spacing.md.scaled(scale)),
+                                    strokeWidth = Spacing.xxs.scaled(scale)
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                                Text(
+                                    text = procState.phase,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextSecondary
+                                )
+                            }
+                        }
                         if (procState is EpgFileManager.MultiSourceState.Completed) {
                             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                             Text(
@@ -415,6 +430,7 @@ fun TvEpgManagementScreen(
 
                             val dotColor = when {
                                 !source.enabled -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
+                                procState is EpgFileManager.MultiSourceState.Finalizing -> CinemaSuccess // All sources done
                                 progress != null -> {
                                     if (progress.phase == "Downloading" || progress.phase == "Ingesting") {
                                         CinemaWarning // Yellow
@@ -522,6 +538,12 @@ fun TvEpgManagementScreen(
                                             color = if (completedStat.error != null) CinemaError else CinemaAccent
                                         )
                                     }
+                                } else if (procState is EpgFileManager.MultiSourceState.Finalizing) {
+                                    Text(
+                                        text = "Ingested",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = CinemaAccent
+                                    )
                                 } else if (procState is EpgFileManager.MultiSourceState.Completed) {
                                     val stat = procState.sourceStats[source.id]
                                     if (stat != null) {

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicBoolean
 import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
@@ -31,6 +32,23 @@ class EpgIndexer private constructor(private val context: Context) {
 
     private val writeMutex = Mutex()
 
+    private val ftsStale = AtomicBoolean(false)
+    private val stalePrefs by lazy {
+        context.getSharedPreferences("epg_indexer_state", Context.MODE_PRIVATE)
+    }
+
+    fun isFtsStale(): Boolean = ftsStale.get()
+
+    fun markFtsStale() {
+        ftsStale.set(true)
+        stalePrefs.edit().putBoolean("fts_stale", true).apply()
+    }
+
+    fun markFtsClean() {
+        ftsStale.set(false)
+        stalePrefs.edit().remove("fts_stale").apply()
+    }
+
     companion object {
         private const val TAG = "EpgIndexer"
         const val BATCH_SIZE_MOBILE = 500
@@ -49,11 +67,12 @@ class EpgIndexer private constructor(private val context: Context) {
             "room_fts_content_sync_epg_programme_fts_AFTER_UPDATE",
             "room_fts_content_sync_epg_programme_fts_AFTER_INSERT"
         )
+        // FTS5 uses `rowid` instead of `docid` in content-table triggers.
         private val FTS_TRIGGER_DDL = listOf(
-            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE` BEFORE UPDATE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `docid`=OLD.`rowid`; END",
-            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `docid`=OLD.`rowid`; END",
-            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END",
-            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END"
+            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE` BEFORE UPDATE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END",
+            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END",
+            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END",
+            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END"
         )
 
         // Query-only indexes on epg_programme that are dropped during bulk
@@ -104,8 +123,16 @@ class EpgIndexer private constructor(private val context: Context) {
 
     /**
      * Restore Indexed state from stored metadata without re-indexing.
+     * Also restores the ftsStale flag so a background rebuild can be resumed if
+     * the previous session was interrupted before the FTS index was refreshed.
+     * Returns true if the FTS index is stale and a background rebuild should be launched.
      */
-    suspend fun initialize() = withContext(Dispatchers.IO) {
+    suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
+        val wasStale = stalePrefs.getBoolean("fts_stale", false)
+        if (wasStale) {
+            ftsStale.set(true)
+            Log.d(TAG, "FTS index is stale from previous session — background rebuild needed")
+        }
         try {
             val db = EpgIndexDatabase.getInstance(context)
             val metadata = db.epgIndexDao().getMetadata()
@@ -123,6 +150,7 @@ class EpgIndexer private constructor(private val context: Context) {
             Log.w(TAG, "Failed to restore index state", e)
             _state.value = EpgIndexState.NotIndexed
         }
+        wasStale
     }
 
     /**
