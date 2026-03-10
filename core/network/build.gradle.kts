@@ -42,6 +42,9 @@ dependencies {
     implementation(libs.room.paging)
     ksp(libs.room.compiler)
 
+    // Bundled SQLite with FTS5 support (system SQLite may lack FTS5 on some OEM builds)
+    implementation(libs.sqlite.android)
+
     // Paging
     api(libs.paging.runtime)
 

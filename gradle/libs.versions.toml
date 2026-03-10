@@ -39,6 +39,9 @@ work = "2.10.1"
 room = "2.8.4"
 ksp = "2.3.4"
 
+# Bundled SQLite with FTS5 support (replaces system SQLite)
+sqliteAndroid = "3.45.0"
+
 # Paging
 paging = "3.3.6"
 
@@ -115,6 +118,9 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
+
+# Bundled SQLite (FTS5 guaranteed on all API levels)
+sqlite-android = { group = "io.requery", name = "sqlite-android", version.ref = "sqliteAndroid" }
 
 # Paging
 paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
