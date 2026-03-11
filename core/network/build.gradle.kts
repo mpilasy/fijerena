@@ -24,6 +24,9 @@ dependencies {
     api(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
+    // AI & Machine Learning
+    implementation(libs.bundles.tflite)
+
     // DocumentFile for local media scanning (SAF)
     implementation("androidx.documentfile:documentfile:1.0.1")
 

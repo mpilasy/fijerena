@@ -43,7 +43,11 @@ data class EpgProgrammeEntity(
     val endEpoch: Long,
 
     @ColumnInfo(name = "source_id")
-    val sourceId: Long = 0
+    val sourceId: Long = 0,
+
+    /** Serialized FloatArray vector for AI semantic search. Null if not yet processed or unsupported. */
+    @ColumnInfo(name = "embedding")
+    val embedding: ByteArray? = null
 )
 
 @Fts4(contentEntity = EpgProgrammeEntity::class, tokenizer = FtsOptions.TOKENIZER_UNICODE61)
