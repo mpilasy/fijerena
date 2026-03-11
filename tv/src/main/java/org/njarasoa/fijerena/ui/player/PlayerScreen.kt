@@ -88,7 +88,8 @@ fun PlayerScreen(
     PlayerEffects(
         state = state,
         playbackState = playbackState,
-        currentMetadata = currentMetadata
+        currentMetadata = currentMetadata,
+        viewModel = viewModel
     )
 
     Box(
@@ -203,7 +204,8 @@ fun PlayerScreen(
                 onShowSubtitleSelector = { state.showSubtitleSelector = true },
                 onShowQualitySelector = { state.showQualitySelector = true },
                 onShowChapterSelector = { state.showChapterSelector = true },
-                onShowStats = { state.showStats = !state.showStats }
+                onShowStats = { state.showStats = !state.showStats },
+                seekSpeedLabel = state.seekSpeedLabel
             )
         }
 

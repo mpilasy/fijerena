@@ -325,6 +325,10 @@ class StreamingPlaybackService : MediaSessionService() {
         mediaSession?.player?.seekTo(position)
     }
 
+    fun setPlaybackSpeed(speed: Float) {
+        mediaSession?.player?.playbackParameters = androidx.media3.common.PlaybackParameters(speed)
+    }
+
     fun selectAudioTrack(groupIndex: Int, trackIndex: Int) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return

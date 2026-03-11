@@ -6,6 +6,7 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import java.util.Calendar
 
@@ -13,7 +14,8 @@ import java.util.Calendar
 fun PlayerEffects(
     state: PlayerScreenState,
     playbackState: PlaybackState,
-    currentMetadata: PlayerMetadata
+    currentMetadata: PlayerMetadata,
+    viewModel: PlaybackViewModel? = null
 ) {
     val isDeveloperMode = state.isDeveloperMode
 
@@ -102,6 +104,18 @@ fun PlayerEffects(
         if (currentMetadata.title.isNotEmpty() &&
             (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
             state.displayedMetadata = currentMetadata
+        }
+    }
+
+    // Reset playback speed when paused, ended, or errored
+    LaunchedEffect(playbackState) {
+        if (playbackState is PlaybackState.Paused ||
+            playbackState is PlaybackState.Ended ||
+            playbackState is PlaybackState.Error) {
+            if (state.seekSpeedLabel != null) {
+                viewModel?.setPlaybackSpeed(1f)
+                state.seekSpeedLabel = null
+            }
         }
     }
 

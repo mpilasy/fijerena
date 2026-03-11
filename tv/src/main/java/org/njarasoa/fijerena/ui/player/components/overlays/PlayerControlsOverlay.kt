@@ -83,6 +83,7 @@ fun PlayerControlsOverlay(
     onShowQualitySelector: () -> Unit,
     onShowChapterSelector: () -> Unit,
     onShowStats: () -> Unit,
+    seekSpeedLabel: String? = null,
 ) {
     val isPaused = playbackState is PlaybackState.Paused
     val isLive = metadata.isLive
@@ -141,6 +142,17 @@ fun PlayerControlsOverlay(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.bounceMarquee()
+            )
+        }
+
+        // Seek speed indicator (shown when fast-forwarding/rewinding with D-pad hold)
+        if (seekSpeedLabel != null && !showFullControls) {
+            Text(
+                text = seekSpeedLabel,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.align(Center)
             )
         }
 
