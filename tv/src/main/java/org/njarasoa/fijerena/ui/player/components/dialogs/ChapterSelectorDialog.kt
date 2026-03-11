@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -98,7 +99,8 @@ fun ChapterSelectorDialog(
             Column(
                 modifier = Modifier
                     .padding(Spacing.xxl)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .focusProperties { exit = { FocusRequester.Cancel } },
                 verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 Text(
