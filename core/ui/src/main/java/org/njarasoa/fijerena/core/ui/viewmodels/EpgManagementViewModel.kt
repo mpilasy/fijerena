@@ -193,7 +193,6 @@ class EpgManagementViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 db().epgSourceDao().deleteSource(id)
-                db().epgIndexDao().deleteBySourceId(id)
                 refreshDbStats()
             }
         }

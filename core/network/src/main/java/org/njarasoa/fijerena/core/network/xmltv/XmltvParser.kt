@@ -318,12 +318,13 @@ object XmltvParser {
      * Parse a <channel> element and return a Room entity for indexing.
      * Reuses the same parsing logic as [parseChannel].
      */
-    fun parseChannelForIndex(parser: XmlPullParser): EpgChannelEntity? {
+    fun parseChannelForIndex(parser: XmlPullParser, sourceId: Long = 0): EpgChannelEntity? {
         val channel = parseChannel(parser) ?: return null
         return EpgChannelEntity(
             xmltvId = channel.id,
             displayName = channel.displayName,
-            iconUrl = channel.iconUrl
+            iconUrl = channel.iconUrl,
+            sourceId = sourceId
         )
     }
 
