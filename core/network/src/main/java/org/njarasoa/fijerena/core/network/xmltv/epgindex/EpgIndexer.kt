@@ -25,7 +25,7 @@ import java.io.InputStream
  * Room withTransaction for atomicity. Network drop or parse error
  * triggers transaction rollback — DB stays consistent.
  *
- * Append-only: uses REPLACE on unique (channel_id, start_epoch) index
+ * Append-only: uses REPLACE on unique (channel_id, source_id, start_epoch) index
  * so the database stays searchable during sync.
  */
 class EpgIndexer private constructor(private val context: Context) {
@@ -84,7 +84,8 @@ class EpgIndexer private constructor(private val context: Context) {
             "idx_programme_time_range",
             "idx_programme_channel",
             "idx_programme_title_lower",
-            "idx_programme_source"
+            "idx_programme_source",
+            "idx_programme_channel_source"
         )
         private val BULK_DROP_INDEX_DDL = listOf(
             "CREATE INDEX IF NOT EXISTS `idx_programme_start` ON `epg_programme` (`start_epoch`)",
@@ -92,7 +93,8 @@ class EpgIndexer private constructor(private val context: Context) {
             "CREATE INDEX IF NOT EXISTS `idx_programme_time_range` ON `epg_programme` (`start_epoch`, `end_epoch`)",
             "CREATE INDEX IF NOT EXISTS `idx_programme_channel` ON `epg_programme` (`channel_id`)",
             "CREATE INDEX IF NOT EXISTS `idx_programme_title_lower` ON `epg_programme` (`title_lowercase`)",
-            "CREATE INDEX IF NOT EXISTS `idx_programme_source` ON `epg_programme` (`source_id`)"
+            "CREATE INDEX IF NOT EXISTS `idx_programme_source` ON `epg_programme` (`source_id`)",
+            "CREATE INDEX IF NOT EXISTS `idx_programme_channel_source` ON `epg_programme` (`channel_id`, `source_id`)"
         )
 
         @Volatile
@@ -206,7 +208,7 @@ class EpgIndexer private constructor(private val context: Context) {
                 if (eventType == XmlPullParser.START_TAG) {
                     when (parser.name) {
                         "channel" -> {
-                            XmltvParser.parseChannelForIndex(parser)?.let {
+                            XmltvParser.parseChannelForIndex(parser, sourceId)?.let {
                                 channelBatch.add(it)
                                 channelCount++
 
@@ -361,7 +363,8 @@ class EpgIndexer private constructor(private val context: Context) {
                     EpgChannelEntity(
                         xmltvId = channelId,
                         displayName = info.name,
-                        iconUrl = info.iconUrl
+                        iconUrl = info.iconUrl,
+                        sourceId = sourceId
                     )
                 )
 
