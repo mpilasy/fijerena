@@ -521,6 +521,9 @@ class EpgFileManager private constructor(private val context: Context) {
             )
             indexer.endBulkIngestion()
 
+            // Trigger AI vectorization for new rows
+            org.njarasoa.fijerena.core.network.ai.EpgVectorizationWorker.schedule(context)
+
             val anyIngested = allStats.any { it.error == null && (it.channelsIngested > 0 || it.programmesIngested > 0) }
 
             val endTime = System.currentTimeMillis()
@@ -655,6 +658,9 @@ class EpgFileManager private constructor(private val context: Context) {
                 totalDownloadBytes = stats.downloadBytes
             )
             indexer.endBulkIngestion()
+
+            // Trigger AI vectorization for new rows
+            org.njarasoa.fijerena.core.network.ai.EpgVectorizationWorker.schedule(context)
 
             val endTime = System.currentTimeMillis()
             _state.value = MultiSourceState.Completed(
