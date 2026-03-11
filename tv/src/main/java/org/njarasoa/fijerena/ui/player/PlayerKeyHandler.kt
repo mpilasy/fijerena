@@ -20,6 +20,26 @@ fun handlePlayerKeyEvent(
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit
 ): Boolean {
+    // Handle KeyUp to reset fast-forward/rewind speed
+    if (keyEvent.type == KeyEventType.KeyUp) {
+        return when (keyEvent.key) {
+            Key.DirectionRight -> {
+                if (!currentMetadata.isLive && state.seekSpeedLabel != null) {
+                    viewModel.setPlaybackSpeed(1f)
+                    state.seekSpeedLabel = null
+                    true
+                } else false
+            }
+            Key.DirectionLeft -> {
+                if (!currentMetadata.isLive && state.seekSpeedLabel != null) {
+                    state.seekSpeedLabel = null
+                    true
+                } else false
+            }
+            else -> false
+        }
+    }
+
     if (keyEvent.type != KeyEventType.KeyDown) {
         return false
     }
@@ -81,15 +101,27 @@ fun handlePlayerKeyEvent(
                 }
                 true
             } else if (!state.showControls && !currentMetadata.isLive) {
-                // VOD: seek backward 10s
+                // VOD: rewind with acceleration on hold
+                val repeatCount = keyEvent.nativeKeyEvent.repeatCount
                 val position = when (val ps = playbackState) {
                     is PlaybackState.Playing -> ps.position
                     is PlaybackState.Paused -> ps.position
                     else -> null
                 }
                 if (position != null) {
-                    val newPosition = (position - 10_000L).coerceAtLeast(0L)
-                    viewModel.seekTo(newPosition)
+                    val seekAmount = when {
+                        repeatCount < 10 -> 10_000L
+                        repeatCount < 20 -> 30_000L
+                        repeatCount < 35 -> 60_000L
+                        else -> 120_000L
+                    }
+                    state.seekSpeedLabel = when {
+                        repeatCount < 10 -> null
+                        repeatCount < 20 -> "<< 3x"
+                        repeatCount < 35 -> "<< 6x"
+                        else -> "<< 12x"
+                    }
+                    viewModel.seekTo((position - seekAmount).coerceAtLeast(0L))
                     state.showStreamInfo = true
                 }
                 true
@@ -107,7 +139,8 @@ fun handlePlayerKeyEvent(
                 }
                 true
             } else if (!state.showControls && !currentMetadata.isLive) {
-                // VOD: seek forward 10s
+                // VOD: fast-forward with acceleration on hold
+                val repeatCount = keyEvent.nativeKeyEvent.repeatCount
                 val position = when (val ps = playbackState) {
                     is PlaybackState.Playing -> ps.position
                     is PlaybackState.Paused -> ps.position
@@ -119,8 +152,20 @@ fun handlePlayerKeyEvent(
                     else -> null
                 }
                 if (position != null && duration != null) {
-                    val newPosition = (position + 10_000L).coerceAtMost(duration)
-                    viewModel.seekTo(newPosition)
+                    if (repeatCount == 0) {
+                        // Single tap: seek +10s
+                        viewModel.seekTo((position + 10_000L).coerceAtMost(duration))
+                    } else {
+                        // Held: accelerate playback speed
+                        val speed = when {
+                            repeatCount < 10 -> 2f
+                            repeatCount < 20 -> 4f
+                            repeatCount < 35 -> 8f
+                            else -> 16f
+                        }
+                        viewModel.setPlaybackSpeed(speed)
+                        state.seekSpeedLabel = ">> ${speed.toInt()}x"
+                    }
                     state.showStreamInfo = true
                 }
                 true

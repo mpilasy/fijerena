@@ -47,14 +47,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.derivedStateOf
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
+import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.compose.ui.draw.alpha
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
@@ -504,27 +507,57 @@ private fun ResultsContent(
                 )
             }
         } else {
-            TvLazyColumn(
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                displayDateGroups.forEach { dateGroup ->
-                    item(key = "date::${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::$matchedOnly", contentType = "header") {
-                        DateHeader(dateLabel = dateGroup.dateLabel)
+            // Build index-to-dateLabel mapping for sticky header
+            val headerIndices = remember(displayDateGroups) {
+                val indices = mutableListOf<Pair<Int, String>>()
+                var idx = 0
+                displayDateGroups.forEach { group ->
+                    indices.add(idx to group.dateLabel)
+                    idx++ // header item
+                    idx += group.programs.size
+                }
+                indices
+            }
+            val listState = rememberTvLazyListState()
+            val pinnedHeaderLabel by remember {
+                derivedStateOf {
+                    val firstVisible = listState.firstVisibleItemIndex
+                    headerIndices.lastOrNull { it.first <= firstVisible }?.second
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                TvLazyColumn(
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    displayDateGroups.forEach { dateGroup ->
+                        item(key = "date::${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::$matchedOnly", contentType = "header") {
+                            DateHeader(dateLabel = dateGroup.dateLabel)
+                        }
+                        items(
+                            dateGroup.programs,
+                            key = { "${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::${it.title}::${it.description}::${it.airings.first().startEpoch}::$matchedOnly" },
+                            contentType = { "program" }
+                        ) { program ->
+                            ProgramCard(
+                                program = program,
+                                nowEpoch = nowEpoch,
+                                isDevMode = isDevMode,
+                                sourceLabels = sourceLabels,
+                                onNavigateToPlayer = onNavigateToPlayer
+                            )
+                        }
                     }
-                    items(
-                        dateGroup.programs,
-                        key = { "${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::${it.title}::${it.description}::${it.airings.first().startEpoch}::$matchedOnly" },
-                        contentType = { "program" }
-                    ) { program ->
-                        ProgramCard(
-                            program = program,
-                            nowEpoch = nowEpoch,
-                            isDevMode = isDevMode,
-                            sourceLabels = sourceLabels,
-                            onNavigateToPlayer = onNavigateToPlayer
-                        )
-                    }
+                }
+
+                // Pinned sticky header overlay
+                pinnedHeaderLabel?.let { label ->
+                    DateHeader(
+                        dateLabel = label,
+                        modifier = Modifier.background(CinemaSurface)
+                    )
                 }
             }
         }
@@ -532,7 +565,7 @@ private fun ResultsContent(
 }
 
 @Composable
-private fun DateHeader(dateLabel: String) {
+private fun DateHeader(dateLabel: String, modifier: Modifier = Modifier) {
     val scale = LocalUiScale.current
     Text(
         text = dateLabel,
@@ -540,7 +573,7 @@ private fun DateHeader(dateLabel: String) {
             fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale)
         ),
         color = CinemaAccentLight,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = Spacing.xs.scaled(scale))
     )
@@ -751,6 +784,7 @@ private fun AiringRow(
                 }
             }
         },
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
         modifier = Modifier.fillMaxWidth()
     ) {
         rowContent()

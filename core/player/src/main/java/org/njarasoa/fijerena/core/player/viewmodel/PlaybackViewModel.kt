@@ -189,6 +189,12 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         seekTo((currentPos + offsetMs).coerceIn(0L, duration))
     }
 
+    fun setPlaybackSpeed(speed: Float) {
+        viewModelScope.launch {
+            StreamingPlaybackService.getInstance()?.setPlaybackSpeed(speed)
+        }
+    }
+
     /**
      * Get available audio tracks from the player.
      * Returns a list of audio track info (language, label, track group index, track index).
