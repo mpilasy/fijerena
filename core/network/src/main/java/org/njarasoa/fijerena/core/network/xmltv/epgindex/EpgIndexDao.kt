@@ -224,6 +224,12 @@ interface EpgIndexDao {
     @Query("SELECT MAX(end_epoch) FROM epg_programme WHERE source_id = :sourceId")
     suspend fun getLatestProgrammeEndTimeForSource(sourceId: Long): Long?
 
+    @Query("SELECT * FROM epg_programme WHERE embedding IS NULL LIMIT :limit")
+    suspend fun getProgrammesMissingEmbeddings(limit: Int): List<EpgProgrammeEntity>
+
+    @Query("UPDATE epg_programme SET embedding = :embedding WHERE id = :id")
+    suspend fun updateEmbedding(id: Long, embedding: ByteArray)
+
     // --------------- Transactional ingestion ---------------
 
     @Transaction
