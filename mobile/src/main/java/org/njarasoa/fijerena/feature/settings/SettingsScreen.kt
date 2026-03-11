@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.feature.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -8,36 +10,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.SettingsExportManager
-import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-import org.njarasoa.fijerena.core.network.provider.CategoryFilters
-import org.njarasoa.fijerena.core.network.provider.FilterMode
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderSettings
-import org.njarasoa.fijerena.core.network.provider.ScriptType
-import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
-import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.theme.*
-import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,66 +43,15 @@ fun MobileSettingsScreen(
     onProviderChanged: () -> Unit
 ) {
     val context = LocalContext.current
-    val repository = remember {
-        val accountManager = AccountManager(context.applicationContext)
-        XtreamRepository(accountManager, context.applicationContext)
-    }
+    val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
-    val appSettings = remember { AppSettings(context.applicationContext) }
     val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Get active provider info from ProviderEntity (not legacy AppSettings)
-    var providerName by remember { mutableStateOf("") }
-    var currentUrl by remember { mutableStateOf("") }
-    var currentUsername by remember { mutableStateOf("") }
-    var activeProviderId by remember { mutableStateOf<Long?>(null) }
-    var providerType by remember { mutableStateOf("") }
-    var subscriptionExpiry by remember { mutableStateOf<String?>(null) }
-    var subscriptionStatus by remember { mutableStateOf<String?>(null) }
-    var subscriptionMaxCons by remember { mutableStateOf<String?>(null) }
-    var subscriptionIsTrial by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        val activeProvider = providerRepo.getActiveProvider()
-        providerName = activeProvider?.name ?: "No provider"
-        currentUrl = activeProvider?.url ?: ""
-        currentUsername = activeProvider?.username ?: ""
-        activeProviderId = activeProvider?.id
-        providerType = activeProvider?.type ?: ""
-
-        if (activeProvider?.type == "XTREAM") {
-            val accountManager = AccountManager(context.applicationContext)
-            accountManager.getAuthResponse()?.userInfo?.let { info ->
-                subscriptionStatus = info.status
-                subscriptionMaxCons = info.maxConnections
-                subscriptionIsTrial = info.isTrial == "1"
-                val expDate = info.expDate
-                subscriptionExpiry = when {
-                    expDate.isNullOrEmpty() -> null
-                    expDate.equals("Unlimited", ignoreCase = true) -> "Unlimited"
-                    else -> {
-                        val epoch = expDate.toLongOrNull()
-                        if (epoch != null) {
-                            val date = java.time.Instant.ofEpochSecond(epoch)
-                                .atZone(java.time.ZoneId.systemDefault())
-                                .toLocalDate()
-                            date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy"))
-                        } else expDate
-                    }
-                }
-            }
-        }
-    }
-
-    // Global settings
-    var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
-    var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
-
-    // Export/Import state
-    var exportImportMessage by remember { mutableStateOf<String?>(null) }
-    var epgRefreshTrigger by remember { mutableStateOf(0) }
+    // Export/Import transient state
     var pendingExportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingImportPath by remember { mutableStateOf<String?>(null) }
@@ -128,15 +70,15 @@ fun MobileSettingsScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri -> pendingImportUri = uri }
 
-    // Process export in LaunchedEffect (survives recomposition)
+    // Process export in LaunchedEffect
     LaunchedEffect(pendingExportUri) {
         val uri = pendingExportUri ?: return@LaunchedEffect
         val success = exportManager.exportToUri(uri)
-        exportImportMessage = if (success) "Settings exported successfully" else "Export failed"
+        viewModel.setExportImportMessage(if (success) "Settings exported successfully" else "Export failed")
         pendingExportUri = null
     }
 
-    // Parse import file and show options dialog
+    // Parse import file (URI)
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportUri(uri)
@@ -145,12 +87,12 @@ fun MobileSettingsScreen(
             pendingImportOptions = SettingsExportManager.ImportOptions()
             showImportOptionsDialog = true
         }.onFailure { e ->
-            exportImportMessage = "Import failed: ${e.message}"
+            viewModel.setExportImportMessage("Import failed: ${e.message}")
         }
         pendingImportUri = null
     }
 
-    // Parse import file (Path) and show options dialog
+    // Parse import file (Path)
     LaunchedEffect(pendingImportPath) {
         val path = pendingImportPath ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportPath(path)
@@ -159,33 +101,12 @@ fun MobileSettingsScreen(
             pendingImportOptions = SettingsExportManager.ImportOptions()
             showImportOptionsDialog = true
         }.onFailure { e ->
-            exportImportMessage = "Import failed: ${e.message}"
+            viewModel.setExportImportMessage("Import failed: ${e.message}")
         }
         pendingImportPath = null
     }
 
-    // Helper to perform import and refresh UI state
-    fun doImport(parsed: SettingsExportManager.ParsedImport, resolution: SettingsExportManager.ConflictResolution, options: SettingsExportManager.ImportOptions) {
-        coroutineScope.launch {
-            val result = exportManager.importFromParsed(parsed, resolution, options)
-            exportImportMessage = result.toSummary()
-            if (result.isSuccess) {
-                if (options.importGlobalSettings) {
-                    selectedThemeId = appSettings.themeId
-                    onThemeChanged(appSettings.themeId)
-                    isDevMode = appSettings.isDevMode
-                }
-                val activeProvider = providerRepo.getActiveProvider()
-                providerName = activeProvider?.name ?: "No provider"
-                currentUrl = activeProvider?.url ?: ""
-                currentUsername = activeProvider?.username ?: ""
-                activeProviderId = activeProvider?.id
-                epgRefreshTrigger++
-            }
-        }
-    }
-
-    // Import options dialog (selective import)
+    // Import options dialog
     if (showImportOptionsDialog && pendingParsedImport != null) {
         val parsed = pendingParsedImport!!
         var optProviders by remember { mutableStateOf(pendingImportOptions.importProviders) }
@@ -195,10 +116,7 @@ fun MobileSettingsScreen(
         AlertDialog(
             onDismissRequest = {
                 showImportOptionsDialog = false
-                // Only clean up if not transitioning to conflict dialog
-                if (!showConflictDialog) {
-                    pendingParsedImport = null
-                }
+                if (!showConflictDialog) pendingParsedImport = null
             },
             title = { Text("Select What to Import") },
             text = {
@@ -247,7 +165,7 @@ fun MobileSettingsScreen(
                     } else {
                         pendingParsedImport = null
                         showImportOptionsDialog = false
-                        doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
+                        viewModel.doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
                     }
                 }) { Text("Import") }
             },
@@ -277,31 +195,52 @@ fun MobileSettingsScreen(
                 )
             },
             confirmButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                    Button(onClick = {
-                        showConflictDialog = false
-                        val parsed = pendingParsedImport!!
-                        val options = pendingImportOptions
-                        pendingParsedImport = null
-                        doImport(parsed, SettingsExportManager.ConflictResolution.OVERWRITE, options)
-                    }) { Text("Overwrite") }
-                    Button(onClick = {
-                        showConflictDialog = false
-                        val parsed = pendingParsedImport!!
-                        val options = pendingImportOptions
-                        pendingParsedImport = null
-                        doImport(parsed, SettingsExportManager.ConflictResolution.DUPLICATE, options)
-                    }) { Text("Duplicate") }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                    ) {
+                        Button(
+                            onClick = {
+                                showConflictDialog = false
+                                val parsed = pendingParsedImport!!
+                                val options = pendingImportOptions
+                                pendingParsedImport = null
+                                viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.OVERWRITE, options)
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Overwrite", maxLines = 1) }
+                        Button(
+                            onClick = {
+                                showConflictDialog = false
+                                val parsed = pendingParsedImport!!
+                                val options = pendingImportOptions
+                                pendingParsedImport = null
+                                viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.DUPLICATE, options)
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Duplicate", maxLines = 1) }
+                    }
+                    Button(
+                        onClick = {
+                            showConflictDialog = false
+                            val parsed = pendingParsedImport!!
+                            val options = pendingImportOptions
+                            pendingParsedImport = null
+                            viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.SKIP, options)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Skip Duplicates") }
                 }
             },
             dismissButton = {
-                Button(onClick = {
+                TextButton(onClick = {
                     showConflictDialog = false
-                    val parsed = pendingParsedImport!!
-                    val options = pendingImportOptions
                     pendingParsedImport = null
-                    doImport(parsed, SettingsExportManager.ConflictResolution.SKIP, options)
-                }) { Text("Skip") }
+                }) { Text("Cancel") }
             }
         )
     }
@@ -355,38 +294,38 @@ fun MobileSettingsScreen(
             // === Provider ===
             SettingsSection(title = "Provider") {
                 Text(
-                    text = providerName,
+                    text = uiState.providerName,
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = currentUrl,
+                    text = uiState.currentUrl,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
-                if (subscriptionExpiry != null) {
+                if (uiState.subscriptionExpiry != null) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    val isExpired = subscriptionStatus?.equals("Expired", ignoreCase = true) == true
+                    val isExpired = uiState.subscriptionStatus?.equals("Expired", ignoreCase = true) == true
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Expires", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow))
                         Text(
-                            text = subscriptionExpiry!!,
+                            text = uiState.subscriptionExpiry!!,
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    if (subscriptionMaxCons != null) {
+                    if (uiState.subscriptionMaxCons != null) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("Max connections", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow))
-                            Text(subscriptionMaxCons!!, style = MaterialTheme.typography.bodySmall)
+                            Text(uiState.subscriptionMaxCons!!, style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    if (subscriptionIsTrial) {
+                    if (uiState.subscriptionIsTrial) {
                         Text("Trial account", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
                     }
                 }
@@ -401,7 +340,9 @@ fun MobileSettingsScreen(
 
             // === Playback ===
             SettingsSection(title = "Playback") {
-                var watchDelayText by remember { mutableStateOf(appSettings.watchDelaySeconds.toString()) }
+                var watchDelayText by remember(uiState.watchDelaySeconds) { 
+                    mutableStateOf(uiState.watchDelaySeconds.toString()) 
+                }
                 Text(
                     text = "How long to watch a channel before it's added to Last Watched",
                     style = MaterialTheme.typography.bodySmall,
@@ -413,7 +354,7 @@ fun MobileSettingsScreen(
                     onValueChange = { newValue ->
                         watchDelayText = newValue
                         newValue.toIntOrNull()?.let { seconds ->
-                            appSettings.watchDelaySeconds = seconds
+                            viewModel.updateWatchDelay(seconds)
                         }
                     },
                     label = { Text("Watch delay (seconds)") },
@@ -441,7 +382,7 @@ fun MobileSettingsScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             rowPalettes.forEach { palette ->
-                                val isSelected = selectedThemeId == palette.id
+                                val isSelected = uiState.themeId == palette.id
                                 if (isSelected) {
                                     Button(
                                         onClick = { },
@@ -452,8 +393,7 @@ fun MobileSettingsScreen(
                                 } else {
                                     OutlinedButton(
                                         onClick = {
-                                            selectedThemeId = palette.id
-                                            appSettings.themeId = palette.id
+                                            viewModel.updateTheme(palette.id)
                                             onThemeChanged(palette.id)
                                         },
                                         modifier = Modifier.weight(1f)
@@ -472,7 +412,7 @@ fun MobileSettingsScreen(
                 val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
                 val indexState by epgIndexer.state.collectAsStateWithLifecycle()
                 var sourceCount by remember { mutableStateOf(0) }
-                LaunchedEffect(epgRefreshTrigger) {
+                LaunchedEffect(uiState.epgRefreshTrigger) {
                     sourceCount = epgIndexer.getSourceCount()
                 }
                 val summaryText = when (val idx = indexState) {
@@ -511,15 +451,14 @@ fun MobileSettingsScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Switch(
-                        checked = isDevMode,
+                        checked = uiState.isDevMode,
                         onCheckedChange = { enabled ->
-                            isDevMode = enabled
-                            appSettings.isDevMode = enabled
+                            viewModel.updateDevMode(enabled)
                         }
                     )
                 }
 
-                if (isDevMode) {
+                if (uiState.isDevMode) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                     Button(
                         onClick = onCellularBuffers,
@@ -634,17 +573,17 @@ fun MobileSettingsScreen(
                         if (path != null) {
                             pendingImportPath = path
                         } else {
-                            exportImportMessage = "Settings file not found in Downloads or app folder"
+                            viewModel.setExportImportMessage("Settings file not found in Downloads or app folder")
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Quick Import from Downloads")
                 }
-                if (exportImportMessage != null) {
+                if (uiState.exportImportMessage != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = exportImportMessage ?: "",
+                        text = uiState.exportImportMessage ?: "",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
                     )
@@ -654,208 +593,44 @@ fun MobileSettingsScreen(
             // === About ===
             SettingsSection(title = "About") {
                 Text(
-                    text = "Fijerena v${org.njarasoa.fijerena.BuildConfig.VERSION_NAME}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                Text(
-                    text = "Build: ${org.njarasoa.fijerena.BuildConfig.GIT_HASH}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                    text = "Fijerena v1.0.0",
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "Built: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME}",
+                    text = "Premium native media player for Android",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
-
 }
 
 @Composable
-private fun SettingsSection(
+fun SettingsSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    GlassPanel(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(CinemaSpacing.md)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            content()
-        }
-    }
-}
-
-@Composable
-private fun ConfirmationDialog(
-    title: String,
-    message: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(message) },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = CinemaError
+    GlassPanel(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(modifier = Modifier.padding(CinemaSpacing.md)) {
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
-            ) {
-                Text("Confirm")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                content()
             }
         }
-    )
-}
-
-private fun formatEpgFileSize(bytes: Long): String {
-    return when {
-        bytes >= 1_073_741_824L -> "%.1f GB".format(bytes / 1_073_741_824.0)
-        bytes >= 1_048_576L -> "%.1f MB".format(bytes / 1_048_576.0)
-        bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
-        else -> "$bytes B"
     }
-}
-
-private fun formatTimestamp(millis: Long): String {
-    val format = java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
-    format.timeZone = java.util.TimeZone.getDefault()
-    return format.format(java.util.Date(millis))
 }
 
 private fun formatProgrammeCount(count: Int): String {
     return when {
-        count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
-        count >= 1_000 -> "%.1fK".format(count / 1_000.0)
+        count >= 1000 -> "%.1fk".format(count / 1000.0)
         else -> count.toString()
     }
 }
-
-@Composable
-private fun CategoryFilterDialog(
-    currentFilters: CategoryFilters,
-    onSave: (CategoryFilters) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var mode by remember { mutableStateOf(currentFilters.mode) }
-    var prefixesText by remember { mutableStateOf(currentFilters.prefixes.joinToString(", ")) }
-    var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Category Filters") },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "Filter mode:",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = mode == FilterMode.EXCLUDE,
-                        onClick = { mode = FilterMode.EXCLUDE },
-                        label = { Text("Exclude") }
-                    )
-                    FilterChip(
-                        selected = mode == FilterMode.INCLUDE,
-                        onClick = { mode = FilterMode.INCLUDE },
-                        label = { Text("Include Only") }
-                    )
-                }
-                Text(
-                    text = if (mode == FilterMode.EXCLUDE)
-                        "Categories starting with these prefixes will be hidden"
-                    else
-                        "Only categories starting with these prefixes will be shown",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
-                OutlinedTextField(
-                    value = prefixesText,
-                    onValueChange = { prefixesText = it },
-                    label = { Text("Prefixes (comma-separated)") },
-                    placeholder = { Text("Adult, XXX, 18+") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = false,
-                    minLines = 2
-                )
-                Text(
-                    text = "Language Script Filter:",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = "Show only categories in selected scripts (none = show all)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
-                ScriptType.entries.forEach { script ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = script in selectedScripts,
-                            onCheckedChange = { checked ->
-                                selectedScripts = if (checked) {
-                                    selectedScripts + script
-                                } else {
-                                    selectedScripts - script
-                                }
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = script.displayName,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val prefixes = prefixesText
-                        .split(",")
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-                    onSave(CategoryFilters(
-                        mode = mode,
-                        prefixes = prefixes,
-                        allowedScripts = selectedScripts
-                    ))
-                }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-

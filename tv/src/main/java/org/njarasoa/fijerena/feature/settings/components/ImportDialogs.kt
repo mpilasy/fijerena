@@ -326,11 +326,24 @@ fun ConflictResolutionDialog(
                             text = "Duplicate",
                             modifier = Modifier.weight(1f)
                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.md))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                    ) {
                         CinemaSecondaryButton(
                             onClick = {
                                 onResolve(SettingsExportManager.ConflictResolution.SKIP)
                             },
-                            text = "Skip",
+                            text = "Skip Duplicates",
+                            modifier = Modifier.weight(1f)
+                        )
+                        CinemaSecondaryButton(
+                            onClick = onCancel,
+                            text = "Cancel",
                             modifier = Modifier.weight(1f)
                         )
                     }
