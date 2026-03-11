@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
@@ -17,7 +16,7 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
  */
 class ProviderRepository(private val context: Context) {
 
-    private val db = ProviderDatabase.getInstance(context)
+    private val db = SettingsDatabase.getInstance(context)
     private val dao = db.providerDao()
 
     private val masterKey: MasterKey by lazy {
@@ -28,7 +27,7 @@ class ProviderRepository(private val context: Context) {
 
     private val encryptedPrefsCache = java.util.concurrent.ConcurrentHashMap<Long, android.content.SharedPreferences>()
 
-    fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders().distinctUntilChanged()
+    fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders()
 
     suspend fun getAllProvidersList(): List<ProviderEntity> = dao.getAllProvidersList()
 

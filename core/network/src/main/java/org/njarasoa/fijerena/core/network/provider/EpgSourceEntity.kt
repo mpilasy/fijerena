@@ -1,4 +1,4 @@
-package org.njarasoa.fijerena.core.network.xmltv.epgindex
+package org.njarasoa.fijerena.core.network.provider
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

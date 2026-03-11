@@ -10,8 +10,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 
 /**
  * Manages export and import of all application settings to/from a JSON file.
@@ -189,7 +189,7 @@ class SettingsExportManager(private val context: Context) {
     suspend fun exportToJson(): String = withContext(Dispatchers.IO) {
         val appSettings = AppSettings(context)
         val providerRepo = ProviderRepository(context)
-        val epgDb = EpgIndexDatabase.getInstance(context)
+        val settingsDb = SettingsDatabase.getInstance(context)
 
         val global = GlobalSettings(
             themeId = appSettings.themeId,
@@ -214,7 +214,7 @@ class SettingsExportManager(private val context: Context) {
             )
         }
 
-        val epgSources = epgDb.epgSourceDao().getAllSourcesOnce().map { source ->
+        val epgSources = settingsDb.epgSourceDao().getAllSourcesOnce().map { source ->
             ExportedEpgSource(
                 url = source.url,
                 label = source.label,
@@ -515,8 +515,8 @@ class SettingsExportManager(private val context: Context) {
             var sourcesSkipped = 0
 
             if (options.importEpgSources) {
-                val epgDb = EpgIndexDatabase.getInstance(context)
-                val sourceDao = epgDb.epgSourceDao()
+                val settingsDb = SettingsDatabase.getInstance(context)
+                val sourceDao = settingsDb.epgSourceDao()
                 val existingSources = sourceDao.getAllSourcesOnce()
                 val existingUrls = existingSources.map { it.url }.toSet()
 

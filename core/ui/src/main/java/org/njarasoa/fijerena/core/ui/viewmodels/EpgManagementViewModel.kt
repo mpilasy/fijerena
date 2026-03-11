@@ -27,7 +27,8 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EpgManagementViewModel(
@@ -38,16 +39,15 @@ class EpgManagementViewModel(
     private val indexer = EpgIndexer.getInstance(context)
     private val appSettings = AppSettings(context)
 
-    // Generation counter — incremented after DB destroy/recreate so Flows re-subscribe
+    // Accessors for separated databases
+    private fun indexDb() = EpgIndexDatabase.getInstance(context)
+    private fun settingsDb() = SettingsDatabase.getInstance(context)
+
+    // Generation counter for index DB — sources Flow now persistent
     private val _dbGeneration = MutableStateFlow(0)
 
-    // Always get fresh DB instance (survives destroy/recreate)
-    private fun db() = EpgIndexDatabase.getInstance(context)
-
-    // Re-subscribes to the new DB after clearing via flatMapLatest on generation
-    val sources: Flow<List<EpgSourceEntity>> = _dbGeneration.flatMapLatest {
-        db().epgSourceDao().getAllSources().distinctUntilChanged()
-    }
+    // Sources are now in the persistent SettingsDatabase
+    val sources: Flow<List<EpgSourceEntity>> = settingsDb().epgSourceDao().getAllSources().distinctUntilChanged()
 
     val staleSourceCount: StateFlow<Int> = sources
         .map { list -> 
@@ -138,7 +138,7 @@ class EpgManagementViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 try {
-                    val dao = db().epgIndexDao()
+                    val dao = indexDb().epgIndexDao()
                     _dbStats.value = DbStats(
                         channelCount = dao.getChannelCount(),
                         programmeCount = dao.getProgrammeCount()
@@ -151,7 +151,7 @@ class EpgManagementViewModel(
     }
 
     suspend fun getLatestProgrammeTime(sourceId: Long): Long? = withContext(Dispatchers.IO) {
-        db().epgIndexDao().getLatestProgrammeEndTimeForSource(sourceId)
+        indexDb().epgIndexDao().getLatestProgrammeEndTimeForSource(sourceId)
     }
 
     fun addSource(url: String, label: String, timezoneOffsetHours: Int, ingestMethod: String = "DOWNLOADED", enabled: Boolean = true) {
@@ -167,7 +167,7 @@ class EpgManagementViewModel(
                     } else {
                         EpgFileManager.extractLabel(u)
                     }
-                    db().epgSourceDao().insertSource(
+                    settingsDb().epgSourceDao().insertSource(
                         EpgSourceEntity(
                             url = u,
                             label = finalLabel,
@@ -184,7 +184,7 @@ class EpgManagementViewModel(
     fun updateSource(source: EpgSourceEntity) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                db().epgSourceDao().updateSource(source)
+                settingsDb().epgSourceDao().updateSource(source)
             }
         }
     }
@@ -192,7 +192,10 @@ class EpgManagementViewModel(
     fun deleteSource(id: Long) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                db().epgSourceDao().deleteSource(id)
+                // Delete from persistent settings
+                settingsDb().epgSourceDao().deleteSource(id)
+                // Also delete its transient data from the index (manual cascade)
+                indexDb().epgIndexDao().deleteBySourceId(id)
                 refreshDbStats()
             }
         }
@@ -210,7 +213,7 @@ class EpgManagementViewModel(
             // Instant feedback: calculate which IDs will be refreshed and put them in the map
             val thresholdMs = System.currentTimeMillis() - STALE_THRESHOLD_MS
             val sourcesToRefresh = withContext(Dispatchers.IO) { 
-                db().epgSourceDao().getStaleSources(thresholdMs) 
+                settingsDb().epgSourceDao().getStaleSources(thresholdMs) 
             }.filter { !queued.contains("epg_refresh_source_${it.id}") }
 
             if (sourcesToRefresh.isEmpty()) {
@@ -253,7 +256,7 @@ class EpgManagementViewModel(
         }
 
         viewModelScope.launch {
-            val sources = withContext(Dispatchers.IO) { db().epgSourceDao().getFailedSources() }
+            val sources = withContext(Dispatchers.IO) { settingsDb().epgSourceDao().getFailedSources() }
             if (sources.isEmpty()) {
                 _toastMessage.tryEmit("No failed sources found.")
                 return@launch
@@ -372,10 +375,10 @@ class EpgManagementViewModel(
 
     fun clearDatabase() {
         epgFileManager.launchClearAllData {
-            // DB was destroyed and recreated — bump generation so sources Flow re-subscribes
+            // DB was destroyed and recreated
             _dbGeneration.value++
-            // Re-query from fresh DB
-            val dao = db().epgIndexDao()
+            // Re-query from fresh index DB
+            val dao = indexDb().epgIndexDao()
             _dbStats.value = DbStats(
                 channelCount = dao.getChannelCount(),
                 programmeCount = dao.getProgrammeCount()

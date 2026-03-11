@@ -18,48 +18,21 @@ import kotlinx.coroutines.DelicateCoroutinesApi
         EpgChannelEntity::class,
         EpgProgrammeEntity::class,
         EpgProgrammeFts::class,
-        EpgIndexMetadata::class,
-        EpgSourceEntity::class
+        EpgIndexMetadata::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class EpgIndexDatabase : RoomDatabase() {
 
     abstract fun epgIndexDao(): EpgIndexDao
-    abstract fun epgSourceDao(): EpgSourceDao
 
     companion object {
         private const val TAG = "EpgIndexDatabase"
         private const val DB_NAME = "epg_index.db"
 
-        private val MIGRATION_7_8 = object : Migration(7, 8) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "ALTER TABLE epg_source ADD COLUMN ingest_method TEXT NOT NULL DEFAULT 'DOWNLOADED'"
-                )
-            }
-        }
-
-        private val MIGRATION_8_9 = object : Migration(8, 9) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "ALTER TABLE epg_source ADD COLUMN last_ingestion_duration_ms INTEGER NOT NULL DEFAULT 0"
-                )
-            }
-        }
-
-        private val MIGRATION_9_10 = object : Migration(9, 10) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "ALTER TABLE epg_source ADD COLUMN last_download_duration_ms INTEGER NOT NULL DEFAULT 0"
-                )
-            }
-        }
-
         // FTS4 -> FTS5 migration is complex via raw SQL because of Room's internal validation.
         // We rely on fallbackToDestructiveMigration(true) for this jump to ensure a clean schema.
-        // The MIGRATION_10_11 is intentionally omitted to trigger the fallback.
 
         @Volatile
         private var INSTANCE: EpgIndexDatabase? = null
@@ -78,7 +51,6 @@ abstract class EpgIndexDatabase : RoomDatabase() {
             )
                 .openHelperFactory(RequerySQLiteOpenHelperFactory())
                 .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(object : RoomDatabase.Callback() {
                     @OptIn(DelicateCoroutinesApi::class)

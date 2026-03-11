@@ -17,6 +17,9 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import java.io.InputStream
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
+import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 
 /**
  * Singleton that indexes XMLTV data into SQLite for fast FTS search.
@@ -323,7 +326,7 @@ class EpgIndexer private constructor(private val context: Context) {
         try {
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
-            val sourceDao = db.epgSourceDao()
+            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
 
             // Upsert EpgSource
             val sourceUrl = "xtream://$providerId"
@@ -342,7 +345,7 @@ class EpgIndexer private constructor(private val context: Context) {
                 }
             }
 
-            // Clean slate for this source
+            // Clean slate for this source in the index
             writeMutex.withLock {
                 dao.deleteBySourceId(sourceId)
             }
@@ -404,7 +407,7 @@ class EpgIndexer private constructor(private val context: Context) {
                 }
             }
 
-            // Update source stats
+            // Update source stats in Settings database
             writeMutex.withLock {
                 sourceDao.markIngested(
                     id = sourceId,
@@ -521,34 +524,17 @@ class EpgIndexer private constructor(private val context: Context) {
 
     /**
      * Clear all EPG data from the database and reset state to NotIndexed.
+     * User-configured sources are now stored in SettingsDatabase and are preserved.
      */
     suspend fun clearAll() = withContext(Dispatchers.IO) {
         try {
             writeMutex.withLock {
-                // Save sources before destroying DB — they're user config, not EPG data
-                val oldDb = EpgIndexDatabase.getInstance(context)
-                val savedSources = oldDb.epgSourceDao().getAllSourcesOnce()
-
-                // Close DB and delete file — instant regardless of data size
+                // SettingsDatabase handles sources persistently. 
+                // We only need to destroy and recreate the indexing database.
                 EpgIndexDatabase.destroy(context)
 
                 // Reopen: Room recreates all tables from schema
-                val newDb = EpgIndexDatabase.getInstance(context)
-
-                // Restore sources with stats reset
-                for (source in savedSources) {
-                    newDb.epgSourceDao().insertSource(
-                        source.copy(
-                            lastIngestedAtMs = 0,
-                            lastChannels = 0,
-                            lastProgrammes = 0,
-                            lastDownloadBytes = 0,
-                            lastError = null,
-                            lastIngestionDurationMs = 0,
-                            lastDownloadDurationMs = 0
-                        )
-                    )
-                }
+                EpgIndexDatabase.getInstance(context)
 
                 _state.value = EpgIndexState.NotIndexed
             }
@@ -622,8 +608,7 @@ class EpgIndexer private constructor(private val context: Context) {
      */
     suspend fun getSourceCount(): Int = withContext(Dispatchers.IO) {
         try {
-            val db = EpgIndexDatabase.getInstance(context)
-            db.epgSourceDao().getSourceCount()
+            SettingsDatabase.getInstance(context).epgSourceDao().getSourceCount()
         } catch (e: Exception) {
             Log.w(TAG, "Failed to get source count: ${e.message}")
             0
