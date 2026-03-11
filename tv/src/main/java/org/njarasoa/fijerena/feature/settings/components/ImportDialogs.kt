@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -258,7 +259,10 @@ fun ConflictResolutionDialog(
                 shape = RoundedCornerShape(CornerRadius.medium)
             ) {
                 Column(
-                    modifier = Modifier.padding(Spacing.xxl)
+                    modifier = Modifier
+                        .padding(Spacing.xxl)
+                        .focusRestorer { conflictDialogFocusRequester }
+                        .focusProperties { exit = { FocusRequester.Cancel } }
                 ) {
                     Text(
                         text = "Provider Conflict",
