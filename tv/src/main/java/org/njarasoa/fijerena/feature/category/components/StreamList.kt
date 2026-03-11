@@ -79,7 +79,7 @@ internal fun StreamList(
     isDevMode: Boolean,
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onStreamLongPress: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -229,7 +229,7 @@ internal fun StreamList(
                                 isFavorite = item.id in favoriteIds,
                                 watchProgress = watchProgress[item.id] ?: 0f,
                                 nowPlayingProgram = nowPlaying[item.id],
-                                onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
+                                onClick = { onStreamSelected(item.id, item.name, item.categoryId, item.providerData) },
                                 onLongPress = { onStreamLongPress(item) },
                                 // Only the last-played item gets a focus requester for auto-scroll
                                 focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null

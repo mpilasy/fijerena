@@ -78,7 +78,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 fun MobileCategoryListScreen(
     contentType: String,
     initialCategoryId: String? = null,
-    onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String) -> Unit,
+    onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String, providerData: Map<String, String>) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
@@ -273,13 +273,14 @@ fun MobileCategoryListScreen(
                                 onItemSelected = { itemId, itemName, categoryId ->
                                     // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
                                     val item = state.streams?.firstOrNull { it.id == itemId }
-                                    if (item?.providerData?.get("isCategoryRef") == "true") {
-                                        val targetCategoryId = item.providerData["categoryId"]
+                                    val providerData = item?.providerData ?: emptyMap()
+                                    if (providerData["isCategoryRef"] == "true") {
+                                        val targetCategoryId = providerData["categoryId"]
                                         if (targetCategoryId != null) {
                                             viewModel.loadStreams(targetCategoryId)
                                         }
                                     } else {
-                                        onStreamSelected(itemId, itemName, categoryId, contentType)
+                                        onStreamSelected(itemId, itemName, categoryId, contentType, providerData)
                                     }
                                 },
                                 onItemLongPress = { item ->

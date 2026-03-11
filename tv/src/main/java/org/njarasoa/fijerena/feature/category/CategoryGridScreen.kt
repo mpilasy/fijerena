@@ -54,7 +54,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 fun CategoryGridScreen(
     contentType: String,
     initialCategoryId: String? = null,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit = {},
@@ -125,7 +125,7 @@ private fun CategoryGridContent(
     configuration: android.content.res.Configuration,
     isDevMode: Boolean,
     catViewModel: CategoryViewModel,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onSearchClick: () -> Unit,
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
     onBack: () -> Unit,
@@ -170,8 +170,8 @@ private fun CategoryGridContent(
                         onCategorySelected = { categoryId ->
                             catViewModel.loadStreams(categoryId)
                         },
-                        onStreamSelected = { streamId, streamName, categoryId ->
-                            onStreamSelected(streamId, streamName, categoryId)
+                        onStreamSelected = { streamId, streamName, categoryId, providerData ->
+                            onStreamSelected(streamId, streamName, categoryId, providerData)
                         },
                         onRefreshCategories = {
                             catViewModel.refreshCategories()

@@ -258,17 +258,34 @@ fun TvNavHost(
                 CategoryGridScreen(
                     contentType = categoryListScreen.contentType,
                     initialCategoryId = categoryListScreen.initialCategoryId,
-                    onStreamSelected = { itemId, streamName, categoryId ->
+                    onStreamSelected = { itemId, streamName, categoryId, providerData ->
                         when (categoryListScreen.contentType) {
                             ContentType.TV_SHOWS -> {
-                                // For TV shows, navigate to episode selection
-                                navController.navigate(
-                                    Screen.EpisodeSelection(
-                                        seriesId = itemId,
-                                        seriesName = streamName,
-                                        categoryId = categoryId
+                                val episodeId = providerData["episodeId"]
+                                if (episodeId != null) {
+                                    // Last-watched episode: go directly to player
+                                    navController.navigate(
+                                        Screen.Player(
+                                            streamId = itemId,
+                                            streamName = streamName,
+                                            categoryId = categoryId,
+                                            contentType = ContentType.TV_SHOWS,
+                                            episodeId = episodeId,
+                                            episodeExtension = providerData["episodeExtension"],
+                                            seriesId = providerData["seriesId"],
+                                            seriesName = providerData["seriesName"]
+                                        )
                                     )
-                                )
+                                } else {
+                                    // Regular series: navigate to episode selection
+                                    navController.navigate(
+                                        Screen.EpisodeSelection(
+                                            seriesId = itemId,
+                                            seriesName = streamName,
+                                            categoryId = categoryId
+                                        )
+                                    )
+                                }
                             }
                             ContentType.MOVIES -> {
                                 // For movies, navigate to movie details
