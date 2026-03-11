@@ -726,17 +726,33 @@ class SettingsExportManager(private val context: Context) {
         fun toSummary(): String {
             if (error != null) return "Import failed: $error"
             val parts = mutableListOf<String>()
-            if (providersAdded > 0) parts.add("$providersAdded provider(s) added")
-            if (providersUpdated > 0) parts.add("$providersUpdated provider(s) overwritten")
-            if (providersSkipped > 0) parts.add("$providersSkipped provider(s) skipped")
-            if (epgSourcesAdded > 0) parts.add("$epgSourcesAdded EPG source(s) added")
-            if (epgSourcesSkipped > 0) parts.add("$epgSourcesSkipped EPG source(s) already existed")
-            if (favoritesRestored > 0) parts.add("$favoritesRestored favorite(s) restored")
-            if (favoriteCategoriesRestored > 0) parts.add("$favoriteCategoriesRestored favorite category(ies) restored")
-            if (favoriteShowsRestored > 0) parts.add("$favoriteShowsRestored favorite show(s) restored")
+            
+            // Providers
+            if (providersAdded > 0 || providersUpdated > 0 || providersSkipped > 0) {
+                val p = mutableListOf<String>()
+                if (providersAdded > 0) p.add("$providersAdded added")
+                if (providersUpdated > 0) p.add("$providersUpdated overwritten")
+                if (providersSkipped > 0) p.add("$providersSkipped skipped")
+                parts.add("Providers: ${p.joinToString(", ")}")
+            }
+            
+            // EPG Sources
+            if (epgSourcesAdded > 0 || epgSourcesSkipped > 0) {
+                val e = mutableListOf<String>()
+                if (epgSourcesAdded > 0) e.add("$epgSourcesAdded added")
+                if (epgSourcesSkipped > 0) e.add("$epgSourcesSkipped skipped")
+                parts.add("EPG Sources: ${e.joinToString(", ")}")
+            }
+
+            // Favorites
+            val favTotal = favoritesRestored + favoriteCategoriesRestored + favoriteShowsRestored
+            if (favTotal > 0) {
+                parts.add("$favTotal favorite(s) restored")
+            }
+
             if (parts.isEmpty()) parts.add("Settings updated")
-            if (providersAdded > 0) parts.add("Passwords must be re-entered in provider settings")
-            return parts.joinToString(". ") + "."
+            val summary = parts.joinToString(". ") + "."
+            return if (providersAdded > 0) "$summary (Passwords must be re-entered)" else summary
         }
     }
 }

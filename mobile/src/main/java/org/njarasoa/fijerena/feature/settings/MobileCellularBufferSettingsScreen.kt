@@ -96,7 +96,7 @@ fun MobileCellularBufferSettingsScreen(
             }
 
             // Live TV Section
-            SettingsSection(title = "Live TV Buffer") {
+            LocalSettingsSection(title = "Live TV Buffer") {
                 Text(
                     text = "Adjust buffer size for cellular Live TV streams",
                     style = MaterialTheme.typography.bodySmall,
@@ -137,7 +137,7 @@ fun MobileCellularBufferSettingsScreen(
             }
 
             // VOD Section
-            SettingsSection(title = "VOD Buffer") {
+            LocalSettingsSection(title = "VOD Buffer") {
                 Text(
                     text = "Adjust buffer size for cellular VOD streams",
                     style = MaterialTheme.typography.bodySmall,
@@ -268,21 +268,21 @@ private fun CellularBufferPreview(
 }
 
 @Composable
-private fun SettingsSection(
+private fun LocalSettingsSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(CinemaSpacing.md)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            content()
+        Box(modifier = Modifier.padding(CinemaSpacing.md)) {
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                content()
+            }
         }
     }
 }
