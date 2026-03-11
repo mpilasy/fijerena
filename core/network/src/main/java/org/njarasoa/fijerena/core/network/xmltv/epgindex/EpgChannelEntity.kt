@@ -2,20 +2,11 @@ package org.njarasoa.fijerena.core.network.xmltv.epgindex
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 
 @Entity(
     tableName = "epg_channel",
     primaryKeys = ["xmltv_id", "source_id"],
-    foreignKeys = [
-        ForeignKey(
-            entity = EpgSourceEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["source_id"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
     indices = [
         Index(value = ["source_id"], name = "idx_channel_source")
     ]

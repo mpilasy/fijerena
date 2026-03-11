@@ -1,4 +1,4 @@
-package org.njarasoa.fijerena.core.network.xmltv.epgindex
+package org.njarasoa.fijerena.core.network.provider
 
 import androidx.room.Dao
 import androidx.room.Insert

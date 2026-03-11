@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.provider.ProviderDatabase
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
@@ -125,7 +125,7 @@ class EpgBrowserViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 try {
-                    val provider = ProviderDatabase.getInstance(context)
+                    val provider = SettingsDatabase.getInstance(context)
                         .providerDao().getActiveProvider()
                     _activeProviderName.value = provider?.name
                 } catch (e: Exception) {
@@ -143,7 +143,7 @@ class EpgBrowserViewModel(
     private suspend fun ensureChannelMatcherCurrent() {
         withContext(Dispatchers.IO) {
             try {
-                val provider = ProviderDatabase.getInstance(context)
+                val provider = SettingsDatabase.getInstance(context)
                     .providerDao().getActiveProvider() ?: return@withContext
                 if (provider.id == lastMatcherProviderId) return@withContext
                 val liveStreams = XtreamDatabase.getInstance(context)
@@ -160,8 +160,8 @@ class EpgBrowserViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 try {
-                    val db = EpgIndexDatabase.getInstance(context)
-                    val sources = db.epgSourceDao().getAllSourcesOnce()
+                    val settingsDb = SettingsDatabase.getInstance(context)
+                    val sources = settingsDb.epgSourceDao().getAllSourcesOnce()
                     _sourceLabels.value = sources.associate { it.id to it.label }
                 } catch (e: Exception) {
                     android.util.Log.e("EpgBrowserViewModel", "Failed to load EPG source labels", e)

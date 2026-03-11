@@ -28,7 +28,9 @@ import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
@@ -235,8 +237,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val oldTz = appSettings.epgTimezoneOffsetHours
 
             if (oldUrl.isNotBlank()) {
-                val db = EpgIndexDatabase.getInstance(context)
-                val sourceDao = db.epgSourceDao()
+                val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
                 if (sourceDao.getSourceCount() == 0) {
                     val label = extractLabel(oldUrl)
                     sourceDao.insertSource(
@@ -313,9 +314,9 @@ class EpgFileManager private constructor(private val context: Context) {
 
     fun launchRefreshStale(onComplete: (suspend () -> Unit)? = null, onCellularConfirm: (suspend () -> Boolean)? = null) {
         launchGenericTask("epg_refresh_stale", onComplete, onCellularConfirm) {
-            val db = EpgIndexDatabase.getInstance(context)
+            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val thresholdMs = System.currentTimeMillis() - STALE_THRESHOLD_MS
-            val staleSources = db.epgSourceDao().getStaleSources(thresholdMs)
+            val staleSources = sourceDao.getStaleSources(thresholdMs)
             if (staleSources.isNotEmpty()) {
                 processAllSourcesInternal(staleSources)
             } else {
@@ -328,8 +329,8 @@ class EpgFileManager private constructor(private val context: Context) {
 
     fun launchRefreshFailed(onComplete: (suspend () -> Unit)? = null, onCellularConfirm: (suspend () -> Boolean)? = null) {
         launchGenericTask("epg_refresh_failed", onComplete, onCellularConfirm) {
-            val db = EpgIndexDatabase.getInstance(context)
-            val failedSources = db.epgSourceDao().getFailedSources()
+            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+            val failedSources = sourceDao.getFailedSources()
             if (failedSources.isNotEmpty()) {
                 processAllSourcesInternal(failedSources)
             } else {
@@ -342,8 +343,8 @@ class EpgFileManager private constructor(private val context: Context) {
 
     fun launchRefreshSelected(selectedIds: Set<Long>, onComplete: (suspend () -> Unit)? = null, onCellularConfirm: (suspend () -> Boolean)? = null) {
         launchGenericTask("epg_refresh_selected", onComplete, onCellularConfirm) {
-            val db = EpgIndexDatabase.getInstance(context)
-            val selectedSources = db.epgSourceDao().getAllSourcesOnce().filter { it.id in selectedIds }
+            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+            val selectedSources = sourceDao.getAllSourcesOnce().filter { it.id in selectedIds }
             if (selectedSources.isNotEmpty()) {
                 processAllSourcesInternal(selectedSources)
             } else {
@@ -397,8 +398,7 @@ class EpgFileManager private constructor(private val context: Context) {
         val fixedDevice = isFixedDevice()
         val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
         try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val sourceDao = db.epgSourceDao()
+            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val indexer = EpgIndexer.getInstance(context)
 
             val maxDownloadConcurrency = if (fixedDevice) 2 else 3
@@ -579,8 +579,7 @@ class EpgFileManager private constructor(private val context: Context) {
         val startTime = System.currentTimeMillis()
         val batchSize = if (isFixedDevice()) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
         try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val sourceDao = db.epgSourceDao()
+            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val source = sourceDao.getSourceById(sourceId) ?: run {
                 _state.value = MultiSourceState.Error("Source not found")
                 return
@@ -732,7 +731,7 @@ class EpgFileManager private constructor(private val context: Context) {
     private suspend fun downloadSource(
         source: EpgSourceEntity,
         label: String,
-        sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
+        sourceDao: EpgSourceDao,
         activeProgress: ConcurrentHashMap<Long, ActiveSourceProgress>,
         onProgressUpdate: () -> Unit
     ): DownloadedSource? {
@@ -857,7 +856,7 @@ class EpgFileManager private constructor(private val context: Context) {
      */
     private suspend fun ingestDownloadedSource(
         downloaded: DownloadedSource,
-        sourceDao: org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceDao,
+        sourceDao: EpgSourceDao,
         indexer: EpgIndexer,
         activeProgress: ConcurrentHashMap<Long, ActiveSourceProgress>,
         batchSize: Int = EpgIndexer.BATCH_SIZE_MOBILE,
@@ -931,8 +930,7 @@ class EpgFileManager private constructor(private val context: Context) {
      * Returns true if refresh was started (stale sources found), false otherwise.
      */
     suspend fun refreshOutdatedSources(): Boolean {
-        val db = EpgIndexDatabase.getInstance(context)
-        val sourceDao = db.epgSourceDao()
+        val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
         val sources = sourceDao.getEnabledSources()
         if (sources.isEmpty()) return false
 
