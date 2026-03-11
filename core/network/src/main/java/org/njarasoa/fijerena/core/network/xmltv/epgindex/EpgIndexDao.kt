@@ -230,6 +230,9 @@ interface EpgIndexDao {
     @Query("UPDATE epg_programme SET embedding = :embedding WHERE id = :id")
     suspend fun updateEmbedding(id: Long, embedding: ByteArray)
 
+    @Query("SELECT * FROM epg_programme WHERE embedding IS NOT NULL AND end_epoch > :windowStart AND start_epoch <= :windowEnd")
+    suspend fun getProgrammesWithEmbeddings(windowStart: Long, windowEnd: Long): List<EpgProgrammeEntity>
+
     // --------------- Transactional ingestion ---------------
 
     @Transaction
