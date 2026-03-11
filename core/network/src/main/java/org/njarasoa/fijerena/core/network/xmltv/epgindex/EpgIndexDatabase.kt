@@ -20,7 +20,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
         EpgProgrammeFts::class,
         EpgIndexMetadata::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class EpgIndexDatabase : RoomDatabase() {

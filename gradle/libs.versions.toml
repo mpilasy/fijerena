@@ -57,6 +57,10 @@ playServicesAuth = "21.3.0"
 googleApiClient = "2.7.0"
 googleApiServicesDrive = "v3-rev20241206-2.0.0"
 
+# AI & Machine Learning
+tensorflowLite = "2.16.1"
+tensorflowLiteSupport = "0.4.4"
+
 [libraries]
 # Core Android
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -146,6 +150,11 @@ play-services-auth = { group = "com.google.android.gms", name = "play-services-a
 google-api-client-android = { group = "com.google.api-client", name = "google-api-client-android", version.ref = "googleApiClient" }
 google-api-services-drive = { group = "com.google.apis", name = "google-api-services-drive", version.ref = "googleApiServicesDrive" }
 
+# AI & Machine Learning
+tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflowLite" }
+tensorflow-lite-gpu = { group = "org.tensorflow", name = "tensorflow-lite-gpu", version.ref = "tensorflowLite" }
+tensorflow-lite-support = { group = "org.tensorflow", name = "tensorflow-lite-support", version.ref = "tensorflowLiteSupport" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -158,3 +167,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 networking = ["ktor-client-core", "ktor-client-android", "ktor-client-okhttp", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json", "kotlinx-serialization-json"]
 media = ["media3-exoplayer", "media3-exoplayer-hls", "media3-exoplayer-dash", "media3-session", "media3-ui", "media3-datasource-okhttp"]
 compose = ["androidx-compose-ui", "androidx-compose-ui-graphics", "androidx-compose-ui-tooling-preview"]
+tflite = ["tensorflow-lite", "tensorflow-lite-gpu", "tensorflow-lite-support"]
