@@ -21,7 +21,6 @@
     <application
         android:name="org.njarasoa.fijerena.core.ui.FijerenaApplication"
         android:largeHeap="true"
-        android:usesCleartextTraffic="true"
         android:allowBackup="false"
         android:banner="@mipmap/ic_launcher"
         android:icon="@mipmap/ic_launcher"
