@@ -186,9 +186,16 @@ class StreamLoaderViewModel(
                     historyJob?.cancel()
                     historyJob = viewModelScope.launch(Dispatchers.IO) {
                         delay(AppSettings(context).watchDelaySeconds * 1000L)
-                        val watchHistoryStreamId = if (contentType == ContentType.TV_SHOWS && seriesId != null) seriesId else streamId
-                        val watchHistoryStreamName = if (contentType == ContentType.TV_SHOWS && seriesName != null) seriesName else streamName
-                        repo.saveLastPlayedItem(categoryId, watchHistoryStreamId, watchHistoryStreamName, contentType)
+                        repo.saveLastPlayedItem(
+                            categoryId = categoryId,
+                            itemId = streamId,
+                            itemName = streamName,
+                            contentType = contentType,
+                            episodeId = episodeId,
+                            episodeExtension = episodeExtension,
+                            seriesId = seriesId,
+                            seriesName = seriesName
+                        )
                     }
                 },
                 onFailure = { e ->

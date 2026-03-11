@@ -63,7 +63,7 @@ internal fun TwoColumnLayout(
     supportsNativeEpg: Boolean,
     epgIndexState: EpgIndexState,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
     onSearchClick: () -> Unit,
@@ -248,16 +248,15 @@ internal fun TwoColumnLayout(
                 isDevMode = isDevMode,
                 favoriteIds = favoriteIds,
                 watchProgress = watchProgress,
-                onStreamSelected = { streamId, streamName, categoryId ->
+                onStreamSelected = { streamId, streamName, categoryId, providerData ->
                     // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
-                    val item = streams?.firstOrNull { it.id == streamId }
-                    if (item?.providerData?.get("isCategoryRef") == "true") {
-                        val targetCategoryId = item.providerData["categoryId"]
+                    if (providerData["isCategoryRef"] == "true") {
+                        val targetCategoryId = providerData["categoryId"]
                         if (targetCategoryId != null) {
                             onCategorySelected(targetCategoryId)
                         }
                     } else {
-                        onStreamSelected(streamId, streamName, categoryId)
+                        onStreamSelected(streamId, streamName, categoryId, providerData)
                     }
                 },
                 onStreamLongPress = { item ->

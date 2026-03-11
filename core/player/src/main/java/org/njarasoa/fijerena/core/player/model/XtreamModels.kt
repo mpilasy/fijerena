@@ -7,8 +7,12 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Represents a live TV category from Xtream API
@@ -214,6 +218,7 @@ data class SeriesInfo(
     @SerialName("seasons")
     val seasons: List<Season> = emptyList(),
 
+    @Serializable(with = EpisodesMapSerializer::class)
     @SerialName("episodes")
     val episodes: Map<String, List<Episode>> = emptyMap()
 )
@@ -411,6 +416,35 @@ data class AudioInfo(
     @SerialName("language")
     val language: String? = null
 )
+
+/**
+ * Custom serializer for episodes map that handles APIs returning [] instead of {}
+ */
+object EpisodesMapSerializer : KSerializer<Map<String, List<Episode>>> {
+    private val mapSerializer = MapSerializer(String.serializer(), ListSerializer(Episode.serializer()))
+
+    override val descriptor: SerialDescriptor = mapSerializer.descriptor
+
+    override fun deserialize(decoder: Decoder): Map<String, List<Episode>> {
+        val jsonDecoder = decoder as? JsonDecoder ?: return emptyMap()
+        val element = jsonDecoder.decodeJsonElement()
+
+        // If it's an array (e.g. []), return empty map
+        return if (element is JsonObject) {
+            try {
+                jsonDecoder.json.decodeFromJsonElement(mapSerializer, element)
+            } catch (e: Exception) {
+                emptyMap()
+            }
+        } else {
+            emptyMap()
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: Map<String, List<Episode>>) {
+        encoder.encodeSerializableValue(mapSerializer, value)
+    }
+}
 
 /**
  * Custom serializer for VideoInfo that handles both object and array responses

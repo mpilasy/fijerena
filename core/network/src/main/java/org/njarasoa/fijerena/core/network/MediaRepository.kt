@@ -32,7 +32,11 @@ data class WatchedItem(
     val timestamp: Long = System.currentTimeMillis(),
     val playbackPosition: Long = 0L,
     val duration: Long = 0L,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val episodeId: String? = null,
+    val episodeExtension: String? = null,
+    val seriesId: String? = null,
+    val seriesName: String? = null
 )
 
 @Serializable
@@ -343,7 +347,16 @@ class MediaRepository(
 
     // --- Local-only operations (favorites, watch history, playback progress) ---
 
-    fun saveLastPlayedItem(categoryId: String, itemId: String, itemName: String, contentType: String) {
+    fun saveLastPlayedItem(
+        categoryId: String,
+        itemId: String,
+        itemName: String,
+        contentType: String,
+        episodeId: String? = null,
+        episodeExtension: String? = null,
+        seriesId: String? = null,
+        seriesName: String? = null
+    ) {
         val editor = cache.edit()
         when (contentType) {
             ContentType.LIVE_TV -> {
@@ -362,7 +375,9 @@ class MediaRepository(
         editor.putString(KEY_LAST_CONTENT_TYPE, contentType)
         editor.apply()
         if (!usesServerUserData) {
-            addToWatchHistory(itemId, itemName, categoryId, contentType)
+            addToWatchHistory(itemId, itemName, categoryId, contentType,
+                episodeId = episodeId, episodeExtension = episodeExtension,
+                seriesId = seriesId, seriesName = seriesName)
         }
     }
 
@@ -425,7 +440,11 @@ class MediaRepository(
         contentType: String,
         playbackPosition: Long = 0L,
         duration: Long = 0L,
-        isCompleted: Boolean = false
+        isCompleted: Boolean = false,
+        episodeId: String? = null,
+        episodeExtension: String? = null,
+        seriesId: String? = null,
+        seriesName: String? = null
     ) {
         synchronized(watchHistoryLock) {
             val history = getWatchHistoryLocked().toMutableList()
@@ -433,7 +452,9 @@ class MediaRepository(
             history.add(0, WatchedItem(
                 itemId, itemName, categoryId, contentType,
                 System.currentTimeMillis(),
-                playbackPosition, duration, isCompleted
+                playbackPosition, duration, isCompleted,
+                episodeId = episodeId, episodeExtension = episodeExtension,
+                seriesId = seriesId, seriesName = seriesName
             ))
             val trimmed = history.take(providerSettings.watchHistorySize)
 
@@ -488,6 +509,10 @@ class MediaRepository(
                         put("playbackPosition", watched.playbackPosition.toString())
                         put("duration", watched.duration.toString())
                         put("isCompleted", watched.isCompleted.toString())
+                        watched.episodeId?.let { put("episodeId", it) }
+                        watched.episodeExtension?.let { put("episodeExtension", it) }
+                        watched.seriesId?.let { put("seriesId", it) }
+                        watched.seriesName?.let { put("seriesName", it) }
                     }
                 )
             }
@@ -713,7 +738,13 @@ class MediaRepository(
             (position.toFloat() / duration.toFloat()) * 100f
         } else 0f
         val isCompleted = progressPercent > 95.0f
-        addToWatchHistory(itemId, itemName, categoryId, contentType, position, duration, isCompleted)
+        // Preserve episode metadata from existing entry
+        val existing = synchronized(watchHistoryLock) {
+            getWatchHistoryLocked().firstOrNull { it.itemId == itemId && it.contentType == contentType }
+        }
+        addToWatchHistory(itemId, itemName, categoryId, contentType, position, duration, isCompleted,
+            episodeId = existing?.episodeId, episodeExtension = existing?.episodeExtension,
+            seriesId = existing?.seriesId, seriesName = existing?.seriesName)
     }
 
     fun getPlaybackPosition(itemId: String, contentType: String): WatchedItem? {
