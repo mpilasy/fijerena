@@ -112,6 +112,7 @@ fun MobileSettingsScreen(
     var epgRefreshTrigger by remember { mutableStateOf(0) }
     var pendingExportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingImportPath by remember { mutableStateOf<String?>(null) }
     var pendingParsedImport by remember { mutableStateOf<SettingsExportManager.ParsedImport?>(null) }
     var showConflictDialog by remember { mutableStateOf(false) }
     var showImportOptionsDialog by remember { mutableStateOf(false) }
@@ -147,6 +148,20 @@ fun MobileSettingsScreen(
             exportImportMessage = "Import failed: ${e.message}"
         }
         pendingImportUri = null
+    }
+
+    // Parse import file (Path) and show options dialog
+    LaunchedEffect(pendingImportPath) {
+        val path = pendingImportPath ?: return@LaunchedEffect
+        val parseResult = exportManager.parseImportPath(path)
+        parseResult.onSuccess { parsed ->
+            pendingParsedImport = parsed
+            pendingImportOptions = SettingsExportManager.ImportOptions()
+            showImportOptionsDialog = true
+        }.onFailure { e ->
+            exportImportMessage = "Import failed: ${e.message}"
+        }
+        pendingImportPath = null
     }
 
     // Helper to perform import and refresh UI state
@@ -611,6 +626,20 @@ fun MobileSettingsScreen(
                     ) {
                         Text("Import")
                     }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        val path = exportManager.getQuickImportPath()
+                        if (path != null) {
+                            pendingImportPath = path
+                        } else {
+                            exportImportMessage = "Settings file not found in Downloads or app folder"
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Quick Import from Downloads")
                 }
                 if (exportImportMessage != null) {
                     Spacer(modifier = Modifier.height(4.dp))

@@ -387,18 +387,11 @@ fun SettingsScreen(
                         onExport = { exportLauncher.launch("fijerena_settings.json") },
                         onImport = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
                         onQuickImport = {
-                            val downloadPath = "/sdcard/Download/fijerena_settings.json"
-                            val privatePath = context.getExternalFilesDir(null)?.absolutePath + "/fijerena_settings.json"
-                            
-                            coroutineScope.launch {
-                                // Try public download folder first
-                                val file = java.io.File(downloadPath)
-                                if (file.exists() && file.canRead()) {
-                                    pendingImportPath = downloadPath
-                                } else {
-                                    // Fallback to app private folder (no permission needed)
-                                    pendingImportPath = privatePath
-                                }
+                            val path = exportManager.getQuickImportPath()
+                            if (path != null) {
+                                pendingImportPath = path
+                            } else {
+                                exportImportMessage = "Settings file not found in Downloads or app folder"
                             }
                         },
                         exportImportMessage = exportImportMessage,

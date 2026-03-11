@@ -145,6 +145,29 @@ class SettingsExportManager(private val context: Context) {
     }
 
     /**
+     * Finds a candidate for "Quick Import" by checking the standard locations.
+     * @return The absolute path to a readable fijerena_settings.json, or null if not found.
+     */
+    fun getQuickImportPath(): String? {
+        val fileName = "fijerena_settings.json"
+        
+        // 1. Try public Download folder (primary choice for TV/easy access)
+        val downloadPath = "/sdcard/Download/$fileName"
+        val downloadFile = java.io.File(downloadPath)
+        if (downloadFile.exists() && downloadFile.canRead()) {
+            return downloadPath
+        }
+
+        // 2. Fallback to app private folder (no permission needed, reliable on all versions)
+        val privateFile = java.io.File(context.getExternalFilesDir(null), fileName)
+        if (privateFile.exists() && privateFile.canRead()) {
+            return privateFile.absolutePath
+        }
+
+        return null
+    }
+
+    /**
      * Parsed import data with conflict information.
      */
     data class ParsedImport(
