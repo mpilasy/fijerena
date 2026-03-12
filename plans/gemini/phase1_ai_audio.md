@@ -66,4 +66,28 @@ If the processor skips **more than 5 frames in a 2-second window** (indicating a
 3. **Surround Check:** Play a Dolby Digital 5.1 test file. Verify the "Side" and "Rear" channels are completely untouched by the AI (no "echo" or phasing).
 4. **Multilingual Test:** Verify speech enhancement quality on **English, French, and Malagasy** IPTV channels.
 5. **Memory Leak:** Open/Close the player 50 times in rapid succession on a Sony Bravia to ensure TFLite `Interpreter` resources are fully reclaimed.
-6. **Thermal Test:** Run 2 hours of 4K content on OnePlus 12R. Verify the "Safety Valve" triggers if the device begins thermal throttling.
+6. Thermal Test: Run 2 hours of 4K content on OnePlus 12R. Verify the "Safety Valve" triggers if the device begins thermal throttling.
+
+---
+
+## 📊 Phase 1 Implementation Summary
+
+| Feature Component | Effort | APK Impact | Memory | Perf Risk | Device Gating |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. Smart Night Mode (DSP)** | 1 week | 0 MB | Negligible | Very Low | All (API 28+) |
+| **2. AI Processor Infra** | 1.5 weeks | < 0.2 MB | ~5 MB | Low | All (Logic Only) |
+| **3. DTLN AI Model** | 2-3 weeks | +3-5 MB | ~40 MB | Medium | PREMIUM (Full) |
+| **4. Sony Voice Zoom** | 1-2 days | 0 MB | None | None | Bravia Only |
+| **Total** | **~4.5-5.5 weeks** | **~3-5 MB** | **~45 MB** | | |
+
+### 🛠 Suggested Execution Order
+
+1.  **Smart Night Mode First:** High impact, lowest effort. Validates the player integration via `onAudioSessionIdChanged`.
+2.  **AI Processor Infrastructure:** Build the resamplers, M/S decomposition, and ring buffers in `core:player`. Test for A/V sync without AI enhancement active.
+3.  **DTLN Model & Speech Enhancer:** Integrate the TFLite model in `core:ai`. This is the most complex step but benefits from the pipes built in the previous stage.
+4.  **Sony Voice Zoom:** Add the hardware shortcut for Bravia users to complete the TV audio suite.
+
+### 📦 APK Footprint Breakdown
+- **Slim Flavor:** **0 MB increase.** All AI-related code and models are strictly gated in the `full` flavor.
+- **Full Flavor:** **~3 MB - 5 MB increase.** This represents the model size. TFLite native libraries (`.so`) are already present in the APK from the existing Semantic Search implementation.
+
