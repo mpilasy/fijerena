@@ -25,9 +25,13 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import androidx.tv.material3.Surface
+import androidx.compose.ui.platform.LocalContext
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.core.player.audio.SonyVoiceZoomManager
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 
 @Composable
 fun AudioSettingsDialog(
@@ -37,6 +41,8 @@ fun AudioSettingsDialog(
     onNightModeToggle: (Boolean) -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    val context = LocalContext.current
+    val isSonyBravia = remember { SonyVoiceZoomManager.isSupported() }
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
@@ -128,6 +134,42 @@ fun AudioSettingsDialog(
                         checked = isNightModeEnabled,
                         onCheckedChange = onNightModeToggle
                     )
+                }
+
+                if (isSonyBravia) {
+                    Spacer(modifier = Modifier.height(Spacing.md))
+
+                    Text(
+                        text = "Hardware Features",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = Spacing.sm)
+                    )
+
+                    Button(
+                        onClick = {
+                            SonyVoiceZoomManager.openAudioSettings(context)
+                            onDismissRequest()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.colors(
+                            containerColor = Color.White.copy(alpha = 0.1f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(Spacing.xs)) {
+                            Text(
+                                text = "Sony Voice Zoom Setup",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Zero-latency hardware dialogue enhancement",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
                 }
             }
         }
