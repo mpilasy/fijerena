@@ -19,6 +19,7 @@ import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
 import org.njarasoa.fijerena.core.player.model.VideoQualityInfo
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.player.audio.SpeechEnhancer
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application
@@ -386,6 +387,20 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance()
             service?.enableAutoQuality()
+        }
+    }
+
+    fun toggleClearVoice(enabled: Boolean, speechEnhancer: SpeechEnhancer?) {
+        viewModelScope.launch {
+            val service = StreamingPlaybackService.getInstance()
+            service?.setSpeechEnhancer(if (enabled) speechEnhancer else null)
+        }
+    }
+
+    fun toggleNightMode(enabled: Boolean) {
+        viewModelScope.launch {
+            val service = StreamingPlaybackService.getInstance()
+            service?.toggleNightMode(enabled)
         }
     }
 

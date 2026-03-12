@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
@@ -82,6 +83,7 @@ fun PlayerControlsOverlay(
     onShowSubtitleSelector: () -> Unit,
     onShowQualitySelector: () -> Unit,
     onShowChapterSelector: () -> Unit,
+    onShowAudioSettings: () -> Unit,
     onShowStats: () -> Unit,
     seekSpeedLabel: String? = null,
 ) {
@@ -364,6 +366,16 @@ fun PlayerControlsOverlay(
                             }
                         }
 
+                        // Audio Settings (Clear Voice / Night Mode)
+                        Button(
+                            onClick = onShowAudioSettings,
+                            colors = ButtonDefaults.colors(
+                                containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                            )
+                        ) {
+                            Icon(Icons.Filled.GraphicEq, "Audio Settings", tint = Color.White)
+                        }
+
                         // Audio track selector
                         if (audioTrackCount > 1) {
                             Button(
@@ -372,7 +384,7 @@ fun PlayerControlsOverlay(
                                     containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
                                 )
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.VolumeUp, "Audio", tint = Color.White)
+                                Icon(Icons.AutoMirrored.Filled.VolumeUp, "Audio Tracks", tint = Color.White)
                             }
                         }
 

@@ -23,6 +23,7 @@ class PlayerScreenState(
     var showAudioTrackSelector by mutableStateOf(false)
     var showSubtitleSelector by mutableStateOf(false)
     var showQualitySelector by mutableStateOf(false)
+    var showAudioSettings by mutableStateOf(false)
     var showStreamInfo by mutableStateOf(false)
     var showCategoryOverlay by mutableStateOf(false)
     var showLastWatchedOverlay by mutableStateOf(false)
@@ -39,6 +40,8 @@ class PlayerScreenState(
     var displayedMetadata by mutableStateOf(initialMetadata)
     var previousMetadataTitle by mutableStateOf<String?>(null)
     var isInitialLoad by mutableStateOf(true)
+    var isClearVoiceEnabled by mutableStateOf(false)
+    var isNightModeEnabled by mutableStateOf(false)
 
     // Configuration
     val focusRequester = FocusRequester()

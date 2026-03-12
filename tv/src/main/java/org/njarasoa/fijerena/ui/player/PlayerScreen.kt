@@ -49,6 +49,7 @@ import org.njarasoa.fijerena.ui.player.components.BufferingContent
 import org.njarasoa.fijerena.ui.player.components.EndedContent
 import org.njarasoa.fijerena.ui.player.components.ErrorContent
 import org.njarasoa.fijerena.ui.player.components.dialogs.AudioTrackSelectorDialog
+import org.njarasoa.fijerena.ui.player.components.dialogs.AudioSettingsDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.ChapterSelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.QualitySelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.SubtitleSelectorDialog
@@ -204,6 +205,7 @@ fun PlayerScreen(
                 onShowSubtitleSelector = { state.showSubtitleSelector = true },
                 onShowQualitySelector = { state.showQualitySelector = true },
                 onShowChapterSelector = { state.showChapterSelector = true },
+                onShowAudioSettings = { state.showAudioSettings = true },
                 onShowStats = { state.showStats = !state.showStats },
                 seekSpeedLabel = state.seekSpeedLabel
             )
@@ -282,6 +284,33 @@ fun PlayerScreen(
                 onDontShowAgain = {
                     state.markHintsDismissed()
                 }
+            )
+        }
+
+        // Audio Settings Overlay
+        if (state.showAudioSettings) {
+            AudioSettingsDialog(
+                isClearVoiceEnabled = state.isClearVoiceEnabled,
+                onClearVoiceToggle = { enabled ->
+                    state.isClearVoiceEnabled = enabled
+                    // Use reflection to instantiate DtlnSpeechEnhancer since core:ai is only included in the full tier.
+                    val enhancer = if (enabled) {
+                        try {
+                            val clazz = Class.forName("org.njarasoa.fijerena.core.ai.audio.DtlnSpeechEnhancer")
+                            clazz.getConstructor(android.content.Context::class.java).newInstance(context) as org.njarasoa.fijerena.core.player.audio.SpeechEnhancer
+                        } catch (e: Exception) {
+                            android.util.Log.e("PlayerScreen", "AI Audio Enhancer not available in this tier", e)
+                            null
+                        }
+                    } else null
+                    viewModel.toggleClearVoice(enabled, enhancer)
+                },
+                isNightModeEnabled = state.isNightModeEnabled,
+                onNightModeToggle = { enabled ->
+                    state.isNightModeEnabled = enabled
+                    viewModel.toggleNightMode(enabled)
+                },
+                onDismissRequest = { state.showAudioSettings = false }
             )
         }
 
