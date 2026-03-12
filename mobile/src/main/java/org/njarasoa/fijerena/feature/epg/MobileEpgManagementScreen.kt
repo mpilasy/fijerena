@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.epg
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,17 +16,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.*
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
-import org.njarasoa.fijerena.ui.theme.CinemaError
-import org.njarasoa.fijerena.ui.theme.CinemaSuccess
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MobileEpgManagementScreen(
     onBack: () -> Unit
@@ -36,11 +35,14 @@ fun MobileEpgManagementScreen(
     )
 
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
+    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
+    val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val queuedTaskIds by viewModel.queuedTaskIds.collectAsStateWithLifecycle()
+    val lastPipelineStats by viewModel.lastPipelineStats.collectAsStateWithLifecycle()
 
     val nowMs = remember { System.currentTimeMillis() }
 
@@ -53,6 +55,7 @@ fun MobileEpgManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -60,80 +63,138 @@ fun MobileEpgManagementScreen(
                 title = { Text("EPG Management") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, "Add Source")
+                        Icon(Icons.Default.Add, contentDescription = "Add Source")
                     }
                 }
             )
         }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(CinemaSpacing.md),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)
             ) {
                 // Quick Actions
-                if (staleSourceCount > 0 || failedSourceCount > 0) {
+                if (staleSourceCount > 0 || failedSourceCount > 0 || selectedIds.isNotEmpty()) {
                     item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                        ) {
-                            if (staleSourceCount > 0) {
+                        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                            if (selectedIds.isNotEmpty()) {
                                 Button(
-                                    onClick = { viewModel.refreshStale() },
-                                    modifier = Modifier.weight(1f)
+                                    onClick = {
+                                        viewModel.refreshSelected(selectedIds)
+                                        viewModel.clearSelection()
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("Refresh Stale ($staleSourceCount)")
+                                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                    Text("Refresh Selected (${selectedIds.size})")
                                 }
                             }
-                            if (failedSourceCount > 0) {
-                                Button(
-                                    onClick = { viewModel.refreshFailed() },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Retry Failed ($failedSourceCount)")
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                            ) {
+                                if (staleSourceCount > 0) {
+                                    Button(
+                                        onClick = { viewModel.refreshStale() },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Refresh Stale ($staleSourceCount)")
+                                    }
+                                }
+                                if (failedSourceCount > 0) {
+                                    Button(
+                                        onClick = { viewModel.refreshFailed() },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Retry Failed ($failedSourceCount)")
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // Processing Status
+                // Processing section
                 item {
-                    EpgStatusCard(processingState, indexState, queuedTaskIds)
+                    EpgStatusCard(processingState, indexState, queuedTaskIds, lastPipelineStats)
                 }
 
                 // Maintenance section
                 item {
-                    GlassPanel {
-                        Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-                            Text("Maintenance", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
-                            Text(
-                                "Manage local database and temporary files.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                            )
-                            
-                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                            
-                            Button(
-                                onClick = { showClearConfirm = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                                modifier = Modifier.fillMaxWidth()
+                    Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)) {
+                        // Maintenance Card
+                        GlassPanel {
+                            Column(modifier = Modifier.padding(CinemaSpacing.md)) {
+                                Text("Maintenance", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                                Text(
+                                    "Manage local database and temporary files.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                )
+                                
+                                Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.cleanupFiles() },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Cleanup")
+                                    }
+                                    OutlinedButton(
+                                        onClick = { viewModel.purgeOldProgrammes() },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Purge")
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+
+                                Button(
+                                    onClick = { showClearConfirm = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                    Text("Clear All Data")
+                                }
+                            }
+                        }
+
+                        // Automation Card
+                        GlassPanel {
+                            Row(
+                                modifier = Modifier
+                                    .padding(CinemaSpacing.md)
+                                    .clickable { showTimePicker = true },
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                Text("Clear All Data")
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                                    Text(
+                                        "Daily update at ${viewModel.epgRefreshTime}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                    )
+                                }
+                                Switch(
+                                    checked = viewModel.autoRefreshEnabled,
+                                    onCheckedChange = { viewModel.setAutoRefreshEnabled(it) }
+                                )
                             }
                         }
                     }
@@ -145,11 +206,24 @@ fun MobileEpgManagementScreen(
                 }
 
                 items(sources, key = { it.id }) { source ->
+                    val isSelected = selectedIds.contains(source.id)
+                    val latestTime = latestProgrammeTimes[source.id] ?: 0L
+                    
+                    // Look for active progress for this source
+                    val activeProgress = if (processingState is MultiSourceState.Processing) {
+                        (processingState as MultiSourceState.Processing).activeProgress[source.id]
+                    } else null
+
                     EpgSourceCard(
                         source = source,
+                        isSelected = isSelected,
+                        latestProgrammeTime = latestTime,
+                        activeProgress = activeProgress,
+                        nowMs = nowMs,
                         onRefresh = { viewModel.refreshSource(source.id) },
                         onEdit = { editingSource = source },
-                        onDelete = { viewModel.deleteSource(source.id) }
+                        onDelete = { viewModel.deleteSource(source.id) },
+                        onToggleSelection = { viewModel.toggleSelection(source.id) }
                     )
                 }
             }
@@ -196,36 +270,83 @@ fun MobileEpgManagementScreen(
             text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") }
         )
     }
+
+    if (showTimePicker) {
+        var timeInput by remember { mutableStateOf(viewModel.epgRefreshTime) }
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Set Refresh Time") },
+            text = {
+                OutlinedTextField(
+                    value = timeInput,
+                    onValueChange = { timeInput = it },
+                    label = { Text("Time (HH:mm)") },
+                    placeholder = { Text("e.g. 04:00") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.setEpgRefreshTime(timeInput)
+                        showTimePicker = false
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EpgSourceCard(
     source: EpgSourceEntity,
+    isSelected: Boolean,
+    latestProgrammeTime: Long,
+    activeProgress: org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.ActiveSourceProgress?,
+    nowMs: Long,
     onRefresh: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onToggleSelection: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    GlassPanel {
+    GlassPanel(modifier = Modifier.clickable { onToggleSelection() }) {
         Column(modifier = Modifier.padding(CinemaSpacing.md)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = source.label.ifBlank { "Unnamed Source" },
-                        style = MaterialTheme.typography.titleMedium
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onToggleSelection() }
                     )
-                    Text(
-                        text = source.url,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+                    
+                    StatusIndicator(source, nowMs)
+
+                    Column {
+                        Text(
+                            text = source.label.ifBlank { "Unnamed Source" },
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = source.url,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
                 }
                 
                 IconButton(onClick = onRefresh) {
@@ -233,20 +354,56 @@ private fun EpgSourceCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            if (activeProgress != null) {
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${activeProgress.phase}...",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "${activeProgress.progressPercent}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { activeProgress.progressPercent / 100f },
+                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md)
-            ) {
-                val lastIngested = if (source.lastIngestedAtMs > 0) {
-                    java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                        .format(java.util.Date(source.lastIngestedAtMs))
-                } else "Never"
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                ) {
+                    val lastIngested = if (source.lastIngestedAtMs > 0) {
+                        java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                            .format(java.util.Date(source.lastIngestedAtMs))
+                    } else "Never"
 
-                SourceStat("Last Sync", lastIngested)
-                SourceStat("Channels", source.lastChannels.toString())
-                SourceStat("Programmes", source.lastProgrammes.toString())
+                    val latestProgStr = if (latestProgrammeTime > 0) {
+                        java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                            .format(java.util.Date(latestProgrammeTime * 1000L))
+                    } else "None"
+
+                    SourceStat("Last Sync", lastIngested)
+                    SourceStat("Download", NumberUtils.formatDuration(source.lastDownloadDurationMs))
+                    SourceStat("Ingest", NumberUtils.formatDuration(source.lastIngestionDurationMs))
+                    SourceStat("Latest Prog", latestProgStr)
+                    SourceStat("Channels", NumberUtils.formatCount(source.lastChannels))
+                    SourceStat("Programmes", NumberUtils.formatCount(source.lastProgrammes))
+                }
             }
 
             if (source.lastError != null) {
@@ -300,6 +457,21 @@ private fun EpgSourceCard(
 }
 
 @Composable
+private fun StatusIndicator(source: EpgSourceEntity, nowMs: Long) {
+    val color = when {
+        !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+        source.lastError != null -> CinemaError
+        source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+        nowMs - source.lastIngestedAtMs > 24 * 3600 * 1000 -> org.njarasoa.fijerena.ui.theme.CinemaWarning
+        else -> CinemaSuccess
+    }
+
+    androidx.compose.foundation.Canvas(modifier = Modifier.size(10.dp)) {
+        drawCircle(color = color)
+    }
+}
+
+@Composable
 private fun SourceStat(label: String, value: String) {
     Column {
         Text(
@@ -316,9 +488,10 @@ private fun SourceStat(label: String, value: String) {
 
 @Composable
 private fun EpgStatusCard(
-    multiState: org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState,
+    multiState: MultiSourceState,
     indexState: EpgIndexState,
-    queuedTaskIds: Set<String>
+    queuedTaskIds: Set<String>,
+    lastRun: org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity?
 ) {
     GlassPanel {
         Column(modifier = Modifier.padding(CinemaSpacing.md)) {
@@ -327,27 +500,39 @@ private fun EpgStatusCard(
 
             // Indexer State
             val indexText = when (indexState) {
-                is EpgIndexState.Indexed -> "Database: ${indexState.programmeCount} programmes indexed"
+                is EpgIndexState.Indexed -> "Database: ${NumberUtils.formatCount(indexState.programmeCount)} programmes indexed"
                 is EpgIndexState.Indexing -> "Database: Indexing in progress..."
                 is EpgIndexState.NotIndexed -> "Database: Empty"
                 is EpgIndexState.Failed -> "Database Error: ${indexState.reason}"
             }
             Text(indexText, style = MaterialTheme.typography.bodySmall)
 
-            // Pipeline State
-            val pipelineText = when (multiState) {
-                is org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState.Idle -> {
+            // Current Pipeline State
+            val currentStatusText = when (multiState) {
+                is MultiSourceState.Idle -> {
                     val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
-                    if (queued > 0) "$queued refresh tasks queued" else "Pipeline: Idle"
+                    if (queued > 0) "Current Status: $queued refresh tasks queued" else "Current Status: Idle"
                 }
-                is org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState.Processing -> "Pipeline: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
-                is org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState.Completed -> "Pipeline: Last run completed"
-                is org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState.Finalizing -> "Pipeline: Finalizing..."
-                is org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState.Clearing -> "Pipeline: Clearing data..."
-                is org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState.Error -> "Pipeline Error: ${multiState.reason}"
-                else -> "Pipeline: Idle"
+                is MultiSourceState.Processing -> "Current Status: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
+                is MultiSourceState.Completed -> "Current Status: Finished run"
+                is MultiSourceState.Finalizing -> "Current Status: Finalizing (${multiState.phase})..."
+                is MultiSourceState.Clearing -> "Current Status: Clearing data..."
+                is MultiSourceState.Error -> "Current Status Error: ${multiState.reason}"
+                else -> "Current Status: Idle"
             }
-            Text(pipelineText, style = MaterialTheme.typography.bodySmall)
+            Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
+
+            // Last Pipeline Run
+            lastRun?.let { stats ->
+                val time = NumberUtils.formatShortTime(stats.updatedAtMs)
+                val duration = NumberUtils.formatDuration(stats.durationMs)
+                val errorText = if (stats.errors > 0) " (${stats.errors} errors)" else ""
+                Text(
+                    text = "Last Run: Finished at $time • ${stats.sourcesProcessed} sources in $duration$errorText",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                )
+            }
         }
     }
 }

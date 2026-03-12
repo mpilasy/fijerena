@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
+import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
@@ -527,7 +528,7 @@ class EpgFileManager private constructor(private val context: Context) {
             val anyIngested = allStats.any { it.error == null && (it.channelsIngested > 0 || it.programmesIngested > 0) }
 
             val endTime = System.currentTimeMillis()
-            _state.value = MultiSourceState.Completed(
+            val finalState = MultiSourceState.Completed(
                 sourcesProcessed = sources.size,
                 errors = allStats.count { it.error != null },
                 sourceStats = allStats.associateBy { it.sourceId },
@@ -537,6 +538,8 @@ class EpgFileManager private constructor(private val context: Context) {
                 updatedAtMs = endTime,
                 durationMs = endTime - startTime
             )
+            _state.value = finalState
+            updateLastPipelineStats(finalState)
 
             // FTS5 rebuild + vacuum are the heaviest post-ingestion operations.
             // Run them in the background so the user sees Completed immediately.
@@ -663,7 +666,7 @@ class EpgFileManager private constructor(private val context: Context) {
             org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
 
             val endTime = System.currentTimeMillis()
-            _state.value = MultiSourceState.Completed(
+            val finalState = MultiSourceState.Completed(
                 sourcesProcessed = 1,
                 errors = if (stats.error != null) 1 else 0,
                 sourceStats = mapOf(stats.copy(durationMs = endTime - startTime).sourceId to stats.copy(durationMs = endTime - startTime)),
@@ -673,6 +676,8 @@ class EpgFileManager private constructor(private val context: Context) {
                 updatedAtMs = endTime,
                 durationMs = endTime - startTime
             )
+            _state.value = finalState
+            updateLastPipelineStats(finalState)
 
             // FTS5 rebuild + vacuum in background — same as processAllSourcesInternal.
             if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
@@ -1084,6 +1089,22 @@ class EpgFileManager private constructor(private val context: Context) {
 
         override fun close() = wrapped.close()
         override fun available() = wrapped.available()
+    }
+
+    private suspend fun updateLastPipelineStats(completed: MultiSourceState.Completed) {
+        try {
+            val stats = EpgPipelineStatsEntity(
+                updatedAtMs = completed.updatedAtMs,
+                durationMs = completed.durationMs,
+                sourcesProcessed = completed.sourcesProcessed,
+                errors = completed.errors,
+                totalChannels = completed.totalChannels,
+                totalProgrammes = completed.totalProgrammes
+            )
+            SettingsDatabase.getInstance(context).epgPipelineStatsDao().insertStats(stats)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save pipeline stats: ${e.message}")
+        }
     }
 
 }

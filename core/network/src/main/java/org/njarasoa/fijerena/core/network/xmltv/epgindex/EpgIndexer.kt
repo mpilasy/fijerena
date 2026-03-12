@@ -136,11 +136,12 @@ class EpgIndexer private constructor(private val context: Context) {
         val wasStale = stalePrefs.getBoolean("fts_stale", false)
         if (wasStale) {
             ftsStale.set(true)
-
         }
         try {
             val db = EpgIndexDatabase.getInstance(context)
-            val metadata = db.epgIndexDao().getMetadata()
+            val dao = db.epgIndexDao()
+            val metadata = dao.getMetadata()
+            
             if (metadata != null && metadata.programmeCount > 0) {
                 _state.value = EpgIndexState.Indexed(
                     channelCount = metadata.channelCount,
@@ -148,7 +149,30 @@ class EpgIndexer private constructor(private val context: Context) {
                     indexedAtMs = metadata.indexedAtMs
                 )
             } else {
-                _state.value = EpgIndexState.NotIndexed
+                // Fallback: check actual counts in case metadata is missing/out of sync
+                val actualChannels = dao.getChannelCount()
+                val actualProgrammes = dao.getProgrammeCount()
+                if (actualProgrammes > 0) {
+                    val now = System.currentTimeMillis()
+                    _state.value = EpgIndexState.Indexed(
+                        channelCount = actualChannels,
+                        programmeCount = actualProgrammes,
+                        indexedAtMs = now
+                    )
+                    // Repair metadata table
+                    dao.insertMetadata(
+                        EpgIndexMetadata(
+                            fileSizeBytes = 0,
+                            fileLastModifiedMs = 0,
+                            indexedAtMs = now,
+                            channelCount = actualChannels,
+                            programmeCount = actualProgrammes,
+                            timezoneOffsetHours = 0
+                        )
+                    )
+                } else {
+                    _state.value = EpgIndexState.NotIndexed
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to restore index state", e)

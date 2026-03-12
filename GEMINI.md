@@ -52,6 +52,15 @@ The project follows a modular, Clean Architecture pattern with MVVM.
 
 ### Deployment
 - TV and Mobile share the same `applicationId`. Use `adb -s <device_id>` when multiple devices are connected.
+- **APK Outputs:** Always build and place all four APK variants in the root `build/outputs/apk/` directory with clear naming:
+    - `fijerena-mobile-full-debug.apk`
+    - `fijerena-mobile-slim-debug.apk`
+    - `fijerena-tv-full-debug.apk`
+    - `fijerena-tv-slim-debug.apk`
+- **Deployment Strategy:**
+    - **NVIDIA Shield:** Always deploy the **Slim** variant (`fijerena-tv-slim-debug.apk`).
+    - **OnePlus 12R:** Always deploy the **Full** variant (`fijerena-mobile-full-debug.apk`).
+    - **Emulators:** Always deploy the **Slim** variants.
 
 ## 🎨 Engineering Standards & Conventions
 
