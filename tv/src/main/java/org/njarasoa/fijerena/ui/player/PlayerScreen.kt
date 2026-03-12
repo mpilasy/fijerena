@@ -210,6 +210,18 @@ fun PlayerScreen(
                     viewModel.setNightMode(newValue)
                 },
                 isNightModeEnabled = viewModel.nightModeEnabled.value,
+                dialogueBoostStrength = viewModel.dialogueBoostStrength.value,
+                onDialogueBoostStrengthChanged = { viewModel.setDialogueBoostStrength(it) },
+                isDialogueBoostAvailable = viewModel.isDialogueBoostAvailable,
+                isVoiceZoomAvailable = viewModel.voiceZoomAvailable.value,
+                isVoiceZoomEnabled = viewModel.voiceZoomEnabled.value,
+                onToggleVoiceZoom = {
+                    val newValue = !viewModel.voiceZoomEnabled.value
+                    if (!viewModel.setVoiceZoom(newValue)) {
+                        viewModel.openVoiceZoomSettings()
+                    }
+                },
+                onOpenVoiceZoomSettings = { viewModel.openVoiceZoomSettings() },
                 seekSpeedLabel = state.seekSpeedLabel
             )
         }

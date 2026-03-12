@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.SurroundSound
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
@@ -42,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -85,6 +88,12 @@ fun MobileControlsOverlay(
     onToggleFavorite: () -> Unit,
     onToggleNightMode: () -> Unit = {},
     isNightModeEnabled: Boolean = false,
+    dialogueBoostStrength: Float = 0f,
+    onDialogueBoostStrengthChanged: (Float) -> Unit = {},
+    isDialogueBoostAvailable: Boolean = false,
+    isVoiceZoomAvailable: Boolean = false,
+    isVoiceZoomEnabled: Boolean = false,
+    onToggleVoiceZoom: () -> Unit = {},
     onFastForward: (() -> Unit)? = null,
     onRewind: (() -> Unit)? = null
 ) {
@@ -365,9 +374,70 @@ fun MobileControlsOverlay(
                     )
                 }
 
+                // Clear Voice (Dialogue Boost) toggle
+                if (isDialogueBoostAvailable) {
+                    val isActive = dialogueBoostStrength > 0f
+                    IconButton(onClick = {
+                        if (isActive) onDialogueBoostStrengthChanged(0f) else onDialogueBoostStrengthChanged(0.7f)
+                    }) {
+                        Icon(
+                            Icons.Filled.RecordVoiceOver,
+                            contentDescription = if (isActive) "Clear Voice On" else "Clear Voice Off",
+                            tint = if (isActive) MaterialTheme.colorScheme.primary else Color.White
+                        )
+                    }
+                }
+
+                // Voice Zoom (Sony Bravia only)
+                if (isVoiceZoomAvailable) {
+                    IconButton(onClick = onToggleVoiceZoom) {
+                        Icon(
+                            Icons.Filled.SurroundSound,
+                            contentDescription = if (isVoiceZoomEnabled) "Voice Zoom On" else "Voice Zoom Off",
+                            tint = if (isVoiceZoomEnabled) MaterialTheme.colorScheme.primary else Color.White
+                        )
+                    }
+                }
+
                 // Stats for nerds (always visible)
                 IconButton(onClick = onStats) {
                     Icon(Icons.Filled.BarChart, "Stats", tint = Color.White)
+                }
+            }
+
+            // Clear Voice strength slider (shown when active)
+            if (isDialogueBoostAvailable && dialogueBoostStrength > 0f) {
+                var sliderValue by remember(dialogueBoostStrength) { mutableFloatStateOf(dialogueBoostStrength) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.RecordVoiceOver,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Slider(
+                        value = sliderValue,
+                        onValueChange = { sliderValue = it },
+                        onValueChangeFinished = { onDialogueBoostStrengthChanged(sliderValue) },
+                        valueRange = 0f..1f,
+                        modifier = Modifier.weight(1f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                        )
+                    )
+                    Text(
+                        text = "${(sliderValue * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White
+                    )
                 }
             }
         }
