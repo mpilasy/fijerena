@@ -43,6 +43,32 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val _dialogueBoostStrength = MutableStateFlow(0f)
     val dialogueBoostStrength: StateFlow<Float> = _dialogueBoostStrength.asStateFlow()
 
+    // Voice Zoom (Sony Bravia only)
+    private val _voiceZoomAvailable = MutableStateFlow(false)
+    val voiceZoomAvailable: StateFlow<Boolean> = _voiceZoomAvailable.asStateFlow()
+
+    private val _voiceZoomEnabled = MutableStateFlow(false)
+    val voiceZoomEnabled: StateFlow<Boolean> = _voiceZoomEnabled.asStateFlow()
+
+    /** Whether the device supports AI dialogue boost (PREMIUM tier with TFLite model).
+     *  Detected at runtime via reflection (core:ai only present in full flavor). */
+    val isDialogueBoostAvailable: Boolean by lazy {
+        try {
+            val clazz = Class.forName("org.njarasoa.fijerena.core.ai.audio.AudioEnhancementManager")
+            val constructor = clazz.getConstructor(android.content.Context::class.java)
+            val manager = constructor.newInstance(context)
+            val method = clazz.getMethod("isDialogueBoostAvailable")
+            // isDialogueBoostAvailable is a Kotlin lazy property — access via getter
+            val getter = clazz.methods.find { it.name == "isDialogueBoostAvailable" || it.name == "getIsDialogueBoostAvailable" }
+            val result = getter?.invoke(manager) as? Boolean ?: false
+            // Clean up
+            (manager as? java.io.Closeable)?.close()
+            result
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     private var isInErrorState = false
 
     private val playerListener = object : Player.Listener {
@@ -111,6 +137,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private suspend fun observeServiceState() {
         val service = StreamingPlaybackService.awaitInstance()
+
+        // Initialize Voice Zoom availability from service
+        val vzm = service.voiceZoomManager
+        if (vzm != null) {
+            _voiceZoomAvailable.value = vzm.isAvailable
+            _voiceZoomEnabled.value = vzm.enabled
+        }
 
         viewModelScope.launch {
             service.playbackState.collect { state ->
@@ -424,6 +457,30 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         _dialogueBoostStrength.value = clamped
         val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         prefs.edit().putFloat("dialogue_boost_strength", clamped).apply()
+    }
+
+    /**
+     * Toggle Sony Bravia Voice Zoom. If programmatic control fails,
+     * returns false — the caller should then call openVoiceZoomSettings().
+     */
+    fun setVoiceZoom(enabled: Boolean): Boolean {
+        return viewModelScope.let {
+            val service = StreamingPlaybackService.getInstance()
+            val manager = service?.voiceZoomManager ?: return false
+            val success = manager.setVoiceZoom(enabled)
+            if (success) {
+                _voiceZoomEnabled.value = enabled
+            }
+            success
+        }
+    }
+
+    /**
+     * Open Sony sound settings for manual Voice Zoom control.
+     */
+    fun openVoiceZoomSettings() {
+        val service = StreamingPlaybackService.getInstance()
+        service?.voiceZoomManager?.openSonySettings()
     }
 
     override fun onCleared() {

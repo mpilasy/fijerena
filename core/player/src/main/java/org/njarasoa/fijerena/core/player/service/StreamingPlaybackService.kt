@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import androidx.media3.common.audio.AudioProcessor
+import org.njarasoa.fijerena.core.player.audio.BraviaVoiceZoomManager
 import org.njarasoa.fijerena.core.player.audio.NightModeManager
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
@@ -85,6 +86,8 @@ class StreamingPlaybackService : MediaSessionService() {
 
     // Audio enhancement
     val nightModeManager = NightModeManager()
+    var voiceZoomManager: BraviaVoiceZoomManager? = null
+        private set
     private var audioProcessors: Array<AudioProcessor> = emptyArray()
 
     /**
@@ -101,6 +104,13 @@ class StreamingPlaybackService : MediaSessionService() {
         instance = this
         instanceReady.complete(this)
         NetworkMonitor.init(this)
+        // Initialize Bravia Voice Zoom if on a Sony TV
+        val vzm = BraviaVoiceZoomManager(this)
+        if (vzm.isAvailable) {
+            voiceZoomManager = vzm
+            vzm.readCurrentState()
+            Log.i(TAG, "Bravia Voice Zoom available, current state: ${vzm.enabled}")
+        }
         initializePlayer()
         acquireWakeLock()
         observeNetworkChanges()

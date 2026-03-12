@@ -27,15 +27,20 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.SurroundSound
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -88,6 +93,13 @@ fun PlayerControlsOverlay(
     onShowStats: () -> Unit,
     onToggleNightMode: () -> Unit = {},
     isNightModeEnabled: Boolean = false,
+    dialogueBoostStrength: Float = 0f,
+    onDialogueBoostStrengthChanged: (Float) -> Unit = {},
+    isDialogueBoostAvailable: Boolean = false,
+    isVoiceZoomAvailable: Boolean = false,
+    isVoiceZoomEnabled: Boolean = false,
+    onToggleVoiceZoom: () -> Unit = {},
+    onOpenVoiceZoomSettings: () -> Unit = {},
     seekSpeedLabel: String? = null,
 ) {
     val isPaused = playbackState is PlaybackState.Paused
@@ -439,6 +451,71 @@ fun PlayerControlsOverlay(
                                 contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
                                 tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else Color.White
                             )
+                        }
+
+                        // Clear Voice (Dialogue Boost) toggle + slider
+                        if (isDialogueBoostAvailable) {
+                            val isActive = dialogueBoostStrength > 0f
+                            var showSlider by remember { mutableStateOf(false) }
+
+                            Button(
+                                onClick = {
+                                    if (isActive) {
+                                        onDialogueBoostStrengthChanged(0f)
+                                    } else {
+                                        onDialogueBoostStrengthChanged(0.7f)
+                                    }
+                                },
+                                colors = ButtonDefaults.colors(
+                                    containerColor = if (isActive)
+                                        CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+                                    else
+                                        CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                ),
+                                onLongClick = { showSlider = !showSlider }
+                            ) {
+                                Icon(
+                                    Icons.Filled.RecordVoiceOver,
+                                    contentDescription = if (isActive) "Clear Voice On" else "Clear Voice Off",
+                                    tint = if (isActive) MaterialTheme.colorScheme.primary else Color.White
+                                )
+                            }
+
+                            if (showSlider) {
+                                var sliderValue by remember(dialogueBoostStrength) { mutableFloatStateOf(dialogueBoostStrength) }
+                                Slider(
+                                    value = sliderValue,
+                                    onValueChange = { sliderValue = it },
+                                    onValueChangeFinished = { onDialogueBoostStrengthChanged(sliderValue) },
+                                    valueRange = 0f..1f,
+                                    modifier = Modifier.padding(horizontal = Spacing.sm),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                                    )
+                                )
+                            }
+                        }
+
+                        // Voice Zoom (Sony Bravia only)
+                        if (isVoiceZoomAvailable) {
+                            Button(
+                                onClick = onToggleVoiceZoom,
+                                colors = ButtonDefaults.colors(
+                                    containerColor = if (isVoiceZoomEnabled)
+                                        CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+                                    else
+                                        CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                ),
+                                onLongClick = onOpenVoiceZoomSettings
+                            ) {
+                                Icon(
+                                    Icons.Filled.SurroundSound,
+                                    contentDescription = if (isVoiceZoomEnabled) "Voice Zoom On" else "Voice Zoom Off",
+                                    tint = if (isVoiceZoomEnabled) MaterialTheme.colorScheme.primary else Color.White
+                                )
+                            }
                         }
 
                         // Stats for nerds (always visible)
