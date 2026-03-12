@@ -117,6 +117,7 @@ fun StatsOverlay(
     val serviceRebufferTimeMs by StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
     val serviceBandwidth by StreamingPlaybackService.getInstance()?.bandwidthEstimate?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
     val serviceQualitySwitches by StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsStateWithLifecycle(0) ?: remember { mutableStateOf(0) }
+    val aiAudioMetrics by StreamingPlaybackService.getInstance()?.aiAudioMetrics?.collectAsStateWithLifecycle(org.njarasoa.fijerena.core.player.model.AiAudioMetrics()) ?: remember { mutableStateOf(org.njarasoa.fijerena.core.player.model.AiAudioMetrics()) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
     // Update stats periodically
@@ -402,6 +403,21 @@ fun StatsOverlay(
                         SectionHeader("DEVICE")
                         CompactStatRow("Model", android.os.Build.MODEL.take(15))
                         CompactStatRow("API", "${android.os.Build.VERSION.SDK_INT}")
+
+                        // Audio Processing info
+                        if (aiAudioMetrics.isClearVoiceActive || aiAudioMetrics.isNightModeActive) {
+                            SectionHeader("AUDIO DSP")
+                            if (aiAudioMetrics.isClearVoiceActive) {
+                                CompactStatRowColored("Clear Voice", "Active", CinemaSuccess)
+                                CompactStatRow("AI Latency", "${aiAudioMetrics.currentLatencyMs}ms")
+                                if (aiAudioMetrics.totalSkippedFrames > 0) {
+                                    CompactStatRowColored("AI Skips", "${aiAudioMetrics.totalSkippedFrames}", CinemaWarning)
+                                }
+                            }
+                            if (aiAudioMetrics.isNightModeActive) {
+                                CompactStatRowColored("Night Mode", "Active", CinemaSuccess)
+                            }
+                        }
                     }
                 }
 

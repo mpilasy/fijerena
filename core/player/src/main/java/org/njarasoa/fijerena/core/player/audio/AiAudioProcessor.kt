@@ -46,6 +46,12 @@ class AiAudioProcessor(
     private val skipWindowMs = 2000L // 2 seconds
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    // Metrics for Stats
+    @Volatile var currentLatencyMs: Long = 0L
+        private set
+    @Volatile var totalSkippedFrames: Long = 0L
+        private set
+
     fun setSpeechEnhancer(enhancer: SpeechEnhancer?) {
         this.speechEnhancer = enhancer
         if (enhancer != null) {
@@ -231,9 +237,11 @@ class AiAudioProcessor(
 
         val endTime = SystemClock.elapsedRealtime()
         val processingTime = endTime - startTime
+        currentLatencyMs = processingTime
 
         if (processingTime > maxLatencyMs) {
             Log.w(TAG, "Frame processing took ${processingTime}ms, exceeding ${maxLatencyMs}ms limit")
+            totalSkippedFrames++
             handleSkippedFrame()
             return frameBuffer // Fallback to unprocessed audio for this frame to prevent stutter
         } else {

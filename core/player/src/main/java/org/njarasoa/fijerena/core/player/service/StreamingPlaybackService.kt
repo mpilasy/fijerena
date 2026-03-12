@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.model.AiAudioMetrics
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
@@ -77,6 +78,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _qualitySwitchCount = MutableStateFlow(0)
     val qualitySwitchCount: StateFlow<Int> = _qualitySwitchCount.asStateFlow()
 
+    private val _aiAudioMetrics = MutableStateFlow(AiAudioMetrics())
+    val aiAudioMetrics: StateFlow<AiAudioMetrics> = _aiAudioMetrics.asStateFlow()
+
     private var onPositionSaveListener: ((Long, Long) -> Unit)? = null
 
     private var liveRetryCount = 0
@@ -88,6 +92,8 @@ class StreamingPlaybackService : MediaSessionService() {
     private val nightModeAudioProcessor = NightModeAudioProcessor()
     private val aiAudioProcessor = AiAudioProcessor()
 
+    private var isNightModeEnabled = false
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -96,11 +102,26 @@ class StreamingPlaybackService : MediaSessionService() {
         initializePlayer()
         acquireWakeLock()
         observeNetworkChanges()
+        startAiMetricsPolling()
+    }
+
+    private fun startAiMetricsPolling() {
+        val scope = serviceScope ?: CoroutineScope(Dispatchers.Main + SupervisorJob()).also { serviceScope = it }
+        scope.launch {
+            while (true) {
+                _aiAudioMetrics.value = AiAudioMetrics(
+                    isClearVoiceActive = aiAudioProcessor.isActive,
+                    isNightModeActive = isNightModeEnabled,
+                    currentLatencyMs = aiAudioProcessor.currentLatencyMs,
+                    totalSkippedFrames = aiAudioProcessor.totalSkippedFrames
+                )
+                kotlinx.coroutines.delay(1000)
+            }
+        }
     }
 
     private fun observeNetworkChanges() {
-        val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-        serviceScope = scope
+        val scope = serviceScope ?: CoroutineScope(Dispatchers.Main + SupervisorJob()).also { serviceScope = it }
         scope.launch {
             NetworkMonitor.networkType.collect { networkType ->
                 adaptiveLoadControl?.updateForNetwork(networkType)
@@ -410,6 +431,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     fun toggleNightMode(enabled: Boolean) {
+        isNightModeEnabled = enabled
         nightModeAudioProcessor.setEnabled(enabled)
     }
 

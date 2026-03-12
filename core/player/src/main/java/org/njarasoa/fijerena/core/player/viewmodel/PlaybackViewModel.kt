@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
 import org.njarasoa.fijerena.core.player.model.VideoQualityInfo
+import org.njarasoa.fijerena.core.player.model.AiAudioMetrics
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.audio.SpeechEnhancer
@@ -33,6 +34,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private val _rebufferCount = MutableStateFlow(0)
     val rebufferCount: StateFlow<Int> = _rebufferCount.asStateFlow()
+
+    private val _aiAudioMetrics = MutableStateFlow(AiAudioMetrics())
+    val aiAudioMetrics: StateFlow<AiAudioMetrics> = _aiAudioMetrics.asStateFlow()
 
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
@@ -110,6 +114,12 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             service.currentMetadata.collect { metadata ->
                 _currentMetadata.value = metadata
+            }
+        }
+
+        viewModelScope.launch {
+            service.aiAudioMetrics.collect { metrics ->
+                _aiAudioMetrics.value = metrics
             }
         }
     }
