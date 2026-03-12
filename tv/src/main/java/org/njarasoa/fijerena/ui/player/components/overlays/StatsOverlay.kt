@@ -119,6 +119,11 @@ fun StatsOverlay(
     val serviceQualitySwitches by StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsStateWithLifecycle(0) ?: remember { mutableStateOf(0) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
+    // Audio DSP stats
+    val audioDspStats by StreamingPlaybackService.getInstance()?.audioDspStats?.collectAsStateWithLifecycle(
+        org.njarasoa.fijerena.core.player.model.AudioDspStats()
+    ) ?: remember { mutableStateOf(org.njarasoa.fijerena.core.player.model.AudioDspStats()) }
+
     // Update stats periodically
     LaunchedEffect(Unit) {
         while (true) {
@@ -402,6 +407,36 @@ fun StatsOverlay(
                         SectionHeader("DEVICE")
                         CompactStatRow("Model", android.os.Build.MODEL.take(15))
                         CompactStatRow("API", "${android.os.Build.VERSION.SDK_INT}")
+
+                        // AI Audio DSP
+                        SectionHeader("AI AUDIO DSP")
+                        val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else Color.White
+                        CompactStatRowColored("Night Mode", if (audioDspStats.nightModeEnabled) "ON" else "OFF", nightModeColor)
+
+                        val cvStatus = when {
+                            audioDspStats.clearVoiceAutoDisabled -> "DISABLED (slow)"
+                            audioDspStats.clearVoiceEnabled -> "ON (${(audioDspStats.clearVoiceStrength * 100).toInt()}%)"
+                            else -> "OFF"
+                        }
+                        val cvColor = when {
+                            audioDspStats.clearVoiceAutoDisabled -> CinemaError
+                            audioDspStats.clearVoiceEnabled -> CinemaSuccess
+                            else -> Color.White
+                        }
+                        CompactStatRowColored("Clear Voice", cvStatus, cvColor)
+                        if (audioDspStats.clearVoiceEnabled || audioDspStats.aiFramesProcessed > 0) {
+                            CompactStatRow("AI Latency", "${audioDspStats.aiLastInferenceMs}ms (avg ${String.format("%.1f", audioDspStats.aiAvgInferenceMs)}ms)")
+                            val skipColor = when {
+                                audioDspStats.aiFramesSkipped == 0L -> CinemaSuccess
+                                audioDspStats.aiFramesSkipped < 10 -> CinemaWarning
+                                else -> CinemaError
+                            }
+                            CompactStatRowColored("AI Frames", "${audioDspStats.aiFramesProcessed} ok / ${audioDspStats.aiFramesSkipped} skip", skipColor)
+                        }
+                        if (audioDspStats.voiceZoomAvailable) {
+                            val vzColor = if (audioDspStats.voiceZoomEnabled) CinemaSuccess else Color.White
+                            CompactStatRowColored("Voice Zoom", if (audioDspStats.voiceZoomEnabled) "ON" else "OFF", vzColor)
+                        }
                     }
                 }
 

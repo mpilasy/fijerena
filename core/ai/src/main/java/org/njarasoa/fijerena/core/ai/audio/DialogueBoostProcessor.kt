@@ -55,6 +55,18 @@ class DialogueBoostProcessor(
     private var consecutiveMisses: Int = 0
     private var autoDisabled: Boolean = false
 
+    // Observable stats for diagnostics (read from UI thread via Stats overlay)
+    @Volatile var totalFramesProcessed: Long = 0L
+        private set
+    @Volatile var totalFramesSkipped: Long = 0L
+        private set
+    @Volatile var lastInferenceMs: Long = 0L
+        private set
+    @Volatile var avgInferenceMs: Float = 0f
+        private set
+    private var inferenceSum: Long = 0L
+    val isAutoDisabled: Boolean get() = autoDisabled
+
     override fun configure(inputAudioFormat: AudioFormat): AudioFormat {
         if (inputAudioFormat == AudioFormat.NOT_SET) {
             return AudioFormat.NOT_SET
@@ -200,9 +212,11 @@ class DialogueBoostProcessor(
         val startNs = System.nanoTime()
         val enhanced = enhancer.enhance(frame)
         val elapsedMs = (System.nanoTime() - startNs) / 1_000_000
+        lastInferenceMs = elapsedMs
 
         if (enhanced == null || elapsedMs > DEADLINE_MS) {
             consecutiveMisses++
+            totalFramesSkipped++
             if (elapsedMs > DEADLINE_MS) {
                 Log.w(TAG, "Inference took ${elapsedMs}ms (deadline: ${DEADLINE_MS}ms), miss #$consecutiveMisses")
             }
@@ -214,6 +228,9 @@ class DialogueBoostProcessor(
         }
 
         consecutiveMisses = 0
+        totalFramesProcessed++
+        inferenceSum += elapsedMs
+        avgInferenceMs = if (totalFramesProcessed > 0) inferenceSum.toFloat() / totalFramesProcessed else 0f
         return enhanced
     }
 
