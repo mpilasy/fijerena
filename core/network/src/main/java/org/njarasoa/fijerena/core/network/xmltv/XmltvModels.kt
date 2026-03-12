@@ -17,6 +17,7 @@ data class XmltvProgramme(
     val title: String,
     val description: String? = null,
     val category: String? = null,
+    val subCategory: String? = null,
     val sourceId: Long = 0
 )
 

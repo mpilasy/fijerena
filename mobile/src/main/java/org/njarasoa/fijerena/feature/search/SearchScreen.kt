@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -53,6 +54,8 @@ fun MobileSearchScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isAiAvailable = (uiState as? SearchViewModel.UiState.Success)?.isAiAvailable ?: false
+    val hasAiResults = (uiState as? SearchViewModel.UiState.Success)?.hasAiResults ?: false
     var searchQuery by remember { mutableStateOf("") }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -123,13 +126,21 @@ fun MobileSearchScreen(
                     .padding(Spacing.md),
                 placeholder = { Text("Search streams...") },
                 leadingIcon = {
-                    IconButton(onClick = {
-                        if (searchQuery.isNotBlank()) {
-                            viewModel.performSearch(searchQuery)
-                            keyboardController?.hide()
+                    if (hasAiResults) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = "AI Results Present",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        IconButton(onClick = {
+                            if (searchQuery.isNotBlank()) {
+                                viewModel.performSearch(searchQuery)
+                                keyboardController?.hide()
+                            }
+                        }) {
+                            Icon(Icons.Default.Search, "Search")
                         }
-                    }) {
-                        Icon(Icons.Default.Search, "Search")
                     }
                 },
                 singleLine = true,

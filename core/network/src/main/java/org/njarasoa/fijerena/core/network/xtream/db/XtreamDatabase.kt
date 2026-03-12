@@ -9,15 +9,21 @@ import androidx.room.RoomDatabase
     entities = [
         XtreamCategoryEntity::class,
         XtreamStreamEntity::class,
-        XtreamSeriesEntity::class
+        XtreamSeriesEntity::class,
+        XtreamEpisodeEntity::class,
+        XtreamCategoryVectorEntity::class,
+        XtreamStreamVectorEntity::class,
+        XtreamSeriesVectorEntity::class,
+        XtreamEpisodeVectorEntity::class
     ],
-    version = 2,
+    version = 7,
     exportSchema = false
 )
 abstract class XtreamDatabase : RoomDatabase() {
     abstract fun categoryDao(): XtreamCategoryDao
     abstract fun streamDao(): XtreamStreamDao
     abstract fun seriesDao(): XtreamSeriesDao
+    abstract fun episodeDao(): XtreamEpisodeDao
 
     companion object {
         @Volatile

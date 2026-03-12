@@ -20,12 +20,27 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val gitHash = providers.exec {
-            commandLine("git", "rev-parse", "--short", "HEAD")
-        }.standardOutput.asText.get().trim()
+        val gitHash = try {
+            providers.exec {
+                commandLine("git", "rev-parse", "--short", "HEAD")
+            }.standardOutput.asText.get().trim()
+        } catch (e: Exception) { "unknown" }
+        
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm z", Locale.US).format(Date())
         buildConfigField("String", "GIT_HASH", "\"$gitHash\"")
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
+    }
+
+    flavorDimensions += "tier"
+    productFlavors {
+        create("slim") {
+            dimension = "tier"
+            buildConfigField("boolean", "USE_AI", "false")
+        }
+        create("full") {
+            dimension = "tier"
+            buildConfigField("boolean", "USE_AI", "true")
+        }
     }
 
     buildTypes {
@@ -62,6 +77,9 @@ dependencies {
     implementation(project(":core:navigation"))
     implementation(project(":core:data"))
     implementation(project(":core:network"))
+    
+    // AI Module (Full tier only)
+    "fullImplementation"(project(":core:ai"))
 
     // Core Android
     implementation(libs.androidx.core.ktx)

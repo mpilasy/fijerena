@@ -5,11 +5,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.RewriteQueriesToDropUnusedColumns
 import androidx.room.Transaction
 
 @Dao
-@RewriteQueriesToDropUnusedColumns
 interface EpgIndexDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -223,15 +221,6 @@ interface EpgIndexDao {
 
     @Query("SELECT MAX(end_epoch) FROM epg_programme WHERE source_id = :sourceId")
     suspend fun getLatestProgrammeEndTimeForSource(sourceId: Long): Long?
-
-    @Query("SELECT * FROM epg_programme WHERE embedding IS NULL LIMIT :limit")
-    suspend fun getProgrammesMissingEmbeddings(limit: Int): List<EpgProgrammeEntity>
-
-    @Query("UPDATE epg_programme SET embedding = :embedding WHERE id = :id")
-    suspend fun updateEmbedding(id: Long, embedding: ByteArray)
-
-    @Query("SELECT * FROM epg_programme WHERE embedding IS NOT NULL AND end_epoch > :windowStart AND start_epoch <= :windowEnd")
-    suspend fun getProgrammesWithEmbeddings(windowStart: Long, windowEnd: Long): List<EpgProgrammeEntity>
 
     // --------------- Transactional ingestion ---------------
 

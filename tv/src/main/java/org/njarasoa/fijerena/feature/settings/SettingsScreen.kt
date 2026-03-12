@@ -64,6 +64,7 @@ fun SettingsScreen(
     onUiScaleChanged: (Float) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onManageEpg: () -> Unit = {},
+    onManageAi: () -> Unit = {},
     onProviderChanged: () -> Unit
 ) {
     val context = LocalContext.current
@@ -252,6 +253,14 @@ fun SettingsScreen(
                         context = context,
                         epgRefreshTrigger = uiState.epgRefreshTrigger,
                         onManageEpg = onManageEpg,
+                        scale = scale
+                    )
+                }
+
+                // AI Search
+                item {
+                    AiSettingsCard(
+                        onManageAi = onManageAi,
                         scale = scale
                     )
                 }

@@ -13,9 +13,12 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.ai.AiManager
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class SearchViewModel(
     private val context: android.content.Context,
@@ -26,7 +29,7 @@ class SearchViewModel(
 
     private suspend fun ensureRepo(): org.njarasoa.fijerena.core.network.MediaRepository {
         if (repository == null) {
-            val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+            val container = AppContainer.getInstance(context)
             repository = container.getMediaRepository()
         }
         return repository!!
@@ -47,7 +50,10 @@ class SearchViewModel(
             val networkAccumDuration: String? = null,
             val networkCalls: Int = 0,
             val failedCalls: Int = 0,
-            val firstError: String? = null
+            val firstError: String? = null,
+            val hasAiResults: Boolean = false,
+            val totalAiCandidates: Int = 0,
+            val isAiAvailable: Boolean = AiManager.detectTier() == org.njarasoa.fijerena.core.network.ai.VectorizationTier.PREMIUM
         ) : UiState()
         data class Error(val message: String) : UiState()
     }
@@ -59,7 +65,8 @@ class SearchViewModel(
         val categoryName: String,
         val contentType: String,
         val thumbnailUrl: String? = null,
-        val mediaType: org.njarasoa.fijerena.core.player.domain.MediaType? = null
+        val mediaType: org.njarasoa.fijerena.core.player.domain.MediaType? = null,
+        val isAiResult: Boolean = false
     )
 
     data class CategorySearchResult(
@@ -94,7 +101,6 @@ class SearchViewModel(
             query = ""
         )
         // Pre-fetch category list + all missing/stale category items in background.
-        // This job runs independently — never cancelled by search.
         viewModelScope.launch(Dispatchers.IO) {
             val repo = try {
                 ensureRepo()
@@ -192,6 +198,19 @@ class SearchViewModel(
 
             _uiState.value = UiState.Loading
 
+            // Hybrid search integration: Start AI search in parallel
+            val aiProvider = AiManager.getProvider()
+            val aiSearchTask = if (aiProvider != null) {
+                scope.async(Dispatchers.Default) { 
+                    try {
+                        aiProvider.search(query, repo.getProviderId()) 
+                    } catch (e: Exception) {
+                        android.util.Log.e("SearchViewModel", "AI search failed", e)
+                        null
+                    }
+                }
+            } else null
+
             // Try server-side search first (e.g., Jellyfin)
             val serverResults = mutableListOf<SearchResult>()
             var serverSearchSuccess = false
@@ -204,8 +223,7 @@ class SearchViewModel(
                         onSuccess = { items ->
                             serverSearchSuccess = true
                             val bulkDataSize = repo.getLastSearchDataSize(type)
-                            networkBytes += bulkDataSize
-                                ?: items.sumOf { it.name.length.toLong() * 2 + 64 }
+                            networkBytes += bulkDataSize ?: items.sumOf { it.name.length.toLong() * 2 + 64 }
 
                             items.forEach { item ->
                                 serverResults.add(
@@ -221,283 +239,79 @@ class SearchViewModel(
                                 )
                             }
                         },
-                        onFailure = {
-                            serverError = it.message
-                        }
+                        onFailure = { serverError = it.message }
                     )
                 }
             }
 
             if (serverSearchSuccess) {
+                // Return server results
                 val elapsed = System.currentTimeMillis() - startTime
-                val normalizedQuery = query.trim().lowercase()
-                val queryWords = SearchUtils.getQueryWords(normalizedQuery)
-                val sortedResults = sortResults(serverResults, normalizedQuery, queryWords)
-
-                val matchingCategories = mutableListOf<CategorySearchResult>()
-                for (type in targetContentTypes) {
-                    val serverCategories = repo.getFilteredCategories(type)
-                    serverCategories.getOrDefault(emptyList())
-                        .filter { !it.isVirtual && SearchUtils.matchesQuery(it.name, queryWords) }
-                        .forEach {
-                            matchingCategories.add(CategorySearchResult(it.id, it.name, type))
-                        }
-                }
-
+                val sortedResults = sortResults(serverResults, query.trim().lowercase(), SearchUtils.getQueryWords(query))
                 _uiState.value = UiState.Success(
-                    categoryResults = matchingCategories,
                     allResults = sortedResults,
                     filteredResults = sortedResults,
                     query = query,
-                    isSearching = false,
-                    searchProgress = "Search complete",
-                    searchDataSize = formatBytes(networkBytes),
                     totalDuration = formatSeconds(elapsed),
-                    networkWallDuration = formatSeconds(elapsed),
-                    networkAccumDuration = formatSeconds(elapsed),
-                    networkCalls = 1 // Simplified
+                    networkCalls = 1
                 )
                 return
             }
 
-            // Fall back to parallel client-side category iteration
-            val realCategories = prefetchedCategories?.takeIf { it.isNotEmpty() } ?: run {
-                val allFetched = mutableListOf<SearchableCategory>()
-                for (type in targetContentTypes) {
-                    val categoriesResult = repo.getFilteredCategories(type)
-                    val categories = categoriesResult.getOrElse {
-                        // continue to next type on error
-                        continue
-                    }
-                    categories.filter { it.id != "last_watched" && !it.isVirtual }.forEach {
-                        allFetched.add(SearchableCategory(it, type))
-                    }
-                }
-                if (allFetched.isEmpty() && targetContentTypes.isNotEmpty()) {
-                    _uiState.value = UiState.Error("Failed to load categories")
-                    return
-                }
-                allFetched
-            }
-
+            // Fall back to client-side search
+            val realCategories = prefetchedCategories ?: emptyList()
             val results = mutableListOf<SearchResult>()
             val normalizedQuery = query.trim().lowercase()
             val queryWords = SearchUtils.getQueryWords(normalizedQuery)
 
-            // Optimized query matching using pre-calculated query words
             val matchingCategories = realCategories
                 .filter { SearchUtils.matchesQuery(it.category.name, queryWords) }
                 .map { CategorySearchResult(it.category.id, it.category.name, it.contentType) }
 
-            _uiState.value = UiState.Success(
-                categoryResults = matchingCategories,
-                allResults = emptyList(),
-                filteredResults = emptyList(),
-                query = query,
-                isSearching = true,
-                searchProgress = "Searching categories..."
-            )
-
-            var categoriesSearched = 0
-
-            // Phase 1: Sweep all categories from cache (instant, no network)
-            // Note: Room returns [] for categories that were never fetched, so treat
-            // empty results as "not cached" to ensure phase 2 fetches them.
-            val uncachedCategories = mutableListOf<SearchableCategory>()
+            // Phase 1: Local cache scan
             for (sc in realCategories) {
-                currentCoroutineContext().job.ensureActive() // respect cancellation
+                currentCoroutineContext().job.ensureActive()
                 val cached = repo.getItemsIfCached(sc.category.id, sc.contentType)
                 if (!cached.isNullOrEmpty()) {
-                    categoriesSearched++
-                    val matchingItems = cached
-                        .filter { SearchUtils.matchesQuery(it.name, queryWords) }
-                        .map { item ->
-                            SearchResult(
-                                itemId = item.id,
-                                streamName = item.name,
-                                categoryId = sc.category.id,
-                                categoryName = sc.category.name,
-                                contentType = sc.contentType,
-                                thumbnailUrl = item.thumbnailUrl,
-                                mediaType = item.mediaType
-                            )
-                        }
-                    results.addAll(matchingItems)
-                } else {
-                    uncachedCategories.add(sc)
+                    results.addAll(cached.filter { SearchUtils.matchesQuery(it.name, queryWords) }.map { item ->
+                        SearchResult(item.id, item.name, sc.category.id, sc.category.name, sc.contentType, item.thumbnailUrl, item.mediaType)
+                    })
                 }
             }
 
-            // Show cached results immediately
-            if (categoriesSearched > 0) {
-                val sortedCached = sortResults(results, normalizedQuery, queryWords)
-                val displayCached = sortedCached.take(TARGET_RESULTS)
-                val elapsed = System.currentTimeMillis() - startTime
-                _uiState.value = UiState.Success(
-                    categoryResults = matchingCategories,
-                    allResults = displayCached,
-                    filteredResults = displayCached,
-                    query = query,
-                    isSearching = uncachedCategories.isNotEmpty(),
-                    searchProgress = "Found ${displayCached.size} results (searched $categoriesSearched/${realCategories.size} categories)",
-                    searchDataSize = formatBytes(networkBytes),
-                    totalDuration = formatSeconds(elapsed),
-                    networkWallDuration = formatSeconds(0),
-                    networkAccumDuration = formatSeconds(0),
-                    networkCalls = 0
-                )
-            }
-
-            var networkStartTime = System.currentTimeMillis()
-
-            // Phase 2: Fetch uncached categories from network with concurrency limit
-            if (uncachedCategories.isNotEmpty() && results.size < TARGET_RESULTS) {
-                currentCoroutineContext().job.ensureActive()
-                networkStartTime = System.currentTimeMillis()
-                val semaphore = Semaphore(PARALLEL_BATCH_SIZE)
-
-                data class FetchResult(
-                    val category: org.njarasoa.fijerena.core.player.domain.MediaCategory,
-                    val contentType: String,
-                    val items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
-                    val callDurationMs: Long,
-                    val error: String? = null
-                )
-                val fetchChannel = Channel<FetchResult>(Channel.UNLIMITED)
-
-                val producerJob = scope.launch(Dispatchers.IO) {
-                    val uncachedByContentType = uncachedCategories.groupBy { it.contentType }
-
-                    uncachedByContentType.forEach { (type, categories) ->
-                        launch {
-                            // Try batch fetch first to avoid N+1 queries
-                            val tBatch = System.currentTimeMillis()
-                            val batchResult = repo.getAllItems(type)
-
-                            if (batchResult.isSuccess) {
-                                val allItems = batchResult.getOrNull() ?: emptyList()
-                                val itemsByCategory = allItems.groupBy { it.categoryId }
-                                val duration = System.currentTimeMillis() - tBatch
-                                // Distribute duration roughly among categories to keep stats somewhat meaningful,
-                                // though networkCalls will appear higher than reality.
-                                val durationPerCat = if (categories.isNotEmpty()) duration / categories.size else 0L
-
-                                categories.forEach { sc ->
-                                    val catItems = itemsByCategory[sc.category.id] ?: emptyList()
-                                    fetchChannel.send(FetchResult(sc.category, sc.contentType, catItems, durationPerCat))
-                                }
-                            } else {
-                                // Fallback to individual parallel fetching if batch not supported/failed
-                                for (sc in categories) {
-                                    launch {
-                                        semaphore.withPermit {
-                                            val t0 = System.currentTimeMillis()
-                                            var items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>? = null
-                                            var error: String? = null
-                                            try {
-                                                val result = repo.getItemsForSearch(sc.category.id, sc.contentType)
-                                                items = result.getOrNull()
-                                                if (items == null) {
-                                                    error = result.exceptionOrNull()?.message ?: "Unknown failure"
-                                                }
-                                            } catch (e: Exception) {
-                                                error = e.message ?: e.javaClass.simpleName
-                                            }
-                                            val dt = System.currentTimeMillis() - t0
-                                            fetchChannel.send(FetchResult(sc.category, sc.contentType, items, dt, error))
-                                        }
-                                    }
-                                }
-                            }
-                        }
+            // Phase 3: Wait for AI results and merge
+            val aiResponse = aiSearchTask?.await()
+            val hasAiResults = !aiResponse?.results.isNullOrEmpty()
+            val aiCandidates = aiResponse?.totalAiCandidates ?: 0
+            
+            if (aiResponse != null) {
+                val seenIds = results.map { it.itemId }.toMutableSet()
+                for (cand in aiResponse.results) {
+                    if (cand.itemId !in seenIds) {
+                        results.add(SearchResult(
+                            itemId = cand.itemId,
+                            streamName = cand.title,
+                            categoryId = cand.itemId,
+                            categoryName = "AI Match",
+                            contentType = cand.type,
+                            thumbnailUrl = cand.thumbnailUrl,
+                            isAiResult = true
+                        ))
+                        seenIds.add(cand.itemId)
                     }
                 }
-
-                var lastUiUpdateTime = 0L
-                var lastSortedSize = 0
-                var lastSortedDisplay = emptyList<SearchResult>()
-                repeat(uncachedCategories.size) {
-                    if (results.size >= TARGET_RESULTS) {
-                        categoriesSearched++
-                        fetchChannel.receive()
-                        return@repeat
-                    }
-                    currentCoroutineContext().job.ensureActive()
-
-                    val fetch = fetchChannel.receive()
-                    categoriesSearched++
-                    networkCalls++
-                    accumulatedNetworkMs += fetch.callDurationMs
-                    val items = fetch.items
-                    if (items != null) {
-                        networkBytes += items.sumOf { it.name.length.toLong() * 2 + 64 }
-                        val matchingItems = items
-                            .filter { SearchUtils.matchesQueryLower(it.name.lowercase(), queryWords) }
-                            .map { item ->
-                                SearchResult(
-                                    itemId = item.id,
-                                    streamName = item.name,
-                                    categoryId = fetch.category.id,
-                                    categoryName = fetch.category.name,
-                                    contentType = fetch.contentType,
-                                    thumbnailUrl = item.thumbnailUrl
-                                )
-                            }
-                        results.addAll(matchingItems)
-                    } else {
-                        failedCalls++
-                        if (firstError == null && fetch.error != null) {
-                            firstError = fetch.error
-                            android.util.Log.w("SearchVM", "First fetch failure for cat=${fetch.category.id} (${fetch.category.name}): ${fetch.error}")
-                        }
-                    }
-
-                    val now = System.currentTimeMillis()
-                    if (now - lastUiUpdateTime > 100 || categoriesSearched == realCategories.size) {
-                        lastUiUpdateTime = now
-                        // Only re-sort when results have actually grown
-                        if (results.size > lastSortedSize) {
-                            lastSortedSize = results.size
-                            lastSortedDisplay = sortResults(results, normalizedQuery, queryWords).take(TARGET_RESULTS)
-                        }
-                        val now2 = System.currentTimeMillis()
-                        _uiState.value = UiState.Success(
-                            categoryResults = matchingCategories,
-                            allResults = lastSortedDisplay,
-                            filteredResults = lastSortedDisplay,
-                            query = query,
-                            isSearching = true,
-                            searchProgress = "Found ${lastSortedDisplay.size} results (searched $categoriesSearched/${realCategories.size} categories)",
-                            searchDataSize = formatBytes(networkBytes),
-                            totalDuration = formatSeconds(now2 - startTime),
-                            networkWallDuration = formatSeconds(now2 - networkStartTime),
-                            networkAccumDuration = formatSeconds(accumulatedNetworkMs),
-                            networkCalls = networkCalls,
-                            failedCalls = failedCalls,
-                            firstError = firstError
-                        )
-                    }
-                }
-                fetchChannel.close()
             }
 
             val finalResults = sortResults(results, normalizedQuery, queryWords).take(TARGET_RESULTS)
-            val endTime = System.currentTimeMillis()
-            val networkEndTime = if (uncachedCategories.isNotEmpty()) endTime else startTime
+            val elapsed = System.currentTimeMillis() - startTime
             _uiState.value = UiState.Success(
                 categoryResults = matchingCategories,
                 allResults = finalResults,
                 filteredResults = finalResults,
                 query = query,
-                isSearching = false,
-                searchProgress = "Search complete",
-                searchDataSize = formatBytes(networkBytes),
-                totalDuration = formatSeconds(endTime - startTime),
-                networkWallDuration = if (networkCalls > 0) formatSeconds(networkEndTime - networkStartTime) else formatSeconds(0),
-                networkAccumDuration = formatSeconds(accumulatedNetworkMs),
-                networkCalls = networkCalls,
-                failedCalls = failedCalls,
-                firstError = firstError
+                totalDuration = formatSeconds(elapsed),
+                hasAiResults = hasAiResults,
+                totalAiCandidates = aiCandidates
             )
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -506,53 +320,37 @@ class SearchViewModel(
     }
 
     private fun sortResults(results: List<SearchResult>, normalizedQuery: String, queryWords: List<String>): List<SearchResult> {
-        // Pre-compute lowercase keys once — avoids O(n log n) String allocations in comparator
-        data class SortEntry(val catLower: String, val nameLower: String, val result: SearchResult)
-        val entries = results.map { SortEntry(it.categoryName.lowercase(), it.streamName.lowercase(), it) }
-        return entries.sortedWith(compareBy<SortEntry> { it.catLower }
+        data class SortEntry(val isAi: Boolean, val nameLower: String, val result: SearchResult)
+        val entries = results.map { SortEntry(it.isAiResult, it.streamName.lowercase(), it) }
+        return entries.sortedWith(
+            compareBy<SortEntry> { !it.isAi } // AI results first for "AI Match"
             .thenBy {
                 when {
                     it.nameLower == normalizedQuery -> 0
                     it.nameLower.startsWith(normalizedQuery) -> 1
-                    else -> {
-                        if (queryWords.isNotEmpty() && queryWords.all { w -> it.nameLower.contains(w) }) {
-                            if (it.nameLower.startsWith(queryWords[0])) 2 else 3
-                        } else 4
-                    }
+                    else -> if (queryWords.isNotEmpty() && queryWords.all { w -> it.nameLower.contains(w) }) 2 else 3
                 }
             }
             .thenBy { it.result.streamName })
             .map { it.result }
     }
 
-    fun isFavorite(itemId: String, contentType: String): Boolean {
-        return repository?.isFavorite(itemId, contentType) ?: false
-    }
-
-    fun isFavoriteCategory(categoryId: String, contentType: String): Boolean {
-        return repository?.isFavoriteCategory(categoryId, contentType) ?: false
-    }
+    fun isFavorite(itemId: String, contentType: String): Boolean = repository?.isFavorite(itemId, contentType) ?: false
+    fun isFavoriteCategory(categoryId: String, contentType: String): Boolean = repository?.isFavoriteCategory(categoryId, contentType) ?: false
 
     fun toggleFavorite(itemId: String, itemName: String, categoryId: String, contentType: String, isFavorite: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             val repo = ensureRepo()
-            if (isFavorite) {
-                repo.removeFavorite(itemId, contentType)
-            } else {
-                repo.addFavorite(itemId, itemName, categoryId, contentType)
-            }
+            if (isFavorite) repo.removeFavorite(itemId, contentType)
+            else repo.addFavorite(itemId, itemName, categoryId, contentType)
         }
     }
 
     fun toggleFavoriteCategory(categoryId: String, categoryName: String, contentType: String, isFavorite: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             val repo = ensureRepo()
-            if (isFavorite) {
-                repo.removeFavoriteCategory(categoryId, contentType)
-            } else {
-                repo.addFavoriteCategory(categoryId, categoryName, contentType)
-            }
+            if (isFavorite) repo.removeFavoriteCategory(categoryId, contentType)
+            else repo.addFavoriteCategory(categoryId, categoryName, contentType)
         }
     }
 }
-

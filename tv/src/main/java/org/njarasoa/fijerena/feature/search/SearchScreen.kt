@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
@@ -182,6 +183,8 @@ fun SearchScreen(
                         searchProgress = successState.searchProgress ?: "",
                         devStats = devStats,
                         contentType = contentType,
+                        hasAiResults = successState.hasAiResults,
+                        totalAiCandidates = successState.totalAiCandidates,
                         onSearchSubmit = { viewModel.performSearch(it) },
                         onResultClick = { result ->
                             onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType)
@@ -295,6 +298,8 @@ private fun SearchContent(
     searchProgress: String?,
     devStats: String?,
     contentType: String,
+    hasAiResults: Boolean,
+    totalAiCandidates: Int,
     onSearchSubmit: (String) -> Unit,
     onResultClick: (SearchResult) -> Unit,
     onResultLongPress: (SearchResult) -> Unit,
@@ -316,6 +321,7 @@ private fun SearchContent(
         // Search field
         SearchTextField(
             query = localQuery,
+            hasAiResults = hasAiResults,
             onQueryChange = { localQuery = it },
             onSearchSubmit = { onSearchSubmit(localQuery) },
             focusRequester = searchFocusRequester
@@ -357,6 +363,7 @@ private fun SearchContent(
 @Composable
 private fun SearchTextField(
     query: String,
+    hasAiResults: Boolean,
     onQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
     focusRequester: FocusRequester
@@ -398,8 +405,9 @@ private fun SearchTextField(
                 onClick = onSearchSubmit,
                 icon = {
                     Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search"
+                        imageVector = if (hasAiResults) Icons.Default.AutoAwesome else Icons.Default.Search,
+                        contentDescription = if (hasAiResults) "AI Results Present" else "Search",
+                        tint = if (hasAiResults) CinemaAccent else androidx.compose.ui.graphics.Color.Unspecified
                     )
                 }
             )

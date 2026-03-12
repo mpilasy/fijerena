@@ -29,7 +29,17 @@ data class XtreamStreamEntity(
     val tvArchive: Int = 0,
     val directSource: String? = null,
     val tvArchiveDuration: Int = 0,
-    val contentHash: Int = 0
+    val contentHash: Int = 0,
+    val description: String? = null,
+
+    // VOD metadata
+    val cast: String? = null,
+    val director: String? = null,
+    val genre: String? = null,
+    val releaseDate: String? = null,
+    val rating: String? = null,
+    val duration: String? = null,
+    val youtubeTrailer: String? = null
 ) {
     companion object {
         const val TYPE_LIVE = "LIVE"
@@ -49,7 +59,15 @@ data class XtreamStreamEntity(
             customSid: String?,
             tvArchive: Int,
             directSource: String?,
-            tvArchiveDuration: Int
+            tvArchiveDuration: Int,
+            description: String? = null,
+            cast: String? = null,
+            director: String? = null,
+            genre: String? = null,
+            releaseDate: String? = null,
+            rating: String? = null,
+            duration: String? = null,
+            youtubeTrailer: String? = null
         ): Int {
             var result = streamId
             result = 31 * result + providerId.hashCode()
@@ -65,6 +83,14 @@ data class XtreamStreamEntity(
             result = 31 * result + tvArchive
             result = 31 * result + (directSource?.hashCode() ?: 0)
             result = 31 * result + tvArchiveDuration
+            result = 31 * result + (description?.hashCode() ?: 0)
+            result = 31 * result + (cast?.hashCode() ?: 0)
+            result = 31 * result + (director?.hashCode() ?: 0)
+            result = 31 * result + (genre?.hashCode() ?: 0)
+            result = 31 * result + (releaseDate?.hashCode() ?: 0)
+            result = 31 * result + (rating?.hashCode() ?: 0)
+            result = 31 * result + (duration?.hashCode() ?: 0)
+            result = 31 * result + (youtubeTrailer?.hashCode() ?: 0)
             return result
         }
     }

@@ -155,6 +155,8 @@ class MediaRepository(
 
     fun isCachingEnabled(): Boolean = providerSettings.cachingEnabled
 
+    fun getProviderId(): Long = providerId
+
     // --- Provider-delegated operations ---
 
     suspend fun connect(): kotlin.Result<Unit> {
