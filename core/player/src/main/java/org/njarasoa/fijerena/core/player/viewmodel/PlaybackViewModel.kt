@@ -36,6 +36,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
+    // Audio enhancement state
+    private val _nightModeEnabled = MutableStateFlow(false)
+    val nightModeEnabled: StateFlow<Boolean> = _nightModeEnabled.asStateFlow()
+
+    private val _dialogueBoostStrength = MutableStateFlow(0f)
+    val dialogueBoostStrength: StateFlow<Float> = _dialogueBoostStrength.asStateFlow()
+
     private var isInErrorState = false
 
     private val playerListener = object : Player.Listener {
@@ -90,6 +97,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     init {
+        // Load persisted audio enhancement settings
+        val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
+        _nightModeEnabled.value = prefs.getBoolean("night_mode_enabled", false)
+        _dialogueBoostStrength.value = prefs.getFloat("dialogue_boost_strength", 0f)
+
         viewModelScope.launch {
             startService()
             connectToService()
@@ -387,6 +399,31 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             val service = StreamingPlaybackService.getInstance()
             service?.enableAutoQuality()
         }
+    }
+
+    /**
+     * Toggle Night Mode on/off. Persists setting and immediately applies to the audio session.
+     */
+    fun setNightMode(enabled: Boolean) {
+        _nightModeEnabled.value = enabled
+        val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("night_mode_enabled", enabled).apply()
+
+        viewModelScope.launch {
+            val service = StreamingPlaybackService.getInstance()
+            service?.nightModeManager?.enabled = enabled
+        }
+    }
+
+    /**
+     * Set dialogue boost (Clear Voice) strength. 0.0 = off, 1.0 = full enhancement.
+     * Persists setting. Only effective on PREMIUM tier devices.
+     */
+    fun setDialogueBoostStrength(strength: Float) {
+        val clamped = strength.coerceIn(0f, 1f)
+        _dialogueBoostStrength.value = clamped
+        val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putFloat("dialogue_boost_strength", clamped).apply()
     }
 
     override fun onCleared() {

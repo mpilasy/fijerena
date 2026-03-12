@@ -8,7 +8,7 @@ import org.njarasoa.fijerena.core.player.device.DeviceType
 import org.tensorflow.lite.gpu.GpuDelegate
 
 /**
- * Detects if the device is capable of running on-device AI semantic search.
+ * Detects if the device is capable of running on-device AI features.
  */
 class SearchCapabilityDetector(private val context: Context) {
 
@@ -17,6 +17,13 @@ class SearchCapabilityDetector(private val context: Context) {
         PREMIUM,
         /** Fallback to classic keyword-based FTS search. */
         STANDARD
+    }
+
+    enum class AudioProcessingTier {
+        /** Can run real-time TFLite audio inference (GPU/NPU). */
+        REALTIME,
+        /** Cannot run real-time inference. Audio effects only via platform APIs. */
+        BASIC
     }
 
     /**
@@ -52,6 +59,17 @@ class SearchCapabilityDetector(private val context: Context) {
         } catch (e: Exception) {
             Log.i(TAG, "Device identified as STANDARD tier (No GPU acceleration available)")
             SearchTier.STANDARD
+        }
+    }
+
+    /**
+     * Determines if the device can sustain real-time TFLite audio inference.
+     * REALTIME tier maps to PREMIUM search tier (same hardware requirements).
+     */
+    fun detectAudioTier(): AudioProcessingTier {
+        return when (detectTier()) {
+            SearchTier.PREMIUM -> AudioProcessingTier.REALTIME
+            SearchTier.STANDARD -> AudioProcessingTier.BASIC
         }
     }
 

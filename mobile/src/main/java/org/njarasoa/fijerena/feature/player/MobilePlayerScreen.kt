@@ -427,7 +427,12 @@ fun MobilePlayerScreen(
                         onQuality = { showQualitySelector = true },
                         onToggleFavorite = {
                              loaderViewModel.toggleFavorite()
-                        }
+                        },
+                        onToggleNightMode = {
+                            val newValue = !viewModel.nightModeEnabled.value
+                            viewModel.setNightMode(newValue)
+                        },
+                        isNightModeEnabled = viewModel.nightModeEnabled.value
                     )
                 }
 
