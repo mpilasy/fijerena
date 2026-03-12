@@ -1,33 +1,28 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 
 import android.content.SharedPreferences
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
-import org.njarasoa.fijerena.core.network.resultOf
+import org.njarasoa.fijerena.core.network.xtream.db.*
+import org.njarasoa.fijerena.core.player.model.*
 import org.njarasoa.fijerena.core.network.suspendResultOf
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesEntity
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
-import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_CATEGORIES_TIMESTAMP
-import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_SERIES_CATEGORIES_TIMESTAMP
-import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_STREAMS_TIMESTAMP_PREFIX
-import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_VOD_CATEGORIES_TIMESTAMP
-import org.njarasoa.fijerena.core.player.model.SeriesInfo
-import org.njarasoa.fijerena.core.player.model.VodInfo
-import org.njarasoa.fijerena.core.player.model.XtreamCategory
-import org.njarasoa.fijerena.core.player.model.XtreamSeries
-import org.njarasoa.fijerena.core.player.model.XtreamStream
-import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.network.resultOf
+import org.njarasoa.fijerena.core.network.Result
 
+/**
+ * Manages Xtream content (categories, streams, series) including database caching and sync logic.
+ */
 class XtreamContentManager(
     private val sessionManager: XtreamSessionManager,
     private val database: XtreamDatabase,
@@ -39,41 +34,32 @@ class XtreamContentManager(
     private val categoryDao = database.categoryDao()
     private val streamDao = database.streamDao()
     private val seriesDao = database.seriesDao()
+    private val episodeDao = database.episodeDao()
 
-    /** Whether caching is enabled for this provider */
-    private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
-
-    /** Cache expiry time in ms for this provider */
-    private val cacheExpiryMs: Long get() = providerSettings.cacheExpiryMs
-
-    /**
-     * Skip background refresh if cache was written less than this many ms ago.
-     * Live TV streams use a shorter threshold (5 min) since channel lists change more often.
-     */
-    private val liveStreamRefreshThresholdMs: Long = 5 * 60 * 1000L // 5 minutes
+    companion object {
+        private const val TAG = "XtreamContentManager"
+        private const val KEY_CATEGORIES_TIMESTAMP = "categories_ts"
+        private const val KEY_VOD_CATEGORIES_TIMESTAMP = "vod_categories_ts"
+        private const val KEY_SERIES_CATEGORIES_TIMESTAMP = "series_categories_ts"
+        private const val KEY_STREAMS_TIMESTAMP_PREFIX = "streams_ts_"
+        private const val CACHE_EXPIRATION_MS = 24 * 3600 * 1000L // 24 hours
+    }
 
     suspend fun getCategories(): Result<List<XtreamCategory>> = withContext(Dispatchers.IO) {
         suspendResultOf {
             val dbEntities = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_LIVE)
-
             if (dbEntities.isNotEmpty()) {
                 if (!isCacheFresh(KEY_CATEGORIES_TIMESTAMP)) {
                     syncCategories(XtreamCategoryEntity.TYPE_LIVE)
                 }
-                return@suspendResultOf dbEntities.map {
-                    XtreamCategory(it.categoryId, it.categoryName, it.parentId)
-                }
+                return@suspendResultOf dbEntities.map { XtreamCategory(it.categoryId, it.categoryName, it.parentId) }
             }
 
             val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
             val categories = service.getCategories()
-
-            // Insert into DB
-            categoryDao.insertAll(categories.map {
-                XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_LIVE)
+            categoryDao.insertAll(categories.map { 
+                XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_LIVE) 
             })
-            sharedPreferences.edit().putLong(KEY_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
-
             categories
         }
     }
@@ -81,25 +67,18 @@ class XtreamContentManager(
     suspend fun getVodCategories(): Result<List<XtreamCategory>> = withContext(Dispatchers.IO) {
         suspendResultOf {
             val dbEntities = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_VOD)
-
             if (dbEntities.isNotEmpty()) {
                 if (!isCacheFresh(KEY_VOD_CATEGORIES_TIMESTAMP)) {
                     syncCategories(XtreamCategoryEntity.TYPE_VOD)
                 }
-                return@suspendResultOf dbEntities.map {
-                    XtreamCategory(it.categoryId, it.categoryName, it.parentId)
-                }
+                return@suspendResultOf dbEntities.map { XtreamCategory(it.categoryId, it.categoryName, it.parentId) }
             }
 
             val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
             val categories = service.getVodCategories()
-
-            categoryDao.insertAll(categories.map {
-                XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_VOD)
+            categoryDao.insertAll(categories.map { 
+                XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_VOD) 
             })
-            // Fix: use VOD-specific timestamp key (was incorrectly using live TV key)
-            sharedPreferences.edit().putLong(KEY_VOD_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
-
             categories
         }
     }
@@ -107,39 +86,60 @@ class XtreamContentManager(
     suspend fun getSeriesCategories(): Result<List<XtreamCategory>> = withContext(Dispatchers.IO) {
         suspendResultOf {
             val dbEntities = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_SERIES)
-
             if (dbEntities.isNotEmpty()) {
                 if (!isCacheFresh(KEY_SERIES_CATEGORIES_TIMESTAMP)) {
                     syncCategories(XtreamCategoryEntity.TYPE_SERIES)
                 }
-                return@suspendResultOf dbEntities.map {
-                    XtreamCategory(it.categoryId, it.categoryName, it.parentId)
-                }
+                return@suspendResultOf dbEntities.map { XtreamCategory(it.categoryId, it.categoryName, it.parentId) }
             }
 
             val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
             val categories = service.getSeriesCategories()
-
-            categoryDao.insertAll(categories.map {
-                XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_SERIES)
+            categoryDao.insertAll(categories.map { 
+                XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_SERIES) 
             })
-            sharedPreferences.edit().putLong(KEY_SERIES_CATEGORIES_TIMESTAMP, System.currentTimeMillis()).apply()
-
             categories
         }
     }
 
-    suspend fun getAllStreams(contentType: String): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
-        try {
-            val entities = when (contentType) {
-                ContentType.LIVE_TV -> streamDao.getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE).map { mapStreamEntityToModel(it) }
-                ContentType.MOVIES -> streamDao.getAllStreams(providerId, XtreamStreamEntity.TYPE_VOD).map { mapStreamEntityToModel(it) }
-                ContentType.TV_SHOWS -> seriesDao.getAllSeries(providerId).map { mapSeriesEntityToStream(it) }
-                else -> streamDao.getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE).map { mapStreamEntityToModel(it) }
+    suspend fun getAllStreams(type: String): Result<List<XtreamStream>> = withContext(Dispatchers.IO) {
+        suspendResultOf {
+            val dbEntities = streamDao.getAllStreams(providerId, type)
+            if (dbEntities.isNotEmpty()) {
+                val key = KEY_STREAMS_TIMESTAMP_PREFIX + type + "_ALL"
+                if (!isCacheFresh(key)) {
+                    syncStreams(type)
+                }
+                return@suspendResultOf dbEntities.map { mapStreamEntityToModel(it) }
             }
-            Result.Success(entities)
-        } catch (e: Exception) {
-            Result.Error(e)
+
+            val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
+            val streams = when(type) {
+                XtreamStreamEntity.TYPE_LIVE -> service.getStreams()
+                XtreamStreamEntity.TYPE_VOD -> service.getVodStreams()
+                else -> emptyList()
+            }
+
+            streamDao.insertAll(streams.map {
+                 XtreamStreamEntity(
+                     streamId = it.streamId,
+                     providerId = providerId,
+                     type = type,
+                     num = it.num,
+                     name = it.name,
+                     streamType = it.streamType,
+                     streamIcon = it.streamIcon,
+                     epgChannelId = it.epgChannelId,
+                     added = it.added,
+                     categoryId = it.categoryId,
+                     customSid = it.customSid,
+                     tvArchive = it.tvArchive,
+                     directSource = it.directSource,
+                     tvArchiveDuration = it.tvArchiveDuration
+                 )
+            })
+
+            streams
         }
     }
 
@@ -153,7 +153,7 @@ class XtreamContentManager(
 
             if (dbEntities.isNotEmpty()) {
                 val key = KEY_STREAMS_TIMESTAMP_PREFIX + "LIVE_ALL"
-                if (!isCacheFresh(key, liveStreamRefreshThresholdMs)) {
+                if (!isCacheFresh(key)) {
                     syncStreams(XtreamStreamEntity.TYPE_LIVE)
                 }
                 return@suspendResultOf dbEntities.map { mapStreamEntityToModel(it) }
@@ -248,23 +248,22 @@ class XtreamContentManager(
 
             seriesDao.insertAll(seriesList.map {
                  XtreamSeriesEntity(
-                     seriesId = it.seriesId,
-                     providerId = providerId,
-                     num = it.num,
-                     name = it.name,
-                     cover = it.cover,
-                     plot = it.plot,
-                     cast = it.cast,
-                     director = it.director,
-                     genre = it.genre,
-                     releaseDate = it.releaseDate,
-                     lastModified = it.lastModified,
-                     rating = it.rating,
-                     rating5based = it.rating5based,
-                     youtubeTrailer = it.youtubeTrailer,
-                     episodeRunTime = it.episodeRunTime,
-                     categoryId = it.categoryId,
-                     backdropPath = it.backdropPath?.joinToString(",")
+                    seriesId = it.seriesId,
+                    providerId = providerId,
+                    num = it.num,
+                    name = it.name,
+                    cover = it.cover,
+                    plot = it.plot,
+                    cast = it.cast,
+                    director = it.director,
+                    genre = it.genre,
+                    releaseDate = it.releaseDate,
+                    lastModified = it.lastModified,
+                    rating = it.rating,
+                    rating5based = it.rating5based,
+                    youtubeTrailer = it.youtubeTrailer,
+                    episodeRunTime = it.episodeRunTime,
+                    categoryId = it.categoryId
                  )
             })
 
@@ -276,7 +275,7 @@ class XtreamContentManager(
                     streamId = series.seriesId,
                     streamIcon = series.cover,
                     epgChannelId = null,
-                    added = series.lastModified,
+                    added = series.releaseDate,
                     categoryId = series.categoryId,
                     customSid = null,
                     tvArchive = 0,
@@ -287,14 +286,294 @@ class XtreamContentManager(
         }
     }
 
+    suspend fun syncCategories(type: String): Deferred<Unit> {
+        val task = object : RefreshTask {
+            override val id = "xtream_categories_${providerId}_$type"
+            override val priority = RefreshPriority.HIGH
+            override suspend fun execute() {
+                val service = sessionManager.apiService ?: return
+                 try {
+                      val categories = when(type) {
+                          XtreamCategoryEntity.TYPE_LIVE -> service.getCategories()
+                          XtreamCategoryEntity.TYPE_VOD -> service.getVodCategories()
+                          XtreamCategoryEntity.TYPE_SERIES -> service.getSeriesCategories()
+                          else -> emptyList()
+                      }
+
+                      val entities = categories.map {
+                          XtreamCategoryEntity(
+                              categoryId = it.categoryId,
+                              providerId = providerId,
+                              categoryName = it.categoryName,
+                              parentId = it.parentId,
+                              type = type,
+                              contentHash = XtreamCategoryEntity.computeHash(it.categoryId, providerId, it.categoryName, it.parentId, type)
+                          )
+                      }
+
+                      val currentHashes = categoryDao.getCategoryHashes(providerId, type)
+                      val seenIds = entities.map { it.categoryId }.toSet()
+                      val toDeleteIds = currentHashes.keys.filter { it !in seenIds }
+                      val toInsert = entities.filter { newEntity ->
+                          val oldHash = currentHashes[newEntity.categoryId]
+                          oldHash == null || oldHash != newEntity.contentHash
+                      }
+
+                      if (toDeleteIds.isNotEmpty()) {
+                          categoryDao.deleteByIds(providerId, type, toDeleteIds.toList())
+                      }
+                      if (toInsert.isNotEmpty()) {
+                          categoryDao.insertAll(toInsert)
+                          // Trigger AI pass for new categories
+                          org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
+                      }
+
+                      val key = when(type) {
+                          XtreamCategoryEntity.TYPE_LIVE -> KEY_CATEGORIES_TIMESTAMP
+                          XtreamCategoryEntity.TYPE_VOD -> KEY_VOD_CATEGORIES_TIMESTAMP
+                          XtreamCategoryEntity.TYPE_SERIES -> KEY_SERIES_CATEGORIES_TIMESTAMP
+                          else -> ""
+                      }
+                      if (key.isNotEmpty()) {
+                          sharedPreferences.edit().putLong(key, System.currentTimeMillis()).apply()
+                      }
+
+                  } catch (e: Exception) {
+                      android.util.Log.e("XtreamContentManager", "Error syncing data", e)
+                  }
+            }
+        }
+        return RefreshQueue.submit(task)
+    }
+
+    suspend fun syncStreams(type: String): Deferred<Unit> {
+        val task = object : RefreshTask {
+            override val id = "xtream_streams_${providerId}_$type"
+            override val priority = if (type == XtreamStreamEntity.TYPE_LIVE) RefreshPriority.HIGH else RefreshPriority.LOW
+            override suspend fun execute() {
+                val service = sessionManager.apiService ?: return
+                  try {
+                      coroutineScope {
+                          val batch = mutableListOf<XtreamStreamEntity>()
+                          val BATCH_SIZE = 2000
+
+                          val currentHashes = streamDao.getStreamHashes(providerId, type)
+                          val seenIds = mutableSetOf<Int>()
+
+                          val onStreamItem: suspend (XtreamStream) -> Unit = { it ->
+                              val contentHash = XtreamStreamEntity.computeHash(
+                                  streamId = it.streamId,
+                                  providerId = providerId,
+                                  type = type,
+                                  num = it.num,
+                                  name = it.name,
+                                  streamType = it.streamType,
+                                  streamIcon = it.streamIcon,
+                                  epgChannelId = it.epgChannelId,
+                                  added = it.added,
+                                  categoryId = it.categoryId,
+                                  customSid = it.customSid,
+                                  tvArchive = it.tvArchive,
+                                  directSource = it.directSource,
+                                  tvArchiveDuration = it.tvArchiveDuration
+                              )
+                              
+                              seenIds.add(it.streamId)
+                              val oldHash = currentHashes[it.streamId]
+                              if (oldHash == null || oldHash != contentHash) {
+                                  batch.add(XtreamStreamEntity(
+                                      streamId = it.streamId,
+                                      providerId = providerId,
+                                      type = type,
+                                      num = it.num,
+                                      name = it.name,
+                                      streamType = it.streamType,
+                                      streamIcon = it.streamIcon,
+                                      epgChannelId = it.epgChannelId,
+                                      added = it.added,
+                                      categoryId = it.categoryId,
+                                      customSid = it.customSid,
+                                      tvArchive = it.tvArchive,
+                                      directSource = it.directSource,
+                                      tvArchiveDuration = it.tvArchiveDuration,
+                                      contentHash = contentHash
+                                  ))
+                                  if (batch.size >= BATCH_SIZE) {
+                                      streamDao.insertAll(batch.toList())
+                                      batch.clear()
+                                  }
+                              }
+                          }
+
+                          if (type == XtreamStreamEntity.TYPE_LIVE) {
+                              service.getStreamsStreaming(null, onStreamItem)
+                          } else {
+                              service.getVodStreamsStreaming(null, onStreamItem)
+                          }
+
+                          if (batch.isNotEmpty()) {
+                              streamDao.insertAll(batch)
+                              // Trigger AI pass for new/updated streams
+                              org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
+                          }
+
+                          // Cleanup deleted
+                          val allIds = streamDao.getStreamIds(providerId, type)
+                          val toDelete = allIds.filter { it !in seenIds }
+                          if (toDelete.isNotEmpty()) {
+                              streamDao.deleteByIds(providerId, type, toDelete)
+                          }
+
+                          sharedPreferences.edit().putLong(KEY_STREAMS_TIMESTAMP_PREFIX + type, System.currentTimeMillis()).apply()
+                      }
+                  } catch (e: Exception) {
+                      android.util.Log.e("XtreamContentManager", "Error syncing streams", e)
+                  }
+            }
+        }
+        return RefreshQueue.submit(task)
+    }
+
+    suspend fun syncSeries(): Deferred<Unit> {
+        val task = object : RefreshTask {
+            override val id = "xtream_series_$providerId"
+            override val priority = RefreshPriority.LOW
+            override suspend fun execute() {
+                val service = sessionManager.apiService ?: return
+                try {
+                    coroutineScope {
+                        val batch = mutableListOf<XtreamSeriesEntity>()
+                        val BATCH_SIZE = 1000
+                        val currentHashes = seriesDao.getSeriesHashes(providerId)
+                        val seenIds = mutableSetOf<Int>()
+
+                        service.getSeriesStreaming(null) { it ->
+                            val contentHash = XtreamSeriesEntity.computeHash(
+                                seriesId = it.seriesId,
+                                providerId = providerId,
+                                num = it.num,
+                                name = it.name,
+                                cover = it.cover,
+                                plot = it.plot,
+                                cast = it.cast,
+                                director = it.director,
+                                genre = it.genre,
+                                releaseDate = it.releaseDate,
+                                lastModified = it.lastModified,
+                                rating = it.rating,
+                                rating5based = it.rating5based,
+                                youtubeTrailer = it.youtubeTrailer,
+                                episodeRunTime = it.episodeRunTime,
+                                categoryId = it.categoryId,
+                                backdropPath = it.backdropPath?.joinToString(",")
+                            )
+                            seenIds.add(it.seriesId)
+                            val oldHash = currentHashes[it.seriesId]
+                            if (oldHash == null || oldHash != contentHash) {
+                                batch.add(XtreamSeriesEntity(
+                                    seriesId = it.seriesId,
+                                    providerId = providerId,
+                                    num = it.num,
+                                    name = it.name,
+                                    cover = it.cover,
+                                    plot = it.plot,
+                                    cast = it.cast,
+                                    director = it.director,
+                                    genre = it.genre,
+                                    releaseDate = it.releaseDate,
+                                    lastModified = it.lastModified,
+                                    rating = it.rating,
+                                    rating5based = it.rating5based,
+                                    youtubeTrailer = it.youtubeTrailer,
+                                    episodeRunTime = it.episodeRunTime,
+                                    categoryId = it.categoryId,
+                                    backdropPath = it.backdropPath?.joinToString(","),
+                                    contentHash = contentHash
+                                ))
+                                if (batch.size >= BATCH_SIZE) {
+                                    seriesDao.insertAll(batch.toList())
+                                    batch.clear()
+                                }
+                            }
+                        }
+
+                        if (batch.isNotEmpty()) {
+                            seriesDao.insertAll(batch)
+                            // Trigger AI pass for new series
+                            org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
+                        }
+
+                        val allIds = seriesDao.getSeriesIds(providerId)
+                        val toDelete = allIds.filter { it !in seenIds }
+                        if (toDelete.isNotEmpty()) {
+                            seriesDao.deleteByIds(providerId, toDelete)
+                        }
+
+                        sharedPreferences.edit().putLong(KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES", System.currentTimeMillis()).apply()
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("XtreamContentManager", "Error syncing series", e)
+                }
+            }
+        }
+        return RefreshQueue.submit(task)
+    }
+
     suspend fun getSeriesInfo(seriesId: Int): Result<SeriesInfo> = withContext(Dispatchers.IO) {
         suspendResultOf {
             val service = sessionManager.apiService
                 ?: throw Exception("Not authenticated. Please login first.")
+            
             val startTime = System.currentTimeMillis()
             val seriesInfo = service.getSeriesInfo(seriesId)
             val fetchTime = System.currentTimeMillis() - startTime
             metricsManager.trackFetchTime("series_$seriesId", fetchTime)
+
+            // Update series metadata
+            val info = seriesInfo.info
+            if (info != null) {
+                seriesDao.getSeriesById(providerId, seriesId)?.let { existing ->
+                    seriesDao.insertAll(listOf(existing.copy(
+                        plot = info.plot,
+                        cast = info.cast,
+                        director = info.director,
+                        genre = info.genre,
+                        releaseDate = info.releaseDate,
+                        rating = info.rating,
+                        rating5based = info.rating5based,
+                        youtubeTrailer = info.youtubeTrailer,
+                        episodeRunTime = info.episodeRunTime,
+                        backdropPath = info.backdropPath?.joinToString(",")
+                    )))
+                }
+            }
+            
+            // Persist episodes for AI vectorization
+            val episodesToInsert = mutableListOf<XtreamEpisodeEntity>()
+            seriesInfo.episodes.forEach { (seasonNum, episodes) ->
+                val sNum = seasonNum.toIntOrNull()
+                episodes.forEach { ep ->
+                    episodesToInsert.add(XtreamEpisodeEntity(
+                        id = ep.id,
+                        seriesId = seriesId,
+                        providerId = providerId,
+                        season = sNum ?: ep.season,
+                        episodeNum = ep.episodeNum,
+                        title = ep.title,
+                        containerExtension = ep.containerExtension,
+                        overview = ep.info?.overview,
+                        duration = ep.info?.duration,
+                        rating = ep.info?.rating,
+                        movieImage = ep.info?.movieImage
+                    ))
+                }
+            }
+            if (episodesToInsert.isNotEmpty()) {
+                episodeDao.insertAll(episodesToInsert)
+                // Trigger AI pass
+                org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
+            }
+
             seriesInfo
         }
     }
@@ -307,6 +586,27 @@ class XtreamContentManager(
             val vodInfo = service.getVodInfo(vodId)
             val fetchTime = System.currentTimeMillis() - startTime
             metricsManager.trackFetchTime("vod_$vodId", fetchTime)
+            
+            // Update movie metadata for AI and UI
+            val info = vodInfo.info
+            if (info != null) {
+                streamDao.updateVodMetadata(
+                    providerId = providerId,
+                    streamId = vodId,
+                    type = XtreamStreamEntity.TYPE_VOD,
+                    description = info.plot,
+                    cast = info.cast,
+                    director = info.director,
+                    genre = info.genre,
+                    releaseDate = info.releaseDate,
+                    rating = info.rating,
+                    duration = info.duration,
+                    youtubeTrailer = null // MovieInfo doesn't seem to have trailer, but SeriesInfo does
+                )
+                // Trigger AI pass
+                org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
+            }
+
             vodInfo
         }
     }
@@ -318,343 +618,87 @@ class XtreamContentManager(
             "LIVE_TV" -> service.buildStreamUrl(streamId)
             "MOVIES" -> service.buildVodStreamUrl(streamId, extension ?: "mp4")
             "TV_SHOWS" -> service.buildSeriesStreamUrl(streamId, extension ?: "mp4")
-            else -> service.buildStreamUrl(streamId)
+            else -> throw Exception("Unknown content type: $contentType")
         }
     }
 
     fun buildEpisodeStreamUrl(episodeId: String, extension: String): Result<String> = resultOf {
-        val service = sessionManager.apiService
-            ?: throw Exception("Not authenticated. Please login first.")
-        service.buildEpisodeStreamUrl(episodeId, extension)
+        val service = sessionManager.apiService ?: throw Exception("Not authenticated")
+        service.buildSeriesStreamUrl(episodeId.toInt(), extension)
     }
 
     suspend fun getStreamName(streamId: Int, contentType: String): String? = withContext(Dispatchers.IO) {
-        try {
-            when (contentType) {
-                ContentType.TV_SHOWS -> seriesDao.getSeriesById(providerId, streamId)?.name
-                else -> streamDao.getStreamById(providerId, streamId)?.name
-            }
-        } catch (e: Exception) {
-            null
+        when (contentType) {
+            "LIVE_TV" -> streamDao.getStreamById(providerId, streamId)?.name
+            "MOVIES" -> streamDao.getStreamById(providerId, streamId)?.name
+            "TV_SHOWS" -> seriesDao.getSeriesById(providerId, streamId)?.name
+            else -> null
         }
     }
 
-    /** Returns streams for a category from the database. */
     fun getStreamsCached(categoryId: String): List<XtreamStream>? {
-        return try {
-            streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
-                .map { mapStreamEntityToModel(it) }
-        } catch (e: Exception) { null }
+        val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
+        return if (dbEntities.isEmpty()) null else dbEntities.map { mapStreamEntityToModel(it) }
     }
 
-    /** Returns VOD streams for a category from the database. */
     fun getVodStreamsCached(categoryId: String): List<XtreamStream>? {
-        return try {
-            streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
-                .map { mapStreamEntityToModel(it) }
-        } catch (e: Exception) { null }
+        val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
+        return if (dbEntities.isEmpty()) null else dbEntities.map { mapStreamEntityToModel(it) }
     }
 
-    /** Returns series for a category from the database. */
     fun getSeriesCached(categoryId: String): List<XtreamStream>? {
-        return try {
-            seriesDao.getSeriesByCategory(providerId, categoryId)
-                .map { mapSeriesEntityToStream(it) }
-        } catch (e: Exception) { null }
+        val dbEntities = seriesDao.getSeriesByCategory(providerId, categoryId)
+        return if (dbEntities.isEmpty()) null else dbEntities.map { mapSeriesEntityToStream(it) }
     }
 
-    suspend fun syncCategories(type: String): Deferred<Unit> {
-        val task = object : RefreshTask {
-            override val id = "xtream_categories_${providerId}_$type"
-            override val priority = if (type == XtreamCategoryEntity.TYPE_LIVE) RefreshPriority.MEDIUM else RefreshPriority.LOW
-
-            override suspend fun execute() {
-                 val service = sessionManager.apiService ?: return
-                 try {
-                     val apiCategories = when (type) {
-                         XtreamCategoryEntity.TYPE_LIVE -> service.getCategories()
-                         XtreamCategoryEntity.TYPE_VOD -> service.getVodCategories()
-                         XtreamCategoryEntity.TYPE_SERIES -> service.getSeriesCategories()
-                         else -> emptyList()
-                     }
-
-                     val entities = apiCategories.map {
-                         val contentHash = XtreamCategoryEntity.computeHash(
-                             categoryId = it.categoryId,
-                             providerId = providerId,
-                             categoryName = it.categoryName,
-                             parentId = it.parentId,
-                             type = type
-                         )
-                         XtreamCategoryEntity(
-                             categoryId = it.categoryId,
-                             providerId = providerId,
-                             categoryName = it.categoryName,
-                             parentId = it.parentId,
-                             type = type,
-                             contentHash = contentHash
-                         )
-                     }
-
-                     val currentHashes = categoryDao.getCategoryHashes(providerId, type)
-
-                     val toDeleteIds = currentHashes.keys - entities.mapTo(HashSet()) { it.categoryId }
-
-                     val toInsert = entities.filter { newEntity ->
-                         val oldHash = currentHashes[newEntity.categoryId]
-                         oldHash == null || oldHash != newEntity.contentHash
-                     }
-
-                     if (toDeleteIds.isNotEmpty()) {
-                         categoryDao.deleteByIds(providerId, type, toDeleteIds.toList())
-                     }
-                     if (toInsert.isNotEmpty()) {
-                         categoryDao.insertAll(toInsert)
-                     }
-
-                     val key = when(type) {
-                         XtreamCategoryEntity.TYPE_LIVE -> KEY_CATEGORIES_TIMESTAMP
-                         XtreamCategoryEntity.TYPE_VOD -> KEY_VOD_CATEGORIES_TIMESTAMP
-                         XtreamCategoryEntity.TYPE_SERIES -> KEY_SERIES_CATEGORIES_TIMESTAMP
-                         else -> ""
-                     }
-                     if (key.isNotEmpty()) {
-                         sharedPreferences.edit().putLong(key, System.currentTimeMillis()).apply()
-                     }
-
-                 } catch (e: Exception) {
-                     android.util.Log.e("XtreamContentManager", "Error syncing data", e)
-                 }
-            }
-        }
-        return RefreshQueue.submit(task)
+    private fun isCacheFresh(key: String): Boolean {
+        val ts = sharedPreferences.getLong(key, 0L)
+        return (System.currentTimeMillis() - ts) < CACHE_EXPIRATION_MS
     }
 
-    suspend fun syncStreams(type: String): Deferred<Unit> {
-        val task = object : RefreshTask {
-            override val id = "xtream_streams_${providerId}_$type"
-            override val priority = if (type == XtreamStreamEntity.TYPE_LIVE) RefreshPriority.HIGH else RefreshPriority.LOW
-            override suspend fun execute() {
-                val service = sessionManager.apiService ?: return
-                 try {
-                     coroutineScope {
-                         val batch = mutableListOf<XtreamStreamEntity>()
-                         val BATCH_SIZE = 2000
+    private fun mapStreamEntityToModel(it: XtreamStreamEntity) = XtreamStream(
+        num = it.num,
+        name = it.name,
+        streamType = it.streamType,
+        streamId = it.streamId,
+        streamIcon = it.streamIcon,
+        epgChannelId = it.epgChannelId,
+        added = it.added,
+        categoryId = it.categoryId,
+        customSid = it.customSid,
+        tvArchive = it.tvArchive,
+        directSource = it.directSource,
+        tvArchiveDuration = it.tvArchiveDuration,
+        description = it.description,
+        cast = it.cast,
+        director = it.director,
+        genre = it.genre,
+        releaseDate = it.releaseDate,
+        rating = it.rating,
+        duration = it.duration,
+        youtubeTrailer = it.youtubeTrailer
+    )
 
-                         val currentHashes = streamDao.getStreamHashes(providerId, type)
-                         val seenIds = mutableSetOf<Int>()
-
-                         val onStreamItem: suspend (XtreamStream) -> Unit = { it ->
-                             val contentHash = XtreamStreamEntity.computeHash(
-                                 streamId = it.streamId,
-                                 providerId = providerId,
-                                 type = type,
-                                 num = it.num,
-                                 name = it.name,
-                                 streamType = it.streamType,
-                                 streamIcon = it.streamIcon,
-                                 epgChannelId = it.epgChannelId,
-                                 added = it.added,
-                                 categoryId = it.categoryId,
-                                 customSid = it.customSid,
-                                 tvArchive = it.tvArchive,
-                                 directSource = it.directSource,
-                                 tvArchiveDuration = it.tvArchiveDuration
-                             )
-                             val entity = XtreamStreamEntity(
-                                 streamId = it.streamId,
-                                 providerId = providerId,
-                                 type = type,
-                                 num = it.num,
-                                 name = it.name,
-                                 streamType = it.streamType,
-                                 streamIcon = it.streamIcon,
-                                 epgChannelId = it.epgChannelId,
-                                 added = it.added,
-                                 categoryId = it.categoryId,
-                                 customSid = it.customSid,
-                                 tvArchive = it.tvArchive,
-                                 directSource = it.directSource,
-                                 tvArchiveDuration = it.tvArchiveDuration,
-                                 contentHash = contentHash
-                             )
-                             seenIds.add(entity.streamId)
-
-                             val oldHash = currentHashes[entity.streamId]
-                             if (oldHash == null || oldHash != entity.contentHash) {
-                                 batch.add(entity)
-                             }
-
-                             if (batch.size >= BATCH_SIZE) {
-                                 val toInsert = ArrayList(batch)
-                                 batch.clear()
-                                 database.runInTransaction {
-                                     streamDao.insertAll(toInsert)
-                                 }
-                             }
-                         }
-
-                         when (type) {
-                             XtreamStreamEntity.TYPE_LIVE -> service.getStreamsStreaming(null, onStreamItem)
-                             XtreamStreamEntity.TYPE_VOD -> service.getVodStreamsStreaming(null, onStreamItem)
-                         }
-
-                         // Flush remaining
-                         if (batch.isNotEmpty()) {
-                             streamDao.insertAll(batch)
-                         }
-
-                         // Delete removed streams
-                         val toDeleteIds = currentHashes.keys - seenIds
-                         if (toDeleteIds.isNotEmpty()) {
-                             streamDao.deleteByIds(providerId, type, toDeleteIds.toList())
-                         }
-
-                         val key = KEY_STREAMS_TIMESTAMP_PREFIX + (if (type==XtreamStreamEntity.TYPE_LIVE) "LIVE_ALL" else "VOD_ALL")
-                         sharedPreferences.edit().putLong(key, System.currentTimeMillis()).apply()
-                     }
-
-                 } catch (e: Exception) {
-                     android.util.Log.e("XtreamContentManager", "Error syncing data", e)
-                 }
-            }
-        }
-        return RefreshQueue.submit(task)
-    }
-
-    suspend fun syncSeries(): Deferred<Unit> {
-        val task = object : RefreshTask {
-            override val id = "xtream_series_${providerId}"
-            override val priority = RefreshPriority.LOW
-            override suspend fun execute() {
-                val service = sessionManager.apiService ?: return
-                 try {
-                     coroutineScope {
-                         val batch = mutableListOf<XtreamSeriesEntity>()
-                         val BATCH_SIZE = 2000
-
-                         val currentHashes = seriesDao.getSeriesHashes(providerId)
-                         val seenIds = mutableSetOf<Int>()
-
-                         val onSeriesItem: suspend (XtreamSeries) -> Unit = { it ->
-                             val backdropPathStr = it.backdropPath?.joinToString(",")
-                             val contentHash = XtreamSeriesEntity.computeHash(
-                                 seriesId = it.seriesId,
-                                 providerId = providerId,
-                                 num = it.num,
-                                 name = it.name,
-                                 cover = it.cover,
-                                 plot = it.plot,
-                                 cast = it.cast,
-                                 director = it.director,
-                                 genre = it.genre,
-                                 releaseDate = it.releaseDate,
-                                 lastModified = it.lastModified,
-                                 rating = it.rating,
-                                 rating5based = it.rating5based,
-                                 youtubeTrailer = it.youtubeTrailer,
-                                 episodeRunTime = it.episodeRunTime,
-                                 categoryId = it.categoryId,
-                                 backdropPath = backdropPathStr
-                             )
-                             val entity = XtreamSeriesEntity(
-                                 seriesId = it.seriesId,
-                                 providerId = providerId,
-                                 num = it.num,
-                                 name = it.name,
-                                 cover = it.cover,
-                                 plot = it.plot,
-                                 cast = it.cast,
-                                 director = it.director,
-                                 genre = it.genre,
-                                 releaseDate = it.releaseDate,
-                                 lastModified = it.lastModified,
-                                 rating = it.rating,
-                                 rating5based = it.rating5based,
-                                 youtubeTrailer = it.youtubeTrailer,
-                                 episodeRunTime = it.episodeRunTime,
-                                 categoryId = it.categoryId,
-                                 backdropPath = backdropPathStr,
-                                 contentHash = contentHash
-                             )
-                             seenIds.add(entity.seriesId)
-
-                             val oldHash = currentHashes[entity.seriesId]
-                             if (oldHash == null || oldHash != entity.contentHash) {
-                                 batch.add(entity)
-                             }
-
-                             if (batch.size >= BATCH_SIZE) {
-                                 val toInsert = ArrayList(batch)
-                                 batch.clear()
-                                 database.runInTransaction {
-                                     seriesDao.insertAll(toInsert)
-                                 }
-                             }
-                         }
-
-                         service.getSeriesStreaming(null, onSeriesItem)
-
-                         // Flush remaining
-                         if (batch.isNotEmpty()) {
-                             seriesDao.insertAll(batch)
-                         }
-
-                         // Delete removed series
-                         val toDeleteIds = currentHashes.keys - seenIds
-                         if (toDeleteIds.isNotEmpty()) {
-                             seriesDao.deleteByIds(providerId, toDeleteIds.toList())
-                         }
-
-                         val key = KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES_ALL"
-                         sharedPreferences.edit().putLong(key, System.currentTimeMillis()).apply()
-                     }
-
-                 } catch (e: Exception) {
-                     android.util.Log.e("XtreamContentManager", "Error syncing data", e)
-                 }
-            }
-        }
-        return RefreshQueue.submit(task)
-    }
-
-    /** Returns true if the given timestamp is recent enough to skip background refresh */
-    private fun isCacheFresh(timestampKey: String, thresholdMs: Long = cacheExpiryMs): Boolean {
-        val timestamp = sharedPreferences.getLong(timestampKey, 0L)
-        return System.currentTimeMillis() - timestamp < thresholdMs
-    }
-
-    private fun mapStreamEntityToModel(entity: XtreamStreamEntity): XtreamStream {
-        return XtreamStream(
-            num = entity.num,
-            name = entity.name,
-            streamType = entity.streamType,
-            streamId = entity.streamId,
-            streamIcon = entity.streamIcon,
-            epgChannelId = entity.epgChannelId,
-            added = entity.added,
-            categoryId = entity.categoryId,
-            customSid = entity.customSid,
-            tvArchive = entity.tvArchive,
-            directSource = entity.directSource,
-            tvArchiveDuration = entity.tvArchiveDuration
-        )
-    }
-
-    private fun mapSeriesEntityToStream(entity: XtreamSeriesEntity): XtreamStream {
-        return XtreamStream(
-            num = entity.num ?: 0,
-            name = entity.name,
-            streamType = "series",
-            streamId = entity.seriesId,
-            streamIcon = entity.cover,
-            epgChannelId = null,
-            added = entity.lastModified,
-            categoryId = entity.categoryId,
-            customSid = null,
-            tvArchive = 0,
-            directSource = null,
-            tvArchiveDuration = 0
-        )
-    }
+    private fun mapSeriesEntityToStream(it: XtreamSeriesEntity) = XtreamStream(
+        num = it.num ?: 0,
+        name = it.name,
+        streamType = "series",
+        streamId = it.seriesId,
+        streamIcon = it.cover,
+        epgChannelId = null,
+        added = it.releaseDate,
+        categoryId = it.categoryId,
+        customSid = null,
+        tvArchive = 0,
+        directSource = null,
+        tvArchiveDuration = 0,
+        description = it.plot,
+        cast = it.cast,
+        director = it.director,
+        genre = it.genre,
+        releaseDate = it.releaseDate,
+        rating = it.rating,
+        duration = it.episodeRunTime,
+        youtubeTrailer = it.youtubeTrailer
+    )
 }

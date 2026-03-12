@@ -68,7 +68,31 @@ data class XtreamStream(
     val directSource: String? = null,
 
     @SerialName("tv_archive_duration")
-    val tvArchiveDuration: Int = 0
+    val tvArchiveDuration: Int = 0,
+
+    @SerialName("description")
+    val description: String? = null,
+
+    @SerialName("cast")
+    val cast: String? = null,
+
+    @SerialName("director")
+    val director: String? = null,
+
+    @SerialName("genre")
+    val genre: String? = null,
+
+    @SerialName("release_date")
+    val releaseDate: String? = null,
+
+    @SerialName("rating")
+    val rating: String? = null,
+
+    @SerialName("duration")
+    val duration: String? = null,
+
+    @SerialName("youtube_trailer")
+    val youtubeTrailer: String? = null
 )
 
 /**
@@ -251,6 +275,18 @@ data class SeriesDetails(
 
     @SerialName("rating")
     val rating: String? = null,
+
+    @SerialName("rating_5based")
+    val rating5based: Double? = null,
+
+    @SerialName("youtube_trailer")
+    val youtubeTrailer: String? = null,
+
+    @SerialName("episode_run_time")
+    val episodeRunTime: String? = null,
+
+    @SerialName("backdrop_path")
+    val backdropPath: List<String>? = null,
 
     @SerialName("category_id")
     val categoryId: String? = null

@@ -422,8 +422,8 @@ class EpgIndexer private constructor(private val context: Context) {
 
             lastIngestionStats = IngestionStats(channelEntities.size, totalProgrammes)
 
-            // Trigger AI vectorization
-            org.njarasoa.fijerena.core.network.ai.EpgVectorizationWorker.schedule(context)
+            // Trigger AI vectorization if available
+            org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
 
             rebuildFtsAndUpdateState()
         } catch (e: Exception) {

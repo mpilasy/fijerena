@@ -35,7 +35,6 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgProgrammeEntity
 
 class EpgBrowserViewModel(
     private val context: Context
@@ -93,8 +92,6 @@ class EpgBrowserViewModel(
 
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
-    private val semanticEngine = org.njarasoa.fijerena.core.network.ai.SemanticSearchEngine(context)
-    private val capabilityDetector = org.njarasoa.fijerena.core.network.ai.SearchCapabilityDetector(context)
     private var channelMatcher: EpgChannelMatcher? = null
     @Volatile private var lastMatcherProviderId: Long? = null
 
@@ -204,48 +201,10 @@ class EpgBrowserViewModel(
                 val startTime = System.currentTimeMillis()
                 val mode = _searchMode.value
                 
-                // Tier-based search strategy
-                val tier = capabilityDetector.detectTier()
-                
                 val result = withContext(Dispatchers.IO) {
-                    if (mode == SearchMode.PROGRAMME && tier == org.njarasoa.fijerena.core.network.ai.SearchCapabilityDetector.SearchTier.PREMIUM) {
-                        // Hybrid Search: Combine FTS4 and Semantic results
-                        val ftsResult = searchService.search(query)
-                        val semanticResults = semanticEngine.search(query)
-                        
-                        if (ftsResult == null) {
-                            if (semanticResults.isNotEmpty()) {
-                                // Only semantic results available
-                                return@withContext XmltvSearchResult(
-                                    programmes = semanticResults.map { entityToXmltv(it.programme) },
-                                    channels = emptyMap(), // Will be resolved below
-                                    totalScanned = semanticResults.size,
-                                    truncated = false,
-                                    searchedFromIndex = true
-                                )
-                            }
-                            return@withContext null
-                        }
-                        
-                        // Merge and deduplicate
-                        val combinedProgrammes = ftsResult.programmes.toMutableList()
-                        val seenTimeTitle = combinedProgrammes.map { "${it.startEpoch}_${it.title.lowercase()}" }.toMutableSet()
-                        
-                        for (sem in semanticResults) {
-                            val key = "${sem.programme.startEpoch}_${sem.programme.title.lowercase()}"
-                            if (key !in seenTimeTitle) {
-                                combinedProgrammes.add(entityToXmltv(sem.programme))
-                                seenTimeTitle.add(key)
-                            }
-                        }
-                        
-                        ftsResult.copy(programmes = combinedProgrammes)
-                    } else {
-                        // Standard FTS Search
-                        when (mode) {
-                            SearchMode.PROGRAMME -> searchService.search(query)
-                            SearchMode.CHANNEL -> searchService.searchByChannel(query)
-                        }
+                    when (mode) {
+                        SearchMode.PROGRAMME -> searchService.search(query)
+                        SearchMode.CHANNEL -> searchService.searchByChannel(query)
                     }
                 }
                 val elapsed = System.currentTimeMillis() - startTime
@@ -300,18 +259,6 @@ class EpgBrowserViewModel(
                 _uiState.value = UiState.Error(e.message ?: "Search failed")
             }
         }
-    }
-
-    private fun entityToXmltv(entity: EpgProgrammeEntity): XmltvProgramme {
-        return XmltvProgramme(
-            channelId = entity.channelId,
-            startEpoch = entity.startEpoch,
-            endEpoch = entity.endEpoch,
-            title = entity.title,
-            description = entity.description,
-            category = entity.category,
-            sourceId = entity.sourceId
-        )
     }
 
     private fun initPagedSearch(query: String) {
@@ -415,11 +362,6 @@ class EpgBrowserViewModel(
                 // Group by programme within this day
                 val programs = dayAirings
                     .groupBy { 
-                        // Include startEpoch in grouping key to differentiate identical titles at different times
-                        // if they are truly different airings, but here we want to group the SAME programme 
-                        // (e.g. same movie shown twice) if desired, OR keep them separate.
-                        // The crash was a UI key collision, not necessarily a grouping problem.
-                        // We'll keep the grouping as-is (by title/desc) but ensure UI keys are unique.
                         it.title.trim().lowercase() to (it.description?.trim()?.lowercase() ?: "") 
                     }
                     .map { (_, group) ->

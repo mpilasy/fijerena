@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.feature.epg.MobileEpgManagementScreen
 import org.njarasoa.fijerena.feature.epgbrowser.MobileEpgBrowserScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
+import org.njarasoa.fijerena.feature.settings.MobileAiSettingsScreen
 import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
 import org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.settings.MobileCellularBufferSettingsScreen
@@ -370,6 +371,9 @@ fun MobileNavHost(
                     onManageEpg = {
                         navController.navigate(Screen.EpgManagement)
                     },
+                    onManageAi = {
+                        navController.navigate(Screen.AiSettings)
+                    },
                     onCellularBuffers = {
                         navController.navigate(Screen.CellularBufferSettings)
                     },
@@ -402,6 +406,15 @@ fun MobileNavHost(
             // Cellular Buffer Settings Screen
             composable<Screen.CellularBufferSettings> {
                 MobileCellularBufferSettingsScreen(
+                    onBack = {
+                        navController.navigateUp()
+                    }
+                )
+            }
+
+            // AI Search Settings Screen
+            composable<Screen.AiSettings> {
+                MobileAiSettingsScreen(
                     onBack = {
                         navController.navigateUp()
                     }

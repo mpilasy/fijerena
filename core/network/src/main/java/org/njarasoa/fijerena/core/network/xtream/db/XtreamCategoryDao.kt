@@ -29,4 +29,13 @@ interface XtreamCategoryDao {
 
     @Query("DELETE FROM xtream_categories WHERE providerId = :providerId AND type = :type AND categoryId IN (:ids)")
     fun deleteByIds(providerId: Long, type: String, ids: List<String>)
+
+    @Query("SELECT c.* FROM xtream_categories c LEFT JOIN xtream_category_vectors v ON c.categoryId = v.categoryId AND c.providerId = v.providerId AND c.type = v.type WHERE v.categoryId IS NULL LIMIT :limit")
+    fun getCategoriesMissingEmbeddings(limit: Int): List<XtreamCategoryEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertVector(vector: XtreamCategoryVectorEntity)
+
+    @Query("SELECT c.*, v.embedding FROM xtream_categories c INNER JOIN xtream_category_vectors v ON c.categoryId = v.categoryId AND c.providerId = v.providerId AND c.type = v.type WHERE c.providerId = :providerId")
+    fun getCategoriesWithEmbeddings(providerId: Long): List<XtreamCategoryWithVector>
 }

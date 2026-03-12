@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.feature.provider.TvProviderSelectionScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
 import org.njarasoa.fijerena.feature.settings.EditProviderScreen
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
+import org.njarasoa.fijerena.feature.settings.TvAiSettingsScreen
 
 /**
  * TV-optimized navigation host with D-pad focus management.
@@ -544,6 +545,13 @@ fun TvNavHost(
                 )
             }
 
+            // AI Settings Screen
+            composable<Screen.AiSettings> {
+                TvAiSettingsScreen(
+                    onBack = { navController.navigateUp() }
+                )
+            }
+
             // Settings Screen
             composable<Screen.Settings> {
                 // Prevent back from exiting if Settings is the start destination (no provider)
@@ -559,6 +567,9 @@ fun TvNavHost(
                     },
                     onManageEpg = {
                         navController.navigate(Screen.EpgManagement)
+                    },
+                    onManageAi = {
+                        navController.navigate(Screen.AiSettings)
                     },
                     onProviderChanged = {
                         coroutineScope.launch {
