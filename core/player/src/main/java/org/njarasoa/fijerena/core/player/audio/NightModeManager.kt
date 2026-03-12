@@ -135,8 +135,9 @@ class NightModeManager {
                     setLimiterByChannelIndex(
                         ch,
                         DynamicsProcessing.Limiter(
+                            /* inUse */ true,
                             /* enabled */ true,
-                            /* linked */ true,
+                            /* linkGroup */ 0,
                             /* attackTime */ 1f,
                             /* releaseTime */ 50f,
                             /* ratio */ 10f,
