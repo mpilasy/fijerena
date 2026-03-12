@@ -31,6 +31,7 @@ sealed interface Screen {
     @Serializable data class EpgGuide(val categoryId: String, val categoryName: String) : Screen
     @Serializable data object EpgBrowser : Screen
     @Serializable data object EpgManagement : Screen
+    @Serializable data object AiSettings : Screen
     @Serializable data object CellularBufferSettings : Screen  // Dev mode only
     @Serializable data class Player(
         val streamId: String, val streamName: String, val categoryId: String, val contentType: String,
@@ -88,6 +89,7 @@ ContentTypeSelection
       │     ├─→ AddProvider (new)
       │     └─→ AddProvider(editId) (edit)
       ├─→ EpgManagement
+      ├─→ AiSettings
       └─→ CellularBufferSettings (dev mode only)
 ```
 

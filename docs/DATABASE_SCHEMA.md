@@ -5,9 +5,20 @@ This document details the complete database schema for the Fijerena application,
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 4
+**Version:** 5
 
 Manages media provider configurations, authentication metadata, and persistent EPG source URLs.
+
+### Table: `epg_pipeline_stats`
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER (PK) | Auto-generated ID (Always 1) |
+| `updated_at_ms` | INTEGER | Timestamp of last pipeline run |
+| `duration_ms` | INTEGER | Total duration of the run |
+| `sources_processed` | INTEGER | Number of sources processed |
+| `errors` | INTEGER | Number of errors encountered |
+| `total_channels` | INTEGER | Total channels from pipeline |
+| `total_programmes` | INTEGER | Total programmes from pipeline |
 
 ### Table: `providers`
 | Column | Type | Description |
@@ -89,7 +100,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 6
+**Version:** 7
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing and **AI Semantic Search**.
 

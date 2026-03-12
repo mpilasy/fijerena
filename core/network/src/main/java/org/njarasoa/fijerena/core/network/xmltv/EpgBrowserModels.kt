@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
 data class EpgBrowserProgram(
+    val id: String,
     val title: String,
     val description: String?,
     val category: String?,

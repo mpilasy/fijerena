@@ -36,6 +36,7 @@ fijerena/
 ├── core/
 │   ├── player/      # Media3 implementation, playback service, domain models
 │   ├── network/     # Provider implementations, API clients, EPG pipeline, Room DBs
+│   ├── ai/          # AI Semantic Search, vector embeddings (TensorFlow Lite)
 │   ├── navigation/  # Type-safe Screen definitions (shared)
 │   ├── ui/          # Shared ViewModels, design tokens, and components
 │   └── data/        # Shared session and auth data
@@ -45,6 +46,7 @@ fijerena/
 1. **No Circular Dependencies:** `core:player` **must not** depend on `core:network`. If the player needs network settings, it reads directly from `SharedPreferences`.
 2. **Unified Domain:** All provider-specific data must be mapped to unified domain models in `core:player/domain/` before reaching the UI.
 3. **String IDs:** All media and category IDs must be `String` (not `Int`) to support diverse provider formats (UUIDs, paths, etc.).
+4. **AI Module Separation:** AI logic (embeddings, semantic search) is isolated in `:core:ai`. It consumes from `:core:network` for database access but stays independent of UI logic.
 
 ---
 
@@ -102,10 +104,11 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ## 📡 EPG & Indexing System
 - **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently, and ingestion into the DB is parallelized (2 workers) via an `UNLIMITED` Channel queue. Tasks are submitted through `RefreshQueue`.
-- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 8) using FTS4. The `ingest_method` column tracks how each source was ingested.
+- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 13) using FTS4. The `ingest_method` column tracks how each source was ingested.
 - **Search:** Two-tier strategy: SQLite **FTS4 MATCH** (primary) -> **LIKE** (fallback).
 - **Timezone:** Per-source `timezoneOffsetHours` override applied at parse time.
 - **State Machine:** `MultiSourceState` sealed interface: `Idle` -> `Processing` -> `Completed`/`Error`, plus `Clearing` state for clear-all operations. Per-source progress tracked via `ActiveSourceProgress(label, phase, channels, programmes)`.
+- **Persistent Stats:** Pipeline completion triggers an update to `EpgPipelineStatsEntity` in `providers.db` (version 5) for persistent UI feedback.
 - **Clear All Data:** Uses DB `destroy()` + `getInstance()` (recreate) instead of `DELETE FROM` — critical for performance on large databases (4M+ rows). Cancel in-flight work via `RefreshQueue.cancelAll()`.
 - **ViewModel Resilience:** `EpgManagementViewModel` uses a `db()` function (always calls `EpgIndexDatabase.getInstance()`) and `_dbGeneration` StateFlow counter. After DB destroy/recreate, bumping the generation causes `flatMapLatest` to re-subscribe all Room Flows to the new DB instance.
 - **Management:** Multi-source EPG management in `Screen.EpgManagement`.
@@ -122,12 +125,14 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ### Features
 - **Search:**
   - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows. Accessible via search button on the Content Type Selection screen.
+  - **AI Semantic Search (Hybrid):** Combines SQLite FTS4 with conceptual semantic search using a local vector embedding model (TensorFlow Lite). embeddings stored in `xtream_v2.db` (version 7) dedicated vector tables.
   - **Collapsible Groups:** Results grouped by source with collapsible headers (saved via `rememberSaveable`).
   - **Xtream:** Two-phase parallel search with multi-word matching.
   - **Jellyfin:** Server-side search.
 - **Virtual Categories:** Favorites (configurable 10-500), Last Watched (1-100), Continue Watching (VOD), Recent Categories.
 - **Jellyfin Quick Connect:** Supported for easy auth.
 - **Settings:** Provider management, theme selection, EPG management, cache management, UI scale, export/import (JSON).
+- **AI Settings:** Configure metadata crawling and monitor vectorization progress in `Screen.AiSettings`.
 
 ---
 

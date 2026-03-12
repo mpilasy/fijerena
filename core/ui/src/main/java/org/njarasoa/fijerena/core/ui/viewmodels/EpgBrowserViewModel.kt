@@ -364,9 +364,12 @@ class EpgBrowserViewModel(
                     .groupBy { 
                         it.title.trim().lowercase() to (it.description?.trim()?.lowercase() ?: "") 
                     }
-                    .map { (_, group) ->
+                    .map { (key, group) ->
                         val rep = group.first()
+                        val firstAiring = group.minBy { it.airing.startEpoch }.airing
+                        val id = "${rep.title}::${rep.description}::${firstAiring.channelId}::${firstAiring.startEpoch}"
                         EpgBrowserProgram(
+                            id = id,
                             title = rep.title,
                             description = rep.description ?: group.firstNotNullOfOrNull { it.description },
                             category = rep.category ?: group.firstNotNullOfOrNull { it.category },
@@ -394,6 +397,7 @@ class EpgBrowserViewModel(
                 val (channelId, channelName) = channelKey
                 val programs = channelAirings.map { airingWithProg ->
                     EpgBrowserProgram(
+                        id = "$channelName::${airingWithProg.title}::${airingWithProg.airing.startEpoch}",
                         title = airingWithProg.title,
                         description = airingWithProg.description,
                         category = airingWithProg.category,

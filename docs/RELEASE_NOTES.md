@@ -1,5 +1,24 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: AI Semantic Search & EPG Management Restore
+**Release Date:** 2026-03-11
+
+### AI & Semantic Search
+- **AI Module:** Extracted AI logic into a dedicated `:core:ai` module.
+- **Semantic Search Engine:** Implemented conceptual query processing.
+- **Hybrid Search:** Integrated FTS4 + Semantic search strategy in `EpgBrowserViewModel`.
+- **Vector Database Optimization:** Separated vector embeddings into dedicated tables (v7) to prevent cache bloat.
+- **Background Metadata Crawling:** Added `AiVectorizationWorker` for VODs, Series, and Episodes.
+- **AI Settings:** Added AI UI and stats tracking for Mobile and TV platforms.
+
+### EPG Management & Stats
+- **Persistent Pipeline Stats:** Added `EpgPipelineStatsEntity` to `SettingsDatabase` (v5) to track last run summary.
+- **EPG Management Features Restored:** Selective refresh, per-source stats, checkboxes, cleanup files, and purge controls.
+- **Dual-row Status Layout:** Enhanced `EpgStatusCard` to show real-time status and persisted last-run summary.
+- **Fix:** Addressed 'No EPG Data' state issue by syncing indexer state with database contents.
+
+---
+
 ## Version: Parallel EPG Pipeline, Clear Fix & TV Stability
 **Release Date:** 2026-03-01
 
