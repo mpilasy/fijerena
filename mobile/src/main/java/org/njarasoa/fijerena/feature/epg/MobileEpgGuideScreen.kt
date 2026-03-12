@@ -297,7 +297,7 @@ private fun MobileEpgSearchContent(
                 contentPadding = PaddingValues(vertical = CinemaSpacing.xs),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
             ) {
-                items(searchResults, key = { "${it.channel.id}_${it.program.start}" }, contentType = { "epg_search_result" }) { result ->
+                items(searchResults, key = { "search_${it.channel.id}_${it.program.id}_${it.program.startTime}" }, contentType = { "epg_search_result" }) { result ->
                     MobileSearchResultCard(
                         result = result,
                         onClick = { onProgramSelected(result.program, result.channel) }

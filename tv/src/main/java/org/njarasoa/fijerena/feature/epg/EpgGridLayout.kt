@@ -432,7 +432,7 @@ private fun ProgramRow(
     ) {
         items(
             count = channelRow.programs.size,
-            key = { channelRow.programs[it].startTime },
+            key = { channelRow.programs[it].id },
             contentType = { "program" }
         ) { index ->
             val program = channelRow.programs[index]
@@ -552,7 +552,7 @@ private fun EpgSearchContent(
             ) {
                 items(
                     count = searchResults.size,
-                    key = { "${searchResults[it].channel.id}_${searchResults[it].program.startTime}" },
+                    key = { "search_${searchResults[it].channel.id}_${searchResults[it].program.id}_${searchResults[it].program.startTime}" },
                     contentType = { "epg_search_result" }
                 ) { index ->
                     val result = searchResults[index]

@@ -58,7 +58,8 @@ The project follows a modular, Clean Architecture pattern with MVVM.
     - `fijerena-tv-full-debug.apk`
     - `fijerena-tv-slim-debug.apk`
 - **Deployment Strategy:**
-    - **NVIDIA Shield:** Always deploy the **Slim** variant (`fijerena-tv-slim-debug.apk`).
+    - **NVIDIA Shield (2019 Pro / mdarcy):** Always deploy the **Full** variant (`fijerena-tv-full-debug.apk`).
+    - **NVIDIA Shield (2017 / darcy):** Always deploy the **Slim** variant (`fijerena-tv-slim-debug.apk`).
     - **OnePlus 12R:** Always deploy the **Full** variant (`fijerena-mobile-full-debug.apk`).
     - **Emulators:** Always deploy the **Slim** variants.
 

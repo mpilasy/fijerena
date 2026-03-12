@@ -449,7 +449,7 @@ private fun SearchResults(
                             modifier = Modifier.padding(vertical = Spacing.xxs)
                         )
                     }
-                    items(results, key = { it.itemId }, contentType = { "stream" }) { result ->
+                    items(results, key = { "search_${it.contentType}_${it.categoryId}_${it.itemId}" }, contentType = { "stream" }) { result ->
                         SearchResultCard(
                             result = result,
                             onClick = { onResultClick(result) },

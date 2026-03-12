@@ -39,6 +39,12 @@ Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute 
 
 ## Search
 
+### AI Semantic Search (Hybrid)
+In addition to keyword matching, the app uses a local vector embedding model to perform conceptual semantic searches.
+- **Concept Understanding:** Searching for abstract concepts (e.g., "space wizards", "scary monsters") finds relevant movies/series.
+- **Hybrid Strategy:** Combines SQLite FTS4 with Semantic Vector similarity.
+- **Offline Capable:** Vector embeddings are generated locally in the background via `AiVectorizationWorker` and stored in `xtream_v2.db`.
+
 ### Global Search ("ALL")
 Unified search across all content types (Live TV, Movies, TV Shows) and categories. Accessible via the search button on the Content Type Selection screen.
 - **Grouped Results:** Results are organized by content type headers.

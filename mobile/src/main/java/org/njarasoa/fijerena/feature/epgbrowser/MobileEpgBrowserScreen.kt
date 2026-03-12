@@ -416,7 +416,7 @@ private fun MobileResultsContent(
                     }
                     items(
                         dateGroup.programs,
-                        key = { "${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::${it.title}::${it.description}::${it.airings.first().startEpoch}::$matchedOnly" },
+                        key = { it.id },
                         contentType = { "program" }
                     ) { program ->
                         MobileProgramCard(
