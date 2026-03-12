@@ -75,6 +75,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _qualitySwitchCount = MutableStateFlow(0)
     val qualitySwitchCount: StateFlow<Int> = _qualitySwitchCount.asStateFlow()
 
+    private val _audioDspStats = MutableStateFlow(org.njarasoa.fijerena.core.player.model.AudioDspStats())
+    val audioDspStats: StateFlow<org.njarasoa.fijerena.core.player.model.AudioDspStats> = _audioDspStats.asStateFlow()
+
     private var onPositionSaveListener: ((Long, Long) -> Unit)? = null
 
     private var liveRetryCount = 0
@@ -124,6 +127,54 @@ class StreamingPlaybackService : MediaSessionService() {
                 adaptiveLoadControl?.updateForNetwork(networkType)
             }
         }
+        // Periodically update Audio DSP stats for the Stats overlay
+        scope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(1000L)
+                updateAudioDspStats()
+            }
+        }
+    }
+
+    private fun updateAudioDspStats() {
+        // Read Clear Voice stats from the AudioProcessor via reflection (core:ai is optional)
+        var clearVoiceEnabled = false
+        var clearVoiceStrength = 0f
+        var clearVoiceAutoDisabled = false
+        var aiFramesProcessed = 0L
+        var aiFramesSkipped = 0L
+        var aiLastInferenceMs = 0L
+        var aiAvgInferenceMs = 0f
+
+        for (proc in audioProcessors) {
+            try {
+                val clazz = proc.javaClass
+                if (clazz.simpleName == "DialogueBoostProcessor") {
+                    clearVoiceStrength = clazz.getMethod("getStrength").invoke(proc) as? Float ?: 0f
+                    clearVoiceEnabled = clearVoiceStrength > 0f
+                    clearVoiceAutoDisabled = clazz.getMethod("isAutoDisabled").invoke(proc) as? Boolean ?: false
+                    aiFramesProcessed = clazz.getMethod("getTotalFramesProcessed").invoke(proc) as? Long ?: 0L
+                    aiFramesSkipped = clazz.getMethod("getTotalFramesSkipped").invoke(proc) as? Long ?: 0L
+                    aiLastInferenceMs = clazz.getMethod("getLastInferenceMs").invoke(proc) as? Long ?: 0L
+                    aiAvgInferenceMs = clazz.getMethod("getAvgInferenceMs").invoke(proc) as? Float ?: 0f
+                }
+            } catch (_: Exception) {
+                // core:ai not present or processor not a DialogueBoostProcessor
+            }
+        }
+
+        _audioDspStats.value = org.njarasoa.fijerena.core.player.model.AudioDspStats(
+            clearVoiceEnabled = clearVoiceEnabled,
+            clearVoiceStrength = clearVoiceStrength,
+            clearVoiceAutoDisabled = clearVoiceAutoDisabled,
+            aiFramesProcessed = aiFramesProcessed,
+            aiFramesSkipped = aiFramesSkipped,
+            aiLastInferenceMs = aiLastInferenceMs,
+            aiAvgInferenceMs = aiAvgInferenceMs,
+            nightModeEnabled = nightModeManager.enabled,
+            voiceZoomEnabled = voiceZoomManager?.enabled ?: false,
+            voiceZoomAvailable = voiceZoomManager?.isAvailable ?: false
+        )
     }
 
     private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {
