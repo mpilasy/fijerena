@@ -44,6 +44,13 @@ object NumberUtils {
     }
 
     /**
+     * Format a timestamp to a short time string (e.g. 14:30:05).
+     */
+    fun formatShortTime(millis: Long): String {
+        return java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(millis))
+    }
+
+    /**
      * Format a timestamp to a medium date/time string.
      */
     fun formatTimestamp(context: Context, millis: Long): String {

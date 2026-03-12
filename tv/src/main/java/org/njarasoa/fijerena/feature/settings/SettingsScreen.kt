@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.AboutSettingsCard
+import org.njarasoa.fijerena.feature.settings.components.AiSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.CloudSyncSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ConflictResolutionDialog
 import org.njarasoa.fijerena.feature.settings.components.DeveloperSettingsCard

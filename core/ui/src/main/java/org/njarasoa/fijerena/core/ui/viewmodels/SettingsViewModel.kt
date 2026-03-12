@@ -48,6 +48,10 @@ class SettingsViewModel(
 
     init {
         refreshProviderInfo()
+        // Sync EPG indexer state to ensure status card is accurate
+        viewModelScope.launch {
+            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer.getInstance(context).initialize()
+        }
     }
 
     fun refreshProviderInfo() {

@@ -8,14 +8,15 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ProviderEntity::class, EpgSourceEntity::class],
-    version = 4,
+    entities = [ProviderEntity::class, EpgSourceEntity::class, EpgPipelineStatsEntity::class],
+    version = 5,
     exportSchema = false
 )
 abstract class SettingsDatabase : RoomDatabase() {
 
     abstract fun providerDao(): ProviderDao
     abstract fun epgSourceDao(): EpgSourceDao
+    abstract fun epgPipelineStatsDao(): EpgPipelineStatsDao
 
     companion object {
         private const val DB_NAME = "providers.db"
@@ -59,6 +60,22 @@ abstract class SettingsDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `epg_pipeline_stats` (
+                        `id` INTEGER PRIMARY KEY NOT NULL, 
+                        `updated_at_ms` INTEGER NOT NULL, 
+                        `duration_ms` INTEGER NOT NULL, 
+                        `sources_processed` INTEGER NOT NULL, 
+                        `errors` INTEGER NOT NULL, 
+                        `total_channels` INTEGER NOT NULL, 
+                        `total_programmes` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
         fun getInstance(context: Context): SettingsDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -66,7 +83,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                     SettingsDatabase::class.java,
                     DB_NAME
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build().also { INSTANCE = it }
             }
         }

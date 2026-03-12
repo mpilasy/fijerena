@@ -68,6 +68,26 @@ class EpgManagementViewModel(
 
     val activeTaskId: StateFlow<String?> = RefreshQueue.activeTaskId
 
+    val lastPipelineStats: StateFlow<org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity?> = settingsDb().epgPipelineStatsDao().getLatestStats()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val _selectedIds = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedIds: StateFlow<Set<Long>> = _selectedIds.asStateFlow()
+
+    // Flow that emits latest programme end times for all sources
+    val latestProgrammeTimes: StateFlow<Map<Long, Long>> = sources
+        .flatMapLatest { list ->
+            // Re-query whenever sources change or DB generation increments
+            _dbGeneration.map { gen ->
+                withContext(Dispatchers.IO) {
+                    list.associate { source ->
+                        source.id to (indexDb().epgIndexDao().getLatestProgrammeEndTimeForSource(source.id) ?: 0L)
+                    }
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     private val _taskSourceIds = MutableStateFlow<Map<String, Set<Long>>>(emptyMap())
     val taskSourceIds: StateFlow<Map<String, Set<Long>>> = _taskSourceIds.asStateFlow()
 
@@ -76,6 +96,18 @@ class EpgManagementViewModel(
     val autoRefreshEnabled: Boolean get() = appSettings.epgAutoRefreshEnabled
 
     val epgRefreshTime: String get() = appSettings.epgRefreshTime
+
+    fun toggleSelection(id: Long) {
+        _selectedIds.value = if (_selectedIds.value.contains(id)) {
+            _selectedIds.value - id
+        } else {
+            _selectedIds.value + id
+        }
+    }
+
+    fun clearSelection() {
+        _selectedIds.value = emptySet()
+    }
 
     fun cancelProcessing() {
         epgFileManager.cancelProcessing()
@@ -139,10 +171,18 @@ class EpgManagementViewModel(
             withContext(Dispatchers.IO) {
                 try {
                     val dao = indexDb().epgIndexDao()
+                    val channelCount = dao.getChannelCount()
+                    val programmeCount = dao.getProgrammeCount()
+                    
                     _dbStats.value = DbStats(
-                        channelCount = dao.getChannelCount(),
-                        programmeCount = dao.getProgrammeCount()
+                        channelCount = channelCount,
+                        programmeCount = programmeCount
                     )
+
+                    // If we have data but indexer state is NotIndexed, force an initialization to sync up
+                    if (programmeCount > 0 && indexer.state.value is EpgIndexState.NotIndexed) {
+                        indexer.initialize()
+                    }
                 } catch (_: Exception) {
                     _dbStats.value = DbStats()
                 }
