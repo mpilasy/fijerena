@@ -13,8 +13,13 @@ import androidx.media3.common.Player
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.VideoRendererEventListener
+import org.njarasoa.fijerena.core.player.audio.AiAudioProcessor
+import org.njarasoa.fijerena.core.player.audio.NightModeAudioProcessor
+import org.njarasoa.fijerena.core.player.audio.SpeechEnhancer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.CoroutineScope
@@ -80,6 +85,8 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private var adaptiveLoadControl: AdaptiveLoadControl? = null
     private var serviceScope: CoroutineScope? = null
+    private val nightModeAudioProcessor = NightModeAudioProcessor()
+    private val aiAudioProcessor = AiAudioProcessor()
 
     override fun onCreate() {
         super.onCreate()
@@ -107,6 +114,18 @@ class StreamingPlaybackService : MediaSessionService() {
 
         // Custom RenderersFactory to bypass VSyncSamplerV33 ClassNotFoundException on Android 9
         val renderersFactory = object : DefaultRenderersFactory(this) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean
+            ): AudioSink? {
+                return DefaultAudioSink.Builder(context)
+                    .setAudioProcessors(arrayOf(aiAudioProcessor))
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .build()
+            }
+
             override fun buildVideoRenderers(
                 context: Context,
                 extensionRendererMode: Int,
@@ -197,6 +216,9 @@ class StreamingPlaybackService : MediaSessionService() {
             },
             onQualitySwitch = { count ->
                 _qualitySwitchCount.value = count
+            },
+            onAudioSessionIdChanged = { sessionId ->
+                nightModeAudioProcessor.attach(sessionId)
             }
         )
         player.addAnalyticsListener(analyticsListener!!)
@@ -385,6 +407,14 @@ class StreamingPlaybackService : MediaSessionService() {
             .build()
 
         trackSelector.parameters = parameters
+    }
+
+    fun toggleNightMode(enabled: Boolean) {
+        nightModeAudioProcessor.setEnabled(enabled)
+    }
+
+    fun setSpeechEnhancer(enhancer: SpeechEnhancer?) {
+        aiAudioProcessor.setSpeechEnhancer(enhancer)
     }
 
     fun selectVideoQuality(groupIndex: Int, trackIndex: Int) {
@@ -629,7 +659,8 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onRebuffer: (count: Int, totalTimeMs: Long) -> Unit,
         private val onExhaustionRebuffer: (count: Int) -> Unit,
         private val onBandwidthUpdate: (bitrateEstimate: Long) -> Unit,
-        private val onQualitySwitch: (count: Int) -> Unit
+        private val onQualitySwitch: (count: Int) -> Unit,
+        private val onAudioSessionIdChanged: (sessionId: Int) -> Unit
     ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
         private var droppedFrames = 0L
         private var totalFrames = 0L
@@ -710,6 +741,13 @@ class StreamingPlaybackService : MediaSessionService() {
             bitrateEstimate: Long
         ) {
             onBandwidthUpdate(bitrateEstimate)
+        }
+
+        override fun onAudioSessionIdChanged(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            audioSessionId: Int
+        ) {
+            onAudioSessionIdChanged(audioSessionId)
         }
 
         override fun onDownstreamFormatChanged(
