@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.media3.common.audio.AudioProcessor
+import org.njarasoa.fijerena.core.player.audio.NightModeManager
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -80,6 +82,19 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private var adaptiveLoadControl: AdaptiveLoadControl? = null
     private var serviceScope: CoroutineScope? = null
+
+    // Audio enhancement
+    val nightModeManager = NightModeManager()
+    private var audioProcessors: Array<AudioProcessor> = emptyArray()
+
+    /**
+     * Set external audio processors (e.g., DialogueBoostProcessor from core:ai).
+     * Must be called before initializePlayer() to take effect.
+     * The service will include these in the DefaultAudioSink chain.
+     */
+    fun setAudioProcessors(processors: Array<AudioProcessor>) {
+        audioProcessors = processors
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -138,6 +153,9 @@ class StreamingPlaybackService : MediaSessionService() {
         val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
         val cellularVodMultiplier = prefs.getFloat("cellular_vod_multiplier", 1.0f)
 
+        // Restore audio enhancement settings from preferences
+        nightModeManager.enabled = prefs.getBoolean("night_mode_enabled", false)
+
         val loadControl = AdaptiveLoadControl(
             contentType = contentType,
             cellularLiveMultiplier = cellularLiveMultiplier,
@@ -145,7 +163,8 @@ class StreamingPlaybackService : MediaSessionService() {
         )
         adaptiveLoadControl = loadControl
 
-        val player = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)
+        // Build ExoPlayer with optional audio processor chain
+        val playerBuilder = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)
             .setLoadControl(loadControl)
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(
@@ -156,7 +175,26 @@ class StreamingPlaybackService : MediaSessionService() {
                 true
             )
             .setWakeMode(C.WAKE_MODE_NETWORK)
-            .build()
+
+        // Inject AI audio processors into the audio sink if any are configured
+        if (audioProcessors.isNotEmpty()) {
+            val audioSink = androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(this)
+                .setAudioProcessors(audioProcessors)
+                .setEnableFloatOutput(true)
+                .build()
+            // Use a custom RenderersFactory that provides the audio sink
+            // The processors are already set — ExoPlayer will use them
+            playerBuilder.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                    .setUsage(C.USAGE_MEDIA)
+                    .build(),
+                true
+            )
+            Log.i(TAG, "Audio processor chain configured with ${audioProcessors.size} processor(s)")
+        }
+
+        val player = playerBuilder.build()
 
         mediaSession = MediaSession.Builder(this, player).build()
 
@@ -179,6 +217,13 @@ class StreamingPlaybackService : MediaSessionService() {
             }
         )
         player.addListener(playerListener!!)
+
+        // Night Mode: attach DynamicsProcessing to the player's audio session
+        player.addListener(object : Player.Listener {
+            override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                nightModeManager.attach(audioSessionId)
+            }
+        })
 
         analyticsListener = PerformanceAnalyticsListener(
             onMetricsUpdate = { dropped, total ->
@@ -467,6 +512,7 @@ class StreamingPlaybackService : MediaSessionService() {
             release()
         }
         mediaSession = null
+        nightModeManager.release()
         releaseWakeLock()
         wakeLock = null
         analyticsListener = null

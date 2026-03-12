@@ -25,12 +25,15 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
@@ -83,6 +86,8 @@ fun PlayerControlsOverlay(
     onShowQualitySelector: () -> Unit,
     onShowChapterSelector: () -> Unit,
     onShowStats: () -> Unit,
+    onToggleNightMode: () -> Unit = {},
+    isNightModeEnabled: Boolean = false,
     seekSpeedLabel: String? = null,
 ) {
     val isPaused = playbackState is PlaybackState.Paused
@@ -417,6 +422,23 @@ fun PlayerControlsOverlay(
                                     tint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.White
                                 )
                             }
+                        }
+
+                        // Night Mode toggle
+                        Button(
+                            onClick = onToggleNightMode,
+                            colors = ButtonDefaults.colors(
+                                containerColor = if (isNightModeEnabled)
+                                    CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+                                else
+                                    CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                            )
+                        ) {
+                            Icon(
+                                Icons.Filled.NightsStay,
+                                contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
+                                tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else Color.White
+                            )
                         }
 
                         // Stats for nerds (always visible)
