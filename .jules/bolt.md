@@ -7,3 +7,7 @@
 In Kotlin, `data class.copy()` allocates a new object. This means every single Xtream entity being processed during syncing (which batches by 2000 items and typically runs over tens of thousands of streams) allocates two objects instead of one.
 
 **Action:** Refactor `XtreamContentManager` so that `computeContentHash` is calculated without allocating a `base` object first, or just create the entity with the hash inline instead of allocating and copying.
+
+## 2025-03-13 - Avoid Object Copying in Room Batches
+**Learning:** During large-scale local synchronization tasks (like parsing Xtream M3U streams, which can contain tens of thousands of items), accumulating entities in a `MutableList` and then passing `batch.toList()` to Room `insertAll` functions creates massive arrays to perform shallow copies. Because Android Room implementations execute the DB transaction synchronously within a suspend function, we can just pass the mutable `batch` list directly. The insertion completes before `batch.clear()` is called.
+**Action:** Removed `.toList()` allocations from Room batch inserts. Going forward, avoid `.toList()` or other defensive copies unless strictly necessary (e.g., passing mutable state to true async jobs without suspend blocking).

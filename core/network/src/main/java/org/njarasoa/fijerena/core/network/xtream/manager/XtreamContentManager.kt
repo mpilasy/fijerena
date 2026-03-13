@@ -399,7 +399,8 @@ class XtreamContentManager(
                                       contentHash = contentHash
                                   ))
                                   if (batch.size >= BATCH_SIZE) {
-                                      streamDao.insertAll(batch.toList())
+                                      // ⚡ Bolt: Pass the mutable list directly without .toList() to avoid allocating a new list of 2000 elements
+                                      streamDao.insertAll(batch)
                                       batch.clear()
                                   }
                               }
@@ -491,7 +492,8 @@ class XtreamContentManager(
                                     contentHash = contentHash
                                 ))
                                 if (batch.size >= BATCH_SIZE) {
-                                    seriesDao.insertAll(batch.toList())
+                                    // ⚡ Bolt: Pass the mutable list directly without .toList() to avoid allocating a new list of 1000 elements
+                                    seriesDao.insertAll(batch)
                                     batch.clear()
                                 }
                             }
