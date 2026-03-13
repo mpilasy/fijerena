@@ -116,7 +116,7 @@ class StreamingPlaybackService : MediaSessionService() {
             // Check tier
             val detector = detectorClass.getConstructor(Context::class.java).newInstance(this)
             val detectAudioTierMethod = detectorClass.getMethod("detectAudioTier")
-            val tier = detectAudioTierMethod.invoke(detector)
+            val tier = detectAudioTierMethod?.invoke(detector)
             
             if (tier.toString() == "REALTIME") {
                 Log.i(TAG, "Device tier is REALTIME, initializing AI processor")
@@ -126,7 +126,10 @@ class StreamingPlaybackService : MediaSessionService() {
                 
                 if (processor is AudioProcessor) {
                     setAudioProcessors(arrayOf(processor))
-                    Log.i(TAG, "AI Dialogue Booster initialized and injected. Processors: ${audioProcessors.size}")
+                    Log.i(TAG, "AI Dialogue Booster initialized and injected. Processors count: ${audioProcessors.size}")
+                    audioProcessors.forEachIndexed { index, proc -> 
+                        Log.d(TAG, "Processor[$index]: ${proc.javaClass.name}")
+                    }
                     
                     // Sync initial strength from prefs
                     val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
@@ -222,8 +225,8 @@ class StreamingPlaybackService : MediaSessionService() {
         for (proc in currentProcessors) {
             try {
                 val clazz = proc.javaClass
-                // Match by class name as it might be in a different classloader or shadowed
-                if (clazz.name.endsWith("DialogueBoostProcessor")) {
+                // Use contains() to be more resilient to class name variations (proxies, shadows)
+                if (clazz.name.contains("DialogueBoostProcessor")) {
                     val methods = clazz.methods
                     
                     val getStrength = methods.find { it.name == "getStrength" }
@@ -271,76 +274,12 @@ class StreamingPlaybackService : MediaSessionService() {
         val ffmpegAvailable = FfmpegLibrary.isAvailable()
         Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
 
-        // Custom RenderersFactory to bypass VSyncSamplerV33 ClassNotFoundException on Android 9
-        val renderersFactory = object : DefaultRenderersFactory(this) {
-            override fun buildVideoRenderers(
-                context: Context,
-                extensionRendererMode: Int,
-                mediaCodecSelector: MediaCodecSelector,
-                enableDecoderFallback: Boolean,
-                eventHandler: Handler,
-                eventListener: VideoRendererEventListener,
-                allowedVideoJoiningTimeMs: Long,
-                out: ArrayList<Renderer>
-            ) {
-                super.buildVideoRenderers(
-                    context,
-                    extensionRendererMode,
-                    mediaCodecSelector,
-                    enableDecoderFallback,
-                    eventHandler,
-                    eventListener,
-                    allowedVideoJoiningTimeMs,
-                    out
-                )
-            }
-
-            override fun buildAudioRenderers(
-                context: Context,
-                extensionRendererMode: Int,
-                mediaCodecSelector: MediaCodecSelector,
-                enableDecoderFallback: Boolean,
-                audioSink: androidx.media3.exoplayer.audio.AudioSink,
-                eventHandler: Handler,
-                eventListener: androidx.media3.exoplayer.audio.AudioRendererEventListener,
-                out: ArrayList<Renderer>
-            ) {
-                Log.i(TAG, "buildAudioRenderers called, audioProcessors count: ${audioProcessors.size}, " +
-                    "processors: ${audioProcessors.map { it.javaClass.simpleName }}")
-                val finalAudioSink = if (audioProcessors.isNotEmpty()) {
-                    androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
-                        .setAudioProcessors(audioProcessors)
-                        // Do NOT enable float output — when float output is enabled,
-                        // DefaultAudioSink skips the user audio processor chain entirely
-                        // (only internal float processors are used). Keeping this false
-                        // ensures NightModeProcessor and DialogueBoostProcessor receive data.
-                        .build()
-                } else {
-                    audioSink
-                }
-                Log.i(TAG, "Built custom DefaultAudioSink with ${audioProcessors.size} processors, floatOutput=true")
-                super.buildAudioRenderers(
-                    context,
-                    extensionRendererMode,
-                    mediaCodecSelector,
-                    enableDecoderFallback,
-                    finalAudioSink,
-                    eventHandler,
-                    eventListener,
-                    out
-                )
-                Log.i(TAG, "Audio renderers built: ${out.size} total renderers, types: ${out.map { it.javaClass.simpleName }}")
-            }
-        }.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 
         val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
         val cellularVodMultiplier = prefs.getFloat("cellular_vod_multiplier", 1.0f)
-
-        // Restore audio enhancement settings from preferences
-        val isNmEnabled = prefs.getBoolean("night_mode_enabled", false)
-        nightModeManager.enabled = isNmEnabled
-        nightModeProcessor.enabled = isNmEnabled
 
         val loadControl = AdaptiveLoadControl(
             contentType = contentType,
@@ -349,8 +288,9 @@ class StreamingPlaybackService : MediaSessionService() {
         )
         adaptiveLoadControl = loadControl
 
-        // Build ExoPlayer with optional audio processor chain
-        val playerBuilder = androidx.media3.exoplayer.ExoPlayer.Builder(this, renderersFactory)
+        // Build ExoPlayer with standard factory
+        val playerBuilder = androidx.media3.exoplayer.ExoPlayer.Builder(this)
+            .setRenderersFactory(renderersFactory)
             .setLoadControl(loadControl)
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(

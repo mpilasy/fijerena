@@ -10,6 +10,8 @@ import org.tensorflow.lite.support.common.FileUtil
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.PI
+import kotlin.math.cos
 
 /**
  * Two-stage DTLN (Dual-signal Transformation LSTM Network) speech enhancer.
@@ -42,6 +44,7 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
     // Sliding window buffers (maintained across processBlock calls)
     private val inBuffer = FloatArray(BLOCK_LEN)
     private val outBuffer = FloatArray(BLOCK_LEN)
+    private val hannWindow = FloatArray(BLOCK_LEN)
 
     private var initialized = false
 
@@ -49,6 +52,11 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
         if (initialized) return true
 
         return try {
+            // Pre-calculate Hann window for analysis: 0.5 * (1 - cos(2*PI*n / N))
+            for (i in 0 until BLOCK_LEN) {
+                hannWindow[i] = (0.5 * (1.0 - cos(2.0 * PI * i / BLOCK_LEN))).toFloat()
+            }
+
             val deviceCaps = DeviceDetector.detect()
             val options1 = createOptions(deviceCaps.deviceType)
             val options2 = createOptions(deviceCaps.deviceType)
@@ -56,9 +64,8 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
             // Verify both model files exist
             val dtlnAssets = context.assets.list("dtln") ?: emptyArray()
             if (!dtlnAssets.contains("model_quant_1.tflite") || !dtlnAssets.contains("model_quant_2.tflite")) {
-                Log.e(TAG, "DTLN model files not found in assets/dtln/. AI will run in passthrough mode.")
-                initialized = true
-                return true
+                Log.e(TAG, "DTLN model files not found in assets/dtln/. Audio AI disabled.")
+                return false
             }
 
             val model1Buffer = FileUtil.loadMappedFile(context, MODEL_1_PATH)
@@ -72,23 +79,19 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
             val interp2 = interpreter2!!
 
             // Model 1 inputs: [0]=magnitude [1,1,257], [1]=LSTM state
-            // Model 1 outputs: [0]=mask, [1]=new LSTM state
             val state1Shape = interp1.getInputTensor(1).shape()
             state1Size = state1Shape.fold(1) { acc, v -> acc * v }
 
             // Model 2 inputs: [0]=estimated block [1,1,512], [1]=LSTM state
-            // Model 2 outputs: [0]=enhanced block, [1]=new LSTM state
             val state2Shape = interp2.getInputTensor(1).shape()
             state2Size = state2Shape.fold(1) { acc, v -> acc * v }
 
             resetStates()
             initialized = true
 
-            Log.i(TAG, "DTLN initialized. Model1 inputs: ${interp1.inputTensorCount}, " +
-                    "Model2 inputs: ${interp2.inputTensorCount}, " +
-                    "State1 size: $state1Size, State2 size: $state2Size")
+            Log.i(TAG, "DTLN initialized with Hann window. Model1 state size: $state1Size, State2 size: $state2Size")
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "Failed to initialize DTLN: ${e.message}", e)
             close()
             false
@@ -111,30 +114,26 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
 
     /**
      * Process a block of [BLOCK_SHIFT] (128) new samples through the DTLN pipeline.
-     *
-     * Internally shifts the 512-sample window, runs FFT → Model1 → IFFT → Model2,
-     * and returns 128 enhanced samples via overlap-add.
-     *
-     * @param newSamples exactly [BLOCK_SHIFT] (128) PCM float samples at 16kHz
-     * @return [BLOCK_SHIFT] enhanced samples, or null if inference fails
      */
     fun processBlock(newSamples: FloatArray): FloatArray? {
         val interp1 = interpreter1 ?: return null
         val interp2 = interpreter2 ?: return null
-        if (newSamples.size != BLOCK_SHIFT) {
-            Log.w(TAG, "Expected $BLOCK_SHIFT samples, got ${newSamples.size}")
-            return null
-        }
+        if (newSamples.size != BLOCK_SHIFT) return null
 
         return try {
             // Shift input buffer: slide left by BLOCK_SHIFT, append new samples
             System.arraycopy(inBuffer, BLOCK_SHIFT, inBuffer, 0, BLOCK_LEN - BLOCK_SHIFT)
             System.arraycopy(newSamples, 0, inBuffer, BLOCK_LEN - BLOCK_SHIFT, BLOCK_SHIFT)
 
-            // --- Stage 1: STFT domain ---
-            val (magnitude, phase) = DtlnFft.rfft(inBuffer)
+            // Apply analysis window
+            val windowedIn = FloatArray(BLOCK_LEN)
+            for (i in 0 until BLOCK_LEN) {
+                windowedIn[i] = inBuffer[i] * hannWindow[i]
+            }
 
-            // Prepare Model 1 inputs: magnitude [1,1,257] and LSTM state
+            // --- Stage 1: STFT domain ---
+            val (magnitude, phase) = DtlnFft.rfft(windowedIn)
+
             val magInput = createFloatBuffer(FFT_BINS)
             for (v in magnitude) magInput.putFloat(v)
             magInput.rewind()
@@ -148,14 +147,12 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
             )
             state1 = newState1
 
-            // Apply mask in frequency domain: estimated = magnitude * mask
             maskOutput.rewind()
             val maskedMag = FloatArray(FFT_BINS)
             for (i in 0 until FFT_BINS) {
                 maskedMag[i] = magnitude[i] * maskOutput.getFloat()
             }
 
-            // IFFT back to time domain using original phase
             val estimatedBlock = DtlnFft.irfft(maskedMag, phase, BLOCK_LEN)
 
             // --- Stage 2: Time domain ---
@@ -185,27 +182,23 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
                 outBuffer[i] += enhancedOutput.getFloat()
             }
 
-            // Return the first BLOCK_SHIFT samples
-            outBuffer.copyOfRange(0, BLOCK_SHIFT)
+            // Return normalized block. 
+            // For Hann window with 75% overlap, the sum of windows is exactly 2.0.
+            val result = FloatArray(BLOCK_SHIFT)
+            for (i in 0 until BLOCK_SHIFT) {
+                result[i] = outBuffer[i] / 2.0f
+            }
+            result
         } catch (e: Exception) {
             Log.e(TAG, "DTLN inference failed: ${e.message}")
             null
         }
     }
 
-    /**
-     * Legacy single-frame interface for compatibility with DialogueBoostProcessor.
-     * Internally processes the frame as multiple BLOCK_SHIFT-sized hops.
-     *
-     * @param inputFrame [FRAME_SIZE] (512) PCM float samples at 16kHz
-     * @return enhanced [FRAME_SIZE] samples, or null on failure
-     */
     fun enhance(inputFrame: FloatArray): FloatArray? {
         if (inputFrame.size != FRAME_SIZE) return null
-
         val result = FloatArray(FRAME_SIZE)
         val hopsPerFrame = FRAME_SIZE / BLOCK_SHIFT
-
         for (hop in 0 until hopsPerFrame) {
             val hopSamples = inputFrame.copyOfRange(hop * BLOCK_SHIFT, (hop + 1) * BLOCK_SHIFT)
             val enhanced = processBlock(hopSamples) ?: return null
@@ -214,9 +207,6 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
         return result
     }
 
-    /**
-     * Reset LSTM states and buffers — call on seek, track change, or stream switch.
-     */
     fun resetStates() {
         state1 = allocateZeroBuffer(state1Size)
         state2 = allocateZeroBuffer(state2Size)
@@ -225,29 +215,20 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
     }
 
     private fun createFloatBuffer(floatCount: Int): ByteBuffer {
-        return ByteBuffer.allocateDirect(floatCount * FLOAT_SIZE)
-            .order(ByteOrder.nativeOrder())
+        return ByteBuffer.allocateDirect(floatCount * FLOAT_SIZE).order(ByteOrder.nativeOrder())
     }
 
     private fun allocateZeroBuffer(floatCount: Int): ByteBuffer {
-        val buffer = ByteBuffer.allocateDirect(floatCount * FLOAT_SIZE)
-            .order(ByteOrder.nativeOrder())
-        for (i in 0 until floatCount) {
-            buffer.putFloat(0f)
-        }
+        val buffer = ByteBuffer.allocateDirect(floatCount * FLOAT_SIZE).order(ByteOrder.nativeOrder())
+        for (i in 0 until floatCount) buffer.putFloat(0f)
         buffer.rewind()
         return buffer
     }
 
     override fun close() {
         interpreter1?.close()
-        interpreter1 = null
         interpreter2?.close()
-        interpreter2 = null
         gpuDelegate?.close()
-        gpuDelegate = null
-        state1 = null
-        state2 = null
         initialized = false
     }
 
@@ -255,22 +236,11 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
         private const val TAG = "AiSpeechEnhancer"
         private const val MODEL_1_PATH = "dtln/model_quant_1.tflite"
         private const val MODEL_2_PATH = "dtln/model_quant_2.tflite"
-
-        /** DTLN window size: 512 samples at 16kHz = 32ms */
         const val FRAME_SIZE = 512
-
-        /** DTLN hop size: 128 samples at 16kHz = 8ms */
         const val BLOCK_SHIFT = 128
-
-        /** DTLN block length (same as FRAME_SIZE) */
         const val BLOCK_LEN = 512
-
-        /** Number of FFT bins for real FFT of 512 points: 512/2 + 1 = 257 */
         private const val FFT_BINS = BLOCK_LEN / 2 + 1
-
-        /** DTLN model sample rate */
         const val MODEL_SAMPLE_RATE = 16000
-
         private const val FLOAT_SIZE = 4
     }
 }

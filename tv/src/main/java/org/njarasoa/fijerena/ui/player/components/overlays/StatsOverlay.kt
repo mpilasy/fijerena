@@ -484,11 +484,12 @@ fun StatsOverlay(
                         )
                         val caps = remember { org.njarasoa.fijerena.core.player.device.DeviceDetector.detect() }
                         Text(
-                            text = "Build: Mar 12 18:45 (v4-smart-night-mode)",
+                            text = "Build: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME} (${org.njarasoa.fijerena.BuildConfig.GIT_HASH})",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = CinemaTextSecondary.copy(alpha = 0.3f),
                             modifier = Modifier.padding(top = 4.dp)
                         )
+
                         Text(
                             text = "Device: ${android.os.Build.MODEL} | Type: ${caps.deviceType}",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
