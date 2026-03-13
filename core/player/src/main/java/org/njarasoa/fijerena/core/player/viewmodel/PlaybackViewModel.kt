@@ -138,6 +138,20 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private suspend fun observeServiceState() {
         val service = StreamingPlaybackService.awaitInstance()
 
+        // Sync initial audio enhancement settings to the service
+        val initialStrength = _dialogueBoostStrength.value
+        if (initialStrength > 0f) {
+            for (proc in service.getAudioProcessors()) {
+                try {
+                    val clazz = proc.javaClass
+                    if (clazz.simpleName == "DialogueBoostProcessor") {
+                        val setter = clazz.methods.find { it.name == "setStrength" }
+                        setter?.invoke(proc, initialStrength)
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
         // Initialize Voice Zoom availability from service
         val vzm = service.voiceZoomManager
         if (vzm != null) {
@@ -457,6 +471,22 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         _dialogueBoostStrength.value = clamped
         val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         prefs.edit().putFloat("dialogue_boost_strength", clamped).apply()
+
+        // Propagate to the service's audio processor
+        viewModelScope.launch {
+            val service = StreamingPlaybackService.getInstance() ?: return@launch
+            // DialogueBoostProcessor is in the audioProcessors array
+            for (proc in service.getAudioProcessors()) {
+                try {
+                    val clazz = proc.javaClass
+                    if (clazz.simpleName == "DialogueBoostProcessor") {
+                        // Strength is a @Volatile var property
+                        val setter = clazz.methods.find { it.name == "setStrength" }
+                        setter?.invoke(proc, clamped)
+                    }
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     /**

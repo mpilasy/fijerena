@@ -102,6 +102,8 @@ class StreamingPlaybackService : MediaSessionService() {
         audioProcessors = processors
     }
 
+    fun getAudioProcessors(): Array<AudioProcessor> = audioProcessors
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -194,9 +196,6 @@ class StreamingPlaybackService : MediaSessionService() {
                 allowedVideoJoiningTimeMs: Long,
                 out: ArrayList<Renderer>
             ) {
-                // Let super build it, but we've verified the issue is specifically triggered
-                // by the VSyncSamplerV33 which we're sidestepping by staying on 1.9.1 
-                // but implementing all required interfaces.
                 super.buildVideoRenderers(
                     context,
                     extensionRendererMode,
@@ -205,6 +204,36 @@ class StreamingPlaybackService : MediaSessionService() {
                     eventHandler,
                     eventListener,
                     allowedVideoJoiningTimeMs,
+                    out
+                )
+            }
+
+            override fun buildAudioRenderers(
+                context: Context,
+                extensionRendererMode: Int,
+                mediaCodecSelector: MediaCodecSelector,
+                enableDecoderFallback: Boolean,
+                audioSink: androidx.media3.exoplayer.audio.AudioSink,
+                eventHandler: Handler,
+                eventListener: androidx.media3.exoplayer.audio.AudioRendererEventListener,
+                out: ArrayList<Renderer>
+            ) {
+                val finalAudioSink = if (audioProcessors.isNotEmpty()) {
+                    androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                        .setAudioProcessors(audioProcessors)
+                        .setEnableFloatOutput(true)
+                        .build()
+                } else {
+                    audioSink
+                }
+                super.buildAudioRenderers(
+                    context,
+                    extensionRendererMode,
+                    mediaCodecSelector,
+                    enableDecoderFallback,
+                    finalAudioSink,
+                    eventHandler,
+                    eventListener,
                     out
                 )
             }
@@ -237,24 +266,6 @@ class StreamingPlaybackService : MediaSessionService() {
                 true
             )
             .setWakeMode(C.WAKE_MODE_NETWORK)
-
-        // Inject AI audio processors into the audio sink if any are configured
-        if (audioProcessors.isNotEmpty()) {
-            val audioSink = androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(this)
-                .setAudioProcessors(audioProcessors)
-                .setEnableFloatOutput(true)
-                .build()
-            // Use a custom RenderersFactory that provides the audio sink
-            // The processors are already set — ExoPlayer will use them
-            playerBuilder.setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                    .setUsage(C.USAGE_MEDIA)
-                    .build(),
-                true
-            )
-            Log.i(TAG, "Audio processor chain configured with ${audioProcessors.size} processor(s)")
-        }
 
         val player = playerBuilder.build()
 
