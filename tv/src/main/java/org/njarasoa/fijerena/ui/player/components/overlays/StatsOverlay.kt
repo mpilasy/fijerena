@@ -292,8 +292,8 @@ fun StatsOverlay(
                 // Header
                 Text(
                     text = "📊 Stats for Nerds",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontSize = 20.sp,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 14.sp,
                         fontFamily = FontFamily.Monospace
                     ),
                     color = MaterialTheme.colorScheme.primary,
@@ -445,7 +445,7 @@ fun StatsOverlay(
                 if (isFocused) {
                     Text(
                         text = "D-pad to move • Double-tap center to hide",
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
                         color = Color.White.copy(alpha = CinemaAlpha.textLow),
                         fontWeight = FontWeight.Medium
                     )
@@ -470,7 +470,7 @@ private fun CompactStatRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 15.sp,
+                fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             ),
             color = Color.White.copy(alpha = CinemaAlpha.textMedium),
@@ -479,7 +479,7 @@ private fun CompactStatRow(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 15.sp,
+                fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             ),
             color = Color.White,
@@ -497,7 +497,7 @@ private fun CompactStatRowColored(label: String, value: String, valueColor: Colo
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 15.sp,
+                fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             ),
             color = Color.White.copy(alpha = CinemaAlpha.textMedium),
@@ -506,7 +506,7 @@ private fun CompactStatRowColored(label: String, value: String, valueColor: Colo
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 15.sp,
+                fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             ),
             color = valueColor,
@@ -520,7 +520,7 @@ private fun SectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = 13.sp,
+            fontSize = 10.sp,
             fontFamily = FontFamily.Monospace
         ),
         color = MaterialTheme.colorScheme.primary,
