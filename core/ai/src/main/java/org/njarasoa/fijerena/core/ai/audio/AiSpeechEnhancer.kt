@@ -78,6 +78,16 @@ class AiSpeechEnhancer(private val context: Context) : Closeable {
                 }
             }
 
+            // Verify model existence before loading
+            val assets = context.assets.list("") ?: emptyArray()
+            val modelExists = assets.contains(MODEL_PATH)
+            
+            if (!modelExists) {
+                Log.e(TAG, "CRITICAL: AI Model $MODEL_PATH not found in assets! AI will run in dummy passthrough mode.")
+                initialized = true // Mark as initialized so processor stays in chain
+                return true
+            }
+
             val modelBuffer: MappedByteBuffer = FileUtil.loadMappedFile(context, MODEL_PATH)
             interpreter = Interpreter(modelBuffer, options)
             resetStates()

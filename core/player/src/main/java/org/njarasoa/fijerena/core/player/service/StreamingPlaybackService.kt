@@ -89,9 +89,10 @@ class StreamingPlaybackService : MediaSessionService() {
 
     // Audio enhancement
     val nightModeManager = NightModeManager()
+    val nightModeProcessor = org.njarasoa.fijerena.core.player.audio.NightModeProcessor()
     var voiceZoomManager: BraviaVoiceZoomManager? = null
         private set
-    private var audioProcessors: Array<AudioProcessor> = emptyArray()
+    private var audioProcessors: Array<AudioProcessor> = arrayOf(nightModeProcessor)
 
     /**
      * Set external audio processors (e.g., DialogueBoostProcessor from core:ai).
@@ -99,16 +100,70 @@ class StreamingPlaybackService : MediaSessionService() {
      * The service will include these in the DefaultAudioSink chain.
      */
     fun setAudioProcessors(processors: Array<AudioProcessor>) {
-        audioProcessors = processors
+        val list = mutableListOf<AudioProcessor>(nightModeProcessor)
+        list.addAll(processors)
+        audioProcessors = list.toTypedArray()
     }
 
     fun getAudioProcessors(): Array<AudioProcessor> = audioProcessors
+
+    private fun initializeAiAudio() {
+        try {
+            // Use reflection to access core:ai which is only in full flavor
+            val managerClass = Class.forName("org.njarasoa.fijerena.core.ai.audio.AudioEnhancementManager")
+            val detectorClass = Class.forName("org.njarasoa.fijerena.core.ai.SearchCapabilityDetector")
+            
+            // Check tier
+            val detector = detectorClass.getConstructor(Context::class.java).newInstance(this)
+            val detectAudioTierMethod = detectorClass.getMethod("detectAudioTier")
+            val tier = detectAudioTierMethod.invoke(detector)
+            
+            if (tier.toString() == "REALTIME") {
+                Log.i(TAG, "Device tier is REALTIME, initializing AI processor")
+                val manager = managerClass.getConstructor(Context::class.java).newInstance(this)
+                val getProcessorMethod = managerClass.getMethod("getProcessor")
+                val processor = getProcessorMethod.invoke(manager)
+                
+                if (processor is AudioProcessor) {
+                    setAudioProcessors(arrayOf(processor))
+                    Log.i(TAG, "AI Dialogue Booster initialized and injected. Processors: ${audioProcessors.size}")
+                    
+                    // Sync initial strength from prefs
+                    val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+                    val strength = prefs.getFloat("dialogue_boost_strength", 0f)
+                    Log.i(TAG, "Syncing initial strength: $strength")
+                    if (strength > 0f) {
+                        try {
+                            val setStrengthMethod = processor.javaClass.methods.find { it.name == "setStrength" }
+                            setStrengthMethod?.invoke(processor, strength)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to sync strength: ${e.message}")
+                        }
+                    }
+                } else if (processor != null) {
+                    Log.w(TAG, "AI processor is NOT an instance of AudioProcessor: ${processor.javaClass.name}")
+                } else {
+                    Log.w(TAG, "AI processor is null")
+                }
+            } else {
+                Log.i(TAG, "AI Audio disabled: device tier is $tier")
+            }
+        } catch (e: ClassNotFoundException) {
+            Log.d(TAG, "AI Audio not available in this build flavor (core:ai missing)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize AI audio: ${e.message}", e)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         instance = this
         instanceReady.complete(this)
         NetworkMonitor.init(this)
+
+        // Initialize AI Audio Processors if available (Full flavor)
+        initializeAiAudio()
+
         // Initialize Bravia Voice Zoom if on a Sony TV
         val vzm = BraviaVoiceZoomManager(this)
         if (vzm.isAvailable) {
@@ -139,6 +194,17 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     private fun updateAudioDspStats() {
+        // Smart Night Mode Fallback:
+        // If Night Mode is desired but the HAL (DynamicsProcessing) is NOT active,
+        // we enable our internal app-level processor instead.
+        val nmDesired = nightModeManager.enabled
+        if (nmDesired) {
+            // Only use internal processor if HAL failed
+            nightModeProcessor.enabled = !nightModeManager.isActuallyActive
+        } else {
+            nightModeProcessor.enabled = false
+        }
+
         // Read Clear Voice stats from the AudioProcessor via reflection (core:ai is optional)
         var clearVoiceEnabled = false
         var clearVoiceStrength = 0f
@@ -152,17 +218,29 @@ class StreamingPlaybackService : MediaSessionService() {
             try {
                 val clazz = proc.javaClass
                 if (clazz.simpleName == "DialogueBoostProcessor") {
-                    clearVoiceStrength = clazz.getMethod("getStrength").invoke(proc) as? Float ?: 0f
-                    clearVoiceEnabled = clearVoiceStrength > 0f
-                    // Kotlin Boolean properties use "isProperty" for getters
-                    clearVoiceAutoDisabled = clazz.getMethod("isAutoDisabled").invoke(proc) as? Boolean ?: false
-                    aiFramesProcessed = clazz.getMethod("getTotalFramesProcessed").invoke(proc) as? Long ?: 0L
-                    aiFramesSkipped = clazz.getMethod("getTotalFramesSkipped").invoke(proc) as? Long ?: 0L
-                    aiLastInferenceMs = clazz.getMethod("getLastInferenceMs").invoke(proc) as? Long ?: 0L
-                    aiAvgInferenceMs = clazz.getMethod("getAvgInferenceMs").invoke(proc) as? Float ?: 0f
+                    val methods = clazz.methods
+                    
+                    val getStrength = methods.find { it.name == "getStrength" }
+                    clearVoiceStrength = getStrength?.invoke(proc) as? Float ?: 0f
+                    clearVoiceEnabled = clearVoiceStrength > 0.01f
+                    
+                    val isAutoDisabled = methods.find { it.name == "isAutoDisabled" }
+                    clearVoiceAutoDisabled = isAutoDisabled?.invoke(proc) as? Boolean ?: false
+                    
+                    val getProcessed = methods.find { it.name == "getTotalFramesProcessed" }
+                    aiFramesProcessed = getProcessed?.invoke(proc) as? Long ?: 0L
+                    
+                    val getSkipped = methods.find { it.name == "getTotalFramesSkipped" }
+                    aiFramesSkipped = getSkipped?.invoke(proc) as? Long ?: 0L
+                    
+                    val getLastInf = methods.find { it.name == "getLastInferenceMs" }
+                    aiLastInferenceMs = getLastInf?.invoke(proc) as? Long ?: 0L
+                    
+                    val getAvgInf = methods.find { it.name == "getAvgInferenceMs" }
+                    aiAvgInferenceMs = getAvgInf?.invoke(proc) as? Float ?: 0f
                 }
-            } catch (_: Exception) {
-                // core:ai not present or processor not a DialogueBoostProcessor
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to read stats from processor: ${e.message}")
             }
         }
 
@@ -245,7 +323,9 @@ class StreamingPlaybackService : MediaSessionService() {
         val cellularVodMultiplier = prefs.getFloat("cellular_vod_multiplier", 1.0f)
 
         // Restore audio enhancement settings from preferences
-        nightModeManager.enabled = prefs.getBoolean("night_mode_enabled", false)
+        val isNmEnabled = prefs.getBoolean("night_mode_enabled", false)
+        nightModeManager.enabled = isNmEnabled
+        nightModeProcessor.enabled = isNmEnabled
 
         val loadControl = AdaptiveLoadControl(
             contentType = contentType,

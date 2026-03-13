@@ -89,6 +89,11 @@ class DialogueBoostProcessor(
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
+        // Increment a metric even if inactive so we know processor is alive
+        if (inputBuffer.remaining() > 0) {
+            totalFramesProcessed++
+        }
+
         if (!isActive() || inputBuffer.remaining() == 0) {
             // Passthrough: copy input directly to output
             val size = inputBuffer.remaining()

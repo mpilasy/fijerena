@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,6 +77,7 @@ private fun getQuadrantAlignment(position: QuadrantPosition): Alignment {
     }
 }
 
+@OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun StatsOverlay(
     playbackState: PlaybackState,
@@ -200,9 +202,9 @@ fun StatsOverlay(
         }
     }
 
-    // Calculate overlay size (55% width × 75% height)
+    // Calculate overlay size (55% width × 100% height)
     val overlayWidth = (configuration.screenWidthDp * 0.55).dp
-    val overlayHeight = (configuration.screenHeightDp * 0.75).dp
+    val overlayHeight = (configuration.screenHeightDp).dp
 
     Box(
         modifier = Modifier
@@ -212,7 +214,7 @@ fun StatsOverlay(
         Box(
             modifier = Modifier
                 .width(overlayWidth)
-                .height(overlayHeight)
+                .fillMaxHeight()
                 .align(getQuadrantAlignment(quadrantPosition))
                 .background(
                     CinemaGlassBackground,
@@ -409,15 +411,36 @@ fun StatsOverlay(
                         CompactStatRow("Uptime", streamElapsed)
                         CompactStatRow("URL", metadata.streamUrl.substringAfterLast("/").take(20))
 
-                        // Device info
                         SectionHeader("DEVICE")
                         CompactStatRow("Model", android.os.Build.MODEL.take(15))
                         CompactStatRow("API", "${android.os.Build.VERSION.SDK_INT}")
+                        val tier = remember {
+                            try {
+                                val detectorClass = Class.forName("org.njarasoa.fijerena.core.ai.SearchCapabilityDetector")
+                                "Unknown" 
+                            } catch (_: Exception) { "BASIC" }
+                        }
+                        
+                        val procCount = remember { StreamingPlaybackService.getInstance()?.getAudioProcessors()?.size ?: 0 }
+                        CompactStatRow("AI Tier", if (procCount > 0) "REALTIME" else "BASIC/NONE")
 
                         // AI Audio DSP
                         SectionHeader("AI AUDIO DSP")
                         val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else CinemaTextPrimary
                         CompactStatRowColored("Night Mode", if (audioDspStats.nightModeEnabled) "ON" else "OFF", nightModeColor)
+                        
+                        // Added debug info for Night Mode
+                        val nmActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.enabled ?: false }
+                        val isHalActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.isActuallyActive ?: false }
+                        val sessionId = remember { 
+                            val p = StreamingPlaybackService.getInstance()?.getPlayer()
+                            if (p is androidx.media3.exoplayer.ExoPlayer) p.audioSessionId else 0
+                        }
+                        CompactStatRow("Audio Session", "$sessionId")
+                        CompactStatRow("DSP Active", if (nmActive && sessionId != 0) "YES" else "NO")
+                        if (nmActive) {
+                            CompactStatRow("NM Engine", if (isHalActive) "HAL (System)" else "APP (Internal)")
+                        }
 
                         val cvStatus = when {
                             audioDspStats.clearVoiceAutoDisabled -> "DISABLED (slow)"
@@ -430,7 +453,9 @@ fun StatsOverlay(
                             else -> CinemaTextPrimary
                         }
                         CompactStatRowColored("Clear Voice", cvStatus, cvColor)
-                        if (audioDspStats.clearVoiceEnabled || audioDspStats.aiFramesProcessed > 0) {
+                        
+                        // Always show these if we have a processor, so we can see 0s
+                        if (procCount > 0) {
                             CompactStatRow("AI Latency", "${audioDspStats.aiLastInferenceMs}ms (avg ${String.format("%.1f", audioDspStats.aiAvgInferenceMs)}ms)")
                             val skipColor = when {
                                 audioDspStats.aiFramesSkipped == 0L -> CinemaSuccess
@@ -439,6 +464,7 @@ fun StatsOverlay(
                             }
                             CompactStatRowColored("AI Frames", "${audioDspStats.aiFramesProcessed} ok / ${audioDspStats.aiFramesSkipped} skip", skipColor)
                         }
+
                         if (audioDspStats.voiceZoomAvailable) {
                             val vzColor = if (audioDspStats.voiceZoomEnabled) CinemaSuccess else CinemaTextPrimary
                             CompactStatRowColored("Voice Zoom", if (audioDspStats.voiceZoomEnabled) "ON" else "OFF", vzColor)
@@ -449,12 +475,26 @@ fun StatsOverlay(
                 Spacer(modifier = Modifier.weight(1f))
 
                 if (isFocused) {
-                    Text(
-                        text = "D-pad to move • Double-tap center to hide",
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
-                        fontWeight = FontWeight.Medium
-                    )
+                    Column {
+                        Text(
+                            text = "D-pad to move • Double-tap center to hide",
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
+                            fontWeight = FontWeight.Medium
+                        )
+                        val caps = remember { org.njarasoa.fijerena.core.player.device.DeviceDetector.detect() }
+                        Text(
+                            text = "Build: Mar 12 18:45 (v4-smart-night-mode)",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = CinemaTextSecondary.copy(alpha = 0.3f),
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                        Text(
+                            text = "Device: ${android.os.Build.MODEL} | Type: ${caps.deviceType}",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = CinemaTextSecondary.copy(alpha = 0.3f)
+                        )
+                    }
                 }
             }
             }
