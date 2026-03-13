@@ -1,93 +1,48 @@
-# 📋 Plan: AI Phase 1 Implementation - Audio & Dialogue Clarity (v4 - Production Grade)
+# 📋 Plan: AI Phase 1 Implementation - Audio & Dialogue Clarity (v4 - WIP/EXPERIMENTAL)
 
 ## 🎯 Objective
-Implement "Clear Voice" (AI Dialogue Enhancement) and "Smart Night Mode" (DSP Dynamics Compression). This version focuses on **Clean Architecture isolation**, **High-Fidelity Surround Sound**, and **Graceful Performance Degradation**.
+Implement "Clear Voice" (AI Dialogue Enhancement) and "Smart Night Mode" (DSP Dynamics Compression). **Status: WIP / EXPERIMENTAL (March 2026)**.
 
 ---
 
-## 🏗️ 1. Architecture & Core Components (Revised)
+## 🏗️ 1. Architecture & Core Components (WIP)
 
-### 1.1 `AiAudioProcessor` (Modular Strategy)
-- **Location:** `core/player/src/main/java/org/njarasoa/fijerena/core/player/audio/AiAudioProcessor.kt`
-- **Isolation:** This class **MUST NOT** import any TFLite libraries. It defines a generic `SpeechEnhancer` interface.
-- **Dependency Injection:** `core:player` will look for a `SpeechEnhancer` implementation at runtime. If the `full` flavor is active, `core:ai` will provide the DTLN-based implementation.
-- **Latency Reporting:** Explicitly reports **32ms fixed buffer latency** (one 512-sample frame at 16kHz) to ExoPlayer for automatic A/V sync compensation.
-
-### 1.2 Channel Handling (Stereo & Surround)
-- **Stereo (2.0):** Use **Mid/Side (M/S) Decomposition**. Enhance the "Mid" signal and re-mux with "Side".
-- **Surround (5.1/7.1):** Directly isolate the **Center Channel** (usually channel index 2). Apply AI enhancement ONLY to this channel and pass L, R, SL, SR, and LFE through untouched. This preserves the original spatial soundstage.
-
-### 1.3 `AiSpeechEnhancer` (TFLite Implementation)
-- **Location:** `core/ai/src/main/java/org/njarasoa/fijerena/core/ai/audio/DtlnSpeechEnhancer.kt`
-- **Linkage:** Reuses the **native TFLite .so libraries** already bundled in `core:ai` to avoid duplication. 
-- **Model:** Quantized DTLN (INT8 or FP16), targeting **~2-4MB** additional APK size.
+### 1.1 `AiAudioProcessor` (Integrated)
+- **Status:** Implemented in `:core:player`. Gated by `AudioProcessingTier.REALTIME`.
+- **Logic:** Two-stage DTLN (Dual-signal Transformation LSTM Network).
+- **Latency Guard:** Bypasses frames if inference timing > 25ms.
+- **Current Status:** **NON-FUNCTIONAL**. Audio enhancement fails to produce expected output.
 
 ---
 
-## 🛠️ 2. Execution Order (Priority-Based)
+## 🛠️ 2. Execution Order (Updated)
 
-### Priority 1: Smart Night Mode (The "Quick Win")
-- **Implementation:** Use Android's native **`DynamicsProcessing`** API.
-- **Action:** Attach to the `audioSessionId` in `StreamingPlaybackService`.
-- **Goal:** Validate the player's audio signal chain and provide an immediate feature (0% CPU/RAM cost) while AI research continues.
+### Priority 1: Smart Night Mode - COMPLETED
+- Functional on all devices (API 28+).
 
-### Priority 2: AI Infrastructure & Resampling
-- **Action:** Implement the `AiAudioProcessor` in `core:player` with Sinc-based resampling (48kHz <-> 16kHz) and the 512-sample ring buffer.
-- **Goal:** Build the "pipes" for the AI without actually loading a model yet.
+### Priority 2: AI Infrastructure - WIP
+- Pipes are built, but the DTLN model processing is currently non-functional.
 
-### Priority 3: DTLN Model Integration (The "Hard Labor")
-- **Action:** Implement the `DtlnSpeechEnhancer` in `core:ai`.
-- **Goal:** Perform the first real-time inference on the NVIDIA Shield and OnePlus 12R.
+### Priority 3: DTLN Model Integration - WIP
+- Integrated but requires debugging for correct speech enhancement output.
 
----
-
-## 🚀 3. Performance & Graceful Degradation
-
-### 3.1 Timing Guard (The "Single Frame" Bypass)
-If a single inference frame takes **> 25ms**, that frame is bypassed (unprocessed audio) to prevent audio "crackling."
-
-### 3.2 Performance Safety Valve (The "Auto-Kill")
-If the processor skips **more than 5 frames in a 2-second window** (indicating a consistently slow device or high CPU load), the feature will:
-1. **Auto-Disable** for the duration of the current stream.
-2. **Notify the User** via a one-time Toast: *"AI Audio Enhancement disabled due to high system load."*
-3. **Log the Event** for future performance tuning.
+### Priority 4: Sony Voice Zoom - EXPERIMENTAL
+- Integrated but unverified on hardware.
 
 ---
 
-## 📦 4. Binary Size & Artifacts Impact
-- **Isolation:** TFLite dependencies remain strictly in the **Full** flavor. The **Slim** flavor APK will see **0MB** increase.
-- **Full Flavor:** Expected **+3MB to +5MB** (Model only, assuming shared TFLite libs).
+## 🚀 3. Performance & Diagnostics
+- **Stats for Nerds:** Monitoring latency and frame skips, but enhancement is currently bypassed or non-functional.
 
 ---
 
-## 🧪 5. Comprehensive Validation & Test Plan
-1. **A/V Sync Stress:** Play a 10-hour HLS live stream on NVIDIA Shield and monitor for drift over time.
-2. **Dynamic Format Switch:** Change from a 1080p 5.1 stream to a 480p Stereo stream mid-playback. The processor must re-configure without crashing.
-3. **Surround Check:** Play a Dolby Digital 5.1 test file. Verify the "Side" and "Rear" channels are completely untouched by the AI (no "echo" or phasing).
-4. **Multilingual Test:** Verify speech enhancement quality on **English, French, and Malagasy** IPTV channels.
-5. **Memory Leak:** Open/Close the player 50 times in rapid succession on a Sony Bravia to ensure TFLite `Interpreter` resources are fully reclaimed.
-6. Thermal Test: Run 2 hours of 4K content on OnePlus 12R. Verify the "Safety Valve" triggers if the device begins thermal throttling.
+## 📊 Phase 1 Implementation Summary (Current)
 
----
-
-## 📊 Phase 1 Implementation Summary
-
-| Feature Component | Effort | APK Impact | Memory | Perf Risk | Device Gating |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **1. Smart Night Mode (DSP)** | 1 week | 0 MB | Negligible | Very Low | All (API 28+) |
-| **2. AI Processor Infra** | 1.5 weeks | < 0.2 MB | ~5 MB | Low | All (Logic Only) |
-| **3. DTLN AI Model** | 2-3 weeks | +3-5 MB | ~40 MB | Medium | PREMIUM (Full) |
-| **4. Sony Voice Zoom** | 1-2 days | 0 MB | None | None | Bravia Only |
-| **Total** | **~4.5-5.5 weeks** | **~3-5 MB** | **~45 MB** | | |
-
-### 🛠 Suggested Execution Order
-
-1.  **Smart Night Mode First:** High impact, lowest effort. Validates the player integration via `onAudioSessionIdChanged`.
-2.  **AI Processor Infrastructure:** Build the resamplers, M/S decomposition, and ring buffers in `core:player`. Test for A/V sync without AI enhancement active.
-3.  **DTLN Model & Speech Enhancer:** Integrate the TFLite model in `core:ai`. This is the most complex step but benefits from the pipes built in the previous stage.
-4.  **Sony Voice Zoom:** Add the hardware shortcut for Bravia users to complete the TV audio suite.
-
-### 📦 APK Footprint Breakdown
-- **Slim Flavor:** **0 MB increase.** All AI-related code and models are strictly gated in the `full` flavor.
-- **Full Flavor:** **~3 MB - 5 MB increase.** This represents the model size. TFLite native libraries (`.so`) are already present in the APK from the existing Semantic Search implementation.
+| Feature Component | Status | Effort | APK Impact | Memory | Perf Risk | Device Gating |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. Smart Night Mode (DSP)** | ✅ DONE | 1 week | 0 MB | Negligible | Very Low | All (API 28+) |
+| **2. AI Processor Infra** | ⚠️ WIP | 1.5 weeks | < 0.2 MB | ~5 MB | Low | All (Logic Only) |
+| **3. DTLN AI Model** | ⚠️ WIP | 3 weeks | +4 MB | ~40 MB | Medium | PREMIUM (Full) |
+| **4. Sony Voice Zoom** | 🧪 EXP | 2 days | 0 MB | None | None | Bravia Only |
+| **Total** | | **~6 weeks** | **~4 MB** | **~45 MB** | | |
 
