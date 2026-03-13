@@ -12,13 +12,13 @@ import java.nio.ByteOrder
  * Processing pipeline:
  * 1. Extract Mid channel from stereo via M/S decomposition: Mid = (L+R)/2
  * 2. Downsample from input rate (typically 48kHz) to 16kHz using linear interpolation
- * 3. Buffer 512-sample frames and run DTLN inference on each
+ * 3. Buffer 128-sample blocks and run DTLN processBlock() on each
  * 4. Upsample enhanced audio back to original rate
  * 5. Blend enhanced Mid with original using strength parameter
  * 6. Reconstruct stereo: L = Mid + Side, R = Mid - Side
  *
  * Thread safety: queueInput() runs on the audio rendering thread. If inference
- * exceeds 25ms, the frame passes through unmodified. After 10 consecutive misses,
+ * exceeds 25ms, the block passes through unmodified. After 10 consecutive misses,
  * auto-disables to prevent persistent audio degradation.
  */
 @androidx.media3.common.util.UnstableApi
@@ -40,16 +40,13 @@ class DialogueBoostProcessor(
     // Resampling ratio: input rate / model rate
     private var resampleRatio: Float = 3f // 48000 / 16000
 
-    // Ring buffer for accumulating resampled 16kHz mono samples
-    private val ringBuffer = FloatArray(AiSpeechEnhancer.FRAME_SIZE * 2)
+    // Ring buffer for accumulating resampled 16kHz mono samples (BLOCK_SHIFT = 128)
+    private val ringBuffer = FloatArray(AiSpeechEnhancer.BLOCK_SHIFT)
     private var ringBufferPos: Int = 0
 
     // Output buffer
     private var outputBuffer: ByteBuffer = EMPTY_BUFFER
     private var outputReady: Boolean = false
-
-    // Pending input that needs to accumulate into frames
-    private val pendingInput = mutableListOf<ByteBuffer>()
 
     // Timing guard for auto-disable
     private var consecutiveMisses: Int = 0
@@ -77,43 +74,72 @@ class DialogueBoostProcessor(
         resampleRatio = sampleRateHz.toFloat() / AiSpeechEnhancer.MODEL_SAMPLE_RATE
 
         inputFormat = inputAudioFormat
-        // Output format is the same as input — we process in-place
+        // Return the same format — we process in-place without changing the encoding.
+        // Changing the format mid-chain can cause DefaultAudioSink to misroute audio data.
         outputFormat = inputAudioFormat
 
-        Log.i(TAG, "Configured: ${sampleRateHz}Hz, ${channelCount}ch, resample ratio: $resampleRatio")
+        Log.i(TAG, "Configured: ${sampleRateHz}Hz, ${channelCount}ch, encoding: ${inputAudioFormat.encoding}")
         return outputFormat
     }
 
     override fun isActive(): Boolean {
-        return strength > 0.01f && !autoDisabled
+        // Always active once configured to allow live toggling of strength
+        // without re-configuring the AudioSink chain.
+        return inputFormat != AudioFormat.NOT_SET && !autoDisabled
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
-        // Increment a metric even if inactive so we know processor is alive
-        if (inputBuffer.remaining() > 0) {
-            totalFramesProcessed++
+        if (inputBuffer.remaining() == 0) return
+
+        // Increment total frames at the start of every non-empty buffer.
+        // This confirms the processor is receiving data even if strength is 0.
+        totalFramesProcessed++
+
+        val remaining = inputBuffer.remaining()
+        val isFloat = inputFormat.encoding == androidx.media3.common.C.ENCODING_PCM_FLOAT
+        val is16Bit = inputFormat.encoding == androidx.media3.common.C.ENCODING_PCM_16BIT
+        val bytesPerSample = if (isFloat) 4 else if (is16Bit) 2 else 4
+
+        if (outputBuffer == EMPTY_BUFFER || outputBuffer.capacity() < remaining) {
+            outputBuffer = ByteBuffer.allocateDirect(remaining).order(ByteOrder.nativeOrder())
+        } else {
+            outputBuffer.clear()
         }
 
-        if (!isActive() || inputBuffer.remaining() == 0) {
-            // Passthrough: copy input directly to output
-            val size = inputBuffer.remaining()
-            outputBuffer = ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder())
+        if (!isActive() || strength <= 0.01f) {
+            // Passthrough: copy bytes unchanged (same format in, same format out)
             outputBuffer.put(inputBuffer)
             outputBuffer.flip()
             outputReady = true
             return
         }
 
-        val remaining = inputBuffer.remaining()
-        val bytesPerSample = 4 // Float PCM = 4 bytes
-        val totalSamples = remaining / bytesPerSample
-        val framesCount = totalSamples / channelCount
+        // Convert input to float samples for processing
+        val totalSamples: Int
+        val inputSamples: FloatArray
+        if (isFloat) {
+            totalSamples = remaining / 4
+            inputSamples = FloatArray(totalSamples)
+            val floatBuf = inputBuffer.order(ByteOrder.nativeOrder()).asFloatBuffer()
+            floatBuf.get(inputSamples)
+            inputBuffer.position(inputBuffer.position() + remaining)
+        } else if (is16Bit) {
+            totalSamples = remaining / 2
+            inputSamples = FloatArray(totalSamples)
+            val shortBuf = inputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
+            for (i in 0 until totalSamples) {
+                inputSamples[i] = shortBuf.get() / 32768f
+            }
+            inputBuffer.position(inputBuffer.position() + remaining)
+        } else {
+            // Unknown encoding: passthrough
+            outputBuffer.put(inputBuffer)
+            outputBuffer.flip()
+            outputReady = true
+            return
+        }
 
-        // Read input as float samples
-        val inputSamples = FloatArray(totalSamples)
-        val floatBuf = inputBuffer.order(ByteOrder.nativeOrder()).asFloatBuffer()
-        floatBuf.get(inputSamples)
-        inputBuffer.position(inputBuffer.position() + remaining)
+        val framesCount = totalSamples / channelCount
 
         // M/S decomposition: extract Mid and Side from stereo
         val midSamples = FloatArray(framesCount)
@@ -127,7 +153,6 @@ class DialogueBoostProcessor(
                 sideSamples[i] = (l - r) * 0.5f
             }
         } else {
-            // Mono: Mid = signal, Side = 0
             for (i in 0 until framesCount) {
                 midSamples[i] = inputSamples[i]
                 sideSamples[i] = 0f
@@ -146,36 +171,42 @@ class DialogueBoostProcessor(
             downsampled[i] = s0 + (s1 - s0) * frac
         }
 
-        // Accumulate into ring buffer and process 512-sample frames
-        val enhancedFrames = mutableListOf<FloatArray>()
+        // Process through DTLN in BLOCK_SHIFT (128) sample blocks
+        val enhancedBlocks = mutableListOf<FloatArray>()
         for (sample in downsampled) {
             ringBuffer[ringBufferPos++] = sample
-            if (ringBufferPos >= AiSpeechEnhancer.FRAME_SIZE) {
-                val frame = ringBuffer.copyOfRange(0, AiSpeechEnhancer.FRAME_SIZE)
-                val enhanced = processFrame(frame)
-                enhancedFrames.add(enhanced)
+            if (ringBufferPos >= AiSpeechEnhancer.BLOCK_SHIFT) {
+                val block = ringBuffer.copyOfRange(0, AiSpeechEnhancer.BLOCK_SHIFT)
+                enhancedBlocks.add(processBlock(block))
                 ringBufferPos = 0
             }
         }
 
-        // Reconstruct enhanced 16kHz signal from processed frames
-        val enhancedLength = enhancedFrames.size * AiSpeechEnhancer.FRAME_SIZE
+        // Concatenate enhanced blocks into a 16kHz signal
+        val enhancedLength = enhancedBlocks.size * AiSpeechEnhancer.BLOCK_SHIFT
         val enhanced16k = FloatArray(enhancedLength)
-        for (i in enhancedFrames.indices) {
-            enhancedFrames[i].copyInto(enhanced16k, i * AiSpeechEnhancer.FRAME_SIZE)
+        for (i in enhancedBlocks.indices) {
+            enhancedBlocks[i].copyInto(enhanced16k, i * AiSpeechEnhancer.BLOCK_SHIFT)
         }
 
-        // Upsample enhanced signal back to original rate
+        // Upsample enhanced signal back to original rate.
         val enhancedMid = FloatArray(framesCount)
+        val coveredFrames: Int
         if (enhanced16k.isNotEmpty()) {
-            val upRatio = enhanced16k.size.toFloat() / framesCount
-            for (i in 0 until framesCount) {
-                val srcPos = i * upRatio
+            coveredFrames = minOf((enhanced16k.size * resampleRatio).toInt(), framesCount)
+            for (i in 0 until coveredFrames) {
+                val srcPos = i / resampleRatio
                 val srcIdx = srcPos.toInt().coerceIn(0, enhanced16k.size - 1)
                 val nextIdx = (srcIdx + 1).coerceIn(0, enhanced16k.size - 1)
                 val frac = srcPos - srcIdx
                 enhancedMid[i] = enhanced16k[srcIdx] + (enhanced16k[nextIdx] - enhanced16k[srcIdx]) * frac
             }
+            for (i in coveredFrames until framesCount) {
+                enhancedMid[i] = midSamples[i]
+            }
+        } else {
+            coveredFrames = 0
+            midSamples.copyInto(enhancedMid)
         }
 
         // Blend: output = (1 - strength) * original + strength * enhanced
@@ -191,7 +222,6 @@ class DialogueBoostProcessor(
             for (i in 0 until framesCount) {
                 outputSamples[i * channelCount] = blendedMid[i] + sideSamples[i]
                 outputSamples[i * channelCount + 1] = blendedMid[i] - sideSamples[i]
-                // Pass through any additional channels (5.1/7.1 surround) unmodified
                 for (ch in 2 until channelCount) {
                     outputSamples[i * channelCount + ch] = inputSamples[i * channelCount + ch]
                 }
@@ -200,22 +230,29 @@ class DialogueBoostProcessor(
             blendedMid.copyInto(outputSamples)
         }
 
-        // Write to output buffer
-        outputBuffer = ByteBuffer.allocateDirect(totalSamples * 4).order(ByteOrder.nativeOrder())
-        val outFloat = outputBuffer.asFloatBuffer()
-        outFloat.put(outputSamples)
-        outputBuffer.limit(totalSamples * 4)
-        outputBuffer.position(0)
+        // Write output in the original format (same format in, same format out)
+        if (isFloat) {
+            val outFloat = outputBuffer.asFloatBuffer()
+            outFloat.put(outputSamples)
+            outputBuffer.position(totalSamples * 4)
+        } else {
+            // Convert back to 16-bit
+            for (i in 0 until totalSamples) {
+                val clamped = (outputSamples[i] * 32768f).toInt().coerceIn(-32768, 32767).toShort()
+                outputBuffer.putShort(clamped)
+            }
+        }
+        outputBuffer.flip()
         outputReady = true
     }
 
     /**
-     * Process a single 512-sample frame through the DTLN model.
-     * If inference takes >25ms, returns the original frame and increments miss counter.
+     * Process a single 128-sample block through the DTLN model.
+     * If inference takes >25ms, returns the original block and increments miss counter.
      */
-    private fun processFrame(frame: FloatArray): FloatArray {
+    private fun processBlock(block: FloatArray): FloatArray {
         val startNs = System.nanoTime()
-        val enhanced = enhancer.enhance(frame)
+        val enhanced = enhancer.processBlock(block)
         val elapsedMs = (System.nanoTime() - startNs) / 1_000_000
         lastInferenceMs = elapsedMs
 
@@ -229,7 +266,7 @@ class DialogueBoostProcessor(
                 Log.w(TAG, "Auto-disabling dialogue boost after $MAX_CONSECUTIVE_MISSES consecutive misses")
                 autoDisabled = true
             }
-            return frame
+            return block
         }
 
         consecutiveMisses = 0

@@ -198,9 +198,12 @@ class StreamingPlaybackService : MediaSessionService() {
         // If Night Mode is desired but the HAL (DynamicsProcessing) is NOT active,
         // we enable our internal app-level processor instead.
         val nmDesired = nightModeManager.enabled
+        val isMobile = org.njarasoa.fijerena.core.player.device.DeviceDetector.detect().deviceType == org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE
+        
         if (nmDesired) {
-            // Only use internal processor if HAL failed
-            nightModeProcessor.enabled = !nightModeManager.isActuallyActive
+            // On mobile, always use internal processor for reliability (HAL is often buggy).
+            // On TV (Shield/Bravia), prefer HAL for zero-CPU overhead if it's actually active.
+            nightModeProcessor.enabled = isMobile || !nightModeManager.isActuallyActive
         } else {
             nightModeProcessor.enabled = false
         }
@@ -214,10 +217,13 @@ class StreamingPlaybackService : MediaSessionService() {
         var aiLastInferenceMs = 0L
         var aiAvgInferenceMs = 0f
 
-        for (proc in audioProcessors) {
+        // Use a local copy to avoid concurrent modification if setAudioProcessors is called
+        val currentProcessors = audioProcessors
+        for (proc in currentProcessors) {
             try {
                 val clazz = proc.javaClass
-                if (clazz.simpleName == "DialogueBoostProcessor") {
+                // Match by class name as it might be in a different classloader or shadowed
+                if (clazz.name.endsWith("DialogueBoostProcessor")) {
                     val methods = clazz.methods
                     
                     val getStrength = methods.find { it.name == "getStrength" }
@@ -240,7 +246,7 @@ class StreamingPlaybackService : MediaSessionService() {
                     aiAvgInferenceMs = getAvgInf?.invoke(proc) as? Float ?: 0f
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to read stats from processor: ${e.message}")
+                Log.w(TAG, "Failed to read stats from processor ${proc.javaClass.name}: ${e.message}")
             }
         }
 
@@ -254,7 +260,10 @@ class StreamingPlaybackService : MediaSessionService() {
             aiAvgInferenceMs = aiAvgInferenceMs,
             nightModeEnabled = nightModeManager.enabled,
             voiceZoomEnabled = voiceZoomManager?.enabled ?: false,
-            voiceZoomAvailable = voiceZoomManager?.isAvailable ?: false
+            voiceZoomAvailable = voiceZoomManager?.isAvailable ?: false,
+            nmEncoding = nightModeProcessor.configuredEncoding,
+            nmEnabled = nightModeProcessor.enabled,
+            nmCallCount = nightModeProcessor.queueInputCallCount
         )
     }
 
@@ -296,14 +305,20 @@ class StreamingPlaybackService : MediaSessionService() {
                 eventListener: androidx.media3.exoplayer.audio.AudioRendererEventListener,
                 out: ArrayList<Renderer>
             ) {
+                Log.i(TAG, "buildAudioRenderers called, audioProcessors count: ${audioProcessors.size}, " +
+                    "processors: ${audioProcessors.map { it.javaClass.simpleName }}")
                 val finalAudioSink = if (audioProcessors.isNotEmpty()) {
                     androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
                         .setAudioProcessors(audioProcessors)
-                        .setEnableFloatOutput(true)
+                        // Do NOT enable float output — when float output is enabled,
+                        // DefaultAudioSink skips the user audio processor chain entirely
+                        // (only internal float processors are used). Keeping this false
+                        // ensures NightModeProcessor and DialogueBoostProcessor receive data.
                         .build()
                 } else {
                     audioSink
                 }
+                Log.i(TAG, "Built custom DefaultAudioSink with ${audioProcessors.size} processors, floatOutput=true")
                 super.buildAudioRenderers(
                     context,
                     extensionRendererMode,
@@ -314,9 +329,9 @@ class StreamingPlaybackService : MediaSessionService() {
                     eventListener,
                     out
                 )
+                Log.i(TAG, "Audio renderers built: ${out.size} total renderers, types: ${out.map { it.javaClass.simpleName }}")
             }
         }.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-         .setEnableAudioFloatOutput(true)
 
         val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
@@ -374,7 +389,14 @@ class StreamingPlaybackService : MediaSessionService() {
         // Night Mode: attach DynamicsProcessing to the player's audio session
         player.addListener(object : Player.Listener {
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                nightModeManager.attach(audioSessionId)
+                // On mobile, we prefer the internal NightModeProcessor for reliability.
+                // Only attach the HAL (DynamicsProcessing) on non-mobile devices (TV).
+                val isTv = org.njarasoa.fijerena.core.player.device.DeviceDetector.detect().deviceType != org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE
+                if (isTv) {
+                    nightModeManager.attach(audioSessionId)
+                } else {
+                    Log.d(TAG, "Mobile device detected, skipping HAL Night Mode attachment in favor of internal processor.")
+                }
             }
         })
 

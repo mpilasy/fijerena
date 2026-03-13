@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.player.audio
 
+import android.util.Log
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.AudioProcessor.AudioFormat
 import androidx.media3.common.util.UnstableApi
@@ -11,7 +12,7 @@ import kotlin.math.pow
 
 /**
  * An internal AudioProcessor that implements Night Mode (Dynamic Range Compression).
- * 
+ *
  * Moving this to an AudioProcessor ensures it works on all devices (including NVIDIA Shield)
  * by processing PCM frames before they reach the system audio HAL.
  */
@@ -22,14 +23,8 @@ class NightModeProcessor : AudioProcessor {
     private var outputBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var inputEnded = false
 
+    @Volatile
     var enabled = false
-        set(value) {
-            if (field != value) {
-                field = value
-                // We don't reset the buffer here to avoid pops, 
-                // just change the processing logic in queueInput
-            }
-        }
 
     // Compressor parameters
     private var envelope = 0f
@@ -37,15 +32,14 @@ class NightModeProcessor : AudioProcessor {
     private val releaseTime = 0.200f // 200ms
     private val threshold = 0.15f    // ~ -16dB
     private val ratio = 4f           // 4:1 compression
-    private val makeupGain = 1.2f    // +1.5dB boost
+    private val makeupGain = 1.8f    // ~+5dB boost for audible quiet-lift
+
+    // Observable state for diagnostics
+    var queueInputCallCount = 0L
+        private set
+    val configuredEncoding: Int get() = inputAudioFormat.encoding
 
     override fun configure(inputAudioFormat: AudioFormat): AudioFormat {
-        if (inputAudioFormat.encoding != androidx.media3.common.C.ENCODING_PCM_FLOAT) {
-            // We expect FLOAT PCM for high precision processing
-            // The service is configured to enable float output
-            this.inputAudioFormat = inputAudioFormat
-            return inputAudioFormat
-        }
         this.inputAudioFormat = inputAudioFormat
         return inputAudioFormat
     }
@@ -54,9 +48,15 @@ class NightModeProcessor : AudioProcessor {
 
     override fun queueInput(inputBuffer: ByteBuffer) {
         if (!inputBuffer.hasRemaining()) return
+        queueInputCallCount++
 
         val remaining = inputBuffer.remaining()
-        if (outputBuffer.capacity() < remaining) {
+        val isFloat = inputAudioFormat.encoding == androidx.media3.common.C.ENCODING_PCM_FLOAT
+        val is16Bit = inputAudioFormat.encoding == androidx.media3.common.C.ENCODING_PCM_16BIT
+        val bytesPerSample = if (isFloat) 4 else if (is16Bit) 2 else 4
+        val sampleCount = remaining / bytesPerSample
+
+        if (outputBuffer == AudioProcessor.EMPTY_BUFFER || outputBuffer.capacity() < remaining) {
             outputBuffer = ByteBuffer.allocateDirect(remaining).order(ByteOrder.nativeOrder())
         } else {
             outputBuffer.clear()
@@ -68,33 +68,54 @@ class NightModeProcessor : AudioProcessor {
             return
         }
 
-        // Apply compression (Simplified single-band for performance)
-        val sampleCount = remaining / 4 // Float size
-        val sampleRate = inputAudioFormat.sampleRate.toFloat()
-        
-        val attackCoef = Math.exp(-1.0 / (sampleRate * attackTime)).toFloat()
-        val releaseCoef = Math.exp(-1.0 / (sampleRate * releaseTime)).toFloat()
+        if (isFloat) {
+            val sampleRate = inputAudioFormat.sampleRate.toFloat()
+            val attackCoef = Math.exp(-1.0 / (sampleRate * attackTime)).toFloat()
+            val releaseCoef = Math.exp(-1.0 / (sampleRate * releaseTime)).toFloat()
 
-        for (i in 0 until sampleCount) {
-            val sample = inputBuffer.getFloat()
-            val absSample = abs(sample)
+            for (i in 0 until sampleCount) {
+                val sample = inputBuffer.getFloat()
+                val absSample = abs(sample)
 
-            // Envelope follower
-            val coef = if (absSample > envelope) attackCoef else releaseCoef
-            envelope = coef * envelope + (1f - coef) * absSample
+                val coef = if (absSample > envelope) attackCoef else releaseCoef
+                envelope = coef * envelope + (1f - coef) * absSample
 
-            // Calculate gain reduction
-            var gain = 1.0f
-            if (envelope > threshold) {
-                // Standard compressor equation: 
-                // Gr(dB) = (1/ratio - 1) * (Env(dB) - Threshold(dB))
-                val envDb = 20f * kotlin.math.log10(max(envelope, 0.0001f))
-                val thresholdDb = 20f * kotlin.math.log10(threshold)
-                val reductionDb = (1f / ratio - 1f) * (envDb - thresholdDb)
-                gain = 10f.pow(reductionDb / 20f)
+                var gain = 1.0f
+                if (envelope > threshold) {
+                    val envDb = 20f * kotlin.math.log10(max(envelope, 0.0001f))
+                    val thresholdDb = 20f * kotlin.math.log10(threshold)
+                    val reductionDb = (1f / ratio - 1f) * (envDb - thresholdDb)
+                    gain = 10f.pow(reductionDb / 20f)
+                }
+
+                outputBuffer.putFloat(sample * gain * makeupGain)
             }
+        } else if (is16Bit) {
+            val sampleRate = inputAudioFormat.sampleRate.toFloat()
+            val attackCoef = Math.exp(-1.0 / (sampleRate * attackTime)).toFloat()
+            val releaseCoef = Math.exp(-1.0 / (sampleRate * releaseTime)).toFloat()
 
-            outputBuffer.putFloat(sample * gain * makeupGain)
+            for (i in 0 until sampleCount) {
+                val sample = inputBuffer.getShort() / 32768f
+                val absSample = abs(sample)
+
+                val coef = if (absSample > envelope) attackCoef else releaseCoef
+                envelope = coef * envelope + (1f - coef) * absSample
+
+                var gain = 1.0f
+                if (envelope > threshold) {
+                    val envDb = 20f * kotlin.math.log10(max(envelope, 0.0001f))
+                    val thresholdDb = 20f * kotlin.math.log10(threshold)
+                    val reductionDb = (1f / ratio - 1f) * (envDb - thresholdDb)
+                    gain = 10f.pow(reductionDb / 20f)
+                }
+
+                val compressed = (sample * gain * makeupGain * 32768f).toInt().coerceIn(-32768, 32767).toShort()
+                outputBuffer.putShort(compressed)
+            }
+        } else {
+            // Unknown encoding: passthrough
+            outputBuffer.put(inputBuffer)
         }
 
         outputBuffer.flip()
