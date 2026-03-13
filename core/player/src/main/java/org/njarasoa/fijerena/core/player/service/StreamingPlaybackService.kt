@@ -152,6 +152,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 if (clazz.simpleName == "DialogueBoostProcessor") {
                     clearVoiceStrength = clazz.getMethod("getStrength").invoke(proc) as? Float ?: 0f
                     clearVoiceEnabled = clearVoiceStrength > 0f
+                    // Kotlin Boolean properties use "isProperty" for getters
                     clearVoiceAutoDisabled = clazz.getMethod("isAutoDisabled").invoke(proc) as? Boolean ?: false
                     aiFramesProcessed = clazz.getMethod("getTotalFramesProcessed").invoke(proc) as? Long ?: 0L
                     aiFramesSkipped = clazz.getMethod("getTotalFramesSkipped").invoke(proc) as? Long ?: 0L
