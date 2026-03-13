@@ -197,9 +197,9 @@ fun StatsOverlay(
         }
     }
 
-    // Calculate overlay size (35% width × 50% height)
-    val overlayWidth = (configuration.screenWidthDp * 0.35).dp
-    val overlayHeight = (configuration.screenHeightDp * 0.50).dp
+    // Calculate overlay size (45% width × 65% height)
+    val overlayWidth = (configuration.screenWidthDp * 0.45).dp
+    val overlayHeight = (configuration.screenHeightDp * 0.65).dp
 
     Box(
         modifier = Modifier
@@ -281,19 +281,19 @@ fun StatsOverlay(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp)
+                    .padding(24.dp)
             ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Header
                 Text(
                     text = "📊 Stats for Nerds",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 14.sp,
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontSize = 20.sp,
                         fontFamily = FontFamily.Monospace
                     ),
                     color = MaterialTheme.colorScheme.primary,
@@ -315,12 +315,12 @@ fun StatsOverlay(
                 // Two-column layout
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Left Column
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         // Video stats
                         SectionHeader("VIDEO")
@@ -363,7 +363,7 @@ fun StatsOverlay(
                     // Right Column
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         // Playback stats
                         SectionHeader("PLAYBACK")
@@ -445,7 +445,7 @@ fun StatsOverlay(
                 if (isFocused) {
                     Text(
                         text = "D-pad to move • Double-tap center to hide",
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
                         color = Color.White.copy(alpha = CinemaAlpha.textLow),
                         fontWeight = FontWeight.Medium
                     )
@@ -470,7 +470,7 @@ private fun CompactStatRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 11.sp,
+                fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace
             ),
             color = Color.White.copy(alpha = CinemaAlpha.textMedium),
@@ -479,7 +479,7 @@ private fun CompactStatRow(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 11.sp,
+                fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace
             ),
             color = Color.White,
@@ -497,7 +497,7 @@ private fun CompactStatRowColored(label: String, value: String, valueColor: Colo
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 11.sp,
+                fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace
             ),
             color = Color.White.copy(alpha = CinemaAlpha.textMedium),
@@ -506,7 +506,7 @@ private fun CompactStatRowColored(label: String, value: String, valueColor: Colo
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 11.sp,
+                fontSize = 15.sp,
                 fontFamily = FontFamily.Monospace
             ),
             color = valueColor,
@@ -520,11 +520,11 @@ private fun SectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelMedium.copy(
-            fontSize = 10.sp,
+            fontSize = 13.sp,
             fontFamily = FontFamily.Monospace
         ),
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 4.dp)
+        modifier = Modifier.padding(top = 8.dp)
     )
 }
