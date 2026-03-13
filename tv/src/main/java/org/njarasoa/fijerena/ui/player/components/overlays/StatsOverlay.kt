@@ -200,9 +200,9 @@ fun StatsOverlay(
         }
     }
 
-    // Calculate overlay size (45% width × 65% height)
-    val overlayWidth = (configuration.screenWidthDp * 0.45).dp
-    val overlayHeight = (configuration.screenHeightDp * 0.65).dp
+    // Calculate overlay size (55% width × 75% height)
+    val overlayWidth = (configuration.screenWidthDp * 0.55).dp
+    val overlayHeight = (configuration.screenHeightDp * 0.75).dp
 
     Box(
         modifier = Modifier
