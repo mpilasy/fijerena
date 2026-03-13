@@ -256,6 +256,8 @@ fun MobileStatsOverlay(
                 SectionHeader("DEVICE")
                 StatRow("Model", android.os.Build.MODEL)
                 StatRow("API", "${android.os.Build.VERSION.SDK_INT}")
+                val procCount = remember { StreamingPlaybackService.getInstance()?.getAudioProcessors()?.size ?: 0 }
+                StatRow("AI Tier", if (procCount > 0) "REALTIME" else "BASIC/NONE")
 
                 SectionHeader("AI AUDIO DSP")
                 val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else Color.White
@@ -272,7 +274,7 @@ fun MobileStatsOverlay(
                     else -> Color.White
                 }
                 StatRowColored("Clear Voice", cvStatus, cvColor)
-                if (audioDspStats.clearVoiceEnabled || audioDspStats.aiFramesProcessed > 0) {
+                if (audioDspStats.aiFramesProcessed > 0) {
                     StatRow("AI Latency", "${audioDspStats.aiLastInferenceMs}ms (avg ${String.format("%.1f", audioDspStats.aiAvgInferenceMs)}ms)")
                     val skipColor = when {
                         audioDspStats.aiFramesSkipped == 0L -> CinemaSuccess
@@ -285,6 +287,19 @@ fun MobileStatsOverlay(
                     val vzColor = if (audioDspStats.voiceZoomEnabled) CinemaSuccess else Color.White
                     StatRowColored("Voice Zoom", if (audioDspStats.voiceZoomEnabled) "ON" else "OFF", vzColor)
                 }
+
+                val caps = remember { org.njarasoa.fijerena.core.player.device.DeviceDetector.detect() }
+                Text(
+                    text = "Build: Mar 12 18:45 (v4-smart-night-mode)",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                    color = Color.White.copy(alpha = 0.3f),
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+                Text(
+                    text = "Type: ${caps.deviceType}",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                    color = Color.White.copy(alpha = 0.3f)
+                )
             }
         }
     }

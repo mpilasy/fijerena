@@ -34,9 +34,11 @@ class SearchCapabilityDetector(private val context: Context) {
         val manufacturer = Build.MANUFACTURER.uppercase()
         val model = Build.MODEL.uppercase()
         
+        Log.d(TAG, "Detecting tier for device: $manufacturer $model, type: ${caps.deviceType}")
+
         // 1. Check for known premium hardware
         val isPremiumSoC = when {
-            // NVIDIA Shield
+            // NVIDIA Shield (all variants are Tegra X1/X1+)
             caps.deviceType == DeviceType.NVIDIA_SHIELD -> true
             // Modern flagship Snapdragon (OnePlus 13 Snapdragon 8 Elite, etc.)
             model.contains("CPH2655") -> true // OnePlus 13
@@ -57,7 +59,7 @@ class SearchCapabilityDetector(private val context: Context) {
                 SearchTier.PREMIUM
             }
         } catch (e: Exception) {
-            Log.i(TAG, "Device identified as STANDARD tier (No GPU acceleration available)")
+            Log.i(TAG, "Device identified as STANDARD tier (No GPU acceleration available: ${e.message})")
             SearchTier.STANDARD
         }
     }

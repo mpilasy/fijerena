@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -53,6 +54,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
@@ -459,42 +462,68 @@ fun PlayerControlsOverlay(
                             var showSlider by remember { mutableStateOf(false) }
 
                             Button(
-                                onClick = {
-                                    if (isActive) {
-                                        onDialogueBoostStrengthChanged(0f)
-                                    } else {
-                                        onDialogueBoostStrengthChanged(0.7f)
-                                    }
-                                },
+                                onClick = { showSlider = !showSlider },
                                 colors = ButtonDefaults.colors(
                                     containerColor = if (isActive)
                                         CinemaAccent.copy(alpha = CinemaAlpha.scrim)
                                     else
                                         CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                ),
-                                onLongClick = { showSlider = !showSlider }
-                            ) {
-                                Icon(
-                                    Icons.Filled.RecordVoiceOver,
-                                    contentDescription = if (isActive) "Clear Voice On" else "Clear Voice Off",
-                                    tint = if (isActive) MaterialTheme.colorScheme.primary else Color.White
                                 )
+                            ) {
+                                Row(
+                                    verticalAlignment = CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                                ) {
+                                    Icon(
+                                        Icons.Filled.RecordVoiceOver,
+                                        contentDescription = if (isActive) "Clear Voice On" else "Clear Voice Off",
+                                        tint = if (isActive) MaterialTheme.colorScheme.primary else Color.White
+                                    )
+                                    if (isActive) {
+                                        Text(
+                                            text = "${(dialogueBoostStrength * 100).toInt()}%",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
                             }
 
                             if (showSlider) {
-                                var sliderValue by remember(dialogueBoostStrength) { mutableFloatStateOf(dialogueBoostStrength) }
-                                Slider(
-                                    value = sliderValue,
-                                    onValueChange = { sliderValue = it },
-                                    onValueChangeFinished = { onDialogueBoostStrengthChanged(sliderValue) },
-                                    valueRange = 0f..1f,
-                                    modifier = Modifier.padding(horizontal = Spacing.sm),
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = MaterialTheme.colorScheme.primary,
-                                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                                        inactiveTrackColor = Color.White.copy(alpha = CinemaAlpha.tint)
-                                    )
-                                )
+                                // Close other panels or just show this one
+                                Box(
+                                    modifier = Modifier
+                                        .padding(start = Spacing.sm)
+                                        .background(CinemaSurface.copy(alpha = 0.9f), RoundedCornerShape(Spacing.sm))
+                                        .padding(horizontal = Spacing.md, vertical = Spacing.xs)
+                                ) {
+                                    Row(
+                                        verticalAlignment = CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                                    ) {
+                                        Text("Strength", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                                        var sliderValue by remember(dialogueBoostStrength) { mutableFloatStateOf(if (dialogueBoostStrength > 0) dialogueBoostStrength else 0.7f) }
+                                        Slider(
+                                            value = sliderValue,
+                                            onValueChange = { sliderValue = it },
+                                            onValueChangeFinished = { onDialogueBoostStrengthChanged(sliderValue) },
+                                            valueRange = 0f..1f,
+                                            modifier = Modifier.width(150.dp),
+                                            colors = SliderDefaults.colors(
+                                                thumbColor = MaterialTheme.colorScheme.primary,
+                                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                                inactiveTrackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                                            )
+                                        )
+                                        Button(
+                                            onClick = { onDialogueBoostStrengthChanged(0f); showSlider = false },
+                                            scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1.1f),
+                                            colors = ButtonDefaults.colors(containerColor = Color.Transparent)
+                                        ) {
+                                            Text("OFF", style = MaterialTheme.typography.labelSmall, color = Color.Red)
+                                        }
+                                    }
+                                }
                             }
                         }
 

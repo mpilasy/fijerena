@@ -457,8 +457,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         prefs.edit().putBoolean("night_mode_enabled", enabled).apply()
 
         viewModelScope.launch {
-            val service = StreamingPlaybackService.getInstance()
-            service?.nightModeManager?.enabled = enabled
+            val service = StreamingPlaybackService.getInstance() ?: return@launch
+            service.nightModeManager.enabled = enabled
+            service.nightModeProcessor.enabled = enabled
         }
     }
 
