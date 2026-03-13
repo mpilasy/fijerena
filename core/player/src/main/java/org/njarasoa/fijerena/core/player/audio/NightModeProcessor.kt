@@ -41,6 +41,7 @@ class NightModeProcessor : AudioProcessor {
 
     override fun configure(inputAudioFormat: AudioFormat): AudioFormat {
         this.inputAudioFormat = inputAudioFormat
+        Log.e("NightModeProcessor", "Configured: ${inputAudioFormat.sampleRate}Hz, ${inputAudioFormat.channelCount}ch, encoding: ${inputAudioFormat.encoding}")
         return inputAudioFormat
     }
 

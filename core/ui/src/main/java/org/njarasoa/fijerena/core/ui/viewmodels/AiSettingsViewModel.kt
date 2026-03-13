@@ -68,6 +68,10 @@ class AiSettingsViewModel(
                     val settingsDb = SettingsDatabase.getInstance(context)
                     
                     val providers = settingsDb.providerDao().getAllProvidersList()
+                    android.util.Log.i("AiSettingsViewModel", "Found ${providers.size} providers to refresh stats")
+                    if (providers.isEmpty()) {
+                        android.util.Log.i("AiSettingsViewModel", "No providers found to refresh stats")
+                    }
                     var totalStreams = 0
                     var totalCategories = 0
                     var totalSeries = 0
@@ -78,17 +82,29 @@ class AiSettingsViewModel(
                     var processedEpisodes = 0
 
                     for (p in providers) {
-                        totalStreams += streamDao.countStreams(p.id, "LIVE") + streamDao.countStreams(p.id, "VOD")
-                        totalCategories += categoryDao.getCategories(p.id, "LIVE").size + 
+                        val streams = streamDao.countStreams(p.id, "LIVE") + streamDao.countStreams(p.id, "VOD")
+                        val categories = categoryDao.getCategories(p.id, "LIVE").size + 
                                           categoryDao.getCategories(p.id, "VOD").size +
                                           categoryDao.getCategories(p.id, "SERIES").size
-                        totalSeries += seriesDao.countSeries(p.id)
-                        totalEpisodes += episodeDao.countEpisodes(p.id)
+                        val series = seriesDao.countSeries(p.id)
+                        val episodes = episodeDao.countEpisodes(p.id)
                         
-                        processedStreams += streamDao.getStreamsWithEmbeddings(p.id).size
-                        processedCategories += categoryDao.getCategoriesWithEmbeddings(p.id).size
-                        processedSeries += seriesDao.getSeriesWithEmbeddings(p.id).size
-                        processedEpisodes += episodeDao.getEpisodesWithEmbeddings(p.id).size
+                        val procStreams = streamDao.getStreamsWithEmbeddings(p.id).size
+                        val procCategories = categoryDao.getCategoriesWithEmbeddings(p.id).size
+                        val procSeries = seriesDao.getSeriesWithEmbeddings(p.id).size
+                        val procEpisodes = episodeDao.getEpisodesWithEmbeddings(p.id).size
+                        
+                        android.util.Log.d("AiSettingsViewModel", "Provider ${p.id}: streams=$procStreams/$streams, cats=$procCategories/$categories, series=$procSeries/$series, eps=$procEpisodes/$episodes")
+                        
+                        totalStreams += streams
+                        totalCategories += categories
+                        totalSeries += series
+                        totalEpisodes += episodes
+                        
+                        processedStreams += procStreams
+                        processedCategories += procCategories
+                        processedSeries += procSeries
+                        processedEpisodes += procEpisodes
                     }
 
                     _stats.value = AiStats(
@@ -101,8 +117,8 @@ class AiSettingsViewModel(
                         totalEpisodes = totalEpisodes,
                         processedEpisodes = processedEpisodes
                     )
-                } catch (e: Exception) {
-                    android.util.Log.e("AiSettingsViewModel", "Failed to refresh stats", e)
+                } catch (e: Throwable) {
+                    android.util.Log.e("AiSettingsViewModel", "Failed to refresh stats: ${e.message}", e)
                 }
             }
         }

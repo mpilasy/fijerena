@@ -315,11 +315,12 @@ fun MobileStatsOverlay(
 
                 val caps = remember { org.njarasoa.fijerena.core.player.device.DeviceDetector.detect() }
                 Text(
-                    text = "Build: Mar 12 18:45 (v4-smart-night-mode)",
+                    text = "Build: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME} (${org.njarasoa.fijerena.BuildConfig.GIT_HASH})",
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                     color = Color.White.copy(alpha = 0.3f),
                     modifier = Modifier.padding(top = 12.dp)
                 )
+
                 Text(
                     text = "Type: ${caps.deviceType}",
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),

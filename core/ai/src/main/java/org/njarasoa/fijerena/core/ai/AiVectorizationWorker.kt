@@ -27,7 +27,9 @@ class AiVectorizationWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val detector = SearchCapabilityDetector(applicationContext)
-        if (detector.detectTier() != SearchCapabilityDetector.SearchTier.PREMIUM) {
+        val tier = detector.detectTier()
+        Log.i(TAG, "AiVectorizationWorker started. Detected tier: $tier")
+        if (tier != SearchCapabilityDetector.SearchTier.PREMIUM) {
             Log.i(TAG, "Device not premium tier. Skipping vectorization.")
             return@withContext Result.success()
         }
@@ -184,7 +186,7 @@ class AiVectorizationWorker(
             Log.i(TAG, "Vectorization run complete. Processed $processedInThisRun rows across Xtream databases.")
             Result.success()
 
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "Vectorization failed: ${e.message}", e)
             Result.retry()
         } finally {
