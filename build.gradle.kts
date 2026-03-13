@@ -6,3 +6,24 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ksp) apply false
 }
+
+// Collect all APKs into build/outputs/apk/ after every assemble.
+// e.g. tv-full-debug.apk → build/outputs/apk/fijerena-tv-full-debug.apk
+subprojects {
+    afterEvaluate {
+        if (plugins.hasPlugin("com.android.application")) {
+            val rootApkDir = rootProject.file("build/outputs/apk")
+            val moduleApkDir = project.file("build/outputs/apk")
+            tasks.matching { it.name.startsWith("assemble") && !it.name.contains("Test") }.configureEach {
+                doLast {
+                    rootApkDir.mkdirs()
+                    moduleApkDir.walkTopDown()
+                        .filter { it.extension == "apk" && !it.name.contains("release") }
+                        .forEach { apk ->
+                            apk.copyTo(File(rootApkDir, "fijerena-${apk.name}"), overwrite = true)
+                        }
+                }
+            }
+        }
+    }
+}

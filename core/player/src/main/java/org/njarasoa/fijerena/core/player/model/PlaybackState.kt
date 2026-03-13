@@ -76,5 +76,8 @@ data class AudioDspStats(
     val aiAvgInferenceMs: Float = 0f,
     val nightModeEnabled: Boolean = false,
     val voiceZoomEnabled: Boolean = false,
-    val voiceZoomAvailable: Boolean = false
+    val voiceZoomAvailable: Boolean = false,
+    val nmEncoding: Int = 0,
+    val nmEnabled: Boolean = false,
+    val nmCallCount: Long = 0L
 )

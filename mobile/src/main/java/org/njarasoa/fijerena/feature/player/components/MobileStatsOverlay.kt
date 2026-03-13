@@ -256,12 +256,36 @@ fun MobileStatsOverlay(
                 SectionHeader("DEVICE")
                 StatRow("Model", android.os.Build.MODEL)
                 StatRow("API", "${android.os.Build.VERSION.SDK_INT}")
-                val procCount = remember { StreamingPlaybackService.getInstance()?.getAudioProcessors()?.size ?: 0 }
-                StatRow("AI Tier", if (procCount > 0) "REALTIME" else "BASIC/NONE")
+                val aiProcCount = remember { StreamingPlaybackService.getInstance()?.getAudioProcessors()?.size ?: 0 }
+                StatRow("AI Tier", if (aiProcCount > 0) "REALTIME" else "BASIC/NONE")
 
                 SectionHeader("AI AUDIO DSP")
                 val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else Color.White
                 StatRowColored("Night Mode", if (audioDspStats.nightModeEnabled) "ON" else "OFF", nightModeColor)
+
+                val nmActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.enabled ?: false }
+                val isHalActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.isActuallyActive ?: false }
+                val sessionId = remember {
+                    val p = StreamingPlaybackService.getInstance()?.getPlayer()
+                    if (p is androidx.media3.exoplayer.ExoPlayer) p.audioSessionId else 0
+                }
+                StatRow("Audio Session", "$sessionId")
+                StatRow("DSP Active", if (nmActive && sessionId != 0) "YES" else "NO")
+                if (nmActive) {
+                    StatRow("NM Engine", if (isHalActive) "HAL (System)" else "APP (Internal)")
+                }
+                // Debug: show processor encoding and state
+                val encodingName = when (audioDspStats.nmEncoding) {
+                    androidx.media3.common.C.ENCODING_PCM_16BIT -> "PCM_16BIT"
+                    androidx.media3.common.C.ENCODING_PCM_FLOAT -> "PCM_FLOAT"
+                    androidx.media3.common.C.ENCODING_PCM_24BIT -> "PCM_24BIT"
+                    androidx.media3.common.C.ENCODING_PCM_32BIT -> "PCM_32BIT"
+                    0 -> "NOT_SET"
+                    else -> "UNKNOWN(${audioDspStats.nmEncoding})"
+                }
+                StatRow("NM Encoding", encodingName)
+                StatRow("NM Proc Enabled", "${audioDspStats.nmEnabled}")
+                StatRow("NM Calls", "${audioDspStats.nmCallCount}")
 
                 val cvStatus = when {
                     audioDspStats.clearVoiceAutoDisabled -> "DISABLED (slow)"
@@ -274,7 +298,8 @@ fun MobileStatsOverlay(
                     else -> Color.White
                 }
                 StatRowColored("Clear Voice", cvStatus, cvColor)
-                if (audioDspStats.aiFramesProcessed > 0) {
+                val procCount = remember { StreamingPlaybackService.getInstance()?.getAudioProcessors()?.size ?: 0 }
+                if (procCount > 0) {
                     StatRow("AI Latency", "${audioDspStats.aiLastInferenceMs}ms (avg ${String.format("%.1f", audioDspStats.aiAvgInferenceMs)}ms)")
                     val skipColor = when {
                         audioDspStats.aiFramesSkipped == 0L -> CinemaSuccess
