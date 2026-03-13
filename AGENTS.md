@@ -97,7 +97,12 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ### Features
 - **Audio/Subtitle/Quality:** In-playback track switching dialogs.
 - **EPG in Player:** Shows current/next programme. Fetched via `getEpgBulkForItems()`.
-- **Stats Overlay:** Double-tap OK. Shows codecs, network stats, dropped frames, etc.
+- **AI Audio Suite (EXPERIMENTAL - WIP):** 
+  - **Dialogue Boost:** Real-time speech enhancement using two-stage DTLN (Dual-signal Transformation LSTM Network) models. **(Currently non-functional/Under development)**.
+  - **Night Mode:** Smart dynamics compression and limiting. Uses HAL-level `DynamicsProcessing` or APP-level DSP fallback.
+  - **Sony Voice Zoom:** Native hardware integration for compatible Bravia TVs. **(Experimental/Status unverified)**.
+  - **Latency Guard:** Bypasses frames if inference > 25ms; auto-disables on persistent high load.
+- **Stats Overlay:** Double-tap OK. Comprehensive diagnostics including codecs, network speed, dropped frames, AI DSP stats (latency, frame skips), and build info (time, git hash). Repositionable to 4 corners via D-pad.
 - **Auto-resume:** Saves position every 5s; resume if 2-95% progress.
 
 ---

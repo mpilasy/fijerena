@@ -43,6 +43,10 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ### 🎮 Playback Features
 - **Media3 (ExoPlayer)** - Industry-leading video playback engine
 - **4K/HDR Support** - Hardware-accelerated rendering on compatible devices
+- **AI Audio Suite (EXPERIMENTAL/WIP)**:
+  - **Clear Voice** - AI-powered dialogue enhancement (Under development/Non-functional)
+  - **Smart Night Mode** - Real-time dynamics compression for consistent volume
+  - **Sony Voice Zoom** - Native integration for compatible Sony Bravia TVs (Experimental)
 - **Multi-Audio Tracks** - Language and format selection (Stereo, 5.1, 7.1)
 - **Subtitles/Captions** - Support for SRT, VTT, TTML, CEA-608/708
 - **Adaptive Quality** - Manual and automatic bitrate selection
@@ -68,7 +72,11 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
   - Favorites - User-curated collection (configurable size: 10-500 items)
   - Last Watched - Recent viewing history (added after 5s of viewing, configurable size: 1-100 items)
 - **Playback Resume** - Automatic position restore for VOD content (2-95% range)
-- **Stats for Nerds** - Real-time playback metrics overlay
+- **Stats for Nerds** - Comprehensive playback metrics overlay including:
+  - **Video/Audio**: Codecs, bitrates, resolution, frame rate
+  - **Network**: Speed, bandwidth, buffer health, rebuffer stats
+  - **AI DSP**: Tier, latency (inference ms), processed/skipped frames, DSP engine status
+  - **Build**: Compile time and git hash for version tracking
 - **Channel Switching** - D-pad up/down for live TV channel navigation
 - **Channel Overlays** - Category and last-watched side panels (D-pad Left/Right on TV, swipe on mobile)
 - **VOD Seek Controls** - Rewind −30s and Fast-forward +1min via buttons or remote media keys
@@ -95,10 +103,10 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ## 🖥️ Supported Devices
 
 ### ✅ Tested & Optimized
-- **Android Mobile** - Phones & tablets (Android 11+)
-- **NVIDIA Shield** - Shield TV & Shield TV Pro (prioritizes AV1/HEVC codecs)
-- **Chromecast with Google TV** - 4K & HD models
-- **Sony Bravia** - Android TV models (HEVC optimization)
+- **Android Mobile** - Phones & tablets (Android 11+). **OnePlus 12/12R/13** optimized for AI features.
+- **NVIDIA Shield** - Shield TV & Shield TV Pro (prioritizes AV1/HEVC codecs, **PREMIUM AI tier**).
+- **Chromecast with Google TV** - 4K & HD models.
+- **Sony Bravia** - Android TV models (HEVC optimization, **Voice Zoom** experimental integration).
 
 ### 🎯 Target Platform
 - **Minimum SDK**: 30 (Android 11)
@@ -196,8 +204,11 @@ No additional configuration is required for the initial build. The app will prom
 ```
 
 **Output Locations:**
-- Mobile: `mobile/build/outputs/apk/debug/mobile-debug.apk`
-- TV: `tv/build/outputs/apk/debug/tv-debug.apk`
+All generated APKs are automatically collected into the root directory:
+- `build/outputs/apk/fijerena-mobile-full-debug.apk`
+- `build/outputs/apk/fijerena-tv-full-debug.apk`
+
+*Note: APKs are prefixed with `fijerena-` and collected from their respective module build folders.*
 
 ### Release Builds
 

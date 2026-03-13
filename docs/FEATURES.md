@@ -170,10 +170,40 @@ Double-tap OK (TV) or tap stats button (mobile) to show overlay. Repositionable 
 **AUDIO:** Codec, Sample Rate, Channels, Bitrate
 **NETWORK:** Speed, Measured Bandwidth, Buffer health, Buffered position, Rebuffer count/duration, ABR quality switches
 **PLAYBACK:** Position, Duration
-**PERFORMANCE:** Dropped frames (color-coded: <0.5% green, <2% yellow, ≥2% red)
+**PERFORMANCE:** Dropped frames (color-coded: <0.5% green, <2% yellow, ≥2% red), Drop Rate
+**DEVICE:** Model, Android API Level, AI Tier (REALTIME/BASIC), Build time, Git hash
+**AI AUDIO DSP:**
+- **Night Mode**: Status (ON/OFF), Engine (HAL/APP)
+- **Clear Voice**: Status (ON/OFF), Strength %, Slow-device auto-disable status
+- **AI Latency**: Current and average inference time in milliseconds
+- **AI Frames**: Count of processed vs. skipped frames (due to latency guard)
+- **Voice Zoom**: Status (Sony Bravia only)
 **STREAM:** Type (Live/VOD), Retries, Uptime, URL
 
 Mobile stats overlay: dismissible only via X button.
+
+---
+
+## AI Audio Suite (EXPERIMENTAL / WIP)
+
+Exclusive to PREMIUM tier devices (NVIDIA Shield, OnePlus 12/12R/13, high-end Sony Bravia).
+
+### Clear Voice (Dialogue Enhancement) - [UNDER DEVELOPMENT]
+**Current Status: NON-FUNCTIONAL.** 
+The implementation uses a two-stage DTLN (Dual-signal Transformation LSTM Network) model to isolate and boost speech.
+- **Experimental Stage**: Integrated into the pipeline but currently disabled or failing to process audio correctly.
+- **Planned Features**: Real-time GPU/NPU inference, 25ms latency guard, and auto-disable safety valve.
+
+### Smart Night Mode
+Real-time dynamic range compression and limiting.
+- **HAL Integration**: Prefers system-level DynamicsProcessing.
+- **APP Fallback**: Internal DSP implementation.
+
+### Sony Voice Zoom - [EXPERIMENTAL]
+**Current Status: Status unverified.** 
+Planned native integration with Sony Bravia's hardware "Voice Zoom" feature (requires compatible XR processor).
+
+---
 
 ### Track Selection
 In-playback dialogs for audio track, subtitle track, and video quality. D-pad navigable on TV.

@@ -1,5 +1,26 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Enhanced Diagnostics & Experimental AI Audio
+**Release Date:** 2026-03-20
+
+### AI Audio Suite (EXPERIMENTAL / WIP)
+- **Clear Voice (Dialogue Boost):** Integrated two-stage DTLN models for speech enhancement. **(Currently non-functional / Under development)**.
+- **Smart Night Mode:** Added real-time dynamics compression and limiting (HAL/APP fallback).
+- **Sony Voice Zoom:** Experimental native integration for Sony Bravia (XR Processor required). **(Status unverified)**.
+- **Latency Guard:** Implemented 25ms inference timing guard and auto-disable safety valve.
+- **Tier Detection:** Enhanced `SearchCapabilityDetector` for `AudioProcessingTier.REALTIME` on NVIDIA Shield and OnePlus 12/12R/13.
+
+### Stats for Nerds & Diagnostics
+- **AI DSP Stats:** Added real-time tracking for AI tier, inference latency (current/avg), frame processing stats (processed vs skipped), and DSP engine status.
+- **Enhanced Overlay:** New sections for DEVICE info and AI AUDIO DSP metrics. Added build time and git hash for precise version tracking.
+- **Quadrant Movement:** Stats overlay can now be moved to any of the 4 screen corners via D-pad on TV.
+
+### Build & Deployment
+- **Automatic APK Collection:** All generated APKs are now automatically collected into the root `build/outputs/apk/` directory after an `assemble` task.
+- **Consistent Naming:** Collected APKs are prefixed with `fijerena-` for easier identification.
+
+---
+
 ## Version: AI Semantic Search & EPG Management Restore
 **Release Date:** 2026-03-11
 
