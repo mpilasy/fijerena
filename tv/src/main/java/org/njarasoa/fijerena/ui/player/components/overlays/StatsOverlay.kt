@@ -53,7 +53,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -204,14 +207,17 @@ fun StatsOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp)
+            .padding(TvDimensions.safeMarginVertical)
     ) {
         Box(
             modifier = Modifier
                 .width(overlayWidth)
                 .height(overlayHeight)
                 .align(getQuadrantAlignment(quadrantPosition))
-                .background(Color.Black.copy(alpha = CinemaAlpha.glass), shape = RoundedCornerShape(CinemaCornerRadius.medium))
+                .background(
+                    CinemaGlassBackground,
+                    shape = RoundedCornerShape(CinemaCornerRadius.medium)
+                )
                 .then(
                     if (isFocused) Modifier.border(
                         TvDimensions.borderFocusedStats,
@@ -219,8 +225,8 @@ fun StatsOverlay(
                         RoundedCornerShape(CinemaCornerRadius.medium)
                     ) else Modifier
                 )
-                .focusRequester(focusRequester)
                 .onFocusChanged { isFocused = it.isFocused }
+                .focusRequester(focusRequester)
                 .focusable()
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.type == KeyEventType.KeyDown) {
@@ -410,7 +416,7 @@ fun StatsOverlay(
 
                         // AI Audio DSP
                         SectionHeader("AI AUDIO DSP")
-                        val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else Color.White
+                        val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else CinemaTextPrimary
                         CompactStatRowColored("Night Mode", if (audioDspStats.nightModeEnabled) "ON" else "OFF", nightModeColor)
 
                         val cvStatus = when {
@@ -421,7 +427,7 @@ fun StatsOverlay(
                         val cvColor = when {
                             audioDspStats.clearVoiceAutoDisabled -> CinemaError
                             audioDspStats.clearVoiceEnabled -> CinemaSuccess
-                            else -> Color.White
+                            else -> CinemaTextPrimary
                         }
                         CompactStatRowColored("Clear Voice", cvStatus, cvColor)
                         if (audioDspStats.clearVoiceEnabled || audioDspStats.aiFramesProcessed > 0) {
@@ -434,7 +440,7 @@ fun StatsOverlay(
                             CompactStatRowColored("AI Frames", "${audioDspStats.aiFramesProcessed} ok / ${audioDspStats.aiFramesSkipped} skip", skipColor)
                         }
                         if (audioDspStats.voiceZoomAvailable) {
-                            val vzColor = if (audioDspStats.voiceZoomEnabled) CinemaSuccess else Color.White
+                            val vzColor = if (audioDspStats.voiceZoomEnabled) CinemaSuccess else CinemaTextPrimary
                             CompactStatRowColored("Voice Zoom", if (audioDspStats.voiceZoomEnabled) "ON" else "OFF", vzColor)
                         }
                     }
@@ -446,7 +452,7 @@ fun StatsOverlay(
                     Text(
                         text = "D-pad to move • Double-tap center to hide",
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                        color = Color.White.copy(alpha = CinemaAlpha.textLow),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -473,7 +479,7 @@ private fun CompactStatRow(label: String, value: String) {
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             ),
-            color = Color.White.copy(alpha = CinemaAlpha.textMedium),
+            color = CinemaTextSecondary,
             modifier = Modifier.weight(1f, fill = false)
         )
         Text(
@@ -482,7 +488,7 @@ private fun CompactStatRow(label: String, value: String) {
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             ),
-            color = Color.White,
+            color = CinemaTextPrimary,
             fontWeight = FontWeight.Bold
         )
     }
@@ -500,7 +506,7 @@ private fun CompactStatRowColored(label: String, value: String, valueColor: Colo
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             ),
-            color = Color.White.copy(alpha = CinemaAlpha.textMedium),
+            color = CinemaTextSecondary,
             modifier = Modifier.weight(1f, fill = false)
         )
         Text(
