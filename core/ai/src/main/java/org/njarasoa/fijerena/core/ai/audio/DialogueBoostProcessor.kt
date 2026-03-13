@@ -85,7 +85,7 @@ class DialogueBoostProcessor(
     }
 
     override fun isActive(): Boolean {
-        return strength > 0f && !autoDisabled
+        return strength > 0.01f && !autoDisabled
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
