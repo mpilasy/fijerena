@@ -524,7 +524,8 @@ private fun EpgStatusCard(
 
             // Last Pipeline Run
             lastRun?.let { stats ->
-                val time = NumberUtils.formatShortTime(stats.updatedAtMs)
+                val context = LocalContext.current
+                val time = NumberUtils.formatTimestamp(context, stats.updatedAtMs)
                 val duration = NumberUtils.formatDuration(stats.durationMs)
                 val errorText = if (stats.errors > 0) " (${stats.errors} errors)" else ""
                 Text(

@@ -209,23 +209,21 @@ class EpgFileManager private constructor(private val context: Context) {
                 }
             }
 
-            // Schedule WorkManager periodic sync on mobile only
-            if (!isFixedDevice()) {
-                val appSettings = AppSettings(context)
-                val constraints = Constraints.Builder()
-                    .setRequiredNetworkType(WorkNetworkType.CONNECTED)
-                    .build()
-                val initialDelay = calculateDelayUntil(appSettings.epgRefreshTime)
-                val request = PeriodicWorkRequestBuilder<EpgSyncWorker>(24, TimeUnit.HOURS)
-                    .setConstraints(constraints)
-                    .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-                    .build()
-                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                    "epg_sync",
-                    ExistingPeriodicWorkPolicy.REPLACE, // REPLACE so change in refresh time is applied
-                    request
-                )
-            }
+            // Schedule WorkManager periodic sync (Doze-aware, works on both mobile and TV)
+            val appSettings = AppSettings(context)
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(WorkNetworkType.CONNECTED)
+                .build()
+            val initialDelay = calculateDelayUntil(appSettings.epgRefreshTime)
+            val request = PeriodicWorkRequestBuilder<EpgSyncWorker>(24, TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+                .build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "epg_sync",
+                ExistingPeriodicWorkPolicy.REPLACE, // REPLACE so change in refresh time is applied
+                request
+            )
         }
     }
 
@@ -1018,22 +1016,20 @@ class EpgFileManager private constructor(private val context: Context) {
         autoRefreshJob?.cancel()
         scope.launch {
             scheduleAutoRefresh()
-            if (!isFixedDevice()) {
-                val appSettings = AppSettings(context)
-                val constraints = Constraints.Builder()
-                    .setRequiredNetworkType(WorkNetworkType.CONNECTED)
-                    .build()
-                val initialDelay = calculateDelayUntil(appSettings.epgRefreshTime)
-                val request = PeriodicWorkRequestBuilder<EpgSyncWorker>(24, TimeUnit.HOURS)
-                    .setConstraints(constraints)
-                    .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-                    .build()
-                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                    "epg_sync",
-                    ExistingPeriodicWorkPolicy.REPLACE,
-                    request
-                )
-            }
+            val appSettings = AppSettings(context)
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(WorkNetworkType.CONNECTED)
+                .build()
+            val initialDelay = calculateDelayUntil(appSettings.epgRefreshTime)
+            val request = PeriodicWorkRequestBuilder<EpgSyncWorker>(24, TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+                .build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "epg_sync",
+                ExistingPeriodicWorkPolicy.REPLACE,
+                request
+            )
         }
     }
 
