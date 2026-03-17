@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -22,24 +21,18 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.SurroundSound
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,9 +42,17 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Alignment.Companion.BottomCenter
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -114,6 +115,7 @@ fun PlayerControlsOverlay(
 
     // Focus requester for the first focusable control
     val controlsFocusRequester = remember { FocusRequester() }
+    var isProgressBarFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(showFullControls) {
         if (showFullControls) {
@@ -176,70 +178,26 @@ fun PlayerControlsOverlay(
             )
         }
 
-        // Center row: Rewind | Play/Pause | FastForward (VOD only, hidden for live)
+        // Center: Play/Pause (VOD only, hidden for live)
         if (showFullControls && !isLive) {
-            Row(
-                modifier = Modifier.align(Center),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xxl),
-                verticalAlignment = CenterVertically
+            Button(
+                onClick = {
+                    if (isPaused) viewModel.resume() else viewModel.pause()
+                },
+                colors = ButtonDefaults.colors(
+                    containerColor = Color.Transparent
+                ),
+                modifier = Modifier
+                    .align(Center)
+                    .size(TvDimensions.iconButtonSizeLarge)
+                    .focusRequester(controlsFocusRequester)
             ) {
-                // Rewind -30s
-                Button(
-                    onClick = { viewModel.seekRelative(-30_000L) },
-                    colors = ButtonDefaults.colors(
-                        containerColor = Color.Transparent
-                    ),
-                    modifier = Modifier.size(TvDimensions.iconButtonSize)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Filled.FastRewind,
-                            contentDescription = "Rewind 30s",
-                            tint = Color.White,
-                            modifier = Modifier.size(TvDimensions.iconLarge)
-                        )
-                        Text("-30s", style = MaterialTheme.typography.labelSmall, color = Color.White)
-                    }
-                }
-
-                // Play/Pause
-                Button(
-                    onClick = {
-                        if (isPaused) viewModel.resume() else viewModel.pause()
-                    },
-                    colors = ButtonDefaults.colors(
-                        containerColor = Color.Transparent
-                    ),
-                    modifier = Modifier
-                        .size(TvDimensions.iconButtonSizeLarge)
-                        .focusRequester(controlsFocusRequester)
-                ) {
-                    Icon(
-                        imageVector = if (isPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                        contentDescription = if (isPaused) "Play" else "Pause",
-                        tint = Color.White,
-                        modifier = Modifier.size(TvDimensions.iconXLarge)
-                    )
-                }
-
-                // Fast Forward +1min
-                Button(
-                    onClick = { viewModel.seekRelative(60_000L) },
-                    colors = ButtonDefaults.colors(
-                        containerColor = Color.Transparent
-                    ),
-                    modifier = Modifier.size(TvDimensions.iconButtonSize)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Filled.FastForward,
-                            contentDescription = "Fast Forward 1min",
-                            tint = Color.White,
-                            modifier = Modifier.size(TvDimensions.iconLarge)
-                        )
-                        Text("+1m", style = MaterialTheme.typography.labelSmall, color = Color.White)
-                    }
-                }
+                Icon(
+                    imageVector = if (isPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                    contentDescription = if (isPaused) "Play" else "Pause",
+                    tint = Color.White,
+                    modifier = Modifier.size(TvDimensions.iconXLarge)
+                )
             }
         }
 
@@ -261,14 +219,45 @@ fun PlayerControlsOverlay(
                     val duration = liveDuration
 
                     if (duration > 0) {
-                        LinearProgressIndicator(
-                            progress = { position.toFloat() / duration.toFloat() },
+                        val seekStep = 10_000L
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(TvDimensions.progressBar),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
-                        )
+                                .focusable(enabled = showFullControls)
+                                .onFocusChanged { isProgressBarFocused = it.isFocused }
+                                .onKeyEvent { event ->
+                                    if (event.type == KeyEventType.KeyDown) {
+                                        when (event.key) {
+                                            Key.DirectionLeft -> {
+                                                viewModel.seekTo((position - seekStep).coerceAtLeast(0L))
+                                                true
+                                            }
+                                            Key.DirectionRight -> {
+                                                viewModel.seekTo((position + seekStep).coerceAtMost(duration))
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    } else false
+                                }
+                                .then(
+                                    if (isProgressBarFocused) Modifier.border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) else Modifier
+                                )
+                                .padding(vertical = if (isProgressBarFocused) Spacing.xs else 0.dp)
+                        ) {
+                            LinearProgressIndicator(
+                                progress = { position.toFloat() / duration.toFloat() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(if (isProgressBarFocused) 8.dp else TvDimensions.progressBar),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(Spacing.xs))
 
@@ -454,77 +443,6 @@ fun PlayerControlsOverlay(
                                 contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
                                 tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else Color.White
                             )
-                        }
-
-                        // Clear Voice (Dialogue Boost) toggle + slider
-                        if (isDialogueBoostAvailable) {
-                            val isActive = dialogueBoostStrength > 0f
-                            var showSlider by remember { mutableStateOf(false) }
-
-                            Button(
-                                onClick = { showSlider = !showSlider },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = if (isActive)
-                                        CinemaAccent.copy(alpha = CinemaAlpha.scrim)
-                                    else
-                                        CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                )
-                            ) {
-                                Row(
-                                    verticalAlignment = CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
-                                ) {
-                                    Icon(
-                                        Icons.Filled.RecordVoiceOver,
-                                        contentDescription = if (isActive) "Clear Voice On" else "Clear Voice Off",
-                                        tint = if (isActive) MaterialTheme.colorScheme.primary else Color.White
-                                    )
-                                    if (isActive) {
-                                        Text(
-                                            text = "${(dialogueBoostStrength * 100).toInt()}%",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-                            }
-
-                            if (showSlider) {
-                                // Close other panels or just show this one
-                                Box(
-                                    modifier = Modifier
-                                        .padding(start = Spacing.sm)
-                                        .background(CinemaSurface.copy(alpha = 0.9f), RoundedCornerShape(Spacing.sm))
-                                        .padding(horizontal = Spacing.md, vertical = Spacing.xs)
-                                ) {
-                                    Row(
-                                        verticalAlignment = CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
-                                    ) {
-                                        Text("Strength", style = MaterialTheme.typography.labelMedium, color = Color.White)
-                                        var sliderValue by remember(dialogueBoostStrength) { mutableFloatStateOf(if (dialogueBoostStrength > 0) dialogueBoostStrength else 0.7f) }
-                                        Slider(
-                                            value = sliderValue,
-                                            onValueChange = { sliderValue = it },
-                                            onValueChangeFinished = { onDialogueBoostStrengthChanged(sliderValue) },
-                                            valueRange = 0f..1f,
-                                            modifier = Modifier.width(150.dp),
-                                            colors = SliderDefaults.colors(
-                                                thumbColor = MaterialTheme.colorScheme.primary,
-                                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                                inactiveTrackColor = Color.White.copy(alpha = CinemaAlpha.tint)
-                                            )
-                                        )
-                                        Button(
-                                            onClick = { onDialogueBoostStrengthChanged(0f); showSlider = false },
-                                            scale = androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1.1f),
-                                            colors = ButtonDefaults.colors(containerColor = Color.Transparent)
-                                        ) {
-                                            Text("OFF", style = MaterialTheme.typography.labelSmall, color = Color.Red)
-                                        }
-                                    }
-                                }
-                            }
                         }
 
                         // Voice Zoom (Sony Bravia only)
