@@ -217,7 +217,8 @@ fun MobilePlayerScreen(
                     else -> null
                 }
                 if (pos != null && dur != null && dur > 0) {
-                    loaderViewModel.recordHistory(pos, dur)
+                    val isPaused = ps is PlaybackState.Paused
+                    loaderViewModel.recordHistory(pos, dur, isPaused)
                 }
             }
         }

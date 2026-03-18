@@ -132,8 +132,8 @@ fun TvPlayerScreen(
 
     // Set up auto-save listener for playback position
     LaunchedEffect(Unit) {
-        StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration ->
-             loaderViewModel.recordHistory(position, duration)
+        StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration, isPaused ->
+             loaderViewModel.recordHistory(position, duration, isPaused)
         }
     }
 

@@ -265,7 +265,7 @@ class StreamLoaderViewModel(
         mediaRepository?.flushWatchHistory()
     }
 
-    fun recordHistory(position: Long, duration: Long) {
+    fun recordHistory(position: Long, duration: Long, isPaused: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _state.value as? StreamState.Success ?: return@launch
             val repo = mediaRepository ?: return@launch
@@ -280,7 +280,7 @@ class StreamLoaderViewModel(
                     position,
                     duration
                 )
-                repo.onPlaybackProgress(currentState.streamId, position, duration)
+                repo.onPlaybackProgress(currentState.streamId, position, duration, isPaused)
             }
         }
     }

@@ -347,8 +347,8 @@ class MediaRepository(
         provider?.onPlaybackStarted(itemId)
     }
 
-    suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long) {
-        provider?.onPlaybackProgress(itemId, positionMs, durationMs)
+    suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long, isPaused: Boolean = false) {
+        provider?.onPlaybackProgress(itemId, positionMs, durationMs, isPaused)
     }
 
     suspend fun onPlaybackStopped(itemId: String, positionMs: Long, durationMs: Long) {

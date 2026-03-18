@@ -349,7 +349,8 @@ class JellyfinApiService(
         positionTicks: Long,
         isPaused: Boolean,
         playSessionId: String? = null,
-        mediaSourceId: String? = null
+        mediaSourceId: String? = null,
+        playMethod: String? = null
     ) {
         try {
             client.post("$serverUrl/Sessions/Playing/Progress") {
@@ -359,7 +360,8 @@ class JellyfinApiService(
                     positionTicks = positionTicks,
                     isPaused = isPaused,
                     playSessionId = playSessionId,
-                    mediaSourceId = mediaSourceId
+                    mediaSourceId = mediaSourceId,
+                    playMethod = playMethod
                 ))
             }
         } catch (e: Exception) {
@@ -370,7 +372,8 @@ class JellyfinApiService(
     suspend fun reportPlaybackStart(
         itemId: String,
         playSessionId: String? = null,
-        mediaSourceId: String? = null
+        mediaSourceId: String? = null,
+        playMethod: String? = null
     ) {
         try {
             client.post("$serverUrl/Sessions/Playing") {
@@ -378,7 +381,8 @@ class JellyfinApiService(
                 setBody(JellyfinPlaybackStart(
                     itemId = itemId,
                     playSessionId = playSessionId,
-                    mediaSourceId = mediaSourceId
+                    mediaSourceId = mediaSourceId,
+                    playMethod = playMethod
                 ))
             }
         } catch (e: Exception) {
@@ -390,7 +394,8 @@ class JellyfinApiService(
         itemId: String,
         positionTicks: Long,
         playSessionId: String? = null,
-        mediaSourceId: String? = null
+        mediaSourceId: String? = null,
+        playMethod: String? = null
     ) {
         try {
             client.post("$serverUrl/Sessions/Playing/Stopped") {
@@ -399,7 +404,8 @@ class JellyfinApiService(
                     itemId = itemId,
                     positionTicks = positionTicks,
                     playSessionId = playSessionId,
-                    mediaSourceId = mediaSourceId
+                    mediaSourceId = mediaSourceId,
+                    playMethod = playMethod
                 ))
             }
         } catch (e: Exception) {

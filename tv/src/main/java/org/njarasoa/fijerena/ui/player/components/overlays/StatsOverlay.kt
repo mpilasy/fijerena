@@ -148,40 +148,47 @@ fun StatsOverlay(
                     0
                 }
 
-                // Estimate network speed from bitrate
                 val tracks = p.currentTracks
-                var totalBitrate = 0
+                var currentVideoBitrate = 0
+                var currentAudioBitrate = 0
 
-                // Get video track
                 for (i in 0 until tracks.groups.size) {
                     val group = tracks.groups[i]
-                    if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO && group.length > 0) {
-                        val format = group.getTrackFormat(0)
-                        videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
-                        videoResolution = "${format.width} × ${format.height}"
-                        videoFrameRate = if (format.frameRate > 0) "${format.frameRate.toInt()} fps" else "N/A"
-                        videoBitrate = formatBitrate(format.bitrate)
-                        if (format.bitrate > 0) totalBitrate += format.bitrate
-                    }
-                    if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO && group.length > 0) {
-                        val format = group.getTrackFormat(0)
-                        audioCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
-                        audioSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else "N/A"
-                        audioChannels = if (format.channelCount > 0) {
-                            when (format.channelCount) {
-                                1 -> "Mono"
-                                2 -> "Stereo"
-                                6 -> "5.1"
-                                8 -> "7.1"
-                                else -> "${format.channelCount}ch"
+                    if (group.isSelected) {
+                        for (j in 0 until group.length) {
+                            if (group.isTrackSelected(j)) {
+                                val format = group.getTrackFormat(j)
+                                if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
+                                    videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
+                                    videoResolution = "${format.width} × ${format.height}"
+                                    videoFrameRate = if (format.frameRate > 0) "${format.frameRate.toInt()} fps" else "N/A"
+                                    videoBitrate = formatBitrate(format.bitrate)
+                                    currentVideoBitrate = format.bitrate
+                                }
+                                if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
+                                    audioCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
+                                    audioSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else "N/A"
+                                    audioChannels = if (format.channelCount > 0) {
+                                        when (format.channelCount) {
+                                            1 -> "Mono"; 2 -> "Stereo"; 6 -> "5.1"; 8 -> "7.1"
+                                            else -> "${format.channelCount}ch"
+                                        }
+                                    } else "N/A"
+                                    audioBitrate = formatBitrate(format.bitrate)
+                                    currentAudioBitrate = format.bitrate
+                                }
+                                break // Found the selected track in this group
                             }
-                        } else "N/A"
-                        audioBitrate = formatBitrate(format.bitrate)
-                        if (format.bitrate > 0) totalBitrate += format.bitrate
+                        }
                     }
                 }
 
-                networkSpeed = if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
+                // Use bandwidth estimate for network speed if available, otherwise total bitrate
+                val bw = serviceBandwidth
+                networkSpeed = if (bw > 0) formatBitrate(bw.toInt()) else {
+                    val totalBitrate = currentVideoBitrate + currentAudioBitrate
+                    if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
+                }
             }
 
             // Update stream elapsed time
