@@ -48,11 +48,13 @@ class StreamLoaderViewModel(
             val lastWatchedStreams: List<MediaItem> = emptyList(),
             val currentEpgProgram: EpgProgram? = null,
             val nextEpgProgram: EpgProgram? = null,
-            val isFavorite: Boolean = false
-        ) : StreamState()
-        data class Error(val message: String) : StreamState()
-    }
+            val isFavorite: Boolean = false,
+            val savedAudioTrackIndex: Int? = null,
+            val savedSubtitleTrackIndex: Int? = null
+            ) : StreamState()
 
+            data class Error(val message: String) : StreamState()
+            }
     private val _state = MutableStateFlow<StreamState>(StreamState.Loading)
     val state: StateFlow<StreamState> = _state.asStateFlow()
 
@@ -134,11 +136,17 @@ class StreamLoaderViewModel(
 
             result.fold(
                 onSuccess = { playable ->
-                    // Determine Resume Position
+                    // Determine Resume Position and Track Settings
                     var resumePos = 0L
-                    if (!startFromBeginning && contentType != ContentType.LIVE_TV && appSettings.autoResumeEnabled) {
-                        val saved = repo.getPlaybackPositionSuspend(streamId, contentType)
-                        if (saved != null) {
+                    var savedAudioIndex: Int? = null
+                    var savedSubtitleIndex: Int? = null
+
+                    val saved = repo.getPlaybackPositionSuspend(streamId, contentType)
+                    if (saved != null) {
+                        savedAudioIndex = saved.audioTrackIndex
+                        savedSubtitleIndex = saved.subtitleTrackIndex
+
+                        if (!startFromBeginning && contentType != ContentType.LIVE_TV && appSettings.autoResumeEnabled) {
                             val progressPercent = if (saved.duration > 0) {
                                 (saved.playbackPosition.toFloat() / saved.duration.toFloat()) * 100f
                             } else 0f
@@ -184,7 +192,9 @@ class StreamLoaderViewModel(
                         lastWatchedStreams = lastWatched,
                         currentEpgProgram = currentProgram,
                         nextEpgProgram = nextProgram,
-                        isFavorite = isFav
+                        isFavorite = isFav,
+                        savedAudioTrackIndex = savedAudioIndex,
+                        savedSubtitleTrackIndex = savedSubtitleIndex
                     )
 
                     // Schedule history update (Recent Channels) after configured delay
@@ -265,7 +275,13 @@ class StreamLoaderViewModel(
         mediaRepository?.flushWatchHistory()
     }
 
-    fun recordHistory(position: Long, duration: Long, isPaused: Boolean = false) {
+    fun recordHistory(
+        position: Long,
+        duration: Long,
+        isPaused: Boolean = false,
+        audioTrackIndex: Int? = null,
+        subtitleTrackIndex: Int? = null
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _state.value as? StreamState.Success ?: return@launch
             val repo = mediaRepository ?: return@launch
@@ -278,7 +294,9 @@ class StreamLoaderViewModel(
                     categoryId,
                     contentType,
                     position,
-                    duration
+                    duration,
+                    audioTrackIndex = audioTrackIndex,
+                    subtitleTrackIndex = subtitleTrackIndex
                 )
                 repo.onPlaybackProgress(currentState.streamId, position, duration, isPaused)
             }
@@ -288,7 +306,7 @@ class StreamLoaderViewModel(
     /**
      * Call this when playback is stopped/exited to finalize session state.
      */
-    fun stopPlayback(position: Long, duration: Long) {
+    fun stopPlayback(position: Long, duration: Long, audioTrackIndex: Int? = null, subtitleTrackIndex: Int? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _state.value as? StreamState.Success ?: return@launch
             val repo = mediaRepository ?: return@launch
@@ -301,7 +319,9 @@ class StreamLoaderViewModel(
                     categoryId,
                     contentType,
                     position,
-                    duration
+                    duration,
+                    audioTrackIndex = audioTrackIndex,
+                    subtitleTrackIndex = subtitleTrackIndex
                 )
                 // Final notification to provider (e.g. reportPlaybackStopped to Jellyfin)
                 repo.onPlaybackStopped(currentState.streamId, position, duration)
