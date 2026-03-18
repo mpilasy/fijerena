@@ -427,12 +427,12 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 
 ### TV Player (`tv/ui/player/PlayerScreen.kt`)
 
-- D-pad key handling: OK = show controls, Double-OK = stats overlay, Back = exit
+- D-pad key handling: OK = show controls, Double-OK = dismiss stats overlay (if visible), Back = dismiss stats or exit
 - Channel switching: D-pad up/down (Live TV only, disabled for VOD)
 - Controls overlay: TvLazyRow of buttons (Play/Pause, Audio, Subtitle, Quality, Stats, Favorite)
-- Stream info display: title, EPG current/next programme, progress bar. Uses `basicMarquee()` for long titles.
+- Stream info display: title, **resolution/codec info**, EPG current/next programme, progress bar. Uses `basicMarquee()` for long titles.
 - Channel Overlays: Slide-in panels (Category/Last Watched) are 25% screen width. Channel names use `basicMarquee()`.
-- Stats overlay: repositionable (4 corners via D-pad), two-column layout
+- Stats overlay: static at top-right corner, non-focusable (allows background stream control)
 - Auto-hide: controls after 15s, stream info after 3s
 
 ### Mobile Player (`mobile/feature/player/MobilePlayerScreen.kt`)
@@ -440,8 +440,9 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 - Touch to show/hide controls
 - Swipe up/down for channel switching (Live TV)
 - Slider-based seek bar for VOD
-- GlassPanel-based controls overlay with scrollable button row
-- Stats overlay: dismissible only via X button (not background tap)
+- GlassPanel-based controls overlay with scrollable button row; **respects status bar padding**
+- Stream info display: title and **resolution/codec info** (top-left)
+- Stats overlay: dismissible only via X button (not background tap); **respects status bar padding**
 - Orientation: unlocked to sensor during playback, portrait on exit
 
 ### Stats for Nerds Overlay

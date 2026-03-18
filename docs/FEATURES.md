@@ -161,10 +161,10 @@ Before playback, the app POSTs a `DeviceProfile` to Jellyfin's `/Items/{id}/Play
 Cellular multipliers are tunable 0.5×–3.0× in dev mode via Settings → Cellular Buffer Settings.
 
 ### In-Player EPG (Live TV)
-Current programme title, time range, and progress bar shown in stream info overlay. "Up Next" programme shown below. Fetched on stream start and channel switch. Degrades gracefully if no EPG data.
+Current programme title, time range, progress bar, and **video resolution/codec** shown in stream info overlay. "Up Next" programme shown below. Fetched on stream start and channel switch. Degrades gracefully if no EPG data.
 
 ### Stats for Nerds
-Double-tap OK (TV) or tap stats button (mobile) to show overlay. Repositionable to 4 corners on TV.
+Double-tap OK (TV) or tap stats button (mobile) to **dismiss** the overlay. Fixed to the top-right corner on TV and non-focusable to allow concurrent stream control.
 
 **VIDEO:** Codec, Resolution, Frame Rate, Bitrate
 **AUDIO:** Codec, Sample Rate, Channels, Bitrate
@@ -215,8 +215,8 @@ Position saved every 10 seconds (Live TV) or based on progress (VOD). On re-open
 
 **TV (D-pad remote):**
 - **OK** = show/hide controls (never pauses playback)
-- **Double-OK** = toggle stats overlay
-- **Back** = exit player
+- **Double-OK** = dismiss stats overlay (if visible)
+- **Back** = dismiss stats (if visible) or exit player
 - **D-pad Up/Down** = switch channel (Live TV only)
 - **D-pad Left** = open category channel overlay (Live TV); if last-watched overlay is open, closes it instead
 - **D-pad Right** = open last-watched channel overlay (Live TV); if category overlay is open, closes it instead
