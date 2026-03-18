@@ -30,6 +30,9 @@ class PlayerScreenState(
     var showTopOfHourClock by mutableStateOf(false)
     var showControlHints by mutableStateOf(false)
 
+    // Interaction state
+    var lastOkClickTime by mutableLongStateOf(0L)
+
     // Fast-forward / rewind state
     var seekSpeedLabel by mutableStateOf<String?>(null)
 

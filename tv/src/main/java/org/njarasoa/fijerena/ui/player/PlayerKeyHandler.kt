@@ -46,16 +46,24 @@ fun handlePlayerKeyEvent(
 
     return when (keyEvent.key) {
         Key.DirectionCenter, Key.Enter -> {
-            // When controls are visible, let ENTER pass through to buttons
-            if (state.showControls) {
-                false
-            } else if (!state.showStats) {
-                // Show controls overlay only — never pause on OK
-                state.showControls = true
-                state.showStreamInfo = true
+            val now = System.currentTimeMillis()
+            val isDoubleClick = now - state.lastOkClickTime < 350L
+            state.lastOkClickTime = now
+
+            if (isDoubleClick && state.showStats) {
+                // Double-click ONLY dismisses stats if they are already showing
+                state.showStats = false
                 true
             } else {
-                false
+                // Single-click (or double-click when stats are NOT showing):
+                // Let it pass if controls are visible, or show controls if not
+                if (state.showControls) {
+                    false
+                } else {
+                    state.showControls = true
+                    state.showStreamInfo = true
+                    true
+                }
             }
         }
         Key.DirectionUp -> {

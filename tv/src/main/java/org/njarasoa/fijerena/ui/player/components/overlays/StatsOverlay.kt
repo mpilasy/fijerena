@@ -2,9 +2,9 @@
 
 package org.njarasoa.fijerena.ui.player.components.overlays
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -28,15 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -61,22 +52,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
-enum class QuadrantPosition {
-    TOP_LEFT,
-    TOP_RIGHT,
-    BOTTOM_LEFT,
-    BOTTOM_RIGHT
-}
-
-private fun getQuadrantAlignment(position: QuadrantPosition): Alignment {
-    return when (position) {
-        QuadrantPosition.TOP_LEFT -> Alignment.TopStart
-        QuadrantPosition.TOP_RIGHT -> Alignment.TopEnd
-        QuadrantPosition.BOTTOM_LEFT -> Alignment.BottomStart
-        QuadrantPosition.BOTTOM_RIGHT -> Alignment.BottomEnd
-    }
-}
-
 @OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun StatsOverlay(
@@ -86,13 +61,9 @@ fun StatsOverlay(
 ) {
     val configuration = LocalConfiguration.current
 
-    var quadrantPosition by remember { mutableStateOf(QuadrantPosition.BOTTOM_RIGHT) }
-    var isFocused by remember { mutableStateOf(false) }
-    val focusRequester = remember { FocusRequester() }
-
-    // Request focus when overlay appears to capture all key events
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    // Handle Back button to close overlay
+    BackHandler(enabled = true) {
+        onHide()
     }
 
     // Get current track info
@@ -238,7 +209,6 @@ fun StatsOverlay(
 
     // Calculate overlay size (55% width × 100% height)
     val overlayWidth = (configuration.screenWidthDp * 0.55).dp
-    val overlayHeight = (configuration.screenHeightDp).dp
 
     Box(
         modifier = Modifier
@@ -249,76 +219,17 @@ fun StatsOverlay(
             modifier = Modifier
                 .width(overlayWidth)
                 .fillMaxHeight()
-                .align(getQuadrantAlignment(quadrantPosition))
+                .align(Alignment.TopEnd) // Fixed to top right
                 .background(
                     CinemaGlassBackground,
                     shape = RoundedCornerShape(CinemaCornerRadius.medium)
                 )
-                .then(
-                    if (isFocused) Modifier.border(
-                        TvDimensions.borderFocusedStats,
-                        MaterialTheme.colorScheme.primary,
-                        RoundedCornerShape(CinemaCornerRadius.medium)
-                    ) else Modifier
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(CinemaCornerRadius.medium)
                 )
-                .onFocusChanged { isFocused = it.isFocused }
-                .focusRequester(focusRequester)
-                .focusable()
-                .onKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown) {
-                        when (keyEvent.key) {
-                            Key.DirectionCenter, Key.Enter -> {
-                                // Single press closes overlay
-                                onHide()
-                                true
-                            }
-                            Key.Back -> {
-                                // Close overlay (not the stream)
-                                onHide()
-                                true
-                            }
-                            Key.DirectionUp -> {
-                                // Move to top
-                                quadrantPosition = when (quadrantPosition) {
-                                    QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.TOP_LEFT
-                                    QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.TOP_RIGHT
-                                    else -> quadrantPosition
-                                }
-                                true
-                            }
-                            Key.DirectionDown -> {
-                                // Move to bottom
-                                quadrantPosition = when (quadrantPosition) {
-                                    QuadrantPosition.TOP_LEFT -> QuadrantPosition.BOTTOM_LEFT
-                                    QuadrantPosition.TOP_RIGHT -> QuadrantPosition.BOTTOM_RIGHT
-                                    else -> quadrantPosition
-                                }
-                                true
-                            }
-                            Key.DirectionLeft -> {
-                                // Move to left
-                                quadrantPosition = when (quadrantPosition) {
-                                    QuadrantPosition.TOP_RIGHT -> QuadrantPosition.TOP_LEFT
-                                    QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.BOTTOM_LEFT
-                                    else -> quadrantPosition
-                                }
-                                true
-                            }
-                            Key.DirectionRight -> {
-                                // Move to right
-                                quadrantPosition = when (quadrantPosition) {
-                                    QuadrantPosition.TOP_LEFT -> QuadrantPosition.TOP_RIGHT
-                                    QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.BOTTOM_RIGHT
-                                    else -> quadrantPosition
-                                }
-                                true
-                            }
-                            else -> true  // Consume all other keys when stats are visible
-                        }
-                    } else {
-                        true  // Consume all key events
-                    }
-                }
+                // Not focusable - allows keys to pass to the stream
         ) {
             Box(
                 modifier = Modifier
@@ -473,37 +384,30 @@ fun StatsOverlay(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                if (isFocused) {
-                    Column {
-                        Text(
-                            text = "D-pad to move • Double-tap center to hide",
-                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
-                            fontWeight = FontWeight.Medium
-                        )
-                        val caps = remember { org.njarasoa.fijerena.core.player.device.DeviceDetector.detect() }
-                        Text(
-                            text = "Build: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME} (${org.njarasoa.fijerena.BuildConfig.GIT_HASH})",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = CinemaTextSecondary.copy(alpha = 0.3f),
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
+                Column {
+                    Text(
+                        text = "Double-tap OK to hide • BACK to exit stats",
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
+                        fontWeight = FontWeight.Medium
+                    )
+                    val caps = remember { org.njarasoa.fijerena.core.player.device.DeviceDetector.detect() }
+                    Text(
+                        text = "Build: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME} (${org.njarasoa.fijerena.BuildConfig.GIT_HASH})",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        color = CinemaTextSecondary.copy(alpha = 0.3f),
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
 
-                        Text(
-                            text = "Device: ${android.os.Build.MODEL} | Type: ${caps.deviceType}",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                            color = CinemaTextSecondary.copy(alpha = 0.3f)
-                        )
-                    }
+                    Text(
+                        text = "Device: ${android.os.Build.MODEL} | Type: ${caps.deviceType}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                        color = CinemaTextSecondary.copy(alpha = 0.3f)
+                    )
                 }
             }
             }
         }
-    }
-
-    // Auto-request focus when overlay becomes visible
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
     }
 }
 
