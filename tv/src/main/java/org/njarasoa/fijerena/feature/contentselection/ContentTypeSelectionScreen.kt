@@ -24,7 +24,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -236,17 +241,30 @@ fun ContentTypeSelectionScreen(
                                     shape = RoundedCornerShape(CinemaCornerRadius.large)
                                 )
                                 .onFocusChanged { providerPillFocused = it.isFocused }
-                                .clickable { showProviderPicker = true }
+                                .clickable(role = Role.DropdownList) { showProviderPicker = true }
+                                .semantics {
+                                    contentDescription = "Switch Provider, current provider: $displayName"
+                                }
                         ) {
-                            Text(
-                                text = displayName,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(
                                     horizontal = Spacing.md,
                                     vertical = Spacing.xs
                                 )
-                            )
+                            ) {
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
+                                    modifier = Modifier.padding(start = Spacing.xs)
+                                )
+                            }
                         }
                     }
                     if (hasEpgData) {

@@ -18,6 +18,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.material.icons.filled.ArrowDropDown
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
@@ -136,11 +141,25 @@ fun MobileContentTypeSelectionScreen(
             }
             TopAppBar(
                 title = {
-                    Text(
-                        text = displayName,
-                        modifier = Modifier.clickable { showProviderPicker = true },
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clickable(role = Role.DropdownList) { showProviderPicker = true }
+                            .semantics {
+                                contentDescription = "Switch Provider, current provider: $displayName"
+                            }
+                            .padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs)
+                    ) {
+                        Text(
+                            text = displayName,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 },
                 actions = {
                     if (hasEpgData) {
