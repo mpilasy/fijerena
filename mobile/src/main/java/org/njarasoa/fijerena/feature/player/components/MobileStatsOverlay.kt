@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -165,7 +167,7 @@ fun MobileStatsOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.scrim))
+            .background(CinemaBackground.copy(alpha = CinemaAlpha.scrim))
     ) {
         GlassPanel(
             modifier = Modifier
@@ -173,6 +175,7 @@ fun MobileStatsOverlay(
                 .padding(CinemaSpacing.md)
                 .widthIn(max = MobileDimensions.statsOverlayMaxWidth)
         ) {
+            val typography = MaterialTheme.typography
             Column(
                 modifier = Modifier
                     .padding(CinemaSpacing.md)
@@ -186,9 +189,8 @@ fun MobileStatsOverlay(
                 ) {
                     Text(
                         text = "Stats for Nerds",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        style = typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
                     IconButton(
                         onClick = onClose,
@@ -197,7 +199,7 @@ fun MobileStatsOverlay(
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = Color.White.copy(alpha = CinemaAlpha.textMedium),
+                            tint = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                             modifier = Modifier.size(MobileDimensions.iconSmall)
                         )
                     }
@@ -258,7 +260,7 @@ fun MobileStatsOverlay(
                 StatRow("API", "${android.os.Build.VERSION.SDK_INT}")
 
                 SectionHeader("AUDIO DSP")
-                val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else Color.White
+                val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else CinemaTextPrimary
                 StatRowColored("Night Mode", if (audioDspStats.nightModeEnabled) "ON" else "OFF", nightModeColor)
 
                 val nmActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.enabled ?: false }
@@ -287,15 +289,15 @@ fun MobileStatsOverlay(
                 val caps = remember { org.njarasoa.fijerena.core.player.device.DeviceDetector.detect() }
                 Text(
                     text = "Build: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME} (${org.njarasoa.fijerena.BuildConfig.GIT_HASH})",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                    color = Color.White.copy(alpha = 0.3f),
+                    style = typography.labelSmall,
+                    color = CinemaTextPrimary.copy(alpha = 0.3f),
                     modifier = Modifier.padding(top = 12.dp)
                 )
 
                 Text(
                     text = "Type: ${caps.deviceType}",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                    color = Color.White.copy(alpha = 0.3f)
+                    style = typography.labelSmall,
+                    color = CinemaTextPrimary.copy(alpha = 0.3f)
                 )
             }
         }
@@ -304,13 +306,10 @@ fun MobileStatsOverlay(
 
 @Composable
 private fun SectionHeader(title: String) {
-    val typography = MaterialTheme.typography
-    val sectionHeaderStyle = remember(typography) { typography.labelSmall.copy(fontSize = 11.sp) }
     Text(
         text = title,
-        style = sectionHeaderStyle,
+        style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(top = 6.dp)
     )
 }
@@ -318,21 +317,19 @@ private fun SectionHeader(title: String) {
 @Composable
 private fun StatRow(label: String, value: String) {
     val typography = MaterialTheme.typography
-    val bodySmall12sp = remember(typography) { typography.bodySmall.copy(fontSize = 12.sp) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
-            style = bodySmall12sp,
-            color = Color.White.copy(alpha = CinemaAlpha.textMedium)
+            style = typography.bodySmall,
+            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
         )
         Text(
             text = value,
-            style = bodySmall12sp,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
+            style = typography.bodySmall,
+            color = CinemaTextPrimary
         )
     }
 }
@@ -340,21 +337,19 @@ private fun StatRow(label: String, value: String) {
 @Composable
 private fun StatRowColored(label: String, value: String, valueColor: Color) {
     val typography = MaterialTheme.typography
-    val bodySmall12sp = remember(typography) { typography.bodySmall.copy(fontSize = 12.sp) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
-            style = bodySmall12sp,
-            color = Color.White.copy(alpha = CinemaAlpha.textMedium)
+            style = typography.bodySmall,
+            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
         )
         Text(
             text = value,
-            style = bodySmall12sp,
-            color = valueColor,
-            fontWeight = FontWeight.Bold
+            style = typography.bodySmall,
+            color = valueColor
         )
     }
 }

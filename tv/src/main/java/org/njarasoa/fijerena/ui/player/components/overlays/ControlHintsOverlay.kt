@@ -25,6 +25,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
@@ -39,7 +40,7 @@ fun ControlHintsOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.glass)),
+            .background(org.njarasoa.fijerena.core.ui.theme.CinemaBackground.copy(alpha = CinemaAlpha.glass)),
         contentAlignment = Center
     ) {
         TvGlassPanel(
@@ -56,8 +57,7 @@ fun ControlHintsOverlay(
                 Text(
                     text = "🎮 Player Controls",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 // Control hints
@@ -104,7 +104,7 @@ fun ControlHintsOverlay(
                 Text(
                     text = "This message will auto-dismiss in 7 seconds",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -124,18 +124,17 @@ private fun ControlHint(control: String, description: String) {
             text = control,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
             modifier = Modifier.width(TvDimensions.audioTrackSelectorWidth)
         )
         Text(
             text = "→",
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.White.copy(alpha = CinemaAlpha.textDisabled)
+            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled)
         )
         Text(
             text = description,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.White
+            color = CinemaTextPrimary
         )
     }
 }

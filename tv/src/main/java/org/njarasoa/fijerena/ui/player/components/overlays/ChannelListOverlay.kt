@@ -64,7 +64,7 @@ fun ChannelListOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.tint))
+            .background(org.njarasoa.fijerena.core.ui.theme.CinemaBackground.copy(alpha = CinemaAlpha.tint))
             .onKeyEvent { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Back) {
                     onDismiss()
@@ -89,7 +89,6 @@ fun ChannelListOverlay(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     modifier = Modifier
                         .padding(bottom = Spacing.md)

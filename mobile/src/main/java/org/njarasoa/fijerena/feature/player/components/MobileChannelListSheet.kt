@@ -30,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
@@ -56,7 +58,7 @@ fun MobileChannelListSheet(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.tint))
+            .background(CinemaBackground.copy(alpha = CinemaAlpha.tint))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -86,11 +88,10 @@ fun MobileChannelListSheet(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        color = CinemaTextPrimary
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = CinemaTextPrimary)
                     }
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -98,7 +99,7 @@ fun MobileChannelListSheet(
                     Text(
                         text = "No channels available",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = CinemaAlpha.textMedium)
+                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
                     )
                 } else {
                     LazyColumn(
@@ -121,7 +122,7 @@ fun MobileChannelListSheet(
                                 Text(
                                     text = stream.name,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White,
+                                    color = CinemaTextPrimary,
                                     modifier = Modifier.padding(
                                         horizontal = CinemaSpacing.md,
                                         vertical = CinemaSpacing.sm

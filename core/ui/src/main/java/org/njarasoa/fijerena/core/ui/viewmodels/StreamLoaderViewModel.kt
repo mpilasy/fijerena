@@ -168,6 +168,11 @@ class StreamLoaderViewModel(
                         } else null
                     }
 
+                    // Notify provider that playback started (e.g. for Jellyfin session tracking)
+                    viewModelScope.launch(Dispatchers.IO) {
+                        repo.onPlaybackStarted(streamId)
+                    }
+
                     _state.value = StreamState.Success(
                         streamUrl = playable.uri,
                         streamHeaders = playable.headers,
@@ -276,6 +281,33 @@ class StreamLoaderViewModel(
                     duration
                 )
                 repo.onPlaybackProgress(currentState.streamId, position, duration)
+            }
+        }
+    }
+
+    /**
+     * Call this when playback is stopped/exited to finalize session state.
+     */
+    fun stopPlayback(position: Long, duration: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentState = _state.value as? StreamState.Success ?: return@launch
+            val repo = mediaRepository ?: return@launch
+
+            if (contentType != ContentType.LIVE_TV) {
+                // Final save
+                repo.savePlaybackPosition(
+                    currentState.streamId,
+                    currentState.streamName,
+                    categoryId,
+                    contentType,
+                    position,
+                    duration
+                )
+                // Final notification to provider (e.g. reportPlaybackStopped to Jellyfin)
+                repo.onPlaybackStopped(currentState.streamId, position, duration)
+
+                // Flush to disk immediately
+                repo.flushWatchHistory()
             }
         }
     }

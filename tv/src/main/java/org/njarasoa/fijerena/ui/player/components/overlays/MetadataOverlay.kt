@@ -34,6 +34,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.ui.player.utils.formatTime
@@ -81,14 +82,12 @@ fun MetadataOverlay(
                 Text(
                     text = metadata.channelName,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = metadata.title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    color = CinemaTextPrimary
                 )
             }
 
@@ -101,7 +100,7 @@ fun MetadataOverlay(
                             .fillMaxWidth()
                             .height(TvDimensions.progressBar),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint)
                     )
 
                     Row(
@@ -111,12 +110,12 @@ fun MetadataOverlay(
                         Text(
                             text = formatTime(position),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = CinemaAlpha.overlayMedium)
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.overlayMedium)
                         )
                         Text(
                             text = formatTime(duration),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = CinemaAlpha.overlayMedium)
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.overlayMedium)
                         )
                     }
                 }
@@ -129,13 +128,12 @@ fun MetadataOverlay(
                     Box(
                         modifier = Modifier
                             .size(TvDimensions.statsDotSize)
-                            .background(Color.Red, shape = RoundedCornerShape(6.dp))
+                            .background(org.njarasoa.fijerena.ui.theme.CinemaLive, shape = RoundedCornerShape(6.dp))
                     )
                     Text(
                         text = "LIVE",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        color = CinemaTextPrimary
                     )
                 }
             }
@@ -254,7 +252,7 @@ fun MetadataOverlay(
             Text(
                 text = "Press OK to hide controls • Press BACK to exit",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = CinemaAlpha.textLow)
+                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow)
             )
         }
     }

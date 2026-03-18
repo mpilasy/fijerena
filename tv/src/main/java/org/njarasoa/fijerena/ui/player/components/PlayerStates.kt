@@ -31,17 +31,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
-import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -55,7 +56,7 @@ fun IdleContent(onBack: () -> Unit) {
         Text(
             text = "Ready to play",
             color = CinemaTextPrimary,
-            fontSize = 24.sp
+            style = MaterialTheme.typography.headlineSmall
         )
         Spacer(modifier = Modifier.height(Spacing.md))
         CinemaSecondaryButton(
@@ -84,7 +85,7 @@ fun EndedContent(onBack: () -> Unit) {
         Text(
             text = "Playback ended",
             color = CinemaTextPrimary,
-            fontSize = 24.sp
+            style = MaterialTheme.typography.headlineSmall
         )
         Spacer(modifier = Modifier.height(Spacing.md))
         CinemaSecondaryButton(
@@ -120,8 +121,7 @@ fun ErrorContent(
             Text(
                 text = "⚠️ Playback Error",
                 color = CinemaError,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.headlineMedium
             )
 
             Spacer(modifier = Modifier.height(Spacing.lg))
@@ -130,7 +130,7 @@ fun ErrorContent(
             Text(
                 text = error.message,
                 color = CinemaTextPrimary,
-                fontSize = 18.sp,
+                style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -150,8 +150,7 @@ fun ErrorContent(
                         Text(
                             text = "Technical Details (Dev Mode):",
                             color = CinemaAccent,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.labelLarge
                         )
                         Spacer(modifier = Modifier.height(Spacing.xs))
 
@@ -172,7 +171,7 @@ fun ErrorContent(
                         Text(
                             text = errorDetails,
                             color = CinemaTextSecondary,
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontFamily = FontFamily.Monospace,
                             modifier = Modifier
                                 .fillMaxWidth()

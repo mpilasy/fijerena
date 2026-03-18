@@ -343,8 +343,16 @@ class MediaRepository(
 
     // --- Progress sync hook ---
 
+    suspend fun onPlaybackStarted(itemId: String) {
+        provider?.onPlaybackStarted(itemId)
+    }
+
     suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long) {
         provider?.onPlaybackProgress(itemId, positionMs, durationMs)
+    }
+
+    suspend fun onPlaybackStopped(itemId: String, positionMs: Long, durationMs: Long) {
+        provider?.onPlaybackStopped(itemId, positionMs, durationMs)
     }
 
     // --- Local-only operations (favorites, watch history, playback progress) ---
@@ -376,11 +384,11 @@ class MediaRepository(
         }
         editor.putString(KEY_LAST_CONTENT_TYPE, contentType)
         editor.apply()
-        if (!usesServerUserData) {
-            addToWatchHistory(itemId, itemName, categoryId, contentType,
-                episodeId = episodeId, episodeExtension = episodeExtension,
-                seriesId = seriesId, seriesName = seriesName)
-        }
+
+        // ALWAYS save to local watch history as a robust fallback
+        addToWatchHistory(itemId, itemName, categoryId, contentType,
+            episodeId = episodeId, episodeExtension = episodeExtension,
+            seriesId = seriesId, seriesName = seriesName)
     }
 
     fun getLastCategoryId(contentType: String): String? {

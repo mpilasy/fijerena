@@ -253,7 +253,7 @@ fun MobilePlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
+                    .background(org.njarasoa.fijerena.core.ui.theme.CinemaBackground)
                     .pointerInput(showStats, isLiveContent, playbackState) {
                         detectTapGestures(
                             onTap = {
@@ -343,7 +343,7 @@ fun MobilePlayerScreen(
                                 else -> null
                             }
                             if (pos != null && dur != null && dur > 0) {
-                                loaderViewModel.recordHistory(pos, dur)
+                                loaderViewModel.stopPlayback(pos, dur)
                             }
                         }
                         // Stop playback when leaving the player screen
@@ -360,7 +360,7 @@ fun MobilePlayerScreen(
                     when (currentPs) {
                         PlaybackState.Buffering -> {
                             if (!hasStartedPlaying) {
-                                CircularProgressIndicator(color = Color.White)
+                                CircularProgressIndicator(color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary)
                             }
                         }
                         is PlaybackState.Error -> {
@@ -398,8 +398,8 @@ fun MobilePlayerScreen(
                                 viewModel.pause()
                             }
                         },
-                        onFastForward = if (!isLiveContent) ({ viewModel.seekRelative(60_000L) }) else null,
-                        onRewind = if (!isLiveContent) ({ viewModel.seekRelative(-30_000L) }) else null,
+                        onFastForward = if (!isLiveContent) ({ viewModel.seekRelative(300_000L) }) else null,
+                        onRewind = if (!isLiveContent) ({ viewModel.seekRelative(-60_000L) }) else null,
                         onBack = {
                             // Save position before stopping (stop sets state to Idle)
                             if (!isLiveContent) {
@@ -415,7 +415,7 @@ fun MobilePlayerScreen(
                                     else -> null
                                 }
                                 if (pos != null && dur != null && dur > 0) {
-                                    loaderViewModel.recordHistory(pos, dur)
+                                    loaderViewModel.stopPlayback(pos, dur)
                                 }
                             }
                             viewModel.stop()

@@ -51,6 +51,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -93,12 +96,12 @@ fun MobileControlsOverlay(
     val subtitleTrackCount = remember(metadata) { viewModel.getSubtitleTracks().size }
     val qualityCount = remember(metadata) { viewModel.getVideoQualities().size }
     val typography = MaterialTheme.typography
-    val bodySmall11sp = remember(typography) { typography.bodySmall.copy(fontSize = 11.sp) }
+    val labelStyle = typography.labelSmall
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.tint))
+            .background(CinemaBackground.copy(alpha = CinemaAlpha.tint))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -116,8 +119,8 @@ fun MobileControlsOverlay(
             // Title
             Text(
                 text = metadata.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
+                style = typography.titleMedium,
+                color = CinemaTextPrimary,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = CinemaSpacing.xs),
@@ -141,11 +144,11 @@ fun MobileControlsOverlay(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = Icons.Default.FastRewind,
-                            contentDescription = "Rewind 30s",
-                            tint = Color.White,
+                            contentDescription = "Rewind 1min",
+                            tint = CinemaTextPrimary,
                             modifier = Modifier.size(MobileDimensions.iconLarge)
                         )
-                        Text("-30s", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                        Text("-1m", style = typography.labelSmall, color = CinemaTextPrimary)
                     }
                 }
             }
@@ -160,7 +163,7 @@ fun MobileControlsOverlay(
                         Icons.Default.Pause
                     },
                     contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
-                    tint = Color.White,
+                    tint = CinemaTextPrimary,
                     modifier = Modifier.size(MobileDimensions.iconPlayIcon)
                 )
             }
@@ -172,11 +175,11 @@ fun MobileControlsOverlay(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = Icons.Default.FastForward,
-                            contentDescription = "Fast Forward 1min",
-                            tint = Color.White,
+                            contentDescription = "Fast Forward 5min",
+                            tint = CinemaTextPrimary,
                             modifier = Modifier.size(MobileDimensions.iconLarge)
                         )
-                        Text("+1m", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                        Text("+5m", style = typography.labelSmall, color = CinemaTextPrimary)
                     }
                 }
             }
@@ -219,7 +222,7 @@ fun MobileControlsOverlay(
                         colors = SliderDefaults.colors(
                             thumbColor = MaterialTheme.colorScheme.primary,
                             activeTrackColor = MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                            inactiveTrackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint)
                         )
                     )
 
@@ -231,13 +234,13 @@ fun MobileControlsOverlay(
                     ) {
                         Text(
                             text = formatTime(position),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                            style = typography.bodySmall,
+                            color = CinemaTextPrimary
                         )
                         Text(
                             text = formatTime(duration),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White
+                            style = typography.bodySmall,
+                            color = CinemaTextPrimary
                         )
                     }
 
@@ -252,12 +255,12 @@ fun MobileControlsOverlay(
                     ) {
                         Text(
                             text = "Remaining: ${formatTime(remainingTime)}",
-                            style = bodySmall11sp,
+                            style = labelStyle,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = "Ends at ${org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date(estimatedEndTimeMillis))}",
-                            style = bodySmall11sp,
+                            style = labelStyle,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -274,12 +277,12 @@ fun MobileControlsOverlay(
                         Box(
                             modifier = Modifier
                                 .size(MobileDimensions.liveDotSize)
-                                .background(Color.Red, shape = MaterialTheme.shapes.small)
+                                .background(CinemaLive, shape = MaterialTheme.shapes.small)
                         )
                         Text(
                             text = "LIVE",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = Color.White
+                            style = typography.labelLarge,
+                            color = CinemaTextPrimary
                         )
                     }
                     if (currentEpgProgram != null) {
@@ -288,8 +291,8 @@ fun MobileControlsOverlay(
                         val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
                         Text(
                             text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = CinemaAlpha.textMedium),
+                            style = typography.bodySmall,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                             modifier = Modifier.padding(top = 4.dp)
                         )
                         // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
@@ -304,13 +307,13 @@ fun MobileControlsOverlay(
                                 .padding(top = 4.dp)
                                 .height(2.dp),
                             color = MaterialTheme.colorScheme.primary,
-                            trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                            trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint)
                         )
                         if (nextEpgProgram != null) {
                             Text(
                                 text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(epgContext, nextEpgProgram.startTime)})",
-                                style = bodySmall11sp,
-                                color = Color.White.copy(alpha = CinemaAlpha.tint),
+                                style = labelStyle,
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                                 modifier = Modifier.padding(top = 2.dp)
                             )
                         }
@@ -329,21 +332,21 @@ fun MobileControlsOverlay(
                 // Audio track selector (only if multiple tracks)
                 if (audioTrackCount > 1) {
                     IconButton(onClick = onAudioTrack) {
-                        Icon(Icons.AutoMirrored.Filled.VolumeUp, "Audio", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.VolumeUp, "Audio", tint = CinemaTextPrimary)
                     }
                 }
 
                 // Subtitle selector (only if subtitles available)
                 if (subtitleTrackCount > 0) {
                     IconButton(onClick = onSubtitle) {
-                        Icon(Icons.Filled.Subtitles, "Subtitles", tint = Color.White)
+                        Icon(Icons.Filled.Subtitles, "Subtitles", tint = CinemaTextPrimary)
                     }
                 }
 
                 // Quality selector (only if multiple qualities)
                 if (qualityCount > 1) {
                     IconButton(onClick = onQuality) {
-                        Icon(Icons.Filled.Tune, "Quality", tint = Color.White)
+                        Icon(Icons.Filled.Tune, "Quality", tint = CinemaTextPrimary)
                     }
                 }
 
@@ -352,7 +355,7 @@ fun MobileControlsOverlay(
                     Icon(
                         imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                         contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
-                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.White
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary
                     )
                 }
 
@@ -361,13 +364,13 @@ fun MobileControlsOverlay(
                     Icon(
                         Icons.Filled.NightsStay,
                         contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
-                        tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else Color.White
+                        tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else CinemaTextPrimary
                     )
                 }
 
                 // Stats for nerds (always visible)
                 IconButton(onClick = onStats) {
-                    Icon(Icons.Filled.BarChart, "Stats", tint = Color.White)
+                    Icon(Icons.Filled.BarChart, "Stats", tint = CinemaTextPrimary)
                 }
             }
 
@@ -390,6 +393,6 @@ private fun ClockDisplay() {
     Text(
         text = org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(Date(tick)),
         style = MaterialTheme.typography.titleMedium,
-        color = Color.White
+        color = CinemaTextPrimary
     )
 }

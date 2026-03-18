@@ -93,7 +93,7 @@ fun TvPlayerScreen(
                     else -> null
                 }
                 if (pos != null && dur != null && dur > 0) {
-                    loaderViewModel.recordHistory(pos, dur)
+                    loaderViewModel.stopPlayback(pos, dur)
                 }
             }
             playbackViewModel.stop()
@@ -164,7 +164,7 @@ fun TvPlayerScreen(
                             else -> null
                         }
                         if (pos != null && dur != null && dur > 0) {
-                            loaderViewModel.recordHistory(pos, dur)
+                            loaderViewModel.stopPlayback(pos, dur)
                         }
                     }
                     playbackViewModel.stop()
