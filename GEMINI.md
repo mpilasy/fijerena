@@ -53,15 +53,12 @@ The project follows a modular, Clean Architecture pattern with MVVM.
 ### Deployment
 - TV and Mobile share the same `applicationId`. Use `adb -s <device_id>` when multiple devices are connected.
 - **APK Outputs:** All generated APKs are automatically collected into the root `build/outputs/apk/` directory after an `assemble` task. They are renamed with a `fijerena-` prefix:
-    - `fijerena-mobile-full-debug.apk`
-    - `fijerena-mobile-slim-debug.apk`
-    - `fijerena-tv-full-debug.apk`
-    - `fijerena-tv-slim-debug.apk`
+    - `fijerena-mobile-debug.apk`
+    - `fijerena-tv-debug.apk`
 - **Deployment Strategy:**
-    - **NVIDIA Shield (2019 Pro / mdarcy):** Always deploy the **Full** variant (`fijerena-tv-full-debug.apk`). Identified as PREMIUM AI tier.
-    - **NVIDIA Shield (2017 / darcy):** Always deploy the **Slim** variant (`fijerena-tv-slim-debug.apk`). Identified as PREMIUM AI tier.
-    - **OnePlus 12/12R/13:** Always deploy the **Full** variant (`fijerena-mobile-full-debug.apk`). Identified as PREMIUM AI tier.
-    - **Emulators:** Always deploy the **Slim** variants.
+    - **Android TV:** Deploy `fijerena-tv-debug.apk`.
+    - **Android Mobile:** Deploy `fijerena-mobile-debug.apk`.
+    - **Emulators:** Use standard debug builds.
 
 ## 🎨 Engineering Standards & Conventions
 
@@ -79,18 +76,10 @@ The project follows a modular, Clean Architecture pattern with MVVM.
 - Use `focusRestorer()` and clear focus indicators (Scale 1.1, 2dp border, 8dp glow).
 - Avoid complex UI animations on mid-range TV processors (e.g., Sony Bravia).
 
-### 3. Media Playback
-- **Source Creation:** Always use `StreamingMediaSourceFactory.createMediaSource()`.
-- **Buffer Management:** `AdaptiveLoadControl` handles dynamic swapping of buffer profiles.
-- **AI Audio Suite (WIP / EXPERIMENTAL):**
-  - **Dialogue Boost:** Uses `DialogueBoostProcessor` (two-stage DTLN). **(Currently non-functional / Under development)**.
-  - **Night Mode:** Uses `NightModeProcessor` for dynamics compression.
-  - **Sony Voice Zoom:** Native hardware integration for compatible Bravia TVs. **(Experimental / Status unverified)**.
-  - **Latency Guard:** Inference must complete within 25ms; otherwise, the frame is bypassed. Auto-disables if frame skips are persistent.
-- **Player Controls:**
-  - OK/Center key ONLY shows controls; it does not pause playback.
-  - D-pad Left/Right on Live TV opens channel overlays (does not seek).
-  - Stats overlay repositionable via D-pad.
+### 3. Media Player Controls
+- **OK/Center key** ONLY shows controls; it does not pause playback.
+- **D-pad Left/Right** on Live TV opens channel overlays (does not seek).
+- **Stats overlay** repositionable via D-pad.
 
 ### 4. EPG & Data
 - **EPG Indexing:** XMLTV data is indexed into a Room SQLite DB with FTS4 support.

@@ -36,7 +36,6 @@ fijerena/
 ├── core/
 │   ├── player/      # Media3 implementation, playback service, domain models
 │   ├── network/     # Provider implementations, API clients, EPG pipeline, Room DBs
-│   ├── ai/          # AI Semantic Search, vector embeddings (TensorFlow Lite)
 │   ├── navigation/  # Type-safe Screen definitions (shared)
 │   ├── ui/          # Shared ViewModels, design tokens, and components
 │   └── data/        # Shared session and auth data
@@ -46,7 +45,6 @@ fijerena/
 1. **No Circular Dependencies:** `core:player` **must not** depend on `core:network`. If the player needs network settings, it reads directly from `SharedPreferences`.
 2. **Unified Domain:** All provider-specific data must be mapped to unified domain models in `core:player/domain/` before reaching the UI.
 3. **String IDs:** All media and category IDs must be `String` (not `Int`) to support diverse provider formats (UUIDs, paths, etc.).
-4. **AI Module Separation:** AI logic (embeddings, semantic search) is isolated in `:core:ai`. It consumes from `:core:network` for database access but stays independent of UI logic.
 
 ---
 
@@ -95,14 +93,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **Mobile Gestures:** `detectTapGestures` (tap=controls, double-tap=pause/resume VOD). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
 
 ### Features
-- **Audio/Subtitle/Quality:** In-playback track switching dialogs.
-- **EPG in Player:** Shows current/next programme. Fetched via `getEpgBulkForItems()`.
-- **AI Audio Suite (EXPERIMENTAL - WIP):** 
-  - **Dialogue Boost:** Real-time speech enhancement using two-stage DTLN (Dual-signal Transformation LSTM Network) models. **(Currently non-functional/Under development)**.
-  - **Night Mode:** Smart dynamics compression and limiting. Uses HAL-level `DynamicsProcessing` or APP-level DSP fallback.
-  - **Sony Voice Zoom:** Native hardware integration for compatible Bravia TVs. **(Experimental/Status unverified)**.
-  - **Latency Guard:** Bypasses frames if inference > 25ms; auto-disables on persistent high load.
-- **Stats Overlay:** Double-tap OK. Comprehensive diagnostics including codecs, network speed, dropped frames, AI DSP stats (latency, frame skips), and build info (time, git hash). Repositionable to 4 corners via D-pad.
+- **Stats Overlay:** Double-tap OK. Comprehensive diagnostics including codecs, network speed, dropped frames, and build info (time, git hash). Repositionable to 4 corners via D-pad.
 - **Auto-resume:** Saves position every 5s; resume if 2-95% progress.
 
 ---
@@ -130,14 +121,12 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ### Features
 - **Search:**
   - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows. Accessible via search button on the Content Type Selection screen.
-  - **AI Semantic Search (Hybrid):** Combines SQLite FTS4 with conceptual semantic search using a local vector embedding model (TensorFlow Lite). embeddings stored in `xtream_v2.db` (version 7) dedicated vector tables.
   - **Collapsible Groups:** Results grouped by source with collapsible headers (saved via `rememberSaveable`).
   - **Xtream:** Two-phase parallel search with multi-word matching.
   - **Jellyfin:** Server-side search.
 - **Virtual Categories:** Favorites (configurable 10-500), Last Watched (1-100), Continue Watching (VOD), Recent Categories.
 - **Jellyfin Quick Connect:** Supported for easy auth.
 - **Settings:** Provider management, theme selection, EPG management, cache management, UI scale, export/import (JSON).
-- **AI Settings:** Configure metadata crawling and monitor vectorization progress in `Screen.AiSettings`.
 
 ---
 

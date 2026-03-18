@@ -23,10 +23,10 @@ abstract class BaseM3uMediaProvider : MediaProvider {
 
     override fun isConnected(): Boolean = connected
 
-    override suspend fun getCategories(contentType: String): Result<List<MediaCategory>> {
+    override suspend fun getCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
         if (!connected) {
             val connectResult = connect()
-            if (connectResult.isFailure) return connectResult.map { emptyList() }
+            if (connectResult.isFailure) return kotlin.Result.failure(connectResult.exceptionOrNull() ?: Exception("Connect failed"))
         }
 
         // Single-pass set construction — avoid intermediate list from filter+map
@@ -44,27 +44,27 @@ abstract class BaseM3uMediaProvider : MediaProvider {
                 categories.filter { it.id in videoCategoryIds }
             }
         }
-        return Result.success(filteredCategories)
+        return kotlin.Result.success(filteredCategories)
     }
 
-    override suspend fun getItems(categoryId: String, contentType: String): Result<List<MediaItem>> {
+    override suspend fun getItems(categoryId: String, contentType: String): kotlin.Result<List<MediaItem>> {
         if (!connected) {
             val connectResult = connect()
-            if (connectResult.isFailure) return connectResult.map { emptyList() }
+            if (connectResult.isFailure) return kotlin.Result.failure(connectResult.exceptionOrNull() ?: Exception("Connect failed"))
         }
         val filtered = items.filter { it.categoryId == categoryId }
-        return Result.success(filtered)
+        return kotlin.Result.success(filtered)
     }
 
-    override suspend fun getSeriesDetail(seriesId: String): Result<SeriesDetail> {
-        return Result.failure(UnsupportedOperationException("M3U does not support series"))
+    override suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> {
+        return kotlin.Result.failure(UnsupportedOperationException("M3U does not support series"))
     }
 
-    override suspend fun getMovieDetail(movieId: String): Result<MovieDetail> {
+    override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
         val item = items.find { it.id == movieId }
-            ?: return Result.failure(NoSuchElementException("Item not found: $movieId"))
+            ?: return kotlin.Result.failure(NoSuchElementException("Item not found: $movieId"))
 
-        return Result.success(
+        return kotlin.Result.success(
             MovieDetail(
                 id = item.id,
                 name = item.name,
@@ -78,14 +78,14 @@ abstract class BaseM3uMediaProvider : MediaProvider {
         contentType: String,
         episodeId: String?,
         extension: String?
-    ): Result<PlayableStream> {
+    ): kotlin.Result<PlayableStream> {
         val item = items.find { it.id == itemId }
-            ?: return Result.failure(NoSuchElementException("Item not found: $itemId"))
+            ?: return kotlin.Result.failure(NoSuchElementException("Item not found: $itemId"))
 
         val uri = item.streamUri
-            ?: return Result.failure(IllegalStateException("No stream URI for item: $itemId"))
+            ?: return kotlin.Result.failure(IllegalStateException("No stream URI for item: $itemId"))
 
-        return Result.success(
+        return kotlin.Result.success(
             PlayableStream(
                 uri = uri,
                 isLive = item.mediaType == MediaType.LIVE_CHANNEL,

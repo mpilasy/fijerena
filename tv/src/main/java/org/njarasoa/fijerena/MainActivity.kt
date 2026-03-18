@@ -18,7 +18,6 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AiInitializer.init(applicationContext)
 
         val appSettings = AppSettings(applicationContext)
         var themeId by mutableStateOf(appSettings.themeId)

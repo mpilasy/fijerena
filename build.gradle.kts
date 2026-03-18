@@ -8,7 +8,7 @@ plugins {
 }
 
 // Collect all APKs into build/outputs/apk/ after every assemble.
-// e.g. tv-full-debug.apk → build/outputs/apk/fijerena-tv-full-debug.apk
+// e.g. tv-debug.apk → build/outputs/apk/fijerena-tv-debug.apk
 subprojects {
     afterEvaluate {
         if (plugins.hasPlugin("com.android.application")) {
