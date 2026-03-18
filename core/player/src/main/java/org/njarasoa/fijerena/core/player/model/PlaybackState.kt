@@ -67,16 +67,7 @@ data class ChapterInfo(
 
 /** Audio DSP stats for the Stats for Nerds overlay */
 data class AudioDspStats(
-    val clearVoiceEnabled: Boolean = false,
-    val clearVoiceStrength: Float = 0f,
-    val clearVoiceAutoDisabled: Boolean = false,
-    val aiFramesProcessed: Long = 0L,
-    val aiFramesSkipped: Long = 0L,
-    val aiLastInferenceMs: Long = 0L,
-    val aiAvgInferenceMs: Float = 0f,
     val nightModeEnabled: Boolean = false,
-    val voiceZoomEnabled: Boolean = false,
-    val voiceZoomAvailable: Boolean = false,
     val nmEncoding: Int = 0,
     val nmEnabled: Boolean = false,
     val nmCallCount: Long = 0L

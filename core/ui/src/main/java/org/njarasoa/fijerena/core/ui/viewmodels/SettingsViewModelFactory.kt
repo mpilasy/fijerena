@@ -18,10 +18,7 @@ class SettingsViewModelFactory(
             modelClass.isAssignableFrom(EpgManagementViewModel::class.java) -> {
                 EpgManagementViewModel(context.applicationContext) as T
             }
-            modelClass.isAssignableFrom(AiSettingsViewModel::class.java) -> {
-                AiSettingsViewModel(context.applicationContext) as T
-            }
-            modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {
+modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {
                 EpgBrowserViewModel(context.applicationContext) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {

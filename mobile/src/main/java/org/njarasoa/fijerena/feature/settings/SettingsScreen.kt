@@ -39,7 +39,6 @@ fun MobileSettingsScreen(
     onThemeChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onManageEpg: () -> Unit = {},
-    onManageAi: () -> Unit = {},
     onCellularBuffers: () -> Unit = {},
     onProviderChanged: () -> Unit
 ) {
@@ -433,25 +432,6 @@ fun MobileSettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Manage EPG Data")
-                }
-            }
-
-            // === AI Search ===
-            val aiTier = remember { org.njarasoa.fijerena.core.network.ai.AiManager.detectTier() }
-            if (aiTier == org.njarasoa.fijerena.core.network.ai.VectorizationTier.PREMIUM) {
-                SettingsSection(title = "AI Search") {
-                    Text(
-                        text = "Your device supports advanced on-device AI for conceptual searching of provider content.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                    )
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    Button(
-                        onClick = onManageAi,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Manage AI Search")
-                    }
                 }
             }
 

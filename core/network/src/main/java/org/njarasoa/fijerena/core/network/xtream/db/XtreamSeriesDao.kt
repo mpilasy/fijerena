@@ -43,12 +43,4 @@ interface XtreamSeriesDao {
     @Query("SELECT COUNT(*) FROM xtream_series WHERE providerId = :providerId")
     fun countSeries(providerId: Long): Int
 
-    @Query("SELECT s.* FROM xtream_series s LEFT JOIN xtream_series_vectors v ON s.seriesId = v.seriesId AND s.providerId = v.providerId WHERE v.seriesId IS NULL LIMIT :limit")
-    fun getSeriesMissingEmbeddings(limit: Int): List<XtreamSeriesEntity>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertVector(vector: XtreamSeriesVectorEntity)
-
-    @Query("SELECT s.*, v.embedding FROM xtream_series s INNER JOIN xtream_series_vectors v ON s.seriesId = v.seriesId AND s.providerId = v.providerId WHERE s.providerId = :providerId")
-    fun getSeriesWithEmbeddings(providerId: Long): List<XtreamSeriesWithVector>
 }
