@@ -94,7 +94,11 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ### Features
 - **Stats Overlay:** Double-tap OK. Comprehensive diagnostics including codecs, network speed, dropped frames, and build info (time, git hash). Repositionable to 4 corners via D-pad.
-- **Auto-resume:** Saves position every 5s; resume if 2-95% progress.
+- **Auto-resume:** Saves position every 10s (Live) or based on progress (VOD); resume if 2-95% progress.
+- **Watch History Rules:**
+  - **Live TV:** Added to history after **10 seconds** of continuous playback.
+  - **VOD (Movies/Series):** Added to history only after reaching a **2% watch threshold** to prevent clutter.
+  - **Session Finalization:** `loaderViewModel.stopPlayback()` MUST be called when exiting the player or switching streams to ensure final progress is reported and history is flushed to disk.
 
 ---
 

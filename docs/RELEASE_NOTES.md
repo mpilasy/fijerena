@@ -1,5 +1,15 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: History Reliability & VOD Thresholds
+**Release Date:** 2026-03-18
+
+### Watch History & Progress Reporting
+- **Reduced Live TV Delay:** Channels are now added to "Recently Watched" after 10 seconds (was 30s) for better responsiveness.
+- **VOD Percentage Threshold:** Movies and TV Shows now require a minimum of 2% watch progress before being added to history, preventing clutter from accidental clicks.
+- **Reliable Session Termination:** Fixed an issue where Live TV history was lost on app exit by ensuring final session closure and disk commits for all content types.
+- **Real-time UI Updates:** The "Last Watched" player overlay now refreshes immediately once the watch thresholds are met.
+- **Unified Platform Logic:** Synchronized session finalization logic between TV and Mobile players.
+
 ## Version: Enhanced Diagnostics & Experimental AI Audio
 **Release Date:** 2026-03-20
 
