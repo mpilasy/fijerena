@@ -72,6 +72,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _qualitySwitchCount = MutableStateFlow(0)
     val qualitySwitchCount: StateFlow<Int> = _qualitySwitchCount.asStateFlow()
 
+    private val _measuredFps = MutableStateFlow(0f)
+    val measuredFps: StateFlow<Float> = _measuredFps.asStateFlow()
+
     private val _audioDspStats = MutableStateFlow(org.njarasoa.fijerena.core.player.model.AudioDspStats())
     val audioDspStats: StateFlow<org.njarasoa.fijerena.core.player.model.AudioDspStats> = _audioDspStats.asStateFlow()
 
@@ -231,6 +234,9 @@ class StreamingPlaybackService : MediaSessionService() {
             },
             onQualitySwitch = { count ->
                 _qualitySwitchCount.value = count
+            },
+            onFpsUpdate = { fps ->
+                _measuredFps.value = fps
             }
         )
         player.addAnalyticsListener(analyticsListener!!)
@@ -675,7 +681,8 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onRebuffer: (count: Int, totalTimeMs: Long) -> Unit,
         private val onExhaustionRebuffer: (count: Int) -> Unit,
         private val onBandwidthUpdate: (bitrateEstimate: Long) -> Unit,
-        private val onQualitySwitch: (count: Int) -> Unit
+        private val onQualitySwitch: (count: Int) -> Unit,
+        private val onFpsUpdate: (fps: Float) -> Unit
     ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
         private var droppedFrames = 0L
         private var totalFrames = 0L
@@ -688,12 +695,29 @@ class StreamingPlaybackService : MediaSessionService() {
         private var qualitySwitchCount = 0
         private var lastVideoHeight = -1
 
+        private var fpsLastTimeMs = 0L
+        private var fpsLastFrameCount = 0L
+
         override fun onVideoFrameProcessingOffset(
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
             totalProcessingOffsetUs: Long,
             frameCount: Int
         ) {
             totalFrames += frameCount
+            val currentTime = SystemClock.elapsedRealtime()
+            if (fpsLastTimeMs == 0L) {
+                fpsLastTimeMs = currentTime
+                fpsLastFrameCount = totalFrames
+            } else {
+                val delta = currentTime - fpsLastTimeMs
+                if (delta >= 1000) {
+                    val frames = totalFrames - fpsLastFrameCount
+                    val fps = (frames * 1000f) / delta
+                    onFpsUpdate(fps)
+                    fpsLastTimeMs = currentTime
+                    fpsLastFrameCount = totalFrames
+                }
+            }
         }
 
         override fun onDroppedVideoFrames(
