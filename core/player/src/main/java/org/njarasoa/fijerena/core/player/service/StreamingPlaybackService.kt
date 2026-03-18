@@ -82,6 +82,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private var pendingRetry: Runnable? = null
 
     private var adaptiveLoadControl: AdaptiveLoadControl? = null
+    private var bandwidthMeter: androidx.media3.exoplayer.upstream.DefaultBandwidthMeter? = null
     private var serviceScope: CoroutineScope? = null
 
     // Audio enhancement
@@ -157,13 +158,14 @@ class StreamingPlaybackService : MediaSessionService() {
         )
         adaptiveLoadControl = loadControl
 
-        val bandwidthMeter = androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(this)
+        val bm = androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(this)
+        bandwidthMeter = bm
 
         // Build ExoPlayer with standard factory
         val playerBuilder = androidx.media3.exoplayer.ExoPlayer.Builder(this)
             .setRenderersFactory(renderersFactory)
             .setLoadControl(loadControl)
-            .setBandwidthMeter(bandwidthMeter)
+            .setBandwidthMeter(bm)
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -267,7 +269,8 @@ class StreamingPlaybackService : MediaSessionService() {
             streamUrl = metadata.streamUrl,
             headers = metadata.headers,
             isLive = metadata.isLive,
-            onRetry = { _streamRetryCount.value++ }
+            onRetry = { _streamRetryCount.value++ },
+            transferListener = bandwidthMeter
         )
 
         player.setMediaSource(mediaSource)

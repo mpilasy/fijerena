@@ -22,7 +22,8 @@ object StreamingMediaSourceFactory {
         streamUrl: String,
         headers: Map<String, String> = emptyMap(),
         isLive: Boolean = false,
-        onRetry: (() -> Unit)? = null
+        onRetry: (() -> Unit)? = null,
+        transferListener: androidx.media3.datasource.TransferListener? = null
     ): MediaSource {
         val isCellular = NetworkMonitor.currentNetworkType == NetworkType.CELLULAR
 
@@ -42,7 +43,8 @@ object StreamingMediaSourceFactory {
         val dataSourceFactory = buildDataSourceFactory(
             connectTimeoutMs = connectTimeout,
             readTimeoutMs = readTimeout,
-            headers = headers
+            headers = headers,
+            transferListener = transferListener
         )
 
         val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
@@ -56,7 +58,8 @@ object StreamingMediaSourceFactory {
     private fun buildDataSourceFactory(
         connectTimeoutMs: Int,
         readTimeoutMs: Int,
-        headers: Map<String, String>
+        headers: Map<String, String>,
+        transferListener: androidx.media3.datasource.TransferListener? = null
     ): DataSource.Factory {
         val allHeaders = buildMap {
             put("User-Agent", USER_AGENT)
@@ -69,5 +72,6 @@ object StreamingMediaSourceFactory {
             .setReadTimeoutMs(readTimeoutMs)
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(allHeaders)
+            .setTransferListener(transferListener)
     }
 }
