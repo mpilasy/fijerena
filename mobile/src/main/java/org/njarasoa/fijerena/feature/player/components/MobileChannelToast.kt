@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -33,21 +34,19 @@ fun ChannelToast(
             Text(
                 text = "Now Playing",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
+                color = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = channelName,
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
+                color = CinemaTextPrimary,
                 textAlign = TextAlign.Center
             )
             if (currentEpgProgram != null) {
                 Text(
                     text = currentEpgProgram.title,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = CinemaAlpha.textMedium),
+                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                     textAlign = TextAlign.Center
                 )
             }

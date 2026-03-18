@@ -19,6 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -82,7 +85,7 @@ fun ErrorOverlay(
 ) {
     Surface(
         modifier = Modifier.padding(32.dp),
-        color = Color.Black.copy(alpha = CinemaAlpha.overlayMedium),
+        color = CinemaBackground.copy(alpha = CinemaAlpha.overlayMedium),
         shape = MaterialTheme.shapes.medium
     ) {
         Column(
@@ -92,13 +95,13 @@ fun ErrorOverlay(
             Text(
                 text = "Playback Error",
                 style = MaterialTheme.typography.headlineSmall,
-                color = Color.Red
+                color = CinemaError
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = error.message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
+                color = CinemaTextPrimary
             )
             Spacer(modifier = Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

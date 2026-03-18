@@ -203,11 +203,11 @@ fun handlePlayerKeyEvent(
             true
         }
         Key(AndroidKeyEvent.KEYCODE_MEDIA_FAST_FORWARD) -> {
-            if (!currentMetadata.isLive) viewModel.seekRelative(60_000L)
+            if (!currentMetadata.isLive) viewModel.seekRelative(300_000L)
             true
         }
         Key(AndroidKeyEvent.KEYCODE_MEDIA_REWIND) -> {
-            if (!currentMetadata.isLive) viewModel.seekRelative(-30_000L)
+            if (!currentMetadata.isLive) viewModel.seekRelative(-60_000L)
             true
         }
         else -> false

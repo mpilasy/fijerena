@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
@@ -106,16 +107,16 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    disabledTextColor = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    focusedTextColor = CinemaTextPrimary,
+                    unfocusedTextColor = CinemaTextPrimary,
+                    disabledTextColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textDisabled),
                     focusedLabelColor = MaterialTheme.colorScheme.primary,
                     unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                    focusedPlaceholderColor = Color.White.copy(alpha = CinemaAlpha.textDisabled),
-                    unfocusedPlaceholderColor = Color.White.copy(alpha = CinemaAlpha.textDisabled)
+                    focusedPlaceholderColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
+                    unfocusedPlaceholderColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled)
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
@@ -138,9 +139,9 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    disabledTextColor = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    focusedTextColor = CinemaTextPrimary,
+                    unfocusedTextColor = CinemaTextPrimary,
+                    disabledTextColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textDisabled),
@@ -168,9 +169,9 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    disabledTextColor = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    focusedTextColor = CinemaTextPrimary,
+                    unfocusedTextColor = CinemaTextPrimary,
+                    disabledTextColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textDisabled),
