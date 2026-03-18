@@ -26,12 +26,4 @@ interface XtreamEpisodeDao {
     @Query("SELECT COUNT(*) FROM xtream_episodes WHERE providerId = :providerId")
     fun countEpisodes(providerId: Long): Int
 
-    @Query("SELECT e.* FROM xtream_episodes e LEFT JOIN xtream_episode_vectors v ON e.id = v.id AND e.providerId = v.providerId WHERE v.id IS NULL LIMIT :limit")
-    fun getEpisodesMissingEmbeddings(limit: Int): List<XtreamEpisodeEntity>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertVector(vector: XtreamEpisodeVectorEntity)
-
-    @Query("SELECT e.*, v.embedding FROM xtream_episodes e INNER JOIN xtream_episode_vectors v ON e.id = v.id AND e.providerId = v.providerId WHERE e.providerId = :providerId")
-    fun getEpisodesWithEmbeddings(providerId: Long): List<XtreamEpisodeWithVector>
 }

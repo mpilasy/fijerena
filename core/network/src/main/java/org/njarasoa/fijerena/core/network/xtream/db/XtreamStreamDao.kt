@@ -44,12 +44,6 @@ interface XtreamStreamDao {
     @Query("SELECT COUNT(*) FROM xtream_streams WHERE providerId = :providerId AND type = :type")
     fun countStreams(providerId: Long, type: String): Int
 
-    @Query("SELECT s.* FROM xtream_streams s LEFT JOIN xtream_stream_vectors v ON s.streamId = v.streamId AND s.providerId = v.providerId AND s.type = v.type WHERE v.streamId IS NULL LIMIT :limit")
-    fun getStreamsMissingEmbeddings(limit: Int): List<XtreamStreamEntity>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertVector(vector: XtreamStreamVectorEntity)
-
     @Query("UPDATE xtream_streams SET description = :description WHERE streamId = :streamId AND providerId = :providerId AND type = :type")
     fun updateDescription(providerId: Long, streamId: Int, type: String, description: String?)
 
@@ -79,6 +73,4 @@ interface XtreamStreamDao {
         youtubeTrailer: String?
     )
 
-    @Query("SELECT s.*, v.embedding FROM xtream_streams s INNER JOIN xtream_stream_vectors v ON s.streamId = v.streamId AND s.providerId = v.providerId AND s.type = v.type WHERE s.providerId = :providerId")
-    fun getStreamsWithEmbeddings(providerId: Long): List<XtreamStreamWithVector>
 }

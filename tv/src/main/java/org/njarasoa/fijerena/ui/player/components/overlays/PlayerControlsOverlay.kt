@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.SurroundSound
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
@@ -97,13 +96,6 @@ fun PlayerControlsOverlay(
     onShowStats: () -> Unit,
     onToggleNightMode: () -> Unit = {},
     isNightModeEnabled: Boolean = false,
-    dialogueBoostStrength: Float = 0f,
-    onDialogueBoostStrengthChanged: (Float) -> Unit = {},
-    isDialogueBoostAvailable: Boolean = false,
-    isVoiceZoomAvailable: Boolean = false,
-    isVoiceZoomEnabled: Boolean = false,
-    onToggleVoiceZoom: () -> Unit = {},
-    onOpenVoiceZoomSettings: () -> Unit = {},
     seekSpeedLabel: String? = null,
 ) {
     val isPaused = playbackState is PlaybackState.Paused
@@ -443,26 +435,6 @@ fun PlayerControlsOverlay(
                                 contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
                                 tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else Color.White
                             )
-                        }
-
-                        // Voice Zoom (Sony Bravia only)
-                        if (isVoiceZoomAvailable) {
-                            Button(
-                                onClick = onToggleVoiceZoom,
-                                colors = ButtonDefaults.colors(
-                                    containerColor = if (isVoiceZoomEnabled)
-                                        CinemaAccent.copy(alpha = CinemaAlpha.scrim)
-                                    else
-                                        CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                ),
-                                onLongClick = onOpenVoiceZoomSettings
-                            ) {
-                                Icon(
-                                    Icons.Filled.SurroundSound,
-                                    contentDescription = if (isVoiceZoomEnabled) "Voice Zoom On" else "Voice Zoom Off",
-                                    tint = if (isVoiceZoomEnabled) MaterialTheme.colorScheme.primary else Color.White
-                                )
-                            }
                         }
 
                         // Stats for nerds (always visible)
