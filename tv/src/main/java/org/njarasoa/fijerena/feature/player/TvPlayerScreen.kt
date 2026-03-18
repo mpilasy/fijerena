@@ -17,6 +17,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -72,6 +75,23 @@ fun TvPlayerScreen(
         )
     )
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Observe app focus/lifecycle to pause on background and stop after timeout
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> playbackViewModel.onFocusLost()
+                Lifecycle.Event.ON_RESUME -> playbackViewModel.onFocusRegained()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
     val currentStreamState by androidx.compose.runtime.rememberUpdatedState(streamState)
 

@@ -31,6 +31,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
@@ -93,6 +96,22 @@ fun MobilePlayerScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     val appSettings = remember { AppSettings(context.applicationContext) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Observe app focus/lifecycle to pause on background and stop after timeout
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> viewModel.onFocusLost()
+                Lifecycle.Event.ON_RESUME -> viewModel.onFocusRegained()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // Unlock orientation for video playback, restore portrait on exit
     DisposableEffect(Unit) {
