@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BarChart
@@ -50,6 +51,8 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -59,9 +62,12 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.feature.player.utils.formatEpochTime
 import org.njarasoa.fijerena.feature.player.utils.formatTime
@@ -96,6 +102,42 @@ fun MobileControlsOverlay(
     val audioTrackCount = remember(metadata) { viewModel.getAudioTracks().size }
     val subtitleTrackCount = remember(metadata) { viewModel.getSubtitleTracks().size }
     val qualityCount = remember(metadata) { viewModel.getVideoQualities().size }
+
+    // State for resolution and codec
+    var videoCodec by remember { mutableStateOf<String?>(null) }
+    var videoResolution by remember { mutableStateOf<String?>(null) }
+
+    // Extract resolution and codec periodically
+    LaunchedEffect(playbackState, metadata.streamUrl) {
+        if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering) {
+            // Keep checking every second as tracks might take time to load
+            while (true) {
+                StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
+                    val tracks = p.currentTracks
+                    for (i in 0 until tracks.groups.size) {
+                        val group = tracks.groups[i]
+                        if (group.isSelected && group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
+                            for (j in 0 until group.length) {
+                                if (group.isTrackSelected(j)) {
+                                    val format = group.getTrackFormat(j)
+                                    videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase()
+                                    videoResolution = if (format.width > 0 && format.height > 0) "${format.width}x${format.height}" else null
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+                // If we found both, we can stop polling for this stream state
+                if (videoCodec != null && videoResolution != null) break
+                delay(1000)
+            }
+        } else {
+            videoCodec = null
+            videoResolution = null
+        }
+    }
+
     val typography = MaterialTheme.typography
     val labelStyle = typography.labelSmall
 
@@ -119,15 +161,47 @@ fun MobileControlsOverlay(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Title
-            Text(
-                text = metadata.title,
-                style = typography.titleMedium,
-                color = CinemaTextPrimary,
+            Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = CinemaSpacing.xs),
-                maxLines = 1
-            )
+                    .padding(horizontal = CinemaSpacing.xs)
+            ) {
+                Text(
+                    text = metadata.title,
+                    style = typography.titleMedium,
+                    color = CinemaTextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Resolution and Codec Info
+                if (videoResolution != null || videoCodec != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        if (videoResolution != null) {
+                            Text(
+                                text = videoResolution!!,
+                                style = typography.labelSmall,
+                                color = CinemaAccent,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        if (videoCodec != null) {
+                            Text(
+                                text = videoCodec!!,
+                                style = typography.labelSmall.copy(fontSize = 10.sp),
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                                modifier = Modifier
+                                    .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                }
+            }
             // Clock — self-ticking so only this leaf recomposes each second
             ClockDisplay()
         }
