@@ -79,6 +79,7 @@ fun MobileStatsOverlay(
     val serviceRebufferTimeMs by StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
     val serviceBandwidth by StreamingPlaybackService.getInstance()?.bandwidthEstimate?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
     val serviceQualitySwitches by StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsStateWithLifecycle(0) ?: remember { mutableStateOf(0) }
+    val serviceMeasuredFps by StreamingPlaybackService.getInstance()?.measuredFps?.collectAsStateWithLifecycle(0f) ?: remember { mutableStateOf(0f) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
     // Audio DSP stats
@@ -119,7 +120,16 @@ fun MobileStatsOverlay(
                                 if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
                                     videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
                                     videoResolution = "${format.width} x ${format.height}"
-                                    videoFrameRate = if (format.frameRate > 0) "${format.frameRate.toInt()} fps" else "N/A"
+                                    
+                                    val mFps = serviceMeasuredFps
+                                    videoFrameRate = if (format.frameRate > 0) {
+                                        "${format.frameRate.toInt()} fps"
+                                    } else if (mFps > 0) {
+                                        String.format(java.util.Locale.getDefault(), "%.1f fps (measured)", mFps)
+                                    } else {
+                                        "N/A"
+                                    }
+                                    
                                     currentVideoBitrate = format.bitrate
                                     videoBitrate = if (currentVideoBitrate > 0) formatBitrate(currentVideoBitrate) else "Unknown"
                                 }
