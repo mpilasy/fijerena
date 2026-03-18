@@ -78,7 +78,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _audioDspStats = MutableStateFlow(org.njarasoa.fijerena.core.player.model.AudioDspStats())
     val audioDspStats: StateFlow<org.njarasoa.fijerena.core.player.model.AudioDspStats> = _audioDspStats.asStateFlow()
 
-    private var onPositionSaveListener: ((Long, Long, Boolean) -> Unit)? = null
+    private var onPositionSaveListener: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null
 
     private var liveRetryCount = 0
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -194,8 +194,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 acquireWakeLock()
             },
             player = player,
-            onPositionSave = { position, duration, isPaused ->
-                onPositionSaveListener?.invoke(position, duration, isPaused)
+            onPositionSave = { position, duration, isPaused, audioIndex, subtitleIndex ->
+                onPositionSaveListener?.invoke(position, duration, isPaused, audioIndex, subtitleIndex)
             },
             onStreamEndedOrError = { errorMessage ->
                 handleStreamEndedOrError(errorMessage)
@@ -252,7 +252,7 @@ class StreamingPlaybackService : MediaSessionService() {
         initializePlayer(contentType)
     }
 
-    fun setPositionSaveListener(listener: (position: Long, duration: Long, isPaused: Boolean) -> Unit) {
+    fun setPositionSaveListener(listener: (position: Long, duration: Long, isPaused: Boolean, audioIndex: Int?, subtitleIndex: Int?) -> Unit) {
         onPositionSaveListener = listener
     }
 
@@ -370,6 +370,84 @@ class StreamingPlaybackService : MediaSessionService() {
         mediaSession?.player?.playbackParameters = androidx.media3.common.PlaybackParameters(speed)
     }
 
+    fun getAudioTracks(): List<org.njarasoa.fijerena.core.player.model.AudioTrackInfo> {
+        val p = mediaSession?.player ?: return emptyList()
+        val tracks = p.currentTracks
+        val audioTracks = mutableListOf<org.njarasoa.fijerena.core.player.model.AudioTrackInfo>()
+
+        for (groupIndex in 0 until tracks.groups.size) {
+            val group = tracks.groups[groupIndex]
+            if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
+                for (trackIndex in 0 until group.length) {
+                    val format = group.getTrackFormat(trackIndex)
+                    val isSelected = group.isTrackSelected(trackIndex)
+
+                    audioTracks.add(
+                        org.njarasoa.fijerena.core.player.model.AudioTrackInfo(
+                            groupIndex = groupIndex,
+                            trackIndex = trackIndex,
+                            language = format.language ?: "Unknown",
+                            label = format.label ?: "${format.language ?: "Track"} - ${format.channelCount}ch",
+                            channelCount = format.channelCount,
+                            sampleRate = format.sampleRate,
+                            bitrate = format.bitrate,
+                            isSelected = isSelected
+                        )
+                    )
+                }
+            }
+        }
+        return audioTracks
+    }
+
+    fun selectAudioTrack(consolidatedIndex: Int) {
+        val tracks = getAudioTracks()
+        if (consolidatedIndex >= 0 && consolidatedIndex < tracks.size) {
+            val track = tracks[consolidatedIndex]
+            selectAudioTrack(track.groupIndex, track.trackIndex)
+        }
+    }
+
+    fun getSubtitleTracks(): List<org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo> {
+        val p = mediaSession?.player ?: return emptyList()
+        val tracks = p.currentTracks
+        val subtitleTracks = mutableListOf<org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo>()
+
+        for (groupIndex in 0 until tracks.groups.size) {
+            val group = tracks.groups[groupIndex]
+            if (group.type == androidx.media3.common.C.TRACK_TYPE_TEXT) {
+                for (trackIndex in 0 until group.length) {
+                    val format = group.getTrackFormat(trackIndex)
+                    val isSelected = group.isTrackSelected(trackIndex)
+
+                    subtitleTracks.add(
+                        org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo(
+                            groupIndex = groupIndex,
+                            trackIndex = trackIndex,
+                            language = format.language ?: "Unknown",
+                            label = format.label ?: format.language ?: "Subtitle ${trackIndex + 1}",
+                            mimeType = format.sampleMimeType ?: "unknown",
+                            isSelected = isSelected
+                        )
+                    )
+                }
+            }
+        }
+        return subtitleTracks
+    }
+
+    fun selectSubtitleTrack(consolidatedIndex: Int) {
+        if (consolidatedIndex == -1) {
+            disableSubtitles()
+            return
+        }
+        val tracks = getSubtitleTracks()
+        if (consolidatedIndex >= 0 && consolidatedIndex < tracks.size) {
+            val track = tracks[consolidatedIndex]
+            selectSubtitleTrack(track.groupIndex, track.trackIndex)
+        }
+    }
+
     fun selectAudioTrack(groupIndex: Int, trackIndex: Int) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
@@ -391,6 +469,9 @@ class StreamingPlaybackService : MediaSessionService() {
             .build()
 
         trackSelector.parameters = parameters
+
+        // Save choice immediately
+        onPositionSaveListener?.invoke(player.currentPosition, player.duration, !player.isPlaying, trackIndex, null)
     }
 
     fun selectSubtitleTrack(groupIndex: Int, trackIndex: Int) {
@@ -414,6 +495,9 @@ class StreamingPlaybackService : MediaSessionService() {
             .build()
 
         trackSelector.parameters = parameters
+
+        // Save choice immediately
+        onPositionSaveListener?.invoke(player.currentPosition, player.duration, !player.isPlaying, null, trackIndex)
     }
 
     fun disableSubtitles() {
@@ -426,6 +510,9 @@ class StreamingPlaybackService : MediaSessionService() {
             .build()
 
         trackSelector.parameters = parameters
+
+        // Save choice immediately (-1 for disabled)
+        onPositionSaveListener?.invoke(player.currentPosition, player.duration, !player.isPlaying, null, -1)
     }
 
     fun selectVideoQuality(groupIndex: Int, trackIndex: Int) {
@@ -498,7 +585,7 @@ class StreamingPlaybackService : MediaSessionService() {
         cancelPendingRetry()
         mediaSession?.player?.let {
             if (it.isPlaying || it.playbackState == Player.STATE_READY) {
-                onPositionSaveListener?.invoke(it.currentPosition, it.duration, !it.isPlaying)
+                onPositionSaveListener?.invoke(it.currentPosition, it.duration, !it.isPlaying, null, null)
             }
         }
 
@@ -524,7 +611,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onStateChanged: (PlaybackState) -> Unit,
         private val onWakeLockRequired: () -> Unit,
         private val player: Player,
-        private val onPositionSave: ((Long, Long, Boolean) -> Unit)? = null,
+        private val onPositionSave: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null,
         private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {}
     ) : Player.Listener {
         private var isInErrorState = false
@@ -542,7 +629,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
                 // Periodic save while playing or immediate save on state change (including pause)
                 if (kotlin.math.abs(currentPosition - lastSavedPosition) >= saveIntervalMs || isPaused) {
-                    onPositionSave?.invoke(currentPosition, duration, isPaused)
+                    onPositionSave?.invoke(currentPosition, duration, isPaused, null, null)
                     lastSavedPosition = currentPosition
                 }
             }
@@ -557,7 +644,7 @@ class StreamingPlaybackService : MediaSessionService() {
             }
             // Trigger immediate save when play/pause state changes
             if (player.playbackState == Player.STATE_READY) {
-                onPositionSave?.invoke(player.currentPosition, player.duration, !playWhenReady)
+                onPositionSave?.invoke(player.currentPosition, player.duration, !playWhenReady, null, null)
             }
             updatePlaybackState()
         }
@@ -568,7 +655,7 @@ class StreamingPlaybackService : MediaSessionService() {
             }
             // Trigger immediate save when play/pause state changes
             if (player.playbackState == Player.STATE_READY) {
-                onPositionSave?.invoke(player.currentPosition, player.duration, !isPlaying)
+                onPositionSave?.invoke(player.currentPosition, player.duration, !isPlaying, null, null)
             }
             updatePlaybackState()
         }

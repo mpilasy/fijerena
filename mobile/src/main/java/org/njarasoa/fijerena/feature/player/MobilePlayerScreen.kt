@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,6 +39,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -200,27 +203,10 @@ fun MobilePlayerScreen(
         }
     }
 
-    // Save playback position periodically for VOD content
+    // Set up auto-save listener for playback position and track settings
     LaunchedEffect(Unit) {
-        if (contentType != ContentType.LIVE_TV) {
-            while (true) {
-                delay(5000L)
-                val ps = viewModel.playbackState.value
-                val pos = when (ps) {
-                    is PlaybackState.Playing -> ps.position
-                    is PlaybackState.Paused -> ps.position
-                    else -> null
-                }
-                val dur = when (ps) {
-                    is PlaybackState.Playing -> ps.duration
-                    is PlaybackState.Paused -> ps.duration
-                    else -> null
-                }
-                if (pos != null && dur != null && dur > 0) {
-                    val isPaused = ps is PlaybackState.Paused
-                    loaderViewModel.recordHistory(pos, dur, isPaused)
-                }
-            }
+        StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
+             loaderViewModel.recordHistory(position, duration, isPaused, audioIndex, subtitleIndex)
         }
     }
 
@@ -258,6 +244,23 @@ fun MobilePlayerScreen(
                 headers = state.streamHeaders
             )
             viewModel.playStream(metadata, state.resumePosition)
+
+            // Restore saved track settings when player is ready
+            if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
+                snapshotFlow { viewModel.playbackState.value }
+                    .filter { it is PlaybackState.Playing || it is PlaybackState.Paused }
+                    .first() // Wait for first ready state
+                
+                val service = StreamingPlaybackService.getInstance()
+                if (service != null) {
+                    state.savedAudioTrackIndex?.let { audioIdx ->
+                        service.selectAudioTrack(audioIdx)
+                    }
+                    state.savedSubtitleTrackIndex?.let { subIdx ->
+                        service.selectSubtitleTrack(subIdx)
+                    }
+                }
+            }
         }
     }
 
@@ -363,7 +366,10 @@ fun MobilePlayerScreen(
                                 else -> null
                             }
                             if (pos != null && dur != null && dur > 0) {
-                                loaderViewModel.stopPlayback(pos, dur)
+                                val service = StreamingPlaybackService.getInstance()
+                                val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                                val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                                loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
                             }
                         }
                         // Stop playback when leaving the player screen
@@ -435,7 +441,10 @@ fun MobilePlayerScreen(
                                     else -> null
                                 }
                                 if (pos != null && dur != null && dur > 0) {
-                                    loaderViewModel.stopPlayback(pos, dur)
+                                    val service = StreamingPlaybackService.getInstance()
+                                    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                                    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                                    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
                                 }
                             }
                             viewModel.stop()
@@ -495,6 +504,26 @@ fun MobilePlayerScreen(
                     panelAlignment = Alignment.CenterStart,
                     currentStreamId = state.streamId,
                     onSelect = { item ->
+                        // Stop current stream properly before starting new one
+                        if (!isLiveContent) {
+                            val ps = viewModel.playbackState.value
+                            val pos = when (ps) {
+                                is PlaybackState.Playing -> ps.position
+                                is PlaybackState.Paused -> ps.position
+                                else -> null
+                            }
+                            val dur = when (ps) {
+                                is PlaybackState.Playing -> ps.duration
+                                is PlaybackState.Paused -> ps.duration
+                                else -> null
+                            }
+                            if (pos != null && dur != null && dur > 0) {
+                                val service = StreamingPlaybackService.getInstance()
+                                val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                                val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                                loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+                            }
+                        }
                         showCategoryOverlay = false
                         loaderViewModel.loadStream(item)
                     },
@@ -515,6 +544,26 @@ fun MobilePlayerScreen(
                     },
                     panelAlignment = Alignment.CenterEnd,
                     onSelect = { item ->
+                        // Stop current stream properly before starting new one
+                        if (!isLiveContent) {
+                            val ps = viewModel.playbackState.value
+                            val pos = when (ps) {
+                                is PlaybackState.Playing -> ps.position
+                                is PlaybackState.Paused -> ps.position
+                                else -> null
+                            }
+                            val dur = when (ps) {
+                                is PlaybackState.Playing -> ps.duration
+                                is PlaybackState.Paused -> ps.duration
+                                else -> null
+                            }
+                            if (pos != null && dur != null && dur > 0) {
+                                val service = StreamingPlaybackService.getInstance()
+                                val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                                val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                                loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+                            }
+                        }
                         showLastWatchedOverlay = false
                         loaderViewModel.loadStream(item)
                     },

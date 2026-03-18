@@ -14,6 +14,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,6 +27,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -132,8 +136,8 @@ fun TvPlayerScreen(
 
     // Set up auto-save listener for playback position
     LaunchedEffect(Unit) {
-        StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration, isPaused ->
-             loaderViewModel.recordHistory(position, duration, isPaused)
+        StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
+             loaderViewModel.recordHistory(position, duration, isPaused, audioIndex, subtitleIndex)
         }
     }
 
@@ -152,6 +156,23 @@ fun TvPlayerScreen(
                 headers = state.streamHeaders
             )
             playbackViewModel.playStream(metadata, state.resumePosition)
+
+            // Restore saved track settings when player is ready
+            if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
+                snapshotFlow { playbackViewModel.playbackState.value }
+                    .filter { it is PlaybackState.Playing || it is PlaybackState.Paused }
+                    .first() // Wait for first ready state
+                
+                val service = StreamingPlaybackService.getInstance()
+                if (service != null) {
+                    state.savedAudioTrackIndex?.let { audioIdx ->
+                        service.selectAudioTrack(audioIdx)
+                    }
+                    state.savedSubtitleTrackIndex?.let { subIdx ->
+                        service.selectSubtitleTrack(subIdx)
+                    }
+                }
+            }
         }
     }
 
@@ -184,7 +205,10 @@ fun TvPlayerScreen(
                             else -> null
                         }
                         if (pos != null && dur != null && dur > 0) {
-                            loaderViewModel.stopPlayback(pos, dur)
+                            val service = StreamingPlaybackService.getInstance()
+                            val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                            val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                            loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
                         }
                     }
                     playbackViewModel.stop()
@@ -200,6 +224,26 @@ fun TvPlayerScreen(
                     ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })
                 },
                 onStreamSelected = { item ->
+                    // Stop current stream properly before starting new one
+                    if (!state.isLive) {
+                        val ps = playbackViewModel.playbackState.value
+                        val pos = when (ps) {
+                            is PlaybackState.Playing -> ps.position
+                            is PlaybackState.Paused -> ps.position
+                            else -> null
+                        }
+                        val dur = when (ps) {
+                            is PlaybackState.Playing -> ps.duration
+                            is PlaybackState.Paused -> ps.duration
+                            else -> null
+                        }
+                        if (pos != null && dur != null && dur > 0) {
+                            val service = StreamingPlaybackService.getInstance()
+                            val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                            val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                            loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+                        }
+                    }
                     loaderViewModel.loadStream(item)
                 },
                 onToggleFavorite = {

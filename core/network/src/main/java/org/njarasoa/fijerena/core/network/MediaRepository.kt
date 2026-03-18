@@ -36,7 +36,9 @@ data class WatchedItem(
     val episodeId: String? = null,
     val episodeExtension: String? = null,
     val seriesId: String? = null,
-    val seriesName: String? = null
+    val seriesName: String? = null,
+    val audioTrackIndex: Int? = null,
+    val subtitleTrackIndex: Int? = null
 )
 
 @Serializable
@@ -454,7 +456,9 @@ class MediaRepository(
         episodeId: String? = null,
         episodeExtension: String? = null,
         seriesId: String? = null,
-        seriesName: String? = null
+        seriesName: String? = null,
+        audioTrackIndex: Int? = null,
+        subtitleTrackIndex: Int? = null
     ) {
         synchronized(watchHistoryLock) {
             val history = getWatchHistoryLocked().toMutableList()
@@ -464,7 +468,9 @@ class MediaRepository(
                 System.currentTimeMillis(),
                 playbackPosition, duration, isCompleted,
                 episodeId = episodeId, episodeExtension = episodeExtension,
-                seriesId = seriesId, seriesName = seriesName
+                seriesId = seriesId, seriesName = seriesName,
+                audioTrackIndex = audioTrackIndex,
+                subtitleTrackIndex = subtitleTrackIndex
             ))
             val trimmed = history.take(providerSettings.watchHistorySize)
 
@@ -740,7 +746,9 @@ class MediaRepository(
         categoryId: String,
         contentType: String,
         position: Long,
-        duration: Long
+        duration: Long,
+        audioTrackIndex: Int? = null,
+        subtitleTrackIndex: Int? = null
     ) {
         if (contentType == ContentType.LIVE_TV) return
         if (usesServerUserData) return
@@ -748,13 +756,15 @@ class MediaRepository(
             (position.toFloat() / duration.toFloat()) * 100f
         } else 0f
         val isCompleted = progressPercent > 95.0f
-        // Preserve episode metadata from existing entry
+        // Preserve metadata from existing entry
         val existing = synchronized(watchHistoryLock) {
             getWatchHistoryLocked().firstOrNull { it.itemId == itemId && it.contentType == contentType }
         }
         addToWatchHistory(itemId, itemName, categoryId, contentType, position, duration, isCompleted,
             episodeId = existing?.episodeId, episodeExtension = existing?.episodeExtension,
-            seriesId = existing?.seriesId, seriesName = existing?.seriesName)
+            seriesId = existing?.seriesId, seriesName = existing?.seriesName,
+            audioTrackIndex = audioTrackIndex ?: existing?.audioTrackIndex,
+            subtitleTrackIndex = subtitleTrackIndex ?: existing?.subtitleTrackIndex)
     }
 
     fun getPlaybackPosition(itemId: String, contentType: String): WatchedItem? {
