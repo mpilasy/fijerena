@@ -31,7 +31,7 @@ class AppSettings(context: Context) {
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_NIGHT_MODE_ENABLED = "night_mode_enabled"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
-        const val DEFAULT_WATCH_DELAY_SECONDS = 30
+        const val DEFAULT_WATCH_DELAY_SECONDS = 10
         const val MIN_WATCH_DELAY_SECONDS = 5
         const val MAX_WATCH_DELAY_SECONDS = 120
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
