@@ -14,7 +14,6 @@ import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AiInitializer.init(applicationContext)
         enableEdgeToEdge()
 
         val appSettings = AppSettings(applicationContext)

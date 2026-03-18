@@ -102,7 +102,7 @@ Provides full-text search over `epg_programme`.
 ## 3. Xtream Cache Database (`xtream_v2.db`)
 **Version:** 7
 
-Persistent cache for Xtream Codes API metadata to enable offline browsing and **AI Semantic Search**.
+Persistent cache for Xtream Codes API metadata to enable offline browsing.
 
 ### Table: `xtream_categories`
 | Column | Type | Description |
@@ -164,39 +164,6 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing and **
 | `episodeNum` | INTEGER | Episode number |
 | `title` | TEXT | Episode title |
 | `overview` | TEXT | Episode plot summary |
-
-### Vector Tables (AI Search)
-To prevent cache bloat and keep UI queries fast, vector embeddings are stored in dedicated tables linked by Foreign Key (`ON DELETE CASCADE`).
-
-#### Table: `xtream_category_vectors`
-| Column | Type | Description |
-|--------|------|-------------|
-| `categoryId` | TEXT (PK) | Foreign key to `xtream_categories` |
-| `providerId` | INTEGER (PK)| Foreign key to `xtream_categories` |
-| `type` | TEXT (PK) | Foreign key to `xtream_categories` |
-| `embedding` | BLOB | AI Vector embedding |
-
-#### Table: `xtream_stream_vectors`
-| Column | Type | Description |
-|--------|------|-------------|
-| `streamId` | INTEGER (PK)| Foreign key to `xtream_streams` |
-| `providerId` | INTEGER (PK)| Foreign key to `xtream_streams` |
-| `type` | TEXT (PK) | Foreign key to `xtream_streams` |
-| `embedding` | BLOB | AI Vector embedding |
-
-#### Table: `xtream_series_vectors`
-| Column | Type | Description |
-|--------|------|-------------|
-| `seriesId` | INTEGER (PK)| Foreign key to `xtream_series` |
-| `providerId` | INTEGER (PK)| Foreign key to `xtream_series` |
-| `embedding` | BLOB | AI Vector embedding |
-
-#### Table: `xtream_episode_vectors`
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | TEXT (PK) | Foreign key to `xtream_episodes` |
-| `providerId` | INTEGER (PK)| Foreign key to `xtream_episodes` |
-| `embedding` | BLOB | AI Vector embedding |
 
 ---
 

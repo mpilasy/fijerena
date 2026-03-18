@@ -15,13 +15,11 @@ fijerena/
   mobile/          Android app target (phone/tablet)
   tv/              Android app target (Android TV / set-top boxes)
   core/
-    player/        Media3 player, domain models, playback service
-    network/       Provider implementations, API clients, EPG, Room databases
-    ai/            AI Semantic Search, vector embeddings (TensorFlow Lite)
-    navigation/    Type-safe navigation routes (Screen sealed interface)
-    ui/            Shared theme tokens, components, ViewModels
-    data/          Auth ViewModel (legacy)
-```
+  player/        Media3 player, domain models, playback service
+  network/       Provider implementations, API clients, EPG, Room databases
+  navigation/    Type-safe navigation routes (Screen sealed interface)
+  ui/            Shared theme tokens, components, ViewModels
+  data/          Auth ViewModel (legacy)```
 
 ### Dependency Graph
 

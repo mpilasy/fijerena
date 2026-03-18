@@ -43,10 +43,6 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ### 🎮 Playback Features
 - **Media3 (ExoPlayer)** - Industry-leading video playback engine
 - **4K/HDR Support** - Hardware-accelerated rendering on compatible devices
-- **AI Audio Suite (EXPERIMENTAL/WIP)**:
-  - **Clear Voice** - AI-powered dialogue enhancement (Under development/Non-functional)
-  - **Smart Night Mode** - Real-time dynamics compression for consistent volume
-  - **Sony Voice Zoom** - Native integration for compatible Sony Bravia TVs (Experimental)
 - **Multi-Audio Tracks** - Language and format selection (Stereo, 5.1, 7.1)
 - **Subtitles/Captions** - Support for SRT, VTT, TTML, CEA-608/708
 - **Adaptive Quality** - Manual and automatic bitrate selection
@@ -75,7 +71,6 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Stats for Nerds** - Comprehensive playback metrics overlay including:
   - **Video/Audio**: Codecs, bitrates, resolution, frame rate
   - **Network**: Speed, bandwidth, buffer health, rebuffer stats
-  - **AI DSP**: Tier, latency (inference ms), processed/skipped frames, DSP engine status
   - **Build**: Compile time and git hash for version tracking
 - **Channel Switching** - D-pad up/down for live TV channel navigation
 - **Channel Overlays** - Category and last-watched side panels (D-pad Left/Right on TV, swipe on mobile)
@@ -103,10 +98,10 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ## 🖥️ Supported Devices
 
 ### ✅ Tested & Optimized
-- **Android Mobile** - Phones & tablets (Android 11+). **OnePlus 12/12R/13** optimized for AI features.
-- **NVIDIA Shield** - Shield TV & Shield TV Pro (prioritizes AV1/HEVC codecs, **PREMIUM AI tier**).
+- **Android Mobile** - Phones & tablets (Android 11+).
+- **NVIDIA Shield** - Shield TV & Shield TV Pro (prioritizes AV1/HEVC codecs).
 - **Chromecast with Google TV** - 4K & HD models.
-- **Sony Bravia** - Android TV models (HEVC optimization, **Voice Zoom** experimental integration).
+- **Sony Bravia** - Android TV models (HEVC optimization).
 
 ### 🎯 Target Platform
 - **Minimum SDK**: 30 (Android 11)
@@ -205,8 +200,8 @@ No additional configuration is required for the initial build. The app will prom
 
 **Output Locations:**
 All generated APKs are automatically collected into the root directory:
-- `build/outputs/apk/fijerena-mobile-full-debug.apk`
-- `build/outputs/apk/fijerena-tv-full-debug.apk`
+- `build/outputs/apk/fijerena-mobile-debug.apk`
+- `build/outputs/apk/fijerena-tv-debug.apk`
 
 *Note: APKs are prefixed with `fijerena-` and collected from their respective module build folders.*
 
