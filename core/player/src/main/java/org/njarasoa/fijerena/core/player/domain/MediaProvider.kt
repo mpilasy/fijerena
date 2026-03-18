@@ -34,7 +34,7 @@ interface MediaProvider {
     suspend fun getEpgBulk(streamIds: List<String>): Result<Map<String, EpgResponse>>? = null
     suspend fun clearEpgCache() {}
 
-    suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long) {}
+    suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long, isPaused: Boolean = false) {}
 
     // Server-side user data methods (only Jellyfin overrides these)
     suspend fun setFavorite(itemId: String, isFavorite: Boolean): Result<Unit>? = null

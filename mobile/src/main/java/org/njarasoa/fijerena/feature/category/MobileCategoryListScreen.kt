@@ -97,8 +97,6 @@ fun MobileCategoryListScreen(
     val context = LocalContext.current
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
-    val appSettings = remember { AppSettings(context.applicationContext) }
-    val isDevMode = remember { appSettings.isDevMode }
 
     // Refresh last played item when returning from player
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -208,27 +206,6 @@ fun MobileCategoryListScreen(
                                         vertical = CinemaSpacing.xs
                                     )
                                 )
-                            }
-                            // Dev mode EPG info
-                            if (isDevMode) {
-                                val epgInfo = when (val epg = epgIndexState) {
-                                    is EpgIndexState.Indexed -> {
-                                        "EPG: ${NumberUtils.formatCount(epg.programmeCount)} progs, ${NumberUtils.formatCount(epg.channelCount)} channels"
-                                    }
-                                    is EpgIndexState.Indexing -> "EPG: Indexing..."
-                                    else -> null
-                                }
-                                if (epgInfo != null) {
-                                    Text(
-                                        text = epgInfo,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(
-                                            horizontal = CinemaSpacing.md,
-                                            vertical = CinemaSpacing.xs
-                                        )
-                                    )
-                                }
                             }
                         }
 

@@ -111,7 +111,8 @@ data class JellyfinPlaybackProgress(
     @SerialName("PositionTicks") val positionTicks: Long,
     @SerialName("IsPaused") val isPaused: Boolean,
     @SerialName("PlaySessionId") val playSessionId: String? = null,
-    @SerialName("MediaSourceId") val mediaSourceId: String? = null
+    @SerialName("MediaSourceId") val mediaSourceId: String? = null,
+    @SerialName("PlayMethod") val playMethod: String? = null
 )
 
 @Serializable
@@ -119,14 +120,16 @@ data class JellyfinPlaybackStopped(
     @SerialName("ItemId") val itemId: String,
     @SerialName("PositionTicks") val positionTicks: Long,
     @SerialName("PlaySessionId") val playSessionId: String? = null,
-    @SerialName("MediaSourceId") val mediaSourceId: String? = null
+    @SerialName("MediaSourceId") val mediaSourceId: String? = null,
+    @SerialName("PlayMethod") val playMethod: String? = null
 )
 
 @Serializable
 data class JellyfinPlaybackStart(
     @SerialName("ItemId") val itemId: String,
     @SerialName("PlaySessionId") val playSessionId: String? = null,
-    @SerialName("MediaSourceId") val mediaSourceId: String? = null
+    @SerialName("MediaSourceId") val mediaSourceId: String? = null,
+    @SerialName("PlayMethod") val playMethod: String? = null
 )
 
 // ---- Auth ----

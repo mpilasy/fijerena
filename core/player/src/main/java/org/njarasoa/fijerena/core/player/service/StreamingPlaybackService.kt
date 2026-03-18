@@ -75,7 +75,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _audioDspStats = MutableStateFlow(org.njarasoa.fijerena.core.player.model.AudioDspStats())
     val audioDspStats: StateFlow<org.njarasoa.fijerena.core.player.model.AudioDspStats> = _audioDspStats.asStateFlow()
 
-    private var onPositionSaveListener: ((Long, Long) -> Unit)? = null
+    private var onPositionSaveListener: ((Long, Long, Boolean) -> Unit)? = null
 
     private var liveRetryCount = 0
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -157,10 +157,13 @@ class StreamingPlaybackService : MediaSessionService() {
         )
         adaptiveLoadControl = loadControl
 
+        val bandwidthMeter = androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(this)
+
         // Build ExoPlayer with standard factory
         val playerBuilder = androidx.media3.exoplayer.ExoPlayer.Builder(this)
             .setRenderersFactory(renderersFactory)
             .setLoadControl(loadControl)
+            .setBandwidthMeter(bandwidthMeter)
             .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -186,8 +189,8 @@ class StreamingPlaybackService : MediaSessionService() {
                 acquireWakeLock()
             },
             player = player,
-            onPositionSave = { position, duration ->
-                onPositionSaveListener?.invoke(position, duration)
+            onPositionSave = { position, duration, isPaused ->
+                onPositionSaveListener?.invoke(position, duration, isPaused)
             },
             onStreamEndedOrError = { errorMessage ->
                 handleStreamEndedOrError(errorMessage)
@@ -241,7 +244,7 @@ class StreamingPlaybackService : MediaSessionService() {
         initializePlayer(contentType)
     }
 
-    fun setPositionSaveListener(listener: (position: Long, duration: Long) -> Unit) {
+    fun setPositionSaveListener(listener: (position: Long, duration: Long, isPaused: Boolean) -> Unit) {
         onPositionSaveListener = listener
     }
 
@@ -486,7 +489,7 @@ class StreamingPlaybackService : MediaSessionService() {
         cancelPendingRetry()
         mediaSession?.player?.let {
             if (it.isPlaying || it.playbackState == Player.STATE_READY) {
-                onPositionSaveListener?.invoke(it.currentPosition, it.duration)
+                onPositionSaveListener?.invoke(it.currentPosition, it.duration, !it.isPlaying)
             }
         }
 
@@ -512,7 +515,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onStateChanged: (PlaybackState) -> Unit,
         private val onWakeLockRequired: () -> Unit,
         private val player: Player,
-        private val onPositionSave: ((Long, Long) -> Unit)? = null,
+        private val onPositionSave: ((Long, Long, Boolean) -> Unit)? = null,
         private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {}
     ) : Player.Listener {
         private var isInErrorState = false
@@ -523,12 +526,14 @@ class StreamingPlaybackService : MediaSessionService() {
             isInErrorState = false
         }
         override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState == Player.STATE_READY && player.isPlaying) {
+            if (playbackState == Player.STATE_READY) {
                 val currentPosition = player.currentPosition
                 val duration = player.duration
+                val isPaused = !player.isPlaying
 
-                if (currentPosition - lastSavedPosition >= saveIntervalMs) {
-                    onPositionSave?.invoke(currentPosition, duration)
+                // Periodic save while playing or immediate save on state change (including pause)
+                if (kotlin.math.abs(currentPosition - lastSavedPosition) >= saveIntervalMs || isPaused) {
+                    onPositionSave?.invoke(currentPosition, duration, isPaused)
                     lastSavedPosition = currentPosition
                 }
             }
@@ -541,12 +546,20 @@ class StreamingPlaybackService : MediaSessionService() {
             if (playWhenReady) {
                 onWakeLockRequired()
             }
+            // Trigger immediate save when play/pause state changes
+            if (player.playbackState == Player.STATE_READY) {
+                onPositionSave?.invoke(player.currentPosition, player.duration, !playWhenReady)
+            }
             updatePlaybackState()
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (isPlaying) {
                 onWakeLockRequired()
+            }
+            // Trigger immediate save when play/pause state changes
+            if (player.playbackState == Player.STATE_READY) {
+                onPositionSave?.invoke(player.currentPosition, player.duration, !isPlaying)
             }
             updatePlaybackState()
         }

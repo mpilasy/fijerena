@@ -42,6 +42,7 @@ class JellyfinMediaProvider(
     // PlaySessionId per item, used for transcoding session reporting
     private val playSessionIds = mutableMapOf<String, String>()
     private val mediaSourceIds = mutableMapOf<String, String>()
+    private val playMethods = mutableMapOf<String, String>()
 
     override val capabilities = ProviderCapabilities(
         supportedContentTypes = setOf(ContentType.MOVIES, ContentType.TV_SHOWS),
@@ -283,6 +284,15 @@ class JellyfinMediaProvider(
             info.playSessionId?.let { playSessionIds[streamItemId] = it }
             source?.id?.let { mediaSourceIds[streamItemId] = it }
 
+            val playMethod = when {
+                source == null -> "DirectPlay"
+                source.supportsDirectPlay -> "DirectPlay"
+                source.transcodingUrl != null -> "Transcode"
+                source.supportsDirectStream -> "DirectStream"
+                else -> "DirectPlay"
+            }
+            playMethods[streamItemId] = playMethod
+
             val streamUrl = when {
                 source == null -> {
                     // No source in response — fall back to static direct play
@@ -311,6 +321,7 @@ class JellyfinMediaProvider(
         }
 
         // PlaybackInfo failed — fall back to legacy static direct play
+        playMethods[streamItemId] = "DirectPlay"
         val rawContainer = extension ?: item?.let { it.container ?: it.mediaSources.firstOrNull()?.container }
         val container = rawContainer?.split(",")?.firstOrNull { ext ->
             ext.trim().lowercase() in setOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd")
@@ -326,14 +337,15 @@ class JellyfinMediaProvider(
         )
     }
 
-    override suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long) {
+    override suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long, isPaused: Boolean) {
         if (!isConnected()) return
         api.reportPlaybackProgress(
             itemId = itemId,
             positionTicks = positionMs * 10_000,
-            isPaused = false,
+            isPaused = isPaused,
             playSessionId = playSessionIds[itemId],
-            mediaSourceId = mediaSourceIds[itemId]
+            mediaSourceId = mediaSourceIds[itemId],
+            playMethod = playMethods[itemId]
         )
     }
 
@@ -387,7 +399,8 @@ class JellyfinMediaProvider(
         api.reportPlaybackStart(
             itemId = itemId,
             playSessionId = playSessionIds[itemId],
-            mediaSourceId = mediaSourceIds[itemId]
+            mediaSourceId = mediaSourceIds[itemId],
+            playMethod = playMethods[itemId]
         )
     }
 
@@ -397,11 +410,13 @@ class JellyfinMediaProvider(
             itemId = itemId,
             positionTicks = positionMs * 10_000,
             playSessionId = playSessionIds[itemId],
-            mediaSourceId = mediaSourceIds[itemId]
+            mediaSourceId = mediaSourceIds[itemId],
+            playMethod = playMethods[itemId]
         )
         // Clean up session tracking after stop
         playSessionIds.remove(itemId)
         mediaSourceIds.remove(itemId)
+        playMethods.remove(itemId)
     }
 
     private suspend fun ensureConnected(): Boolean {
