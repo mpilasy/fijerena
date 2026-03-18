@@ -152,6 +152,14 @@ fun StatsOverlay(
                 var currentVideoBitrate = 0
                 var currentAudioBitrate = 0
 
+                // Fallback resolution from videoSize
+                if (videoResolution == "N/A" || videoResolution == "0 × 0") {
+                    val size = p.videoSize
+                    if (size.width > 0 && size.height > 0) {
+                        videoResolution = "${size.width} × ${size.height}"
+                    }
+                }
+
                 for (i in 0 until tracks.groups.size) {
                     val group = tracks.groups[i]
                     if (group.isSelected) {
@@ -162,7 +170,8 @@ fun StatsOverlay(
                                     videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
                                     videoResolution = "${format.width} × ${format.height}"
                                     videoFrameRate = if (format.frameRate > 0) "${format.frameRate.toInt()} fps" else "N/A"
-                                    videoBitrate = formatBitrate(format.bitrate)
+                                    currentVideoBitrate = format.bitrate
+                                    videoBitrate = if (currentVideoBitrate > 0) formatBitrate(currentVideoBitrate) else "Unknown"
                                     currentVideoBitrate = format.bitrate
                                 }
                                 if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
@@ -174,7 +183,8 @@ fun StatsOverlay(
                                             else -> "${format.channelCount}ch"
                                         }
                                     } else "N/A"
-                                    audioBitrate = formatBitrate(format.bitrate)
+                                    currentAudioBitrate = format.bitrate
+                                    audioBitrate = if (currentAudioBitrate > 0) formatBitrate(currentAudioBitrate) else "Unknown"
                                     currentAudioBitrate = format.bitrate
                                 }
                                 break // Found the selected track in this group
@@ -183,10 +193,17 @@ fun StatsOverlay(
                     }
                 }
 
-                // Use bandwidth estimate for network speed if available, otherwise total bitrate
+                // If bitrate is still unknown for video but we have a bandwidth estimate, use a portion of it as a guess
                 val bw = serviceBandwidth
+                if (currentVideoBitrate <= 0 && bw > 0) {
+                    val estimatedBitrate = (bw * 0.9).toInt()
+                    videoBitrate = "~" + formatBitrate(estimatedBitrate)
+                }
+
+                // Use bandwidth estimate for network speed
                 networkSpeed = if (bw > 0) formatBitrate(bw.toInt()) else {
-                    val totalBitrate = currentVideoBitrate + currentAudioBitrate
+                    val totalBitrate = (if (currentVideoBitrate > 0) currentVideoBitrate else 0) + 
+                                     (if (currentAudioBitrate > 0) currentAudioBitrate else 0)
                     if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
                 }
             }
