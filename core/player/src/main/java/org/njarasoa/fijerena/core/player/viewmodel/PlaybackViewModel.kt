@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,6 +43,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     val nightModeEnabled: StateFlow<Boolean> = _nightModeEnabled.asStateFlow()
 
     private var isInErrorState = false
+    private var focusLostJob: Job? = null
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -141,6 +144,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     fun playStream(metadata: PlayerMetadata, resumeFromPosition: Long = 0L) {
         // Reset error state on new stream
         isInErrorState = false
+        onFocusRegained()
         _currentMetadata.value = metadata
         _playbackState.value = PlaybackState.Buffering
 
@@ -157,6 +161,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun resume() {
+        onFocusRegained()
         viewModelScope.launch {
             StreamingPlaybackService.getInstance()?.resume()
         }
@@ -165,9 +170,39 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     fun stop() {
         // Reset error state when user goes back
         isInErrorState = false
+        onFocusRegained()
         viewModelScope.launch {
             StreamingPlaybackService.getInstance()?.stop()
         }
+    }
+
+    /**
+     * Called when the app loses focus (e.g. backgrounded).
+     * Pauses playback and starts a 30s timer to stop playback completely.
+     */
+    fun onFocusLost() {
+        val currentState = _playbackState.value
+        if (currentState is PlaybackState.Playing || currentState is PlaybackState.Buffering) {
+            pause()
+        }
+
+        // Always start/reset the stop timer if we were at least in a non-idle state
+        if (currentState !is PlaybackState.Idle && currentState !is PlaybackState.Ended) {
+            focusLostJob?.cancel()
+            focusLostJob = viewModelScope.launch {
+                delay(30_000L)
+                stop()
+            }
+        }
+    }
+
+    /**
+     * Called when the app regains focus.
+     * Cancels the pending stop timer.
+     */
+    fun onFocusRegained() {
+        focusLostJob?.cancel()
+        focusLostJob = null
     }
 
     fun seekTo(position: Long) {
