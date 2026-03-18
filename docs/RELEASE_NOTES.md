@@ -1,5 +1,22 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Static Stats & Stream Specs
+**Release Date:** 2026-03-18
+
+### TV Player Refinements
+- **Static Stats Overlay:** The "Stats for Nerds" is now fixed to the top-right corner. It is completely non-focusable, allowing full D-pad control of the stream (channel switching, seeking) while diagnostics are visible.
+- **Double-OK Dismissal:** Added a convenient double-click OK gesture to hide the stats overlay instantly.
+- **Stream Specs:** Current resolution (e.g., 1080p) and codec (e.g., HEVC) are now displayed in the top-left info panel whenever it appears.
+- **Icon Visibility Fix:** Resolved an issue where control buttons appeared "black on black" when not focused; icons are now correctly white-on-dark.
+
+### Mobile Player Improvements
+- **Status Bar Integration:** All top-aligned player overlays (title, clock, stats, channel toasts) now properly respect the phone's status bar padding, preventing visual overlap with system icons.
+- **Stream Specs:** Ported the resolution and codec information to the mobile player, displayed underneath the stream title.
+
+### Architecture & Stability
+- **Interaction State:** Added `lastOkClickTime` to `PlayerScreenState` for reliable multi-tap gesture detection.
+- **Build & Deploy:** Synchronized debug APK collection and multi-device deployment pipeline.
+
 ## Version: History Reliability & VOD Thresholds
 **Release Date:** 2026-03-18
 

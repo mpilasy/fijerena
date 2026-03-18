@@ -78,8 +78,10 @@ The project follows a modular, Clean Architecture pattern with MVVM.
 
 ### 3. Media Player Controls
 - **OK/Center key** ONLY shows controls; it does not pause playback.
+- **Double-OK** specifically dismisses the stats overlay if it is visible.
 - **D-pad Left/Right** on Live TV opens channel overlays (does not seek).
-- **Stats overlay** repositionable via D-pad.
+- **Stats overlay** is static at the top-right on TV and non-focusable to allow background control.
+- **Stream info overlay** (top-left) now displays the current stream's resolution and codec information underneath the title.
 - **Watch History Rules:**
   - **Live TV:** Added to history after **10 seconds** of continuous playback.
   - **VOD (Movies/Series):** Added to history only after reaching a **2% watch threshold** to prevent clutter.
