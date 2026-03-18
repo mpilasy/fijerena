@@ -80,6 +80,10 @@ The project follows a modular, Clean Architecture pattern with MVVM.
 - **OK/Center key** ONLY shows controls; it does not pause playback.
 - **D-pad Left/Right** on Live TV opens channel overlays (does not seek).
 - **Stats overlay** repositionable via D-pad.
+- **Watch History Rules:**
+  - **Live TV:** Added to history after **10 seconds** of continuous playback.
+  - **VOD (Movies/Series):** Added to history only after reaching a **2% watch threshold** to prevent clutter.
+  - **Session Finalization:** `loaderViewModel.stopPlayback()` MUST be called when exiting the player or switching streams to ensure final progress is reported and history is flushed to disk.
 
 ### 4. EPG & Data
 - **EPG Indexing:** XMLTV data is indexed into a Room SQLite DB with FTS4 support.
