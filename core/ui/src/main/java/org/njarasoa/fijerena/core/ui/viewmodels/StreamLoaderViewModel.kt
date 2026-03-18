@@ -197,20 +197,30 @@ class StreamLoaderViewModel(
                         savedSubtitleTrackIndex = savedSubtitleIndex
                     )
 
-                    // Schedule history update (Recent Channels) after configured delay
+                    // Schedule history update (Recent Channels) after configured delay — LIVE TV ONLY
+                    // For VOD, history is recorded via recordHistory() once a threshold (%) is reached
                     historyJob?.cancel()
-                    historyJob = viewModelScope.launch(Dispatchers.IO) {
-                        delay(AppSettings(context).watchDelaySeconds * 1000L)
-                        repo.saveLastPlayedItem(
-                            categoryId = categoryId,
-                            itemId = streamId,
-                            itemName = streamName,
-                            contentType = contentType,
-                            episodeId = episodeId,
-                            episodeExtension = episodeExtension,
-                            seriesId = seriesId,
-                            seriesName = seriesName
-                        )
+                    if (contentType == ContentType.LIVE_TV) {
+                        historyJob = viewModelScope.launch(Dispatchers.IO) {
+                            delay(AppSettings(context).watchDelaySeconds * 1000L)
+                            repo.saveLastPlayedItem(
+                                categoryId = categoryId,
+                                itemId = streamId,
+                                itemName = streamName,
+                                contentType = contentType,
+                                episodeId = episodeId,
+                                episodeExtension = episodeExtension,
+                                seriesId = seriesId,
+                                seriesName = seriesName
+                            )
+
+                            // Refresh history in the current state so the "Last Watched" overlay is up-to-date
+                            val updatedHistory = repo.getWatchHistoryForContentTypeSuspend(contentType)
+                            val currentState = _state.value
+                            if (currentState is StreamState.Success && currentState.streamId == streamId) {
+                                _state.value = currentState.copy(lastWatchedStreams = updatedHistory)
+                            }
+                        }
                     }
                 },
                 onFailure = { e ->
@@ -224,7 +234,7 @@ class StreamLoaderViewModel(
 
     fun loadStream(item: MediaItem) {
         viewModelScope.launch(Dispatchers.IO) {
-            // Capture current state before setting Loading, so we preserve categoryStreams/lastWatchedStreams
+            // Capture current state before setting Loading, so we preserve categoryStreams
             val previousState = _state.value
             _state.value = StreamState.Loading
 
@@ -232,7 +242,9 @@ class StreamLoaderViewModel(
             currentStreamIndex = streamList.indexOfFirst { it.id == item.id }
 
             val currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else streamList
-            val lastWatched = if (previousState is StreamState.Success) previousState.lastWatchedStreams else emptyList()
+            
+            // Re-fetch history to ensure we have the latest watched items from previous stream
+            val lastWatched = mediaRepository?.getWatchHistoryForContentTypeSuspend(contentType) ?: emptyList()
 
             loadStreamInternal(item.id, item.name, currentStreams, lastWatched)
         }
@@ -286,8 +298,24 @@ class StreamLoaderViewModel(
             val currentState = _state.value as? StreamState.Success ?: return@launch
             val repo = mediaRepository ?: return@launch
 
-            // Save playback position (Resume Point)
+            // Save playback position (Resume Point) - Only for VOD/Series
             if (contentType != ContentType.LIVE_TV) {
+                val progressPercent = if (duration > 0) (position.toFloat() / duration.toFloat()) * 100f else 0f
+                
+                // VOD Rules: Only add to history once > 2% threshold is reached to avoid cluttering
+                if (progressPercent >= 2.0f) {
+                    repo.saveLastPlayedItem(
+                        categoryId = categoryId,
+                        itemId = currentState.streamId,
+                        itemName = currentState.streamName,
+                        contentType = contentType,
+                        episodeId = episodeId,
+                        episodeExtension = episodeExtension,
+                        seriesId = seriesId,
+                        seriesName = seriesName
+                    )
+                }
+
                 repo.savePlaybackPosition(
                     currentState.streamId,
                     currentState.streamName,
@@ -298,8 +326,10 @@ class StreamLoaderViewModel(
                     audioTrackIndex = audioTrackIndex,
                     subtitleTrackIndex = subtitleTrackIndex
                 )
-                repo.onPlaybackProgress(currentState.streamId, position, duration, isPaused)
             }
+
+            // Always notify provider of progress (e.g. for session tracking/scrobbling)
+            repo.onPlaybackProgress(currentState.streamId, position, duration, isPaused)
         }
     }
 
@@ -311,8 +341,24 @@ class StreamLoaderViewModel(
             val currentState = _state.value as? StreamState.Success ?: return@launch
             val repo = mediaRepository ?: return@launch
 
+            // Final save - Only for VOD/Series
             if (contentType != ContentType.LIVE_TV) {
-                // Final save
+                val progressPercent = if (duration > 0) (position.toFloat() / duration.toFloat()) * 100f else 0f
+
+                // Final check to see if we reached threshold before exiting
+                if (progressPercent >= 2.0f) {
+                    repo.saveLastPlayedItem(
+                        categoryId = categoryId,
+                        itemId = currentState.streamId,
+                        itemName = currentState.streamName,
+                        contentType = contentType,
+                        episodeId = episodeId,
+                        episodeExtension = episodeExtension,
+                        seriesId = seriesId,
+                        seriesName = seriesName
+                    )
+                }
+
                 repo.savePlaybackPosition(
                     currentState.streamId,
                     currentState.streamName,
@@ -323,12 +369,13 @@ class StreamLoaderViewModel(
                     audioTrackIndex = audioTrackIndex,
                     subtitleTrackIndex = subtitleTrackIndex
                 )
-                // Final notification to provider (e.g. reportPlaybackStopped to Jellyfin)
-                repo.onPlaybackStopped(currentState.streamId, position, duration)
-
-                // Flush to disk immediately
-                repo.flushWatchHistory()
             }
+
+            // Final notification to provider (e.g. reportPlaybackStopped to Jellyfin/Xtream)
+            repo.onPlaybackStopped(currentState.streamId, position, duration)
+
+            // Flush to disk immediately to ensure history is committed
+            repo.flushWatchHistory()
         }
     }
 }

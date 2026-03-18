@@ -191,26 +191,23 @@ fun TvPlayerScreen(
                 viewModel = playbackViewModel,
                 currentStreamId = state.streamId,
                 onBack = {
-                    // Save position before stopping (stop sets state to Idle)
-                    if (!state.isLive) {
-                        val ps = playbackViewModel.playbackState.value
-                        val pos = when (ps) {
-                            is PlaybackState.Playing -> ps.position
-                            is PlaybackState.Paused -> ps.position
-                            else -> null
-                        }
-                        val dur = when (ps) {
-                            is PlaybackState.Playing -> ps.duration
-                            is PlaybackState.Paused -> ps.duration
-                            else -> null
-                        }
-                        if (pos != null && dur != null && dur > 0) {
-                            val service = StreamingPlaybackService.getInstance()
-                            val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
-                            val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
-                            loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
-                        }
+                    // Finalize session before stopping
+                    val ps = playbackViewModel.playbackState.value
+                    val pos = when (ps) {
+                        is PlaybackState.Playing -> ps.position
+                        is PlaybackState.Paused -> ps.position
+                        else -> 0L
                     }
+                    val dur = when (ps) {
+                        is PlaybackState.Playing -> ps.duration
+                        is PlaybackState.Paused -> ps.duration
+                        else -> 0L
+                    }
+                    val service = StreamingPlaybackService.getInstance()
+                    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+
                     playbackViewModel.stop()
                     onBack()
                 },
@@ -224,26 +221,23 @@ fun TvPlayerScreen(
                     ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })
                 },
                 onStreamSelected = { item ->
-                    // Stop current stream properly before starting new one
-                    if (!state.isLive) {
-                        val ps = playbackViewModel.playbackState.value
-                        val pos = when (ps) {
-                            is PlaybackState.Playing -> ps.position
-                            is PlaybackState.Paused -> ps.position
-                            else -> null
-                        }
-                        val dur = when (ps) {
-                            is PlaybackState.Playing -> ps.duration
-                            is PlaybackState.Paused -> ps.duration
-                            else -> null
-                        }
-                        if (pos != null && dur != null && dur > 0) {
-                            val service = StreamingPlaybackService.getInstance()
-                            val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
-                            val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
-                            loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
-                        }
+                    // Finalize current session properly before starting new one
+                    val ps = playbackViewModel.playbackState.value
+                    val pos = when (ps) {
+                        is PlaybackState.Playing -> ps.position
+                        is PlaybackState.Paused -> ps.position
+                        else -> 0L
                     }
+                    val dur = when (ps) {
+                        is PlaybackState.Playing -> ps.duration
+                        is PlaybackState.Paused -> ps.duration
+                        else -> 0L
+                    }
+                    val service = StreamingPlaybackService.getInstance()
+                    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+
                     loaderViewModel.loadStream(item)
                 },
                 onToggleFavorite = {
