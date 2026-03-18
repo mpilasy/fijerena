@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,11 +12,9 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.ai.AiManager
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class SearchViewModel(
@@ -50,10 +47,7 @@ class SearchViewModel(
             val networkAccumDuration: String? = null,
             val networkCalls: Int = 0,
             val failedCalls: Int = 0,
-            val firstError: String? = null,
-            val hasAiResults: Boolean = false,
-            val totalAiCandidates: Int = 0,
-            val isAiAvailable: Boolean = AiManager.detectTier() == org.njarasoa.fijerena.core.network.ai.VectorizationTier.PREMIUM
+            val firstError: String? = null
         ) : UiState()
         data class Error(val message: String) : UiState()
     }
@@ -65,8 +59,7 @@ class SearchViewModel(
         val categoryName: String,
         val contentType: String,
         val thumbnailUrl: String? = null,
-        val mediaType: org.njarasoa.fijerena.core.player.domain.MediaType? = null,
-        val isAiResult: Boolean = false
+        val mediaType: org.njarasoa.fijerena.core.player.domain.MediaType? = null
     )
 
     data class CategorySearchResult(
@@ -198,19 +191,6 @@ class SearchViewModel(
 
             _uiState.value = UiState.Loading
 
-            // Hybrid search integration: Start AI search in parallel
-            val aiProvider = AiManager.getProvider()
-            val aiSearchTask = if (aiProvider != null) {
-                scope.async(Dispatchers.Default) { 
-                    try {
-                        aiProvider.search(query, repo.getProviderId()) 
-                    } catch (e: Exception) {
-                        android.util.Log.e("SearchViewModel", "AI search failed", e)
-                        null
-                    }
-                }
-            } else null
-
             // Try server-side search first (e.g., Jellyfin)
             val serverResults = mutableListOf<SearchResult>()
             var serverSearchSuccess = false
@@ -279,29 +259,6 @@ class SearchViewModel(
                 }
             }
 
-            // Phase 3: Wait for AI results and merge
-            val aiResponse = aiSearchTask?.await()
-            val hasAiResults = !aiResponse?.results.isNullOrEmpty()
-            val aiCandidates = aiResponse?.totalAiCandidates ?: 0
-            
-            if (aiResponse != null) {
-                val seenIds = results.map { it.itemId }.toMutableSet()
-                for (cand in aiResponse.results) {
-                    if (cand.itemId !in seenIds) {
-                        results.add(SearchResult(
-                            itemId = cand.itemId,
-                            streamName = cand.title,
-                            categoryId = cand.itemId,
-                            categoryName = "AI Match",
-                            contentType = cand.type,
-                            thumbnailUrl = cand.thumbnailUrl,
-                            isAiResult = true
-                        ))
-                        seenIds.add(cand.itemId)
-                    }
-                }
-            }
-
             val finalResults = sortResults(results, normalizedQuery, queryWords).take(TARGET_RESULTS)
             val elapsed = System.currentTimeMillis() - startTime
             _uiState.value = UiState.Success(
@@ -309,9 +266,7 @@ class SearchViewModel(
                 allResults = finalResults,
                 filteredResults = finalResults,
                 query = query,
-                totalDuration = formatSeconds(elapsed),
-                hasAiResults = hasAiResults,
-                totalAiCandidates = aiCandidates
+                totalDuration = formatSeconds(elapsed)
             )
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -320,11 +275,10 @@ class SearchViewModel(
     }
 
     private fun sortResults(results: List<SearchResult>, normalizedQuery: String, queryWords: List<String>): List<SearchResult> {
-        data class SortEntry(val isAi: Boolean, val nameLower: String, val result: SearchResult)
-        val entries = results.map { SortEntry(it.isAiResult, it.streamName.lowercase(), it) }
+        data class SortEntry(val nameLower: String, val result: SearchResult)
+        val entries = results.map { SortEntry(it.streamName.lowercase(), it) }
         return entries.sortedWith(
-            compareBy<SortEntry> { !it.isAi } // AI results first for "AI Match"
-            .thenBy {
+            compareBy<SortEntry> {
                 when {
                     it.nameLower == normalizedQuery -> 0
                     it.nameLower.startsWith(normalizedQuery) -> 1

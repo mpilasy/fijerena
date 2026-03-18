@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.player.service
 
-import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -25,8 +24,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import androidx.media3.common.audio.AudioProcessor
-import org.njarasoa.fijerena.core.player.audio.BraviaVoiceZoomManager
 import org.njarasoa.fijerena.core.player.audio.NightModeManager
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
@@ -90,73 +87,6 @@ class StreamingPlaybackService : MediaSessionService() {
     // Audio enhancement
     val nightModeManager = NightModeManager()
     val nightModeProcessor = org.njarasoa.fijerena.core.player.audio.NightModeProcessor()
-    var voiceZoomManager: BraviaVoiceZoomManager? = null
-        private set
-    private var audioProcessors: Array<AudioProcessor> = arrayOf(nightModeProcessor)
-
-    /**
-     * Set external audio processors (e.g., DialogueBoostProcessor from core:ai).
-     * Must be called before initializePlayer() to take effect.
-     * The service will include these in the DefaultAudioSink chain.
-     */
-    fun setAudioProcessors(processors: Array<AudioProcessor>) {
-        val list = mutableListOf<AudioProcessor>(nightModeProcessor)
-        list.addAll(processors)
-        audioProcessors = list.toTypedArray()
-    }
-
-    fun getAudioProcessors(): Array<AudioProcessor> = audioProcessors
-
-    private fun initializeAiAudio() {
-        try {
-            // Use reflection to access core:ai which is only in full flavor
-            val managerClass = Class.forName("org.njarasoa.fijerena.core.ai.audio.AudioEnhancementManager")
-            val detectorClass = Class.forName("org.njarasoa.fijerena.core.ai.SearchCapabilityDetector")
-            
-            // Check tier
-            val detector = detectorClass.getConstructor(Context::class.java).newInstance(this)
-            val detectAudioTierMethod = detectorClass.getMethod("detectAudioTier")
-            val tier = detectAudioTierMethod?.invoke(detector)
-            
-            if (tier.toString() == "REALTIME") {
-                Log.i(TAG, "Device tier is REALTIME, initializing AI processor")
-                val manager = managerClass.getConstructor(Context::class.java).newInstance(this)
-                val getProcessorMethod = managerClass.getMethod("getProcessor")
-                val processor = getProcessorMethod.invoke(manager)
-                
-                if (processor is AudioProcessor) {
-                    setAudioProcessors(arrayOf(processor))
-                    Log.i(TAG, "AI Dialogue Booster initialized and injected. Processors count: ${audioProcessors.size}")
-                    audioProcessors.forEachIndexed { index, proc -> 
-                        Log.d(TAG, "Processor[$index]: ${proc.javaClass.name}")
-                    }
-                    
-                    // Sync initial strength from prefs
-                    val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-                    val strength = prefs.getFloat("dialogue_boost_strength", 0f)
-                    Log.i(TAG, "Syncing initial strength: $strength")
-                    if (strength > 0f) {
-                        try {
-                            val setStrengthMethod = processor.javaClass.methods.find { it.name == "setStrength" }
-                            setStrengthMethod?.invoke(processor, strength)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to sync strength: ${e.message}")
-                        }
-                    }
-                } else if (processor != null) {
-                    Log.w(TAG, "AI processor is NOT an instance of AudioProcessor: ${processor.javaClass.name}")
-                } else {
-                    Log.w(TAG, "AI processor is null")
-                }
-            } else {
-                Log.i(TAG, "AI Audio disabled: device tier is $tier")
-            }
-        } catch (e: ClassNotFoundException) {
-            Log.d(TAG, "AI Audio not available in this build flavor (core:ai missing)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize AI audio: ${e.message}", e)
-        }
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -164,16 +94,6 @@ class StreamingPlaybackService : MediaSessionService() {
         instanceReady.complete(this)
         NetworkMonitor.init(this)
 
-        // Initialize AI Audio Processors if available (Full flavor)
-        initializeAiAudio()
-
-        // Initialize Bravia Voice Zoom if on a Sony TV
-        val vzm = BraviaVoiceZoomManager(this)
-        if (vzm.isAvailable) {
-            voiceZoomManager = vzm
-            vzm.readCurrentState()
-            Log.i(TAG, "Bravia Voice Zoom available, current state: ${vzm.enabled}")
-        }
         initializePlayer()
         acquireWakeLock()
         observeNetworkChanges()
@@ -202,7 +122,7 @@ class StreamingPlaybackService : MediaSessionService() {
         // we enable our internal app-level processor instead.
         val nmDesired = nightModeManager.enabled
         val isMobile = org.njarasoa.fijerena.core.player.device.DeviceDetector.detect().deviceType == org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE
-        
+
         if (nmDesired) {
             // On mobile, always use internal processor for reliability (HAL is often buggy).
             // On TV (Shield/Bravia), prefer HAL for zero-CPU overhead if it's actually active.
@@ -211,59 +131,8 @@ class StreamingPlaybackService : MediaSessionService() {
             nightModeProcessor.enabled = false
         }
 
-        // Read Clear Voice stats from the AudioProcessor via reflection (core:ai is optional)
-        var clearVoiceEnabled = false
-        var clearVoiceStrength = 0f
-        var clearVoiceAutoDisabled = false
-        var aiFramesProcessed = 0L
-        var aiFramesSkipped = 0L
-        var aiLastInferenceMs = 0L
-        var aiAvgInferenceMs = 0f
-
-        // Use a local copy to avoid concurrent modification if setAudioProcessors is called
-        val currentProcessors = audioProcessors
-        for (proc in currentProcessors) {
-            try {
-                val clazz = proc.javaClass
-                // Use contains() to be more resilient to class name variations (proxies, shadows)
-                if (clazz.name.contains("DialogueBoostProcessor")) {
-                    val methods = clazz.methods
-                    
-                    val getStrength = methods.find { it.name == "getStrength" }
-                    clearVoiceStrength = getStrength?.invoke(proc) as? Float ?: 0f
-                    clearVoiceEnabled = clearVoiceStrength > 0.01f
-                    
-                    val isAutoDisabled = methods.find { it.name == "isAutoDisabled" }
-                    clearVoiceAutoDisabled = isAutoDisabled?.invoke(proc) as? Boolean ?: false
-                    
-                    val getProcessed = methods.find { it.name == "getTotalFramesProcessed" }
-                    aiFramesProcessed = getProcessed?.invoke(proc) as? Long ?: 0L
-                    
-                    val getSkipped = methods.find { it.name == "getTotalFramesSkipped" }
-                    aiFramesSkipped = getSkipped?.invoke(proc) as? Long ?: 0L
-                    
-                    val getLastInf = methods.find { it.name == "getLastInferenceMs" }
-                    aiLastInferenceMs = getLastInf?.invoke(proc) as? Long ?: 0L
-                    
-                    val getAvgInf = methods.find { it.name == "getAvgInferenceMs" }
-                    aiAvgInferenceMs = getAvgInf?.invoke(proc) as? Float ?: 0f
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to read stats from processor ${proc.javaClass.name}: ${e.message}")
-            }
-        }
-
         _audioDspStats.value = org.njarasoa.fijerena.core.player.model.AudioDspStats(
-            clearVoiceEnabled = clearVoiceEnabled,
-            clearVoiceStrength = clearVoiceStrength,
-            clearVoiceAutoDisabled = clearVoiceAutoDisabled,
-            aiFramesProcessed = aiFramesProcessed,
-            aiFramesSkipped = aiFramesSkipped,
-            aiLastInferenceMs = aiLastInferenceMs,
-            aiAvgInferenceMs = aiAvgInferenceMs,
             nightModeEnabled = nightModeManager.enabled,
-            voiceZoomEnabled = voiceZoomManager?.enabled ?: false,
-            voiceZoomAvailable = voiceZoomManager?.isAvailable ?: false,
             nmEncoding = nightModeProcessor.configuredEncoding,
             nmEnabled = nightModeProcessor.enabled,
             nmCallCount = nightModeProcessor.queueInputCallCount

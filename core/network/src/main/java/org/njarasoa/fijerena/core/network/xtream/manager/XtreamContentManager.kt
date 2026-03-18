@@ -324,8 +324,6 @@ class XtreamContentManager(
                       }
                       if (toInsert.isNotEmpty()) {
                           categoryDao.insertAll(toInsert)
-                          // Trigger AI pass for new categories
-                          org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
                       }
 
                       val key = when(type) {
@@ -414,8 +412,6 @@ class XtreamContentManager(
 
                           if (batch.isNotEmpty()) {
                               streamDao.insertAll(batch)
-                              // Trigger AI pass for new/updated streams
-                              org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
                           }
 
                           // Cleanup deleted
@@ -501,8 +497,6 @@ class XtreamContentManager(
 
                         if (batch.isNotEmpty()) {
                             seriesDao.insertAll(batch)
-                            // Trigger AI pass for new series
-                            org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
                         }
 
                         val allIds = seriesDao.getSeriesIds(providerId)
@@ -572,8 +566,6 @@ class XtreamContentManager(
             }
             if (episodesToInsert.isNotEmpty()) {
                 episodeDao.insertAll(episodesToInsert)
-                // Trigger AI pass
-                org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
             }
 
             seriesInfo
@@ -605,8 +597,6 @@ class XtreamContentManager(
                     duration = info.duration,
                     youtubeTrailer = null // MovieInfo doesn't seem to have trailer, but SeriesInfo does
                 )
-                // Trigger AI pass
-                org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
             }
 
             vodInfo

@@ -414,25 +414,15 @@ fun StatsOverlay(
                         SectionHeader("DEVICE")
                         CompactStatRow("Model", android.os.Build.MODEL.take(15))
                         CompactStatRow("API", "${android.os.Build.VERSION.SDK_INT}")
-                        val tier = remember {
-                            try {
-                                val detectorClass = Class.forName("org.njarasoa.fijerena.core.ai.SearchCapabilityDetector")
-                                "Unknown" 
-                            } catch (_: Exception) { "BASIC" }
-                        }
-                        
-                        val procCount = remember { StreamingPlaybackService.getInstance()?.getAudioProcessors()?.size ?: 0 }
-                        CompactStatRow("AI Tier", if (procCount > 0) "REALTIME" else "BASIC/NONE")
 
-                        // AI Audio DSP
-                        SectionHeader("AI AUDIO DSP")
+                        // Audio DSP
+                        SectionHeader("AUDIO DSP")
                         val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else CinemaTextPrimary
                         CompactStatRowColored("Night Mode", if (audioDspStats.nightModeEnabled) "ON" else "OFF", nightModeColor)
-                        
-                        // Added debug info for Night Mode
+
                         val nmActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.enabled ?: false }
                         val isHalActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.isActuallyActive ?: false }
-                        val sessionId = remember { 
+                        val sessionId = remember {
                             val p = StreamingPlaybackService.getInstance()?.getPlayer()
                             if (p is androidx.media3.exoplayer.ExoPlayer) p.audioSessionId else 0
                         }
@@ -440,34 +430,6 @@ fun StatsOverlay(
                         CompactStatRow("DSP Active", if (nmActive && sessionId != 0) "YES" else "NO")
                         if (nmActive) {
                             CompactStatRow("NM Engine", if (isHalActive) "HAL (System)" else "APP (Internal)")
-                        }
-
-                        val cvStatus = when {
-                            audioDspStats.clearVoiceAutoDisabled -> "DISABLED (slow)"
-                            audioDspStats.clearVoiceEnabled -> "ON (${(audioDspStats.clearVoiceStrength * 100).toInt()}%)"
-                            else -> "OFF"
-                        }
-                        val cvColor = when {
-                            audioDspStats.clearVoiceAutoDisabled -> CinemaError
-                            audioDspStats.clearVoiceEnabled -> CinemaSuccess
-                            else -> CinemaTextPrimary
-                        }
-                        CompactStatRowColored("Clear Voice", cvStatus, cvColor)
-                        
-                        // Always show these if we have a processor, so we can see 0s
-                        if (procCount > 0) {
-                            CompactStatRow("AI Latency", "${audioDspStats.aiLastInferenceMs}ms (avg ${String.format("%.1f", audioDspStats.aiAvgInferenceMs)}ms)")
-                            val skipColor = when {
-                                audioDspStats.aiFramesSkipped == 0L -> CinemaSuccess
-                                audioDspStats.aiFramesSkipped < 10 -> CinemaWarning
-                                else -> CinemaError
-                            }
-                            CompactStatRowColored("AI Frames", "${audioDspStats.aiFramesProcessed} ok / ${audioDspStats.aiFramesSkipped} skip", skipColor)
-                        }
-
-                        if (audioDspStats.voiceZoomAvailable) {
-                            val vzColor = if (audioDspStats.voiceZoomEnabled) CinemaSuccess else CinemaTextPrimary
-                            CompactStatRowColored("Voice Zoom", if (audioDspStats.voiceZoomEnabled) "ON" else "OFF", vzColor)
                         }
                     }
                 }

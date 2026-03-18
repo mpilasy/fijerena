@@ -31,18 +31,6 @@ android {
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
     }
 
-    flavorDimensions += "tier"
-    productFlavors {
-        create("slim") {
-            dimension = "tier"
-            buildConfigField("boolean", "USE_AI", "false")
-        }
-        create("full") {
-            dimension = "tier"
-            buildConfigField("boolean", "USE_AI", "true")
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -78,9 +66,6 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:network"))
     
-    // AI Module (Full tier only)
-    "fullImplementation"(project(":core:ai"))
-
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

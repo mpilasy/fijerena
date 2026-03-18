@@ -446,9 +446,6 @@ class EpgIndexer private constructor(private val context: Context) {
 
             lastIngestionStats = IngestionStats(channelEntities.size, totalProgrammes)
 
-            // Trigger AI vectorization if available
-            org.njarasoa.fijerena.core.network.ai.AiManager.getProvider()?.scheduleVectorization()
-
             rebuildFtsAndUpdateState()
         } catch (e: Exception) {
             Log.e(TAG, "Xtream EPG ingestion failed: ${e.message}", e)

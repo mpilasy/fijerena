@@ -141,13 +141,6 @@ sealed interface Screen {
     data object EpgManagement : Screen
 
     /**
-     * AI Search Settings screen destination.
-     * Configure and monitor AI semantic search processing.
-     */
-    @Serializable
-    data object AiSettings : Screen
-
-    /**
      * Cellular Buffer Settings screen destination (developer mode only).
      * Configure cellular buffer multipliers for Live TV and VOD.
      */

@@ -256,10 +256,8 @@ fun MobileStatsOverlay(
                 SectionHeader("DEVICE")
                 StatRow("Model", android.os.Build.MODEL)
                 StatRow("API", "${android.os.Build.VERSION.SDK_INT}")
-                val aiProcCount = remember { StreamingPlaybackService.getInstance()?.getAudioProcessors()?.size ?: 0 }
-                StatRow("AI Tier", if (aiProcCount > 0) "REALTIME" else "BASIC/NONE")
 
-                SectionHeader("AI AUDIO DSP")
+                SectionHeader("AUDIO DSP")
                 val nightModeColor = if (audioDspStats.nightModeEnabled) CinemaSuccess else Color.White
                 StatRowColored("Night Mode", if (audioDspStats.nightModeEnabled) "ON" else "OFF", nightModeColor)
 
@@ -274,7 +272,6 @@ fun MobileStatsOverlay(
                 if (nmActive) {
                     StatRow("NM Engine", if (isHalActive) "HAL (System)" else "APP (Internal)")
                 }
-                // Debug: show processor encoding and state
                 val encodingName = when (audioDspStats.nmEncoding) {
                     androidx.media3.common.C.ENCODING_PCM_16BIT -> "PCM_16BIT"
                     androidx.media3.common.C.ENCODING_PCM_FLOAT -> "PCM_FLOAT"
@@ -286,32 +283,6 @@ fun MobileStatsOverlay(
                 StatRow("NM Encoding", encodingName)
                 StatRow("NM Proc Enabled", "${audioDspStats.nmEnabled}")
                 StatRow("NM Calls", "${audioDspStats.nmCallCount}")
-
-                val cvStatus = when {
-                    audioDspStats.clearVoiceAutoDisabled -> "DISABLED (slow)"
-                    audioDspStats.clearVoiceEnabled -> "ON (${(audioDspStats.clearVoiceStrength * 100).toInt()}%)"
-                    else -> "OFF"
-                }
-                val cvColor = when {
-                    audioDspStats.clearVoiceAutoDisabled -> CinemaError
-                    audioDspStats.clearVoiceEnabled -> CinemaSuccess
-                    else -> Color.White
-                }
-                StatRowColored("Clear Voice", cvStatus, cvColor)
-                val procCount = remember { StreamingPlaybackService.getInstance()?.getAudioProcessors()?.size ?: 0 }
-                if (procCount > 0) {
-                    StatRow("AI Latency", "${audioDspStats.aiLastInferenceMs}ms (avg ${String.format("%.1f", audioDspStats.aiAvgInferenceMs)}ms)")
-                    val skipColor = when {
-                        audioDspStats.aiFramesSkipped == 0L -> CinemaSuccess
-                        audioDspStats.aiFramesSkipped < 10 -> CinemaWarning
-                        else -> CinemaError
-                    }
-                    StatRowColored("AI Frames", "${audioDspStats.aiFramesProcessed} ok / ${audioDspStats.aiFramesSkipped} skip", skipColor)
-                }
-                if (audioDspStats.voiceZoomAvailable) {
-                    val vzColor = if (audioDspStats.voiceZoomEnabled) CinemaSuccess else Color.White
-                    StatRowColored("Voice Zoom", if (audioDspStats.voiceZoomEnabled) "ON" else "OFF", vzColor)
-                }
 
                 val caps = remember { org.njarasoa.fijerena.core.player.device.DeviceDetector.detect() }
                 Text(

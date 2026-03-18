@@ -30,7 +30,6 @@ class AppSettings(context: Context) {
         private const val KEY_HAS_PROVIDER_CACHE = "has_provider_cache"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_NIGHT_MODE_ENABLED = "night_mode_enabled"
-        private const val KEY_DIALOGUE_BOOST_STRENGTH = "dialogue_boost_strength"
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_WATCH_DELAY_SECONDS = 30
         const val MIN_WATCH_DELAY_SECONDS = 5
@@ -201,17 +200,6 @@ class AppSettings(context: Context) {
     var nightModeEnabled: Boolean
         get() = prefs.getBoolean(KEY_NIGHT_MODE_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_NIGHT_MODE_ENABLED, value).apply()
-
-    /**
-     * Dialogue boost (Clear Voice) strength: 0.0 = off, 1.0 = full enhancement.
-     * Only available on PREMIUM/REALTIME tier devices with AI model support.
-     */
-    var dialogueBoostStrength: Float
-        get() = prefs.getFloat(KEY_DIALOGUE_BOOST_STRENGTH, 0f)
-        set(value) {
-            val clamped = value.coerceIn(0f, 1f)
-            prefs.edit().putFloat(KEY_DIALOGUE_BOOST_STRENGTH, clamped).apply()
-        }
 
     /**
      * Reset both cellular buffer multipliers to default (1.0x).

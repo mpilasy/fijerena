@@ -40,35 +40,6 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val _nightModeEnabled = MutableStateFlow(false)
     val nightModeEnabled: StateFlow<Boolean> = _nightModeEnabled.asStateFlow()
 
-    private val _dialogueBoostStrength = MutableStateFlow(0f)
-    val dialogueBoostStrength: StateFlow<Float> = _dialogueBoostStrength.asStateFlow()
-
-    // Voice Zoom (Sony Bravia only)
-    private val _voiceZoomAvailable = MutableStateFlow(false)
-    val voiceZoomAvailable: StateFlow<Boolean> = _voiceZoomAvailable.asStateFlow()
-
-    private val _voiceZoomEnabled = MutableStateFlow(false)
-    val voiceZoomEnabled: StateFlow<Boolean> = _voiceZoomEnabled.asStateFlow()
-
-    /** Whether the device supports AI dialogue boost (PREMIUM tier with TFLite model).
-     *  Detected at runtime via reflection (core:ai only present in full flavor). */
-    val isDialogueBoostAvailable: Boolean by lazy {
-        try {
-            val clazz = Class.forName("org.njarasoa.fijerena.core.ai.audio.AudioEnhancementManager")
-            val constructor = clazz.getConstructor(android.content.Context::class.java)
-            val manager = constructor.newInstance(context)
-            val method = clazz.getMethod("isDialogueBoostAvailable")
-            // isDialogueBoostAvailable is a Kotlin lazy property — access via getter
-            val getter = clazz.methods.find { it.name == "isDialogueBoostAvailable" || it.name == "getIsDialogueBoostAvailable" }
-            val result = getter?.invoke(manager) as? Boolean ?: false
-            // Clean up
-            (manager as? java.io.Closeable)?.close()
-            result
-        } catch (_: Exception) {
-            false
-        }
-    }
-
     private var isInErrorState = false
 
     private val playerListener = object : Player.Listener {
@@ -126,7 +97,6 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         // Load persisted audio enhancement settings
         val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         _nightModeEnabled.value = prefs.getBoolean("night_mode_enabled", false)
-        _dialogueBoostStrength.value = prefs.getFloat("dialogue_boost_strength", 0f)
 
         viewModelScope.launch {
             startService()
@@ -137,27 +107,6 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private suspend fun observeServiceState() {
         val service = StreamingPlaybackService.awaitInstance()
-
-        // Sync initial audio enhancement settings to the service
-        val initialStrength = _dialogueBoostStrength.value
-        if (initialStrength > 0f) {
-            for (proc in service.getAudioProcessors()) {
-                try {
-                    val clazz = proc.javaClass
-                    if (clazz.simpleName == "DialogueBoostProcessor") {
-                        val setter = clazz.methods.find { it.name == "setStrength" }
-                        setter?.invoke(proc, initialStrength)
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-
-        // Initialize Voice Zoom availability from service
-        val vzm = service.voiceZoomManager
-        if (vzm != null) {
-            _voiceZoomAvailable.value = vzm.isAvailable
-            _voiceZoomEnabled.value = vzm.enabled
-        }
 
         viewModelScope.launch {
             service.playbackState.collect { state ->
@@ -461,57 +410,6 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             service.nightModeManager.enabled = enabled
             service.nightModeProcessor.enabled = enabled
         }
-    }
-
-    /**
-     * Set dialogue boost (Clear Voice) strength. 0.0 = off, 1.0 = full enhancement.
-     * Persists setting. Only effective on PREMIUM tier devices.
-     */
-    fun setDialogueBoostStrength(strength: Float) {
-        val clamped = strength.coerceIn(0f, 1f)
-        _dialogueBoostStrength.value = clamped
-        val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putFloat("dialogue_boost_strength", clamped).apply()
-
-        // Propagate to the service's audio processor
-        viewModelScope.launch {
-            val service = StreamingPlaybackService.getInstance() ?: return@launch
-            // DialogueBoostProcessor is in the audioProcessors array
-            for (proc in service.getAudioProcessors()) {
-                try {
-                    val clazz = proc.javaClass
-                    if (clazz.simpleName == "DialogueBoostProcessor") {
-                        // Strength is a @Volatile var property
-                        val setter = clazz.methods.find { it.name == "setStrength" }
-                        setter?.invoke(proc, clamped)
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-    }
-
-    /**
-     * Toggle Sony Bravia Voice Zoom. If programmatic control fails,
-     * returns false — the caller should then call openVoiceZoomSettings().
-     */
-    fun setVoiceZoom(enabled: Boolean): Boolean {
-        return viewModelScope.let {
-            val service = StreamingPlaybackService.getInstance()
-            val manager = service?.voiceZoomManager ?: return false
-            val success = manager.setVoiceZoom(enabled)
-            if (success) {
-                _voiceZoomEnabled.value = enabled
-            }
-            success
-        }
-    }
-
-    /**
-     * Open Sony sound settings for manual Voice Zoom control.
-     */
-    fun openVoiceZoomSettings() {
-        val service = StreamingPlaybackService.getInstance()
-        service?.voiceZoomManager?.openSonySettings()
     }
 
     override fun onCleared() {
