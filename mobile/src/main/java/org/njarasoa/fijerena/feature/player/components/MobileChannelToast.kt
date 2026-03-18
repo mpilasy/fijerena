@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.player.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,7 +23,9 @@ fun ChannelToast(
     currentEpgProgram: EpgProgram? = null
 ) {
     GlassPanel(
-        modifier = Modifier.padding(top = CinemaSpacing.xl)
+        modifier = Modifier
+            .statusBarsPadding()
+            .padding(top = CinemaSpacing.xl)
     ) {
         Column(
             modifier = Modifier.padding(

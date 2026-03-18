@@ -1,6 +1,11 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.media3.common.util.UnstableApi::class
+)
 
 package org.njarasoa.fijerena.ui.player.components.overlays
+
+import androidx.media3.common.C
 
 import androidx.compose.foundation.background
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
@@ -72,6 +77,7 @@ import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.player.utils.formatEpochTime
 import org.njarasoa.fijerena.ui.player.utils.formatTime
 import androidx.compose.ui.platform.LocalContext
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -106,6 +112,41 @@ fun PlayerControlsOverlay(
     val audioTrackCount = remember(metadata) { viewModel.getAudioTracks().size }
     val subtitleTrackCount = remember(metadata) { viewModel.getSubtitleTracks().size }
     val qualityCount = remember(metadata) { viewModel.getVideoQualities().size }
+
+    // State for resolution and codec
+    var videoCodec by remember { mutableStateOf<String?>(null) }
+    var videoResolution by remember { mutableStateOf<String?>(null) }
+
+    // Extract resolution and codec periodically
+    LaunchedEffect(playbackState, metadata.streamUrl) {
+        if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering) {
+            // Keep checking every second as tracks might take time to load
+            while (true) {
+                StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
+                    val tracks = p.currentTracks
+                    for (i in 0 until tracks.groups.size) {
+                        val group = tracks.groups[i]
+                        if (group.isSelected && group.type == C.TRACK_TYPE_VIDEO) {
+                            for (j in 0 until group.length) {
+                                if (group.isTrackSelected(j)) {
+                                    val format = group.getTrackFormat(j)
+                                    videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase()
+                                    videoResolution = if (format.width > 0 && format.height > 0) "${format.width}x${format.height}" else null
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+                // If we found both, we can stop polling for this stream state
+                if (videoCodec != null && videoResolution != null) break
+                delay(1000)
+            }
+        } else {
+            videoCodec = null
+            videoResolution = null
+        }
+    }
 
     // Focus requester for the first focusable control
     val controlsFocusRequester = remember { FocusRequester() }
@@ -157,6 +198,34 @@ fun PlayerControlsOverlay(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.bounceMarquee()
             )
+
+            // Resolution and Codec Info
+            if (videoResolution != null || videoCodec != null) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = Spacing.xs)
+                ) {
+                    if (videoResolution != null) {
+                        Text(
+                            text = videoResolution!!,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = CinemaAccent,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (videoCodec != null) {
+                        Text(
+                            text = videoCodec!!,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                            modifier = Modifier
+                                .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
         }
 
         // Seek speed indicator (shown when fast-forwarding/rewinding with D-pad hold)
@@ -177,6 +246,7 @@ fun PlayerControlsOverlay(
                 },
                 colors = ButtonDefaults.colors(
                     containerColor = Color.Transparent,
+                    contentColor = CinemaTextPrimary,
                     focusedContainerColor = CinemaTextPrimary,
                     focusedContentColor = CinemaBackground
                 ),
@@ -358,6 +428,7 @@ fun PlayerControlsOverlay(
                                 onClick = onShowChapterSelector,
                                 colors = ButtonDefaults.colors(
                                     containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                    contentColor = CinemaTextPrimary,
                                     focusedContainerColor = CinemaTextPrimary,
                                     focusedContentColor = CinemaBackground
                                 )
@@ -372,6 +443,7 @@ fun PlayerControlsOverlay(
                                 onClick = onShowAudioTrackSelector,
                                 colors = ButtonDefaults.colors(
                                     containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                    contentColor = CinemaTextPrimary,
                                     focusedContainerColor = CinemaTextPrimary,
                                     focusedContentColor = CinemaBackground
                                 )
@@ -386,6 +458,7 @@ fun PlayerControlsOverlay(
                                 onClick = onShowSubtitleSelector,
                                 colors = ButtonDefaults.colors(
                                     containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                    contentColor = CinemaTextPrimary,
                                     focusedContainerColor = CinemaTextPrimary,
                                     focusedContentColor = CinemaBackground
                                 )
@@ -400,6 +473,7 @@ fun PlayerControlsOverlay(
                                 onClick = onShowQualitySelector,
                                 colors = ButtonDefaults.colors(
                                     containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                    contentColor = CinemaTextPrimary,
                                     focusedContainerColor = CinemaTextPrimary,
                                     focusedContentColor = CinemaBackground
                                 )
@@ -417,6 +491,7 @@ fun PlayerControlsOverlay(
                                         CinemaAccent.copy(alpha = CinemaAlpha.scrim)
                                     else
                                         CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                    contentColor = CinemaTextPrimary,
                                     focusedContainerColor = CinemaTextPrimary,
                                     focusedContentColor = CinemaBackground
                                 )
@@ -437,6 +512,7 @@ fun PlayerControlsOverlay(
                                     CinemaAccent.copy(alpha = CinemaAlpha.scrim)
                                 else
                                     CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                contentColor = CinemaTextPrimary,
                                 focusedContainerColor = CinemaTextPrimary,
                                 focusedContentColor = CinemaBackground
                             )
@@ -453,6 +529,7 @@ fun PlayerControlsOverlay(
                             onClick = onShowStats,
                             colors = ButtonDefaults.colors(
                                 containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                contentColor = CinemaTextPrimary,
                                 focusedContainerColor = CinemaTextPrimary,
                                 focusedContentColor = CinemaBackground
                             )

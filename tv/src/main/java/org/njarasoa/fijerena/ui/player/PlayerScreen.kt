@@ -97,8 +97,9 @@ fun PlayerScreen(
             .fillMaxSize()
             .background(CinemaBackground)
             .then(
-                // Only make the player box focusable when overlays are not visible
-                if (!state.showStats && !state.showControls) {
+                // Only make the player box focusable when controls are not visible
+                // Stats overlay is now non-focusable and survives channel switches
+                if (!state.showControls) {
                     Modifier
                         .focusRequester(state.focusRequester)
                         .focusable()
@@ -185,7 +186,7 @@ fun PlayerScreen(
 
         // Modern unified controls overlay (mobile-style)
         AnimatedVisibility(
-            visible = (state.showControls || state.showStreamInfo) && !state.showStats,
+            visible = (state.showControls || state.showStreamInfo),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
