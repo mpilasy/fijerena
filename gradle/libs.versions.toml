@@ -104,6 +104,7 @@ ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref =
 ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
 ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-encoding = { group = "io.ktor", name = "ktor-client-encoding", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
 # Serialization
@@ -164,7 +165,7 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 
 [bundles]
-networking = ["ktor-client-core", "ktor-client-android", "ktor-client-okhttp", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json", "kotlinx-serialization-json"]
+networking = ["ktor-client-core", "ktor-client-android", "ktor-client-okhttp", "ktor-client-content-negotiation", "ktor-client-encoding", "ktor-serialization-kotlinx-json", "kotlinx-serialization-json"]
 media = ["media3-exoplayer", "media3-exoplayer-hls", "media3-exoplayer-dash", "media3-session", "media3-ui", "media3-datasource-okhttp"]
 compose = ["androidx-compose-ui", "androidx-compose-ui-graphics", "androidx-compose-ui-tooling-preview"]
 tflite = ["tensorflow-lite", "tensorflow-lite-gpu", "tensorflow-lite-support"]

@@ -68,6 +68,7 @@ class XtreamRepository(
     private val statsManager = XtreamStatsManager(database, cache, metricsManager, providerId)
 
     private val sessionManager = XtreamSessionManager(
+        context,
         accountManager,
         { statsManager.clearCache() },
         providerSettings.streamOutputFormat

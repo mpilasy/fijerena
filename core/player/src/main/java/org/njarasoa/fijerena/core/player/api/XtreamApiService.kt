@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.player.api
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
@@ -51,6 +52,11 @@ class XtreamApiService(
     private val client: HttpClient = HttpClient(OkHttp) {
         install(ContentNegotiation) {
             json(json)
+        }
+
+        install(ContentEncoding) {
+            gzip()
+            deflate()
         }
 
         defaultRequest {
