@@ -20,9 +20,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
@@ -43,7 +42,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.theme.*
 
 @Composable
@@ -51,15 +49,20 @@ fun TvProviderSelectionScreen(
     onProviderSelected: (ProviderEntity) -> Unit,
     onAddProvider: () -> Unit,
     onEditProvider: (Long) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    val viewModel: ProviderViewModel = viewModel(
-        factory = ProviderViewModelFactory(context)
-    )
+    val viewModel: ProviderViewModel =
+        viewModel(
+            factory = ProviderViewModelFactory(context),
+        )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
-    val appSettings = remember { org.njarasoa.fijerena.core.network.AppSettings(context.applicationContext) }
+    val appSettings =
+        remember {
+            org.njarasoa.fijerena.core.network
+                .AppSettings(context.applicationContext)
+        }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
     // Refresh provider list when screen is shown (e.g., after adding a provider)
@@ -70,31 +73,35 @@ fun TvProviderSelectionScreen(
     val scale = LocalUiScale.current
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(
-                horizontal = Spacing.tvSafeMarginHorizontal,
-                vertical = Spacing.tvSafeMarginVertical
-            )
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = Spacing.tvSafeMarginHorizontal,
+                    vertical = Spacing.tvSafeMarginVertical,
+                ),
     ) {
         // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = "Providers",
-                style = MaterialTheme.typography.displaySmall.copy(
-                    fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale)
-                ),
-                color = MaterialTheme.colorScheme.onSurface
+                style =
+                    MaterialTheme.typography.displaySmall.copy(
+                        fontSize =
+                            MaterialTheme.typography.displaySmall.fontSize
+                                .scaled(scale),
+                    ),
+                color = MaterialTheme.colorScheme.onSurface,
             )
             CinemaIconButton(
                 onClick = onAddProvider,
                 icon = {
                     Icon(Icons.Default.Add, contentDescription = "Add Provider", tint = CinemaAccent)
-                }
+                },
             )
         }
 
@@ -105,21 +112,21 @@ fun TvProviderSelectionScreen(
                 Text(
                     text = "Loading providers...",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaTextSecondary
+                    color = CinemaTextSecondary,
                 )
             }
             is ProviderUiState.NoProviders -> {
                 Text(
                     text = "No providers configured",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaTextSecondary
+                    color = CinemaTextSecondary,
                 )
             }
             is ProviderUiState.Error -> {
                 Text(
                     text = state.message,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaError
+                    color = CinemaError,
                 )
             }
             is ProviderUiState.SingleProvider -> {
@@ -127,7 +134,7 @@ fun TvProviderSelectionScreen(
                     providers = listOf(state.provider),
                     onSelect = onProviderSelected,
                     onEdit = onEditProvider,
-                    onDelete = { deleteConfirmProvider = it }
+                    onDelete = { deleteConfirmProvider = it },
                 )
             }
             is ProviderUiState.MultipleProviders -> {
@@ -135,7 +142,7 @@ fun TvProviderSelectionScreen(
                     providers = state.providers,
                     onSelect = onProviderSelected,
                     onEdit = onEditProvider,
-                    onDelete = { deleteConfirmProvider = it }
+                    onDelete = { deleteConfirmProvider = it },
                 )
             }
         }
@@ -148,13 +155,13 @@ fun TvProviderSelectionScreen(
             title = {
                 Text(
                     "Delete Provider?",
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             },
             text = {
                 Text(
                     "Delete \"${provider.name}\"? All cached data for this provider will be removed.",
-                    color = CinemaTextSecondary
+                    color = CinemaTextSecondary,
                 )
             },
             confirmButton = {
@@ -163,10 +170,11 @@ fun TvProviderSelectionScreen(
                         viewModel.deleteProvider(provider.id)
                         deleteConfirmProvider = null
                     },
-                    colors = androidx.tv.material3.ButtonDefaults.colors(
-                        containerColor = CinemaError,
-                        contentColor = CinemaTextPrimary
-                    )
+                    colors =
+                        androidx.tv.material3.ButtonDefaults.colors(
+                            containerColor = CinemaError,
+                            contentColor = CinemaTextPrimary,
+                        ),
                 ) {
                     Text("Delete")
                 }
@@ -174,15 +182,16 @@ fun TvProviderSelectionScreen(
             dismissButton = {
                 androidx.tv.material3.Button(
                     onClick = { deleteConfirmProvider = null },
-                    colors = androidx.tv.material3.ButtonDefaults.colors(
-                        containerColor = CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary
-                    )
+                    colors =
+                        androidx.tv.material3.ButtonDefaults.colors(
+                            containerColor = CinemaSurfaceVariant,
+                            contentColor = CinemaTextPrimary,
+                        ),
                 ) {
                     Text("Cancel")
                 }
             },
-            containerColor = CinemaSurface
+            containerColor = CinemaSurface,
         )
     }
 }
@@ -192,45 +201,45 @@ private fun ProviderList(
     providers: List<ProviderEntity>,
     onSelect: (ProviderEntity) -> Unit,
     onEdit: (Long) -> Unit,
-    onDelete: (ProviderEntity) -> Unit
+    onDelete: (ProviderEntity) -> Unit,
 ) {
     val scale = LocalUiScale.current
     TvLazyColumn(
         contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
     ) {
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = provider.name,
                             style = MaterialTheme.typography.titleMedium,
-                            color = if (provider.isActive) CinemaAccent else CinemaTextPrimary
+                            color = if (provider.isActive) CinemaAccent else CinemaTextPrimary,
                         )
                         if (provider.isActive) {
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text(
                                 text = "Active",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh)
+                                color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh),
                             )
                         }
                     }
                     Text(
                         text = provider.url,
                         style = MaterialTheme.typography.bodySmall,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                     )
                     Text(
                         text = provider.username,
                         style = MaterialTheme.typography.bodySmall,
-                        color = CinemaTextTertiary
+                        color = CinemaTextTertiary,
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -239,20 +248,20 @@ private fun ProviderList(
                             onClick = { onSelect(provider) },
                             icon = {
                                 Icon(Icons.Default.CheckCircle, contentDescription = "Select", tint = CinemaAccent)
-                            }
+                            },
                         )
                     }
                     CinemaIconButton(
                         onClick = { onEdit(provider.id) },
                         icon = {
                             Icon(Icons.Default.Edit, contentDescription = "Edit", tint = CinemaAccent)
-                        }
+                        },
                     )
                     CinemaDangerIconButton(
                         onClick = { onDelete(provider) },
                         icon = {
                             Icon(Icons.Default.Delete, contentDescription = "Delete")
-                        }
+                        },
                     )
                 }
             }

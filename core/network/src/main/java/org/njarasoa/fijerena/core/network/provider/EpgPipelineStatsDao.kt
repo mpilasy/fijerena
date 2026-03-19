@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface EpgPipelineStatsDao {
-
     @Query("SELECT * FROM epg_pipeline_stats WHERE id = 1")
     fun getLatestStats(): Flow<EpgPipelineStatsEntity?>
 

@@ -1,8 +1,8 @@
 package org.njarasoa.fijerena.core.network.sync
-
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.core.content.edit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,7 +18,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
  */
 class DriveSettingsSyncManager(
     private val context: Context,
-    private val providerRepository: ProviderRepository
+    private val providerRepository: ProviderRepository,
 ) {
     companion object {
         private const val TAG = "DriveSettingsSyncManager"
@@ -37,10 +37,16 @@ class DriveSettingsSyncManager(
      */
     sealed interface SyncStatus {
         data object NotSignedIn : SyncStatus
+
         data object Idle : SyncStatus
+
         data object Syncing : SyncStatus
+
         data object Synced : SyncStatus
-        data class Error(val message: String) : SyncStatus
+
+        data class Error(
+            val message: String,
+        ) : SyncStatus
     }
 
     private val _syncStatus = MutableStateFlow<SyncStatus>(SyncStatus.NotSignedIn)
@@ -55,7 +61,7 @@ class DriveSettingsSyncManager(
     var isSyncEnabled: Boolean
         get() = prefs.getBoolean(KEY_SYNC_ENABLED, false)
         set(value) {
-            prefs.edit().putBoolean(KEY_SYNC_ENABLED, value).apply()
+            prefs.edit { putBoolean(KEY_SYNC_ENABLED, value) }
         }
 
     /**
@@ -125,10 +131,11 @@ class DriveSettingsSyncManager(
      * Use on startup and when connecting new device.
      */
     suspend fun downloadAndApplySettings(): Boolean {
-        val credential = authManager.getCredential() ?: run {
-            _syncStatus.value = SyncStatus.NotSignedIn
-            return false
-        }
+        val credential =
+            authManager.getCredential() ?: run {
+                _syncStatus.value = SyncStatus.NotSignedIn
+                return false
+            }
 
         _syncStatus.value = SyncStatus.Syncing
         try {
@@ -139,13 +146,13 @@ class DriveSettingsSyncManager(
                     try {
                         providerRepository.updateProviderSettings(
                             providerData.providerId,
-                            providerData.settings
+                            providerData.settings,
                         )
                     } catch (e: Exception) {
                         Log.w(TAG, "Could not apply settings for provider ${providerData.providerId}", e)
                     }
                 }
-                prefs.edit().putLong(KEY_LAST_SYNC, System.currentTimeMillis()).apply()
+                prefs.edit { putLong(KEY_LAST_SYNC, System.currentTimeMillis()) }
                 _syncStatus.value = SyncStatus.Synced
                 return true
             } else {
@@ -163,31 +170,35 @@ class DriveSettingsSyncManager(
      * Upload all provider settings to Drive.
      */
     suspend fun uploadAllSettings(): Boolean {
-        val credential = authManager.getCredential() ?: run {
-            _syncStatus.value = SyncStatus.NotSignedIn
-            return false
-        }
+        val credential =
+            authManager.getCredential() ?: run {
+                _syncStatus.value = SyncStatus.NotSignedIn
+                return false
+            }
 
         _syncStatus.value = SyncStatus.Syncing
         try {
             val providers = providerRepository.getAllProvidersList()
-            val providerDataMap = providers.associate { provider ->
-                val settings = providerRepository.getProviderSettings(provider.id)
-                provider.id.toString() to DriveSettingsRepository.ProviderSyncData(
-                    providerId = provider.id,
-                    providerName = provider.name,
-                    providerType = provider.type,
-                    settings = settings
-                )
-            }
+            val providerDataMap =
+                providers.associate { provider ->
+                    val settings = providerRepository.getProviderSettings(provider.id)
+                    provider.id.toString() to
+                        DriveSettingsRepository.ProviderSyncData(
+                            providerId = provider.id,
+                            providerName = provider.name,
+                            providerType = provider.type,
+                            settings = settings,
+                        )
+                }
 
-            val syncedSettings = DriveSettingsRepository.SyncedSettings(
-                providers = providerDataMap
-            )
+            val syncedSettings =
+                DriveSettingsRepository.SyncedSettings(
+                    providers = providerDataMap,
+                )
 
             val success = driveRepository.uploadSettings(credential, syncedSettings)
             if (success) {
-                prefs.edit().putLong(KEY_LAST_SYNC, System.currentTimeMillis()).apply()
+                prefs.edit { putLong(KEY_LAST_SYNC, System.currentTimeMillis()) }
                 _syncStatus.value = SyncStatus.Synced
             } else {
                 _syncStatus.value = SyncStatus.Error("Upload failed")

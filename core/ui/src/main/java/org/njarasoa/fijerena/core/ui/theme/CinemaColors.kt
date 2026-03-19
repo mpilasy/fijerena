@@ -1,7 +1,5 @@
 package org.njarasoa.fijerena.core.ui.theme
 
-import androidx.compose.ui.graphics.Color
-
 /**
  * Reactive Cinema Color Scheme
  * Bridges the static constants to the current active palette.

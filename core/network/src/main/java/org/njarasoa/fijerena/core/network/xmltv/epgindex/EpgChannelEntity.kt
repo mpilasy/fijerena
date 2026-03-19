@@ -8,19 +8,16 @@ import androidx.room.Index
     tableName = "epg_channel",
     primaryKeys = ["xmltv_id", "source_id"],
     indices = [
-        Index(value = ["source_id"], name = "idx_channel_source")
-    ]
+        Index(value = ["source_id"], name = "idx_channel_source"),
+    ],
 )
 data class EpgChannelEntity(
     @ColumnInfo(name = "xmltv_id")
     val xmltvId: String,
-
     @ColumnInfo(name = "display_name")
     val displayName: String,
-
     @ColumnInfo(name = "icon_url")
     val iconUrl: String? = null,
-
     @ColumnInfo(name = "source_id")
-    val sourceId: Long = 0
+    val sourceId: Long = 0,
 )

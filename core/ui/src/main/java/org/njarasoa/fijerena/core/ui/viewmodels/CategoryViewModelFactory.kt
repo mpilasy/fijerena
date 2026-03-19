@@ -7,9 +7,8 @@ import androidx.lifecycle.ViewModelProvider
 class CategoryViewModelFactory(
     private val context: Context,
     private val contentType: String,
-    private val initialCategoryId: String? = null
+    private val initialCategoryId: String? = null,
 ) : ViewModelProvider.Factory {
-
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CategoryViewModel::class.java)) {

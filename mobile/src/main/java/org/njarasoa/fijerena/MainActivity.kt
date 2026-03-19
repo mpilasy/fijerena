@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
                     onThemeChanged = { newThemeId ->
                         appSettings.themeId = newThemeId
                         themeId = newThemeId
-                    }
+                    },
                 )
             }
         }

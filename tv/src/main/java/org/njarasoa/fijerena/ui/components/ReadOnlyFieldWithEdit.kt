@@ -34,12 +34,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
@@ -59,7 +59,7 @@ fun ReadOnlyFieldWithEdit(
     singleLine: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    displayText: String = value
+    displayText: String = value,
 ) {
     var isEditing by remember { mutableStateOf(false) }
     var editValue by remember(value) { mutableStateOf(value) }
@@ -70,51 +70,62 @@ fun ReadOnlyFieldWithEdit(
             value = editValue,
             onValueChange = { editValue = it },
             label = { Text(label) },
-            placeholder = if (placeholder.isNotEmpty()) {{ Text(placeholder) }} else null,
+            placeholder =
+                if (placeholder.isNotEmpty()) {
+                    { Text(placeholder) }
+                } else {
+                    null
+                },
             singleLine = singleLine,
             visualTransformation = visualTransformation,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = keyboardType,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    onValueChange(editValue)
-                    isEditing = false
-                }
-            ),
-            modifier = modifier
-                .fillMaxWidth()
-                .focusRequester(editFocusRequester)
-                .onKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown) {
-                        when (event.key) {
-                            Key.Escape, Key.Back -> {
-                                editValue = value
-                                isEditing = false
-                                true
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = keyboardType,
+                    imeAction = ImeAction.Done,
+                ),
+            keyboardActions =
+                KeyboardActions(
+                    onDone = {
+                        onValueChange(editValue)
+                        isEditing = false
+                    },
+                ),
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .focusRequester(editFocusRequester)
+                    .onKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown) {
+                            when (event.key) {
+                                Key.Escape, Key.Back -> {
+                                    editValue = value
+                                    isEditing = false
+                                    true
+                                }
+                                Key.Enter -> {
+                                    onValueChange(editValue)
+                                    isEditing = false
+                                    true
+                                }
+                                else -> false
                             }
-                            Key.Enter -> {
-                                onValueChange(editValue)
-                                isEditing = false
-                                true
-                            }
-                            else -> false
+                        } else {
+                            false
                         }
-                    } else false
-                },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = CinemaTextPrimary,
-                unfocusedTextColor = CinemaTextPrimary,
-                cursorColor = CinemaAccent,
-                focusedBorderColor = CinemaAccent,
-                unfocusedBorderColor = CinemaTextSecondary,
-                focusedLabelColor = CinemaAccent,
-                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                focusedContainerColor = CinemaSurfaceVariant,
-                focusedPlaceholderColor = CinemaTextSecondary,
-                unfocusedPlaceholderColor = CinemaTextSecondary
-            )
+                    },
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = CinemaTextPrimary,
+                    unfocusedTextColor = CinemaTextPrimary,
+                    cursorColor = CinemaAccent,
+                    focusedBorderColor = CinemaAccent,
+                    unfocusedBorderColor = CinemaTextSecondary,
+                    focusedLabelColor = CinemaAccent,
+                    unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    focusedContainerColor = CinemaSurfaceVariant,
+                    focusedPlaceholderColor = CinemaTextSecondary,
+                    unfocusedPlaceholderColor = CinemaTextSecondary,
+                ),
         )
 
         LaunchedEffect(Unit) {
@@ -123,21 +134,25 @@ fun ReadOnlyFieldWithEdit(
     } else {
         Row(
             modifier = modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = "$label: ",
                 style = MaterialTheme.typography.bodySmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
             Text(
                 text = displayText.ifEmpty { placeholder },
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (displayText.isNotEmpty()) CinemaTextPrimary
-                    else CinemaTextSecondary,
+                color =
+                    if (displayText.isNotEmpty()) {
+                        CinemaTextPrimary
+                    } else {
+                        CinemaTextSecondary
+                    },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             Spacer(modifier = Modifier.width(Spacing.sm))
             CinemaIconButton(
@@ -145,7 +160,7 @@ fun ReadOnlyFieldWithEdit(
                     editValue = value
                     isEditing = true
                 },
-                icon = { Icon(Icons.Default.Edit, contentDescription = "Edit $label") }
+                icon = { Icon(Icons.Default.Edit, contentDescription = "Edit $label") },
             )
         }
     }

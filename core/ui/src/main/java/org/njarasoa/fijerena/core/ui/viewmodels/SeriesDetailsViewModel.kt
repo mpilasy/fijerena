@@ -9,22 +9,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 
 class SeriesDetailsViewModel(
     private val context: android.content.Context,
     private val seriesId: String,
-    private val categoryId: String
+    private val categoryId: String,
 ) : ViewModel() {
-
     private var repository: org.njarasoa.fijerena.core.network.MediaRepository? = null
 
     private suspend fun ensureRepo(): org.njarasoa.fijerena.core.network.MediaRepository {
         if (repository == null) {
-            val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+            val container =
+                org.njarasoa.fijerena.core.ui.di.AppContainer
+                    .getInstance(context)
             repository = container.getMediaRepository()
         }
         return repository!!
@@ -32,11 +31,15 @@ class SeriesDetailsViewModel(
 
     sealed class UiState {
         data object Loading : UiState()
+
         data class Success(
             val seriesDetail: SeriesDetail,
-            val isFavorite: Boolean
+            val isFavorite: Boolean,
         ) : UiState()
-        data class Error(val message: String) : UiState()
+
+        data class Error(
+            val message: String,
+        ) : UiState()
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
@@ -59,14 +62,15 @@ class SeriesDetailsViewModel(
                 result.fold(
                     onSuccess = { detail ->
                         val isFav = repo.isFavorite(seriesId, "TV_SHOWS")
-                        _uiState.value = UiState.Success(
-                            seriesDetail = detail,
-                            isFavorite = isFav
-                        )
+                        _uiState.value =
+                            UiState.Success(
+                                seriesDetail = detail,
+                                isFavorite = isFav,
+                            )
                     },
                     onFailure = { e ->
                         _uiState.value = UiState.Error(e.message ?: "Failed to load series info")
-                    }
+                    },
                 )
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Initialization error")
@@ -93,10 +97,9 @@ class SeriesDetailsViewModel(
 class SeriesDetailsViewModelFactory(
     private val context: Context,
     private val seriesId: String,
-    private val categoryId: String
+    private val categoryId: String,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return SeriesDetailsViewModel(context.applicationContext, seriesId, categoryId) as T
-    }
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        SeriesDetailsViewModel(context.applicationContext, seriesId, categoryId) as T
 }

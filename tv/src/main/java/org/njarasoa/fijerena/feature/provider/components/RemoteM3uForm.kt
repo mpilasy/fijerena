@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun RemoteM3uForm(
     url: String,
     onUrlChange: (String) -> Unit,
-    onErrorChange: (String?) -> Unit
+    onErrorChange: (String?) -> Unit,
 ) {
     val scale = LocalUiScale.current
 
@@ -28,6 +28,6 @@ fun RemoteM3uForm(
         },
         label = "M3U Playlist URL",
         placeholder = "https://example.com/playlist.m3u",
-        keyboardType = KeyboardType.Uri
+        keyboardType = KeyboardType.Uri,
     )
 }

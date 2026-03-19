@@ -25,7 +25,6 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
-import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -34,6 +33,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +42,7 @@ fun MobileEpisodeSelectionScreen(
     seriesName: String,
     categoryId: String,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     var mediaRepository by remember { mutableStateOf<MediaRepository?>(null) }
@@ -66,22 +66,26 @@ fun MobileEpisodeSelectionScreen(
         error = null
 
         // Initialize repository asynchronously (avoids runBlocking on main thread)
-        val repo = mediaRepository ?: run {
-            val appContext = context.applicationContext
-            val providerRepo = ProviderRepository(appContext)
-            val entity = providerRepo.getActiveProvider()
-            val r = if (entity != null) {
-                val resolvedRepo = MediaRepository(appContext, entity.id)
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect()
-                resolvedRepo.setProvider(provider)
-                resolvedRepo
-            } else MediaRepository(appContext, 0L)
-            mediaRepository = r
-            isFavorite = r.isFavorite(seriesId, ContentType.TV_SHOWS)
-            r
-        }
+        val repo =
+            mediaRepository ?: run {
+                val appContext = context.applicationContext
+                val providerRepo = ProviderRepository(appContext)
+                val entity = providerRepo.getActiveProvider()
+                val r =
+                    if (entity != null) {
+                        val resolvedRepo = MediaRepository(appContext, entity.id)
+                        val password = providerRepo.getPassword(entity.id) ?: ""
+                        val provider = MediaProviderFactory.create(entity, appContext, password)
+                        provider.connect()
+                        resolvedRepo.setProvider(provider)
+                        resolvedRepo
+                    } else {
+                        MediaRepository(appContext, 0L)
+                    }
+                mediaRepository = r
+                isFavorite = r.isFavorite(seriesId, ContentType.TV_SHOWS)
+                r
+            }
 
         val result = repo.getSeriesDetail(seriesId)
         result.fold(
@@ -94,7 +98,7 @@ fun MobileEpisodeSelectionScreen(
                 error = e.message ?: "Failed to load series info"
                 isLoading = false
                 isRefreshing = false
-            }
+            },
         )
     }
 
@@ -127,17 +131,18 @@ fun MobileEpisodeSelectionScreen(
                         Icon(
                             imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
                             contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
-                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
         ) {
             when {
                 isLoading -> {
@@ -146,7 +151,7 @@ fun MobileEpisodeSelectionScreen(
                 error != null -> {
                     ErrorScreen(
                         message = error ?: "Unknown error",
-                        onBack = onBack
+                        onBack = onBack,
                     )
                 }
                 seriesDetail != null && selectedEpisode != null -> {
@@ -157,7 +162,7 @@ fun MobileEpisodeSelectionScreen(
                         mediaRepository = mediaRepository!!,
                         onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
                             onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
-                        }
+                        },
                     )
                 }
                 seriesDetail != null -> {
@@ -167,14 +172,14 @@ fun MobileEpisodeSelectionScreen(
                             isRefreshing = true
                             refreshTrigger++
                         },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
                     ) {
                         EpisodeListContent(
                             seriesDetail = seriesDetail!!,
                             mediaRepository = mediaRepository!!,
                             onEpisodeSelected = { episode ->
                                 selectedEpisode = episode
-                            }
+                            },
                         )
                     }
                 }
@@ -187,30 +192,43 @@ fun MobileEpisodeSelectionScreen(
 private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     mediaRepository: MediaRepository,
-    onEpisodeSelected: (DomainEpisodeItem) -> Unit
+    onEpisodeSelected: (DomainEpisodeItem) -> Unit,
 ) {
     // Use API seasons if available, otherwise derive from episode map keys
-    val sortedSeasons = remember(seriesDetail) {
-        val apiSeasons = seriesDetail.seasons.sortedBy { it.seasonNumber }
-        if (apiSeasons.isNotEmpty()) apiSeasons
-        else seriesDetail.episodes.keys
-            .mapNotNull { key -> key.toIntOrNull() }
-            .sorted()
-            .map { num -> SeasonInfo(seasonNumber = num, name = "Season $num", episodeCount = seriesDetail.episodes[num.toString()]?.size ?: 0) }
-    }
+    val sortedSeasons =
+        remember(seriesDetail) {
+            val apiSeasons = seriesDetail.seasons.sortedBy { it.seasonNumber }
+            if (apiSeasons.isNotEmpty()) {
+                apiSeasons
+            } else {
+                seriesDetail.episodes.keys
+                    .mapNotNull { key -> key.toIntOrNull() }
+                    .sorted()
+                    .map { num ->
+                        SeasonInfo(
+                            seasonNumber = num,
+                            name = "Season $num",
+                            episodeCount =
+                                seriesDetail.episodes[num.toString()]?.size ?: 0,
+                        )
+                    }
+            }
+        }
     // Pre-sort episodes by season — avoids re-sorting on every recomposition of the LazyColumn
-    val sortedEpisodesBySeason = remember(seriesDetail) {
-        seriesDetail.episodes.mapValues { (_, eps) -> eps.sortedBy { it.episodeNumber } }
-    }
-    val totalEpisodes = remember(seriesDetail) {
-        seriesDetail.episodes.values.sumOf { it.size }
-    }
+    val sortedEpisodesBySeason =
+        remember(seriesDetail) {
+            seriesDetail.episodes.mapValues { (_, eps) -> eps.sortedBy { it.episodeNumber } }
+        }
+    val totalEpisodes =
+        remember(seriesDetail) {
+            seriesDetail.episodes.values.sumOf { it.size }
+        }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
     // Accordion: only one season expanded at a time (first season by default)
     var expandedSeasons by remember(seriesDetail) {
         mutableStateOf(
-            if (hasMultipleSeasons && sortedSeasons.isNotEmpty()) setOf(sortedSeasons.first().seasonNumber) else emptySet()
+            if (hasMultipleSeasons && sortedSeasons.isNotEmpty()) setOf(sortedSeasons.first().seasonNumber) else emptySet(),
         )
     }
 
@@ -231,21 +249,23 @@ private fun EpisodeListContent(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
     ) {
         // Series info header
         val hasPlot = seriesDetail.metadata.plot != null
-        val metadataParts = remember(seriesDetail) {
-            listOfNotNull(
-                seriesDetail.metadata.genre,
-                seriesDetail.metadata.rating?.let { "Rating: $it" }
-            )
-        }
+        val metadataParts =
+            remember(seriesDetail) {
+                listOfNotNull(
+                    seriesDetail.metadata.genre,
+                    seriesDetail.metadata.rating?.let { "Rating: $it" },
+                )
+            }
         if (hasPlot || metadataParts.isNotEmpty()) {
             GlassPanel(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(CinemaSpacing.md)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(CinemaSpacing.md),
             ) {
                 Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                     seriesDetail.metadata.plot?.let { plot ->
@@ -253,7 +273,7 @@ private fun EpisodeListContent(
                             text = plot,
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     if (metadataParts.isNotEmpty()) {
@@ -263,7 +283,7 @@ private fun EpisodeListContent(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -275,14 +295,14 @@ private fun EpisodeListContent(
             text = "$totalEpisodes episodes",
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
 
         // Season-grouped episodes list
         LazyColumn(
             contentPadding = PaddingValues(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             sortedSeasons.forEach { season ->
                 val seasonKey = season.seasonNumber.toString()
@@ -297,12 +317,13 @@ private fun EpisodeListContent(
                             episodeCount = seasonEpisodes.size,
                             isExpanded = isExpanded,
                             onToggle = {
-                                expandedSeasons = if (isExpanded) {
-                                    emptySet()
-                                } else {
-                                    setOf(season.seasonNumber)
-                                }
-                            }
+                                expandedSeasons =
+                                    if (isExpanded) {
+                                        emptySet()
+                                    } else {
+                                        setOf(season.seasonNumber)
+                                    }
+                            },
                         )
                     }
                 }
@@ -313,7 +334,7 @@ private fun EpisodeListContent(
                             episode = episode,
                             onClick = {
                                 onEpisodeSelected(episode)
-                            }
+                            },
                         )
                     }
                 }
@@ -328,7 +349,7 @@ private fun EpisodeDetailContent(
     seriesDetail: SeriesDetail,
     categoryId: String,
     mediaRepository: MediaRepository,
-    onPlay: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit
+    onPlay: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
 ) {
     val extension = episode.extension ?: "mp4"
 
@@ -346,19 +367,21 @@ private fun EpisodeDetailContent(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(CinemaSpacing.md)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(CinemaSpacing.md),
     ) {
         // Episode thumbnail
         CinemaThumbnail(
             url = episode.thumbnailUrl,
             fallbackLetter = episode.title.firstOrNull(),
             contentType = ThumbnailContentType.TV_SHOW,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(MobileDimensions.posterHeightLarge)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(MobileDimensions.posterHeightLarge),
         )
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
@@ -366,20 +389,21 @@ private fun EpisodeDetailContent(
         // Episode title
         Text(
             text = episode.title,
-            style = MaterialTheme.typography.headlineLarge
+            style = MaterialTheme.typography.headlineLarge,
         )
 
         // Season / Episode label
         val seasonLabel = episode.seasonNumber?.let { "S${it.toString().padStart(2, '0')}" } ?: ""
         val episodeLabel = "E${episode.episodeNumber.toString().padStart(2, '0')}"
-        val subLabel = listOfNotNull(
-            seasonLabel.ifEmpty { null },
-            episodeLabel
-        ).joinToString(" ")
+        val subLabel =
+            listOfNotNull(
+                seasonLabel.ifEmpty { null },
+                episodeLabel,
+            ).joinToString(" ")
         Text(
             text = subLabel,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
         )
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
@@ -389,7 +413,7 @@ private fun EpisodeDetailContent(
             Text(
                 text = genre,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
         }
 
@@ -400,33 +424,34 @@ private fun EpisodeDetailContent(
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 rating?.let {
                     Text(
                         text = "★ $it",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.secondary,
                     )
                 }
                 episode.metadata.duration?.let { duration ->
                     Text(
                         text = formatDuration(duration),
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
                 // "Ends at" based on remaining duration
                 val endsAtContext = LocalContext.current
-                val endsAtText = remember(episode.metadata.duration, resumePositionMs) {
-                    computeEndsAt(endsAtContext, episode.metadata.duration, resumePositionMs)
-                }
+                val endsAtText =
+                    remember(episode.metadata.duration, resumePositionMs) {
+                        computeEndsAt(endsAtContext, episode.metadata.duration, resumePositionMs)
+                    }
                 if (endsAtText != null) {
                     Text(
                         text = "Ends at $endsAtText",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
             }
@@ -442,7 +467,7 @@ private fun EpisodeDetailContent(
                 onClick = {
                     onPlay(episode.id, episode.title, extension, false)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("▶ Resume from $resumeTimeText")
             }
@@ -451,7 +476,7 @@ private fun EpisodeDetailContent(
                 onClick = {
                     onPlay(episode.id, episode.title, extension, true)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Start from Beginning")
             }
@@ -460,7 +485,7 @@ private fun EpisodeDetailContent(
                 onClick = {
                     onPlay(episode.id, episode.title, extension, false)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("▶ Play Episode")
             }
@@ -471,7 +496,7 @@ private fun EpisodeDetailContent(
             Spacer(modifier = Modifier.height(CinemaSpacing.lg))
             Text(
                 text = plot,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
             )
         }
 
@@ -485,7 +510,7 @@ private fun EpisodeDetailContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
         }
@@ -496,7 +521,7 @@ private fun EpisodeDetailContent(
             Text(
                 text = "Director: $it",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
             )
         }
     }
@@ -507,31 +532,32 @@ private fun SeasonHeader(
     season: SeasonInfo,
     episodeCount: Int,
     isExpanded: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle() }
-            .padding(vertical = CinemaSpacing.sm),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onToggle() }
+                .padding(vertical = CinemaSpacing.sm),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
     ) {
         Icon(
             imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
             contentDescription = if (isExpanded) "Collapse" else "Expand",
-            tint = MaterialTheme.colorScheme.primary
+            tint = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = "Season ${season.seasonNumber}",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = "$episodeCount episodes",
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
     }
 }
@@ -539,27 +565,29 @@ private fun SeasonHeader(
 @Composable
 private fun EpisodeCard(
     episode: DomainEpisodeItem,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(CinemaSpacing.sm),
-            verticalAlignment = Alignment.Top
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(CinemaSpacing.sm),
+            verticalAlignment = Alignment.Top,
         ) {
             // Episode thumbnail
             CinemaThumbnail(
                 url = episode.thumbnailUrl,
                 fallbackLetter = episode.title.firstOrNull(),
                 contentType = ThumbnailContentType.TV_SHOW,
-                modifier = Modifier.size(
-                    width = MobileDimensions.posterWidth,
-                    height = MobileDimensions.posterHeight
-                )
+                modifier =
+                    Modifier.size(
+                        width = MobileDimensions.posterWidth,
+                        height = MobileDimensions.posterHeight,
+                    ),
             )
 
             Spacer(modifier = Modifier.width(CinemaSpacing.sm))
@@ -569,7 +597,7 @@ private fun EpisodeCard(
                 Text(
                     text = "E${episode.episodeNumber.toString().padStart(2, '0')}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
@@ -579,7 +607,7 @@ private fun EpisodeCard(
                     text = episode.title,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
 
                 // Episode plot/summary
@@ -590,7 +618,7 @@ private fun EpisodeCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                         maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
@@ -600,7 +628,7 @@ private fun EpisodeCard(
                     Text(
                         text = formatDuration(duration),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
                 }
             }
@@ -612,11 +640,11 @@ private fun EpisodeCard(
 private fun LoadingScreen() {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             CircularProgressIndicator()
             Text("Loading episodes...")
@@ -627,25 +655,25 @@ private fun LoadingScreen() {
 @Composable
 private fun ErrorScreen(
     message: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-            modifier = Modifier.padding(CinemaSpacing.xl)
+            modifier = Modifier.padding(CinemaSpacing.xl),
         ) {
             Text(
                 text = "Error Loading Episodes",
                 style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
             )
             Button(onClick = onBack) {
                 Text("Back")
@@ -673,7 +701,11 @@ private fun parseDurationToSeconds(duration: String): Long? {
     }
 }
 
-private fun computeEndsAt(context: android.content.Context, duration: String?, resumePositionMs: Long): String? {
+private fun computeEndsAt(
+    context: android.content.Context,
+    duration: String?,
+    resumePositionMs: Long,
+): String? {
     if (duration == null) return null
     val totalSeconds = parseDurationToSeconds(duration) ?: return null
     if (totalSeconds <= 0) return null
@@ -681,7 +713,8 @@ private fun computeEndsAt(context: android.content.Context, duration: String?, r
     val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
     val calendar = java.util.Calendar.getInstance()
     calendar.add(java.util.Calendar.MILLISECOND, remainingMs.toInt())
-    return org.njarasoa.fijerena.core.player.model.TimeFormat.formatClockTime(context, calendar.time)
+    return org.njarasoa.fijerena.core.player.model.TimeFormat
+        .formatClockTime(context, calendar.time)
 }
 
 private fun formatMillis(ms: Long): String {

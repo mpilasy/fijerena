@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -25,18 +24,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import org.njarasoa.fijerena.ui.theme.CinemaBackground
-import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 
 @Composable
 fun MobileChannelListSheet(
@@ -45,7 +43,7 @@ fun MobileChannelListSheet(
     onSelect: (MediaItem) -> Unit,
     onDismiss: () -> Unit,
     panelAlignment: Alignment = Alignment.CenterStart,
-    currentStreamId: String? = null
+    currentStreamId: String? = null,
 ) {
     val listState = rememberLazyListState()
 
@@ -56,39 +54,42 @@ fun MobileChannelListSheet(
         }
     }
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CinemaBackground.copy(alpha = CinemaAlpha.tint))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onDismiss() }
-    ) {
-        GlassPanel(
-            modifier = Modifier
-                .align(panelAlignment)
-                .fillMaxWidth(0.72f)
-                .fillMaxHeight()
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(CinemaBackground.copy(alpha = CinemaAlpha.tint))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { /* consume clicks */ },
-            backgroundAlpha = 0.5f
+                    indication = null,
+                ) { onDismiss() },
+    ) {
+        GlassPanel(
+            modifier =
+                Modifier
+                    .align(panelAlignment)
+                    .fillMaxWidth(0.72f)
+                    .fillMaxHeight()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { /* consume clicks */ },
+            backgroundAlpha = 0.5f,
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(CinemaSpacing.md)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(CinemaSpacing.md),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
-                        color = CinemaTextPrimary
+                        color = CinemaTextPrimary,
                     )
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close", tint = CinemaTextPrimary)
@@ -99,35 +100,37 @@ fun MobileChannelListSheet(
                     Text(
                         text = "No channels available",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
+                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                     )
                 } else {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                     ) {
                         items(streams, key = { it.id }, contentType = { "channel" }) { stream ->
                             val isCurrentStream = stream.id == currentStreamId
                             Surface(
                                 onClick = { onSelect(stream) },
                                 modifier = Modifier.fillMaxWidth(),
-                                color = if (isCurrentStream) {
-                                    MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.glass)
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CinemaAlpha.glass)
-                                },
-                                shape = MaterialTheme.shapes.small
+                                color =
+                                    if (isCurrentStream) {
+                                        MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.glass)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CinemaAlpha.glass)
+                                    },
+                                shape = MaterialTheme.shapes.small,
                             ) {
                                 Text(
                                     text = stream.name,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = CinemaTextPrimary,
-                                    modifier = Modifier.padding(
-                                        horizontal = CinemaSpacing.md,
-                                        vertical = CinemaSpacing.sm
-                                    ),
-                                    maxLines = 1
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal = CinemaSpacing.md,
+                                            vertical = CinemaSpacing.sm,
+                                        ),
+                                    maxLines = 1,
                                 )
                             }
                         }

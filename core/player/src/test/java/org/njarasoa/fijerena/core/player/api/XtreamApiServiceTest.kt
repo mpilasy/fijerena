@@ -4,14 +4,14 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class XtreamApiServiceTest {
-
     @Test
     fun testBuildStreamUrl_encodesCredentials() {
-        val service = XtreamApiService(
-            baseUrl = "http://example.com",
-            username = "user/name",
-            password = "pass/word"
-        )
+        val service =
+            XtreamApiService(
+                baseUrl = "http://example.com",
+                username = "user/name",
+                password = "pass/word",
+            )
 
         val url = service.buildStreamUrl(123)
         // Expected URL encoding for "user/name" -> "user%2Fname"
@@ -21,11 +21,12 @@ class XtreamApiServiceTest {
 
     @Test
     fun testBuildVodStreamUrl_encodesCredentials() {
-        val service = XtreamApiService(
-            baseUrl = "http://example.com",
-            username = "user@test.com",
-            password = "p@ssw:rd"
-        )
+        val service =
+            XtreamApiService(
+                baseUrl = "http://example.com",
+                username = "user@test.com",
+                password = "p@ssw:rd",
+            )
 
         val url = service.buildVodStreamUrl(456, "mkv")
         // "user@test.com" -> "user%40test.com"
@@ -35,11 +36,12 @@ class XtreamApiServiceTest {
 
     @Test
     fun testBuildSeriesStreamUrl_encodesExtension() {
-        val service = XtreamApiService(
-            baseUrl = "http://example.com",
-            username = "user",
-            password = "pass"
-        )
+        val service =
+            XtreamApiService(
+                baseUrl = "http://example.com",
+                username = "user",
+                password = "pass",
+            )
 
         // Extension with special chars (unlikely but good to cover)
         val url = service.buildSeriesStreamUrl(789, "mp4/bad")
@@ -49,11 +51,12 @@ class XtreamApiServiceTest {
 
     @Test
     fun testBuildEpisodeStreamUrl_encodesEpisodeId() {
-        val service = XtreamApiService(
-            baseUrl = "http://example.com",
-            username = "user",
-            password = "pass"
-        )
+        val service =
+            XtreamApiService(
+                baseUrl = "http://example.com",
+                username = "user",
+                password = "pass",
+            )
 
         // Episode ID with special chars
         val url = service.buildEpisodeStreamUrl("ep/123", "mp4")

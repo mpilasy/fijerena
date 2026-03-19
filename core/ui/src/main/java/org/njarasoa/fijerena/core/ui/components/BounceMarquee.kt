@@ -35,17 +35,19 @@ import kotlinx.coroutines.launch
  */
 fun Modifier.bounceMarquee(
     velocity: Dp = 30.dp,
-    delayMillis: Int = 1200
+    delayMillis: Int = 1200,
 ): Modifier = this then BounceMarqueeElement(velocity, delayMillis)
 
 private data class BounceMarqueeElement(
     val velocity: Dp,
-    val delayMillis: Int
+    val delayMillis: Int,
 ) : ModifierNodeElement<BounceMarqueeNode>() {
     override fun create() = BounceMarqueeNode(velocity, delayMillis)
+
     override fun update(node: BounceMarqueeNode) {
         node.update(velocity, delayMillis)
     }
+
     override fun InspectorInfo.inspectableProperties() {
         name = "bounceMarquee"
         properties["velocity"] = velocity
@@ -55,15 +57,19 @@ private data class BounceMarqueeElement(
 
 private class BounceMarqueeNode(
     private var velocity: Dp,
-    private var delayMillis: Int
-) : Modifier.Node(), LayoutModifierNode, DrawModifierNode {
-
+    private var delayMillis: Int,
+) : Modifier.Node(),
+    LayoutModifierNode,
+    DrawModifierNode {
     private var overflowPx = 0
     private var fraction = 0f
     private var velocityPxPerSec = 0f
     private var animationJob: Job? = null
 
-    fun update(newVelocity: Dp, newDelayMillis: Int) {
+    fun update(
+        newVelocity: Dp,
+        newDelayMillis: Int,
+    ) {
         velocity = newVelocity
         delayMillis = newDelayMillis
         // Restart animation if running, since timing parameters changed
@@ -72,7 +78,7 @@ private class BounceMarqueeNode(
 
     override fun MeasureScope.measure(
         measurable: Measurable,
-        constraints: Constraints
+        constraints: Constraints,
     ): MeasureResult {
         // Cache velocity in px/sec for animation calculations
         velocityPxPerSec = velocity.toPx()
@@ -91,9 +97,10 @@ private class BounceMarqueeNode(
         // Measure content without width constraint to get its natural width.
         // Use 5x container width, capped conservatively to avoid Constraints overflow.
         val wideMax = (containerWidth.toLong() * 5).coerceAtMost(65_535L).toInt()
-        val placeable = measurable.measure(
-            constraints.copy(minWidth = 0, maxWidth = wideMax)
-        )
+        val placeable =
+            measurable.measure(
+                constraints.copy(minWidth = 0, maxWidth = wideMax),
+            )
 
         updateOverflow((placeable.width - containerWidth).coerceAtLeast(0))
 
@@ -125,24 +132,28 @@ private class BounceMarqueeNode(
 
     private fun startAnimation() {
         animationJob?.cancel()
-        animationJob = coroutineScope.launch {
-            // Initial pause before first scroll
-            delay(delayMillis.toLong())
-
-            while (isActive) {
-                val durationMs = if (velocityPxPerSec > 0f) {
-                    ((overflowPx / velocityPxPerSec) * 1000f).toLong().coerceAtLeast(500L)
-                } else { 1000L }
-
-                // Forward sweep: fraction 0 -> 1
-                animateLinear(durationMs) { fraction = it }
+        animationJob =
+            coroutineScope.launch {
+                // Initial pause before first scroll
                 delay(delayMillis.toLong())
 
-                // Reverse sweep: fraction 1 -> 0
-                animateLinear(durationMs) { fraction = 1f - it }
-                delay(delayMillis.toLong())
+                while (isActive) {
+                    val durationMs =
+                        if (velocityPxPerSec > 0f) {
+                            ((overflowPx / velocityPxPerSec) * 1000f).toLong().coerceAtLeast(500L)
+                        } else {
+                            1000L
+                        }
+
+                    // Forward sweep: fraction 0 -> 1
+                    animateLinear(durationMs) { fraction = it }
+                    delay(delayMillis.toLong())
+
+                    // Reverse sweep: fraction 1 -> 0
+                    animateLinear(durationMs) { fraction = 1f - it }
+                    delay(delayMillis.toLong())
+                }
             }
-        }
     }
 
     private fun stopAnimation() {
@@ -154,7 +165,10 @@ private class BounceMarqueeNode(
      * Frame-synchronized linear animation using withFrameNanos.
      * Each frame updates progress and invalidates draw without triggering recomposition.
      */
-    private suspend fun animateLinear(durationMs: Long, onProgress: (Float) -> Unit) {
+    private suspend fun animateLinear(
+        durationMs: Long,
+        onProgress: (Float) -> Unit,
+    ) {
         if (durationMs <= 0L) return
         val durationNanos = durationMs * 1_000_000L
         val startNanos = withFrameNanos { it }

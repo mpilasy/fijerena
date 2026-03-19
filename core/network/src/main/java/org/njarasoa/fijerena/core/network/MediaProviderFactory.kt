@@ -23,7 +23,6 @@ import org.njarasoa.fijerena.core.player.domain.MediaProvider
  * across all screens, preventing session conflicts (especially for Jellyfin).
  */
 object MediaProviderFactory {
-
     private val json = Json { ignoreUnknownKeys = true }
 
     // Cache of provider instances by provider ID
@@ -41,19 +40,20 @@ object MediaProviderFactory {
     fun create(
         entity: ProviderEntity,
         context: Context,
-        password: String
+        password: String,
     ): MediaProvider {
         // Return cached provider if available
         providerCache[entity.id]?.let { return it }
 
-        val provider = when (entity.type) {
-            "XTREAM" -> createXtream(entity, context, password)
-            "JELLYFIN" -> createJellyfin(entity, password, context)
-            "SMB" -> createSmb(entity, password)
-            "LOCAL" -> createLocal(entity, context)
-            "REMOTE_M3U" -> createRemoteM3u(entity, context)
-            else -> createXtream(entity, context, password)
-        }
+        val provider =
+            when (entity.type) {
+                "XTREAM" -> createXtream(entity, context, password)
+                "JELLYFIN" -> createJellyfin(entity, password, context)
+                "SMB" -> createSmb(entity, password)
+                "LOCAL" -> createLocal(entity, context)
+                "REMOTE_M3U" -> createRemoteM3u(entity, context)
+                else -> createXtream(entity, context, password)
+            }
 
         // Cache the provider instance
         providerCache[entity.id] = provider
@@ -77,7 +77,7 @@ object MediaProviderFactory {
     private fun createXtream(
         entity: ProviderEntity,
         context: Context,
-        password: String
+        password: String,
     ): MediaProvider {
         val accountManager = AccountManager(context.applicationContext)
         val providerSettings = parseProviderSettings(entity.providerSettings)
@@ -85,24 +85,26 @@ object MediaProviderFactory {
         // Store credentials so XtreamRepository.restoreSession() can find them
         accountManager.storeBasicCredentials(entity.url, entity.username, password)
 
-        val xtreamRepository = XtreamRepository(
-            accountManager,
-            context.applicationContext,
-            entity.id,
-            providerSettings
-        )
+        val xtreamRepository =
+            XtreamRepository(
+                accountManager,
+                context.applicationContext,
+                entity.id,
+                providerSettings,
+            )
         return XtreamMediaProvider(entity.id, xtreamRepository)
     }
 
     private fun createJellyfin(
         entity: ProviderEntity,
         password: String,
-        context: Context
+        context: Context,
     ): MediaProvider {
-        val deviceId = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ANDROID_ID
-        ) ?: "fijerena-${entity.id}"
+        val deviceId =
+            Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ANDROID_ID,
+            ) ?: "fijerena-${entity.id}"
 
         val prefs = getJellyfinSessionPrefs(context, entity.id)
         val savedToken = prefs?.getString("jellyfin_token", null)
@@ -117,57 +119,67 @@ object MediaProviderFactory {
             savedToken = savedToken,
             savedUserId = savedUserId,
             onSessionSaved = { token, userId ->
-                prefs?.edit()
+                prefs
+                    ?.edit()
                     ?.putString("jellyfin_token", token)
                     ?.putString("jellyfin_user_id", userId)
                     ?.apply()
             },
             onSessionCleared = {
-                prefs?.edit()
+                prefs
+                    ?.edit()
                     ?.remove("jellyfin_token")
                     ?.remove("jellyfin_user_id")
                     ?.apply()
-            }
+            },
         )
     }
 
     private fun getJellyfinSessionPrefs(
         context: Context,
-        providerId: Long
-    ): android.content.SharedPreferences? {
-        return try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
+        providerId: Long,
+    ): android.content.SharedPreferences? =
+        try {
+            val masterKey =
+                MasterKey
+                    .Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
             EncryptedSharedPreferences.create(
                 context,
                 "provider_creds_$providerId",
                 masterKey,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
             )
         } catch (_: Exception) {
             null
         }
-    }
 
-    private fun createSmb(entity: ProviderEntity, password: String): MediaProvider {
+    private fun createSmb(
+        entity: ProviderEntity,
+        password: String,
+    ): MediaProvider {
         val config = parseConfig(entity.config)
         val host = config["host"] ?: ""
         val share = config["share"] ?: ""
         val domain = config["domain"] ?: "WORKGROUP"
 
-        val smbClient = SmbClient(
-            host = host,
-            shareName = share,
-            domain = domain,
-            username = entity.username.ifEmpty { null },
-            password = password.ifEmpty { null }
-        )
+        val smbClient =
+            SmbClient(
+                host = host,
+                shareName = share,
+                domain = domain,
+                username = entity.username.ifEmpty { null },
+                password = password.ifEmpty { null },
+            )
         return SmbMediaProvider(entity.id, smbClient)
     }
 
-    private fun createLocal(entity: ProviderEntity, context: Context): MediaProvider {
+    private fun createLocal(
+        entity: ProviderEntity,
+        context: Context,
+    ): MediaProvider {
         val config = parseConfig(entity.config)
         val rootPaths = config["rootPaths"]?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
         val m3uPath = config["m3uPath"]?.ifEmpty { null }
@@ -175,20 +187,23 @@ object MediaProviderFactory {
         return LocalMediaProvider(
             providerId = entity.id,
             context = context.applicationContext,
-            config = LocalMediaProvider.LocalProviderConfig(
-                rootPaths = rootPaths,
-                m3uPath = m3uPath
-            )
+            config =
+                LocalMediaProvider.LocalProviderConfig(
+                    rootPaths = rootPaths,
+                    m3uPath = m3uPath,
+                ),
         )
     }
 
-    private fun createRemoteM3u(entity: ProviderEntity, context: Context): MediaProvider {
-        return RemoteM3uMediaProvider(
+    private fun createRemoteM3u(
+        entity: ProviderEntity,
+        context: Context,
+    ): MediaProvider =
+        RemoteM3uMediaProvider(
             providerId = entity.id,
             m3uUrl = entity.url,
-            context = context.applicationContext
+            context = context.applicationContext,
         )
-    }
 
     private fun parseConfig(configStr: String): Map<String, String> {
         if (configStr.isBlank()) return emptyMap()

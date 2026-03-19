@@ -12,72 +12,71 @@ import org.njarasoa.fijerena.core.player.device.DeviceType
 object PlayerConfigFactory {
     enum class ContentType {
         LIVE_TV,
-        VOD
+        VOD,
     }
 
-    fun createLoadControl(contentType: ContentType = ContentType.VOD): DefaultLoadControl {
-        return when (contentType) {
+    fun createLoadControl(contentType: ContentType = ContentType.VOD): DefaultLoadControl =
+        when (contentType) {
             ContentType.LIVE_TV -> {
                 // IPTV optimized - fast zapping, minimal latency
-                DefaultLoadControl.Builder()
+                DefaultLoadControl
+                    .Builder()
                     .setBufferDurationsMs(
-                        2000,   // minBufferMs - 2s for live streams
-                        5000,   // maxBufferMs - 5s max to avoid over-buffering
-                        250,    // bufferForPlaybackMs - fast startup
-                        500     // bufferForPlaybackAfterRebufferMs - quick recovery
-                    )
-                    .setBackBuffer(
-                        0,      // backBufferDurationMs - no back buffer for live
-                        false   // retainBackBufferFromKeyframe
-                    )
-                    .build()
+                        2000, // minBufferMs - 2s for live streams
+                        5000, // maxBufferMs - 5s max to avoid over-buffering
+                        250, // bufferForPlaybackMs - fast startup
+                        500, // bufferForPlaybackAfterRebufferMs - quick recovery
+                    ).setBackBuffer(
+                        0, // backBufferDurationMs - no back buffer for live
+                        false, // retainBackBufferFromKeyframe
+                    ).build()
             }
             ContentType.VOD -> {
                 // VOD optimized - smooth playback during network fluctuations
-                DefaultLoadControl.Builder()
+                DefaultLoadControl
+                    .Builder()
                     .setBufferDurationsMs(
-                        15000,  // minBufferMs - 15s buffer for smooth playback
-                        50000,  // maxBufferMs - 50s max buffer for network fluctuations
-                        2500,   // bufferForPlaybackMs - 2.5s before starting playback
-                        5000    // bufferForPlaybackAfterRebufferMs - 5s to recover from buffering
-                    )
-                    .setBackBuffer(
-                        10000,  // backBufferDurationMs - 10s back buffer for seeking
-                        true    // retainBackBufferFromKeyframe
-                    )
-                    .build()
+                        15000, // minBufferMs - 15s buffer for smooth playback
+                        50000, // maxBufferMs - 50s max buffer for network fluctuations
+                        2500, // bufferForPlaybackMs - 2.5s before starting playback
+                        5000, // bufferForPlaybackAfterRebufferMs - 5s to recover from buffering
+                    ).setBackBuffer(
+                        10000, // backBufferDurationMs - 10s back buffer for seeking
+                        true, // retainBackBufferFromKeyframe
+                    ).build()
             }
         }
-    }
 
     fun createTrackSelector(context: Context): DefaultTrackSelector {
         val capabilities = DeviceDetector.detect()
 
         // Use the non-deprecated constructor (Media3 1.9+)
-        val parameters = DefaultTrackSelector.Parameters.Builder()
-            .setPreferredAudioLanguage("en")
-            .apply {
-                // Set max resolution based on device
-                val (maxWidth, maxHeight) = capabilities.maxResolution
-                setMaxVideoSize(maxWidth, maxHeight)
+        val parameters =
+            DefaultTrackSelector.Parameters
+                .Builder()
+                .setPreferredAudioLanguage("en")
+                .apply {
+                    // Set max resolution based on device
+                    val (maxWidth, maxHeight) = capabilities.maxResolution
+                    setMaxVideoSize(maxWidth, maxHeight)
 
-                // Set bitrate constraints
-                val maxBitrate = when (capabilities.deviceType) {
-                    DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                    DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                    DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
-                    DeviceType.GENERIC_TV -> 10_000_000
-                    DeviceType.GENERIC_MOBILE -> 5_000_000
-                }
-                setMaxVideoBitrate(maxBitrate)
+                    // Set bitrate constraints
+                    val maxBitrate =
+                        when (capabilities.deviceType) {
+                            DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                            DeviceType.SONY_BRAVIA -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                            DeviceType.CHROMECAST_TV -> if (capabilities.supports4K) 20_000_000 else 10_000_000
+                            DeviceType.GENERIC_TV -> 10_000_000
+                            DeviceType.GENERIC_MOBILE -> 5_000_000
+                        }
+                    setMaxVideoBitrate(maxBitrate)
 
-                // Prioritize hardware-accelerated codecs based on device capabilities
-                // Media3 will select the first available codec from the preferredMimeTypes list
-                if (capabilities.preferredCodecs.isNotEmpty()) {
-                    setPreferredVideoMimeTypes(*capabilities.preferredCodecs.toTypedArray())
-                }
-            }
-            .build()
+                    // Prioritize hardware-accelerated codecs based on device capabilities
+                    // Media3 will select the first available codec from the preferredMimeTypes list
+                    if (capabilities.preferredCodecs.isNotEmpty()) {
+                        setPreferredVideoMimeTypes(*capabilities.preferredCodecs.toTypedArray())
+                    }
+                }.build()
 
         return DefaultTrackSelector(context).apply {
             setParameters(parameters)

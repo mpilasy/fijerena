@@ -1,19 +1,19 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ktlint)
 }
 
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         freeCompilerArgs.addAll(
             "-opt-in=androidx.tv.material3.ExperimentalTvMaterial3Api",
-            "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi"
+            "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
         )
     }
 }
@@ -29,11 +29,17 @@ android {
         versionCode = 4
         versionName = "1.0"
 
-        val gitHash = try {
-            providers.exec {
-                commandLine("git", "rev-parse", "--short", "HEAD")
-            }.standardOutput.asText.get().trim()
-        } catch (e: Exception) { "unknown" }
+        val gitHash =
+            try {
+                providers
+                    .exec {
+                        commandLine("git", "rev-parse", "--short", "HEAD")
+                    }.standardOutput.asText
+                    .get()
+                    .trim()
+            } catch (e: Exception) {
+                "unknown"
+            }
 
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm z", Locale.US).format(Date())
         buildConfigField("String", "GIT_HASH", "\"$gitHash\"")
@@ -45,7 +51,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -73,7 +79,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:network"))
     implementation(project(":core:ui"))
-    
+
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -131,27 +137,33 @@ tasks.register("deployToShield") {
     dependsOn("assembleDebug")
 
     doLast {
-        val tvIpAddress = project.findProperty("tv.ip.address") as? String
-            ?: throw org.gradle.api.GradleException(
-                "TV IP address not set. Add 'tv.ip.address=YOUR_TV_IP' to gradle.properties"
-            )
+        val tvIpAddress =
+            project.findProperty("tv.ip.address") as? String
+                ?: throw org.gradle.api.GradleException(
+                    "TV IP address not set. Add 'tv.ip.address=YOUR_TV_IP' to gradle.properties",
+                )
 
         println("🔌 Connecting to TV at $tvIpAddress...")
 
         // Connect to TV via ADB
-        val connectProcess = ProcessBuilder("adb", "connect", "$tvIpAddress:5555")
-            .redirectErrorStream(true)
-            .start()
+        val connectProcess =
+            ProcessBuilder("adb", "connect", "$tvIpAddress:5555")
+                .redirectErrorStream(true)
+                .start()
         connectProcess.waitFor()
 
         println("✅ Connected to TV")
         println("📦 Installing TV app...")
 
         // Install the built APK
-        val installProcess = ProcessBuilder(
-            "adb", "install", "-r", "build/outputs/apk/debug/tv-debug.apk"
-        ).redirectErrorStream(true)
-            .start()
+        val installProcess =
+            ProcessBuilder(
+                "adb",
+                "install",
+                "-r",
+                "build/outputs/apk/debug/tv-debug.apk",
+            ).redirectErrorStream(true)
+                .start()
 
         val exitCode = installProcess.waitFor()
         if (exitCode == 0) {

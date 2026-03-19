@@ -20,12 +20,18 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val gitHash = try {
-            providers.exec {
-                commandLine("git", "rev-parse", "--short", "HEAD")
-            }.standardOutput.asText.get().trim()
-        } catch (e: Exception) { "unknown" }
-        
+        val gitHash =
+            try {
+                providers
+                    .exec {
+                        commandLine("git", "rev-parse", "--short", "HEAD")
+                    }.standardOutput.asText
+                    .get()
+                    .trim()
+            } catch (e: Exception) {
+                "unknown"
+            }
+
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm z", Locale.US).format(Date())
         buildConfigField("String", "GIT_HASH", "\"$gitHash\"")
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
@@ -36,7 +42,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -65,7 +71,7 @@ dependencies {
     implementation(project(":core:navigation"))
     implementation(project(":core:data"))
     implementation(project(":core:network"))
-    
+
     // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

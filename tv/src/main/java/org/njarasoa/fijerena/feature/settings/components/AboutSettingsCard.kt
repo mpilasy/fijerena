@@ -23,34 +23,46 @@ fun AboutSettingsCard(scale: Float) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
                 text = "About",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaAccent
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Text(
                 text = "Fijerena v${org.njarasoa.fijerena.BuildConfig.VERSION_NAME}",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaTextPrimary
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodyMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextPrimary,
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
                 text = "Build: ${org.njarasoa.fijerena.BuildConfig.GIT_HASH}",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodySmall.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
                 text = "Built: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME}",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodySmall.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
         }
     }

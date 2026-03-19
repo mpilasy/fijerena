@@ -27,10 +27,8 @@ import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -51,18 +49,18 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 fun IdleContent(onBack: () -> Unit) {
     Column(
         horizontalAlignment = CenterHorizontally,
-        modifier = Modifier.padding(Spacing.xl)
+        modifier = Modifier.padding(Spacing.xl),
     ) {
         Text(
             text = "Ready to play",
             color = CinemaTextPrimary,
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.headlineSmall,
         )
         Spacer(modifier = Modifier.height(Spacing.md))
         CinemaSecondaryButton(
             onClick = onBack,
             text = "Back",
-            modifier = Modifier.padding(Spacing.xs)
+            modifier = Modifier.padding(Spacing.xs),
         )
     }
 }
@@ -72,7 +70,7 @@ fun BufferingContent() {
     CircularProgressIndicator(
         color = CinemaAccent,
         strokeWidth = TvDimensions.progressBar,
-        modifier = Modifier.size(TvDimensions.progressIndicator)
+        modifier = Modifier.size(TvDimensions.progressIndicator),
     )
 }
 
@@ -80,17 +78,17 @@ fun BufferingContent() {
 fun EndedContent(onBack: () -> Unit) {
     Column(
         horizontalAlignment = CenterHorizontally,
-        modifier = Modifier.padding(Spacing.xl)
+        modifier = Modifier.padding(Spacing.xl),
     ) {
         Text(
             text = "Playback ended",
             color = CinemaTextPrimary,
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.headlineSmall,
         )
         Spacer(modifier = Modifier.height(Spacing.md))
         CinemaSecondaryButton(
             onClick = onBack,
-            text = "Back"
+            text = "Back",
         )
     }
 }
@@ -99,29 +97,31 @@ fun EndedContent(onBack: () -> Unit) {
 fun ErrorContent(
     error: PlaybackState.Error,
     onRetry: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode = appSettings.isDevMode
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CinemaBackground.copy(alpha = 0.95f)),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(CinemaBackground.copy(alpha = 0.95f)),
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = CenterHorizontally,
-            modifier = Modifier
-                .padding(Spacing.xxl)
-                .width(TvDimensions.dialogWidth)
+            modifier =
+                Modifier
+                    .padding(Spacing.xxl)
+                    .width(TvDimensions.dialogWidth),
         ) {
             // Error icon/title
             Text(
                 text = "⚠️ Playback Error",
                 color = CinemaError,
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineMedium,
             )
 
             Spacer(modifier = Modifier.height(Spacing.lg))
@@ -132,7 +132,7 @@ fun ErrorContent(
                 color = CinemaTextPrimary,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
 
             // Technical details in dev mode
@@ -142,42 +142,46 @@ fun ErrorContent(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = CinemaSurface,
-                    shape = RoundedCornerShape(CornerRadius.small)
+                    shape = RoundedCornerShape(CornerRadius.small),
                 ) {
                     Column(
-                        modifier = Modifier.padding(Spacing.md)
+                        modifier = Modifier.padding(Spacing.md),
                     ) {
                         Text(
                             text = "Technical Details (Dev Mode):",
                             color = CinemaAccent,
-                            style = MaterialTheme.typography.labelLarge
+                            style = MaterialTheme.typography.labelLarge,
                         )
                         Spacer(modifier = Modifier.height(Spacing.xs))
 
                         val exception = error.exception
-                        val errorDetails = buildString {
-                            append("Type: ${exception?.javaClass?.simpleName ?: "Unknown"}\n")
-                            exception?.message?.let { msg ->
-                                append("Message: $msg\n")
+                        val errorDetails =
+                            buildString {
+                                append("Type: ${exception?.javaClass?.simpleName ?: "Unknown"}\n")
+                                exception?.message?.let { msg ->
+                                    append("Message: $msg\n")
+                                }
+                                // Get stack trace preview (first 5 lines)
+                                val stackTrace =
+                                    exception
+                                        ?.stackTraceToString()
+                                        ?.lines()
+                                        ?.take(5)
+                                        ?.joinToString("\n") ?: "No stack trace available"
+                                append("\nStack Trace:\n$stackTrace")
                             }
-                            // Get stack trace preview (first 5 lines)
-                            val stackTrace = exception?.stackTraceToString()
-                                ?.lines()
-                                ?.take(5)
-                                ?.joinToString("\n") ?: "No stack trace available"
-                            append("\nStack Trace:\n$stackTrace")
-                        }
 
                         Text(
                             text = errorDetails,
                             color = CinemaTextSecondary,
                             style = MaterialTheme.typography.labelSmall,
                             fontFamily = FontFamily.Monospace,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(TvDimensions.statsOverlayPanelHeight)
-                                .focusable(false)
-                                .verticalScroll(rememberScrollState())
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(TvDimensions.statsOverlayPanelHeight)
+                                    .focusable(false)
+                                    .verticalScroll(rememberScrollState()),
                         )
                     }
                 }
@@ -187,17 +191,17 @@ fun ErrorContent(
 
             // Action buttons
             Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 CinemaPrimaryButton(
                     onClick = onRetry,
                     text = "Retry",
-                    modifier = Modifier.width(120.dp).height(TvDimensions.trackItemHeight)
+                    modifier = Modifier.width(120.dp).height(TvDimensions.trackItemHeight),
                 )
                 CinemaSecondaryButton(
                     onClick = onBack,
                     text = "Back",
-                    modifier = Modifier.width(120.dp).height(TvDimensions.trackItemHeight)
+                    modifier = Modifier.width(120.dp).height(TvDimensions.trackItemHeight),
                 )
             }
         }

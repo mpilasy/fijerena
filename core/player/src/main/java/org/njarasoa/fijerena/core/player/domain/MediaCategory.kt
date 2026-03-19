@@ -5,5 +5,5 @@ data class MediaCategory(
     val name: String,
     val parentId: String? = null,
     val iconUrl: String? = null,
-    val isVirtual: Boolean = false
+    val isVirtual: Boolean = false,
 )

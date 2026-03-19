@@ -21,7 +21,7 @@ fun SmbForm(
     onUsernameChange: (String) -> Unit,
     password: String,
     onPasswordChange: (String) -> Unit,
-    onErrorChange: (String?) -> Unit
+    onErrorChange: (String?) -> Unit,
 ) {
     val scale = LocalUiScale.current
 
@@ -34,7 +34,7 @@ fun SmbForm(
             onErrorChange(null)
         },
         label = "Host / IP",
-        placeholder = "192.168.1.100"
+        placeholder = "192.168.1.100",
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -46,7 +46,7 @@ fun SmbForm(
             onErrorChange(null)
         },
         label = "Share Name",
-        placeholder = "media"
+        placeholder = "media",
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -57,7 +57,7 @@ fun SmbForm(
             onUsernameChange(it)
             onErrorChange(null)
         },
-        label = "Username (optional)"
+        label = "Username (optional)",
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -71,6 +71,6 @@ fun SmbForm(
         label = "Password (optional)",
         visualTransformation = PasswordVisualTransformation(),
         keyboardType = KeyboardType.Password,
-        displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else ""
+        displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else "",
     )
 }

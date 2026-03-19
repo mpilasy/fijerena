@@ -7,20 +7,28 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
  * then answers match(channelId, channelName) -> EpgBrowserMatchedStream? queries
  * using a 5-level fallback.
  */
-class EpgChannelMatcher(streams: List<XtreamStreamEntity>) {
-
+class EpgChannelMatcher(
+    streams: List<XtreamStreamEntity>,
+) {
     // Level 1: exact epgChannelId -> stream
     private val byEpgId = mutableMapOf<String, XtreamStreamEntity>()
+
     // Level 2: lowercase epgChannelId -> stream
     private val byEpgIdLower = mutableMapOf<String, XtreamStreamEntity>()
+
     // Level 3: exact stream name -> stream
     private val byName = mutableMapOf<String, XtreamStreamEntity>()
+
     // Level 4: normalized stream name -> stream
     private val byNormalized = mutableMapOf<String, XtreamStreamEntity>()
-    // Level 5: (normalized name, stream) pairs for contains matching
-    private val normalizedEntries = mutableListOf<Pair<String, XtreamStreamEntity>>()
+    // Level 5: Arrays instead of lists to avoid overhead
+    private val normalizedNames: Array<String>
+    private val normalizedStreams: Array<XtreamStreamEntity>
 
     init {
+        val namesList = ArrayList<String>(streams.size)
+        val streamsList = ArrayList<XtreamStreamEntity>(streams.size)
+
         for (stream in streams) {
             val epgId = stream.epgChannelId
             if (!epgId.isNullOrBlank()) {
@@ -31,12 +39,21 @@ class EpgChannelMatcher(streams: List<XtreamStreamEntity>) {
             val norm = ChannelNameNormalizer.normalize(stream.name)
             if (norm.isNotEmpty()) {
                 byNormalized.putIfAbsent(norm, stream)
-                normalizedEntries.add(norm to stream)
+                if (norm.length >= 4) {
+                    namesList.add(norm)
+                    streamsList.add(stream)
+                }
             }
         }
+
+        normalizedNames = namesList.toTypedArray()
+        normalizedStreams = streamsList.toTypedArray()
     }
 
-    fun match(channelId: String, channelName: String): EpgBrowserMatchedStream? {
+    fun match(
+        channelId: String,
+        channelName: String,
+    ): EpgBrowserMatchedStream? {
         // 1. Exact epgChannelId == XMLTV channelId
         byEpgId[channelId]?.let { return it.toMatched() }
 
@@ -55,20 +72,29 @@ class EpgChannelMatcher(streams: List<XtreamStreamEntity>) {
         // 5. Contains match (min 4 chars, pre-filter by length)
         if (normalizedChannelName.length >= 4) {
             val chanLen = normalizedChannelName.length
-            for ((norm, stream) in normalizedEntries) {
-                if (norm.length < 4) continue
+            val names = normalizedNames
+            val streams = normalizedStreams
+            // Use traditional indexed for loop which compiles to highly optimized JVM bytecode
+            for (i in names.indices) {
+                val norm = names[i]
+                val normLen = norm.length
+
                 // Only check contains when needle ≤ haystack length
-                if (chanLen >= norm.length && normalizedChannelName.contains(norm)) return stream.toMatched()
-                if (norm.length >= chanLen && norm.contains(normalizedChannelName)) return stream.toMatched()
+                if (chanLen >= normLen) {
+                    if (normalizedChannelName.contains(norm)) return streams[i].toMatched()
+                } else {
+                    if (norm.contains(normalizedChannelName)) return streams[i].toMatched()
+                }
             }
         }
 
         return null
     }
 
-    private fun XtreamStreamEntity.toMatched() = EpgBrowserMatchedStream(
-        streamId = streamId,
-        streamName = name,
-        categoryId = categoryId
-    )
+    private fun XtreamStreamEntity.toMatched() =
+        EpgBrowserMatchedStream(
+            streamId = streamId,
+            streamName = name,
+            categoryId = categoryId,
+        )
 }

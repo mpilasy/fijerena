@@ -9,16 +9,15 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 
 class SettingsViewModelFactory(
     private val context: Context,
-    private val contentType: String = "ALL"
+    private val contentType: String = "ALL",
 ) : ViewModelProvider.Factory {
-
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return when {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        when {
             modelClass.isAssignableFrom(EpgManagementViewModel::class.java) -> {
                 EpgManagementViewModel(context.applicationContext) as T
             }
-modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {
+            modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {
                 EpgBrowserViewModel(context.applicationContext) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
@@ -27,7 +26,7 @@ modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {
                     context = appCtx,
                     appSettings = AppSettings(appCtx),
                     providerRepo = ProviderRepository(appCtx),
-                    exportManager = SettingsExportManager(appCtx)
+                    exportManager = SettingsExportManager(appCtx),
                 ) as T
             }
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
@@ -35,5 +34,4 @@ modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
-    }
 }

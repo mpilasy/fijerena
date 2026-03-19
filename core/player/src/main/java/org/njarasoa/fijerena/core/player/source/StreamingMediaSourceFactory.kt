@@ -14,7 +14,6 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
 @OptIn(UnstableApi::class)
 object StreamingMediaSourceFactory {
-
     private const val USER_AGENT = "MediaPlayer/1.0 (Linux; Android)"
 
     fun createMediaSource(
@@ -23,29 +22,36 @@ object StreamingMediaSourceFactory {
         headers: Map<String, String> = emptyMap(),
         isLive: Boolean = false,
         onRetry: (() -> Unit)? = null,
-        transferListener: androidx.media3.datasource.TransferListener? = null
+        transferListener: androidx.media3.datasource.TransferListener? = null,
     ): MediaSource {
         val isCellular = NetworkMonitor.currentNetworkType == NetworkType.CELLULAR
 
-        val mediaItem = MediaItem.Builder()
-            .setUri(streamUrl)
-            .build()
+        val mediaItem =
+            MediaItem
+                .Builder()
+                .setUri(streamUrl)
+                .build()
 
-        val connectTimeout = if (isCellular)
-            NetworkBufferProfile.CELLULAR_CONNECT_TIMEOUT_MS
-        else
-            NetworkBufferProfile.WIFI_CONNECT_TIMEOUT_MS
-        val readTimeout = if (isCellular)
-            NetworkBufferProfile.CELLULAR_READ_TIMEOUT_MS
-        else
-            NetworkBufferProfile.WIFI_READ_TIMEOUT_MS
+        val connectTimeout =
+            if (isCellular) {
+                NetworkBufferProfile.CELLULAR_CONNECT_TIMEOUT_MS
+            } else {
+                NetworkBufferProfile.WIFI_CONNECT_TIMEOUT_MS
+            }
+        val readTimeout =
+            if (isCellular) {
+                NetworkBufferProfile.CELLULAR_READ_TIMEOUT_MS
+            } else {
+                NetworkBufferProfile.WIFI_READ_TIMEOUT_MS
+            }
 
-        val dataSourceFactory = buildDataSourceFactory(
-            connectTimeoutMs = connectTimeout,
-            readTimeoutMs = readTimeout,
-            headers = headers,
-            transferListener = transferListener
-        )
+        val dataSourceFactory =
+            buildDataSourceFactory(
+                connectTimeoutMs = connectTimeout,
+                readTimeoutMs = readTimeout,
+                headers = headers,
+                transferListener = transferListener,
+            )
 
         val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
 
@@ -59,14 +65,16 @@ object StreamingMediaSourceFactory {
         connectTimeoutMs: Int,
         readTimeoutMs: Int,
         headers: Map<String, String>,
-        transferListener: androidx.media3.datasource.TransferListener? = null
+        transferListener: androidx.media3.datasource.TransferListener? = null,
     ): DataSource.Factory {
-        val allHeaders = buildMap {
-            put("User-Agent", USER_AGENT)
-            putAll(headers)
-        }
+        val allHeaders =
+            buildMap {
+                put("User-Agent", USER_AGENT)
+                putAll(headers)
+            }
 
-        return DefaultHttpDataSource.Factory()
+        return DefaultHttpDataSource
+            .Factory()
             .setUserAgent(USER_AGENT)
             .setConnectTimeoutMs(connectTimeoutMs)
             .setReadTimeoutMs(readTimeoutMs)

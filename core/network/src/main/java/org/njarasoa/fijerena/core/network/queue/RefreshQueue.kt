@@ -43,11 +43,9 @@ object RefreshQueue {
 
     private class QueuedTask(
         val task: RefreshTask,
-        val deferred: CompletableDeferred<Unit>
+        val deferred: CompletableDeferred<Unit>,
     ) : Comparable<QueuedTask> {
-        override fun compareTo(other: QueuedTask): Int {
-            return task.compareTo(other.task)
-        }
+        override fun compareTo(other: QueuedTask): Int = task.compareTo(other.task)
     }
 
     init {
@@ -86,29 +84,31 @@ object RefreshQueue {
 
     private suspend fun processAvailable() {
         while (true) {
-            val queuedTask = queueMutex.withLock {
-                if (queue.isEmpty()) return@withLock null
-                queue.poll()?.also {
-                    _queuedTaskIds.value = queue.map { it.task.id }.toSet()
-                }
-            } ?: break
+            val queuedTask =
+                queueMutex.withLock {
+                    if (queue.isEmpty()) return@withLock null
+                    queue.poll()?.also {
+                        _queuedTaskIds.value = queue.map { it.task.id }.toSet()
+                    }
+                } ?: break
 
             // Launch each task in its own coroutine, governed by the semaphore
             scope.launch {
                 semaphore.withPermit {
                     _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
                     _isProcessing.value = true
-                    
-                    val job = launch {
-                        try {
-                            queuedTask.task.execute()
-                            queuedTask.deferred.complete(Unit)
-                        } catch (e: Exception) {
-                            android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
-                            queuedTask.deferred.completeExceptionally(e)
+
+                    val job =
+                        launch {
+                            try {
+                                queuedTask.task.execute()
+                                queuedTask.deferred.complete(Unit)
+                            } catch (e: Exception) {
+                                android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
+                                queuedTask.deferred.completeExceptionally(e)
+                            }
                         }
-                    }
-                    
+
                     activeJobs[queuedTask.task.id] = job
                     try {
                         job.join()

@@ -18,7 +18,6 @@ import kotlin.math.pow
  */
 @UnstableApi
 class NightModeProcessor : AudioProcessor {
-
     private var inputAudioFormat = AudioFormat.NOT_SET
     private var outputBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var inputEnded = false
@@ -28,11 +27,11 @@ class NightModeProcessor : AudioProcessor {
 
     // Compressor parameters
     private var envelope = 0f
-    private val attackTime = 0.005f  // 5ms
+    private val attackTime = 0.005f // 5ms
     private val releaseTime = 0.200f // 200ms
-    private val threshold = 0.15f    // ~ -16dB
-    private val ratio = 4f           // 4:1 compression
-    private val makeupGain = 1.8f    // ~+5dB boost for audible quiet-lift
+    private val threshold = 0.15f // ~ -16dB
+    private val ratio = 4f // 4:1 compression
+    private val makeupGain = 1.8f // ~+5dB boost for audible quiet-lift
 
     // Observable state for diagnostics
     var queueInputCallCount = 0L
@@ -41,7 +40,10 @@ class NightModeProcessor : AudioProcessor {
 
     override fun configure(inputAudioFormat: AudioFormat): AudioFormat {
         this.inputAudioFormat = inputAudioFormat
-        Log.e("NightModeProcessor", "Configured: ${inputAudioFormat.sampleRate}Hz, ${inputAudioFormat.channelCount}ch, encoding: ${inputAudioFormat.encoding}")
+        Log.e(
+            "NightModeProcessor",
+            "Configured: ${inputAudioFormat.sampleRate}Hz, ${inputAudioFormat.channelCount}ch, encoding: ${inputAudioFormat.encoding}",
+        )
         return inputAudioFormat
     }
 
@@ -54,7 +56,14 @@ class NightModeProcessor : AudioProcessor {
         val remaining = inputBuffer.remaining()
         val isFloat = inputAudioFormat.encoding == androidx.media3.common.C.ENCODING_PCM_FLOAT
         val is16Bit = inputAudioFormat.encoding == androidx.media3.common.C.ENCODING_PCM_16BIT
-        val bytesPerSample = if (isFloat) 4 else if (is16Bit) 2 else 4
+        val bytesPerSample =
+            if (isFloat) {
+                4
+            } else if (is16Bit) {
+                2
+            } else {
+                4
+            }
         val sampleCount = remaining / bytesPerSample
 
         if (outputBuffer == AudioProcessor.EMPTY_BUFFER || outputBuffer.capacity() < remaining) {

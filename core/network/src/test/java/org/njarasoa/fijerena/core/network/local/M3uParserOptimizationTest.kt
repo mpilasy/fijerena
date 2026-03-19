@@ -6,10 +6,10 @@ import org.junit.Test
 import kotlin.system.measureTimeMillis
 
 class M3uParserOptimizationTest {
-
     @Test
     fun `parse correctly parses valid m3u content`() {
-        val content = """
+        val content =
+            """
             #EXTM3U
             #EXTINF:-1 tvg-id="CNN.us" tvg-name="CNN" tvg-logo="http://example.com/cnn.png" group-title="News",CNN
             http://example.com/cnn.m3u8
@@ -17,7 +17,7 @@ class M3uParserOptimizationTest {
             http://example.com/bbc.m3u8
             #EXTINF:-1 group-title="Sports",ESPN
             http://example.com/espn.m3u8
-        """.trimIndent()
+            """.trimIndent()
 
         val entries = M3uParser.parse(content.reader().buffered()).toList()
 
@@ -40,7 +40,7 @@ class M3uParserOptimizationTest {
             assertEquals("http://example.com/bbc.m3u8", url)
         }
 
-         with(entries[2]) {
+        with(entries[2]) {
             assertEquals("ESPN", name)
             assertEquals("Sports", groupTitle)
             assertEquals(null, logo)
@@ -51,11 +51,12 @@ class M3uParserOptimizationTest {
 
     @Test
     fun `parse handles quoted attributes correctly`() {
-        val content = """
+        val content =
+            """
             #EXTM3U
             #EXTINF:-1 tvg-id="channel 1" group-title="My Group",Channel 1
             http://example.com/1.m3u8
-        """.trimIndent()
+            """.trimIndent()
 
         val entries = M3uParser.parse(content.reader().buffered()).toList()
         assertEquals(1, entries.size)
@@ -69,7 +70,9 @@ class M3uParserOptimizationTest {
         val sb = StringBuilder()
         sb.append("#EXTM3U\n")
         repeat(5000) { i ->
-            sb.append("#EXTINF:-1 tvg-id=\"id$i\" tvg-name=\"Channel $i\" tvg-logo=\"http://logo.com/$i.png\" group-title=\"Group ${i % 10}\",Channel $i\n")
+            sb.append(
+                "#EXTINF:-1 tvg-id=\"id$i\" tvg-name=\"Channel $i\" tvg-logo=\"http://logo.com/$i.png\" group-title=\"Group ${i % 10}\",Channel $i\n",
+            )
             sb.append("http://stream.com/$i.m3u8\n")
         }
         val content = sb.toString()
@@ -77,10 +80,11 @@ class M3uParserOptimizationTest {
         // Warmup
         repeat(5) { M3uParser.parse(content.reader().buffered()).toList() }
 
-        val time = measureTimeMillis {
-            repeat(10) {
-                M3uParser.parse(content.reader().buffered()).toList()
+        val time =
+            measureTimeMillis {
+                repeat(10) {
+                    M3uParser.parse(content.reader().buffered()).toList()
+                }
             }
-        }
     }
 }

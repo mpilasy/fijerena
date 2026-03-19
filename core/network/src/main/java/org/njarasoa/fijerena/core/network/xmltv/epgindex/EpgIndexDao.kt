@@ -9,7 +9,6 @@ import androidx.room.Transaction
 
 @Dao
 interface EpgIndexDao {
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChannels(channels: List<EpgChannelEntity>)
 
@@ -42,13 +41,13 @@ interface EpgIndexDao {
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         LIMIT :maxResults
-        """
+        """,
     )
     suspend fun searchByTitleFts(
         query: String,
         windowStart: Long,
         windowEnd: Long,
-        maxResults: Int = 500
+        maxResults: Int = 500,
     ): List<EpgSearchResultRow>
 
     @Query(
@@ -60,13 +59,13 @@ interface EpgIndexDao {
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         LIMIT :maxResults
-        """
+        """,
     )
     suspend fun searchByTitleLike(
         queryLower: String,
         windowStart: Long,
         windowEnd: Long,
-        maxResults: Int = 500
+        maxResults: Int = 500,
     ): List<EpgSearchResultRow>
 
     // --------------- Now Playing query (uses composite start_epoch + end_epoch index) ---------------
@@ -78,7 +77,7 @@ interface EpgIndexDao {
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
         ORDER BY c.display_name ASC
-        """
+        """,
     )
     suspend fun getNowPlaying(nowEpoch: Long): List<EpgSearchResultRow>
 
@@ -91,11 +90,11 @@ interface EpgIndexDao {
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
-        """
+        """,
     )
     fun getPagedProgrammes(
         windowStart: Long,
-        windowEnd: Long
+        windowEnd: Long,
     ): PagingSource<Int, EpgSearchResultRow>
 
     @Query(
@@ -105,7 +104,7 @@ interface EpgIndexDao {
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
         ORDER BY c.display_name ASC
-        """
+        """,
     )
     fun getPagedNowPlaying(nowEpoch: Long): PagingSource<Int, EpgSearchResultRow>
 
@@ -117,12 +116,12 @@ interface EpgIndexDao {
         WHERE p.channel_id = :channelId
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
-        """
+        """,
     )
     fun getPagedProgrammesForChannel(
         channelId: String,
         windowStart: Long,
-        windowEnd: Long
+        windowEnd: Long,
     ): PagingSource<Int, EpgSearchResultRow>
 
     @Query(
@@ -134,12 +133,12 @@ interface EpgIndexDao {
         WHERE epg_programme_fts MATCH :query
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
-        """
+        """,
     )
     fun searchByTitleFtsPaged(
         query: String,
         windowStart: Long,
-        windowEnd: Long
+        windowEnd: Long,
     ): PagingSource<Int, EpgSearchResultRow>
 
     // --------------- Channel queries ---------------
@@ -149,7 +148,7 @@ interface EpgIndexDao {
         SELECT * FROM epg_channel
         WHERE LOWER(display_name) LIKE '%' || :queryLower || '%'
         ORDER BY display_name ASC
-        """
+        """,
     )
     suspend fun searchChannelsByName(queryLower: String): List<EpgChannelEntity>
 
@@ -164,12 +163,12 @@ interface EpgIndexDao {
         WHERE p.channel_id IN (:channelIds)
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
-        """
+        """,
     )
     suspend fun getProgrammesForChannels(
         channelIds: List<String>,
         windowStart: Long,
-        windowEnd: Long
+        windowEnd: Long,
     ): List<EpgSearchResultRow>
 
     // --------------- Now Playing for specific channels ---------------
@@ -181,9 +180,12 @@ interface EpgIndexDao {
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE p.channel_id IN (:channelIds)
           AND p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
-        """
+        """,
     )
-    suspend fun getNowPlayingForChannels(channelIds: List<String>, nowEpoch: Long): List<EpgSearchResultRow>
+    suspend fun getNowPlayingForChannels(
+        channelIds: List<String>,
+        nowEpoch: Long,
+    ): List<EpgSearchResultRow>
 
     // --------------- Source-scoped cleanup ---------------
 
@@ -228,7 +230,7 @@ interface EpgIndexDao {
     suspend fun replaceAllData(
         channels: List<EpgChannelEntity>,
         programmes: List<EpgProgrammeEntity>,
-        metadata: EpgIndexMetadata
+        metadata: EpgIndexMetadata,
     ) {
         deleteAllProgrammes()
         deleteAllChannels()
@@ -243,7 +245,7 @@ interface EpgIndexDao {
         channels: List<EpgChannelEntity>,
         programmes: List<EpgProgrammeEntity>,
         staleCutoffEpoch: Long,
-        metadata: EpgIndexMetadata
+        metadata: EpgIndexMetadata,
     ) {
         deleteStaleProgrammes(staleCutoffEpoch)
         insertChannels(channels)
