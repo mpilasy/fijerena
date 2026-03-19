@@ -21,11 +21,14 @@ class EpgChannelMatcher(
 
     // Level 4: normalized stream name -> stream
     private val byNormalized = mutableMapOf<String, XtreamStreamEntity>()
-
-    // Level 5: (normalized name, stream) pairs for contains matching
-    private val normalizedEntries = mutableListOf<Pair<String, XtreamStreamEntity>>()
+    // Level 5: Arrays instead of lists to avoid overhead
+    private val normalizedNames: Array<String>
+    private val normalizedStreams: Array<XtreamStreamEntity>
 
     init {
+        val namesList = ArrayList<String>(streams.size)
+        val streamsList = ArrayList<XtreamStreamEntity>(streams.size)
+
         for (stream in streams) {
             val epgId = stream.epgChannelId
             if (!epgId.isNullOrBlank()) {
@@ -36,9 +39,15 @@ class EpgChannelMatcher(
             val norm = ChannelNameNormalizer.normalize(stream.name)
             if (norm.isNotEmpty()) {
                 byNormalized.putIfAbsent(norm, stream)
-                normalizedEntries.add(norm to stream)
+                if (norm.length >= 4) {
+                    namesList.add(norm)
+                    streamsList.add(stream)
+                }
             }
         }
+
+        normalizedNames = namesList.toTypedArray()
+        normalizedStreams = streamsList.toTypedArray()
     }
 
     fun match(
@@ -63,11 +72,19 @@ class EpgChannelMatcher(
         // 5. Contains match (min 4 chars, pre-filter by length)
         if (normalizedChannelName.length >= 4) {
             val chanLen = normalizedChannelName.length
-            for ((norm, stream) in normalizedEntries) {
-                if (norm.length < 4) continue
+            val names = normalizedNames
+            val streams = normalizedStreams
+            // Use traditional indexed for loop which compiles to highly optimized JVM bytecode
+            for (i in names.indices) {
+                val norm = names[i]
+                val normLen = norm.length
+
                 // Only check contains when needle ≤ haystack length
-                if (chanLen >= norm.length && normalizedChannelName.contains(norm)) return stream.toMatched()
-                if (norm.length >= chanLen && norm.contains(normalizedChannelName)) return stream.toMatched()
+                if (chanLen >= normLen) {
+                    if (normalizedChannelName.contains(norm)) return streams[i].toMatched()
+                } else {
+                    if (norm.contains(normalizedChannelName)) return streams[i].toMatched()
+                }
             }
         }
 
