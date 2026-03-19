@@ -21,9 +21,8 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 class AdaptiveLoadControl(
     private val contentType: PlayerConfigFactory.ContentType,
     private val cellularLiveMultiplier: Float = 1.0f,
-    private val cellularVodMultiplier: Float = 1.0f
+    private val cellularVodMultiplier: Float = 1.0f,
 ) : LoadControl {
-
     private val sharedAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
 
     @Volatile
@@ -76,7 +75,8 @@ class AdaptiveLoadControl(
             retainKeyframe = true
         }
 
-        return DefaultLoadControl.Builder()
+        return DefaultLoadControl
+            .Builder()
             .setAllocator(sharedAllocator)
             .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
             .setBackBuffer(backBuffer, retainKeyframe)
@@ -88,40 +88,54 @@ class AdaptiveLoadControl(
 
     // Basic lifecycle methods (required by 1.5.1 interface)
     @Deprecated("Use onPrepared(PlayerId) instead")
-    override fun onPrepared() { delegate.onPrepared() }
+    override fun onPrepared() {
+        delegate.onPrepared()
+    }
+
     @Deprecated("Use onStopped(PlayerId) instead")
-    override fun onStopped() { delegate.onStopped() }
+    override fun onStopped() {
+        delegate.onStopped()
+    }
+
     @Deprecated("Use onReleased(PlayerId) instead")
-    override fun onReleased() { delegate.onReleased() }
+    override fun onReleased() {
+        delegate.onReleased()
+    }
 
     // Analytics-aware lifecycle methods (often used by 1.7.1+ internal logic)
-    override fun onPrepared(playerId: PlayerId) { delegate.onPrepared(playerId) }
-    override fun onStopped(playerId: PlayerId) { delegate.onStopped(playerId) }
-    override fun onReleased(playerId: PlayerId) { delegate.onReleased(playerId) }
+    override fun onPrepared(playerId: PlayerId) {
+        delegate.onPrepared(playerId)
+    }
+
+    override fun onStopped(playerId: PlayerId) {
+        delegate.onStopped(playerId)
+    }
+
+    override fun onReleased(playerId: PlayerId) {
+        delegate.onReleased(playerId)
+    }
 
     // Allocator (signature varies, implemented both via override where possible)
     override fun getAllocator(): Allocator = delegate.allocator
 
     @Deprecated("Use getBackBufferDurationUs(PlayerId) instead")
     override fun getBackBufferDurationUs(): Long = delegate.backBufferDurationUs
+
     override fun getBackBufferDurationUs(playerId: PlayerId): Long = delegate.getBackBufferDurationUs(playerId)
 
     @Deprecated("Use retainBackBufferFromKeyframe(PlayerId) instead")
     override fun retainBackBufferFromKeyframe(): Boolean = delegate.retainBackBufferFromKeyframe()
+
     override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean = delegate.retainBackBufferFromKeyframe(playerId)
 
-    override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
-        return delegate.shouldContinueLoading(parameters)
-    }
+    override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean = delegate.shouldContinueLoading(parameters)
 
-    override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
-        return delegate.shouldStartPlayback(parameters)
-    }
+    override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean = delegate.shouldStartPlayback(parameters)
 
     override fun onTracksSelected(
         parameters: LoadControl.Parameters,
         trackGroups: TrackGroupArray,
-        trackSelections: Array<out ExoTrackSelection?>
+        trackSelections: Array<out ExoTrackSelection?>,
     ) {
         delegate.onTracksSelected(parameters, trackGroups, trackSelections)
     }

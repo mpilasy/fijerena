@@ -5,7 +5,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusState
-import androidx.compose.ui.geometry.CornerRadius as ComposeCornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -20,13 +19,13 @@ import androidx.compose.ui.node.invalidateMeasurement
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import androidx.compose.ui.geometry.CornerRadius as ComposeCornerRadius
 
 /**
  * Standard TV Focus Modifier
@@ -41,10 +40,11 @@ fun Modifier.tvFocusable(
     focusScale: Float = TvFocusTokens.focusedScale,
     borderWidth: Dp = TvFocusTokens.focusBorderWidth,
     borderColor: Color = CinemaAccentLight,
-    cornerRadius: Dp = CornerRadius.medium
-): Modifier = this
-    .focusable()
-    .then(TvFocusableElement(focusScale, borderWidth, borderColor, cornerRadius))
+    cornerRadius: Dp = CornerRadius.medium,
+): Modifier =
+    this
+        .focusable()
+        .then(TvFocusableElement(focusScale, borderWidth, borderColor, cornerRadius))
 
 /**
  * Subtle Focus Modifier
@@ -54,13 +54,14 @@ fun Modifier.tvFocusable(
  */
 fun Modifier.tvFocusableSubtle(
     borderColor: Color = CinemaAccentLight,
-    cornerRadius: Dp = CornerRadius.medium
-): Modifier = tvFocusable(
-    focusScale = TvFocusTokens.focusedScaleSubtle,
-    borderWidth = TvFocusTokens.focusBorderWidth,
-    borderColor = borderColor,
-    cornerRadius = cornerRadius
-)
+    cornerRadius: Dp = CornerRadius.medium,
+): Modifier =
+    tvFocusable(
+        focusScale = TvFocusTokens.focusedScaleSubtle,
+        borderWidth = TvFocusTokens.focusBorderWidth,
+        borderColor = borderColor,
+        cornerRadius = cornerRadius,
+    )
 
 /**
  * No Scale Focus Modifier
@@ -72,13 +73,14 @@ fun Modifier.tvFocusableSubtle(
  */
 fun Modifier.tvFocusableNoScale(
     borderColor: Color = CinemaAccentLight,
-    cornerRadius: Dp = CornerRadius.medium
-): Modifier = tvFocusable(
-    focusScale = TvFocusTokens.defaultScale,
-    borderWidth = TvFocusTokens.focusBorderWidth,
-    borderColor = borderColor,
-    cornerRadius = cornerRadius
-)
+    cornerRadius: Dp = CornerRadius.medium,
+): Modifier =
+    tvFocusable(
+        focusScale = TvFocusTokens.defaultScale,
+        borderWidth = TvFocusTokens.focusBorderWidth,
+        borderColor = borderColor,
+        cornerRadius = cornerRadius,
+    )
 
 /**
  * Content-First Focus Modifier (borderless)
@@ -87,25 +89,26 @@ fun Modifier.tvFocusableNoScale(
  * - Subtle border only when focused
  * - No bright border, no 1.1x scale
  */
-fun Modifier.tvFocusableContent(
-    cornerRadius: Dp = CornerRadius.medium
-): Modifier = tvFocusable(
-    focusScale = TvFocusTokens.focusedScaleContent,
-    borderWidth = TvFocusTokens.focusBorderWidth,
-    borderColor = CinemaAccentLight,
-    cornerRadius = cornerRadius
-)
+fun Modifier.tvFocusableContent(cornerRadius: Dp = CornerRadius.medium): Modifier =
+    tvFocusable(
+        focusScale = TvFocusTokens.focusedScaleContent,
+        borderWidth = TvFocusTokens.focusBorderWidth,
+        borderColor = CinemaAccentLight,
+        cornerRadius = cornerRadius,
+    )
 
 private data class TvFocusableElement(
     val focusScale: Float,
     val borderWidth: Dp,
     val borderColor: Color,
-    val cornerRadius: Dp
+    val cornerRadius: Dp,
 ) : ModifierNodeElement<TvFocusableNode>() {
     override fun create() = TvFocusableNode(focusScale, borderWidth, borderColor, cornerRadius)
+
     override fun update(node: TvFocusableNode) {
         node.update(focusScale, borderWidth, borderColor, cornerRadius)
     }
+
     override fun InspectorInfo.inspectableProperties() {
         name = "tvFocusable"
         properties["focusScale"] = focusScale
@@ -119,9 +122,11 @@ private class TvFocusableNode(
     private var focusScale: Float,
     private var borderWidth: Dp,
     private var borderColor: Color,
-    private var cornerRadius: Dp
-) : Modifier.Node(), FocusEventModifierNode, LayoutModifierNode, DrawModifierNode {
-
+    private var cornerRadius: Dp,
+) : Modifier.Node(),
+    FocusEventModifierNode,
+    LayoutModifierNode,
+    DrawModifierNode {
     private var isFocused = false
     private var currentScale = TvFocusTokens.defaultScale
     private var animationJob: Job? = null
@@ -134,7 +139,7 @@ private class TvFocusableNode(
         newFocusScale: Float,
         newBorderWidth: Dp,
         newBorderColor: Color,
-        newCornerRadius: Dp
+        newCornerRadius: Dp,
     ) {
         focusScale = newFocusScale
         borderWidth = newBorderWidth
@@ -154,7 +159,7 @@ private class TvFocusableNode(
 
     override fun MeasureScope.measure(
         measurable: Measurable,
-        constraints: Constraints
+        constraints: Constraints,
     ): MeasureResult {
         // Cache dp-to-px conversions
         borderWidthPx = borderWidth.toPx()
@@ -177,7 +182,7 @@ private class TvFocusableNode(
             drawRoundRect(
                 color = borderColor,
                 style = Stroke(width = borderWidthPx),
-                cornerRadius = ComposeCornerRadius(cornerRadiusPx)
+                cornerRadius = ComposeCornerRadius(cornerRadiusPx),
             )
         }
     }
@@ -188,20 +193,21 @@ private class TvFocusableNode(
         val startScale = currentScale
         if (startScale == targetScale) return
 
-        animationJob = coroutineScope.launch {
-            val durationMs = CinemaAnimation.focusDurationMs.toLong()
-            val durationNanos = durationMs * 1_000_000L
-            val startNanos = withFrameNanos { it }
-            var progress = 0f
-            while (progress < 1f) {
-                val nowNanos = withFrameNanos { it }
-                progress = ((nowNanos - startNanos).toFloat() / durationNanos).coerceIn(0f, 1f)
-                currentScale = startScale + (targetScale - startScale) * progress
-                invalidateMeasurement()
-                invalidateDraw()
+        animationJob =
+            coroutineScope.launch {
+                val durationMs = CinemaAnimation.focusDurationMs.toLong()
+                val durationNanos = durationMs * 1_000_000L
+                val startNanos = withFrameNanos { it }
+                var progress = 0f
+                while (progress < 1f) {
+                    val nowNanos = withFrameNanos { it }
+                    progress = ((nowNanos - startNanos).toFloat() / durationNanos).coerceIn(0f, 1f)
+                    currentScale = startScale + (targetScale - startScale) * progress
+                    invalidateMeasurement()
+                    invalidateDraw()
+                }
+                currentScale = targetScale
             }
-            currentScale = targetScale
-        }
     }
 
     override fun onDetach() {

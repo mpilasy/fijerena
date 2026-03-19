@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProviderDao {
-
     @Query("SELECT * FROM providers ORDER BY isActive DESC, name COLLATE NOCASE ASC")
     fun getAllProviders(): Flow<List<ProviderEntity>>
 
@@ -38,5 +37,8 @@ interface ProviderDao {
     suspend fun deactivateAll()
 
     @Query("UPDATE providers SET isActive = 1, lastUsedAt = :timestamp WHERE id = :id")
-    suspend fun activateProvider(id: Long, timestamp: Long = System.currentTimeMillis())
+    suspend fun activateProvider(
+        id: Long,
+        timestamp: Long = System.currentTimeMillis(),
+    )
 }

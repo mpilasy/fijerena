@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 
 class EpgViewModelFactory(
     private val context: Context,
-    private val categoryId: String
+    private val categoryId: String,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(EpgViewModel::class.java)) {

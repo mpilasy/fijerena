@@ -40,12 +40,12 @@ fun MobileSettingsScreen(
     onManageProviders: () -> Unit = {},
     onManageEpg: () -> Unit = {},
     onCellularBuffers: () -> Unit = {},
-    onProviderChanged: () -> Unit
+    onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    
+
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
@@ -61,14 +61,16 @@ fun MobileSettingsScreen(
     var pendingImportOptions by remember { mutableStateOf(SettingsExportManager.ImportOptions()) }
 
     // SAF launcher for export (create file)
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri -> pendingExportUri = uri }
+    val exportLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("application/json"),
+        ) { uri -> pendingExportUri = uri }
 
     // SAF launcher for import (open file)
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri -> pendingImportUri = uri }
+    val importLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+        ) { uri -> pendingImportUri = uri }
 
     // Process export in LaunchedEffect
     LaunchedEffect(pendingExportUri) {
@@ -82,13 +84,14 @@ fun MobileSettingsScreen(
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportUri(uri)
-        parseResult.onSuccess { parsed ->
-            pendingParsedImport = parsed
-            pendingImportOptions = SettingsExportManager.ImportOptions()
-            showImportOptionsDialog = true
-        }.onFailure { e ->
-            viewModel.setExportImportMessage("Import failed: ${e.message}")
-        }
+        parseResult
+            .onSuccess { parsed ->
+                pendingParsedImport = parsed
+                pendingImportOptions = SettingsExportManager.ImportOptions()
+                showImportOptionsDialog = true
+            }.onFailure { e ->
+                viewModel.setExportImportMessage("Import failed: ${e.message}")
+            }
         pendingImportUri = null
     }
 
@@ -96,13 +99,14 @@ fun MobileSettingsScreen(
     LaunchedEffect(pendingImportPath) {
         val path = pendingImportPath ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportPath(path)
-        parseResult.onSuccess { parsed ->
-            pendingParsedImport = parsed
-            pendingImportOptions = SettingsExportManager.ImportOptions()
-            showImportOptionsDialog = true
-        }.onFailure { e ->
-            viewModel.setExportImportMessage("Import failed: ${e.message}")
-        }
+        parseResult
+            .onSuccess { parsed ->
+                pendingParsedImport = parsed
+                pendingImportOptions = SettingsExportManager.ImportOptions()
+                showImportOptionsDialog = true
+            }.onFailure { e ->
+                viewModel.setExportImportMessage("Import failed: ${e.message}")
+            }
         pendingImportPath = null
     }
 
@@ -151,12 +155,13 @@ fun MobileSettingsScreen(
             },
             confirmButton = {
                 Button(onClick = {
-                    val options = SettingsExportManager.ImportOptions(
-                        importProviders = optProviders,
-                        importEpgSources = optEpg,
-                        importGlobalSettings = optGlobal,
-                        importFavorites = optFavorites
-                    )
+                    val options =
+                        SettingsExportManager.ImportOptions(
+                            importProviders = optProviders,
+                            importEpgSources = optEpg,
+                            importGlobalSettings = optGlobal,
+                            importFavorites = optFavorites,
+                        )
                     pendingImportOptions = options
                     val p = pendingParsedImport!!
                     if (optProviders && parsed.hasConflicts) {
@@ -174,7 +179,7 @@ fun MobileSettingsScreen(
                     showImportOptionsDialog = false
                     pendingParsedImport = null
                 }) { Text("Cancel") }
-            }
+            },
         )
     }
 
@@ -191,17 +196,17 @@ fun MobileSettingsScreen(
                 Text(
                     "The following provider(s) already exist:\n\n" +
                         conflicts.joinToString("\n") { "• $it" } +
-                        "\n\nWhat would you like to do?"
+                        "\n\nWhat would you like to do?",
                 )
             },
             confirmButton = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                     ) {
                         Button(
                             onClick = {
@@ -211,7 +216,7 @@ fun MobileSettingsScreen(
                                 pendingParsedImport = null
                                 viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.OVERWRITE, options)
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         ) { Text("Overwrite", maxLines = 1) }
                         Button(
                             onClick = {
@@ -221,7 +226,7 @@ fun MobileSettingsScreen(
                                 pendingParsedImport = null
                                 viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.DUPLICATE, options)
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         ) { Text("Duplicate", maxLines = 1) }
                     }
                     Button(
@@ -232,7 +237,7 @@ fun MobileSettingsScreen(
                             pendingParsedImport = null
                             viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.SKIP, options)
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) { Text("Skip Duplicates") }
                 }
             },
@@ -241,7 +246,7 @@ fun MobileSettingsScreen(
                     showConflictDialog = false
                     pendingParsedImport = null
                 }) { Text("Cancel") }
-            }
+            },
         )
     }
 
@@ -253,18 +258,19 @@ fun MobileSettingsScreen(
     var signInError by remember { mutableStateOf<String?>(null) }
 
     // Google Sign-In launcher
-    val signInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        coroutineScope.launch {
-            val success = syncManager.handleSignInResult(result.data)
-            if (!success) {
-                signInError = "Sign-in failed. Check Google Play Services."
-            } else {
-                signInError = null
+    val signInLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            coroutineScope.launch {
+                val success = syncManager.handleSignInResult(result.data)
+                if (!success) {
+                    signInError = "Sign-in failed. Check Google Play Services."
+                } else {
+                    signInError = null
+                }
             }
         }
-    }
 
     // Initialize sync on startup
     LaunchedEffect(Unit) {
@@ -279,49 +285,58 @@ fun MobileSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(CinemaSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(CinemaSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             // === Provider ===
             SettingsSection(title = "Provider") {
                 Text(
                     text = uiState.providerName,
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = uiState.currentUrl,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
                 if (uiState.subscriptionExpiry != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     val isExpired = uiState.subscriptionStatus?.equals("Expired", ignoreCase = true) == true
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Expires", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow))
+                        Text(
+                            "Expires",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        )
                         Text(
                             text = uiState.subscriptionExpiry!!,
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                            color = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     if (uiState.subscriptionMaxCons != null) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("Max connections", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow))
+                            Text(
+                                "Max connections",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                            )
                             Text(uiState.subscriptionMaxCons!!, style = MaterialTheme.typography.bodySmall)
                         }
                     }
@@ -332,7 +347,7 @@ fun MobileSettingsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = onManageProviders,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Manage Providers")
                 }
@@ -340,13 +355,13 @@ fun MobileSettingsScreen(
 
             // === Playback ===
             SettingsSection(title = "Playback") {
-                var watchDelayText by remember(uiState.watchDelaySeconds) { 
-                    mutableStateOf(uiState.watchDelaySeconds.toString()) 
+                var watchDelayText by remember(uiState.watchDelaySeconds) {
+                    mutableStateOf(uiState.watchDelaySeconds.toString())
                 }
                 Text(
                     text = "How long to watch a channel before it's added to Last Watched",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
@@ -363,7 +378,7 @@ fun MobileSettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     supportingText = {
                         Text("${AppSettings.MIN_WATCH_DELAY_SECONDS}–${AppSettings.MAX_WATCH_DELAY_SECONDS} seconds")
-                    }
+                    },
                 )
             }
 
@@ -372,21 +387,21 @@ fun MobileSettingsScreen(
                 Text(
                     text = "Select a color theme for the app",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AllPalettes.chunked(2).forEach { rowPalettes ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             rowPalettes.forEach { palette ->
                                 val isSelected = uiState.themeId == palette.id
                                 if (isSelected) {
                                     Button(
                                         onClick = { },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
                                     ) {
                                         Text(palette.displayName, maxLines = 1)
                                     }
@@ -396,7 +411,7 @@ fun MobileSettingsScreen(
                                             viewModel.updateTheme(palette.id)
                                             onThemeChanged(palette.id)
                                         },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
                                     ) {
                                         Text(palette.displayName, maxLines = 1)
                                     }
@@ -415,21 +430,31 @@ fun MobileSettingsScreen(
                 LaunchedEffect(uiState.epgRefreshTrigger) {
                     sourceCount = epgIndexer.getSourceCount()
                 }
-                val summaryText = when (val idx = indexState) {
-                    is EpgIndexState.Indexed -> "${formatProgrammeCount(idx.channelCount)} channels, ${formatProgrammeCount(idx.programmeCount)} programmes"
-                    is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
-                    is EpgIndexState.NotIndexed -> if (sourceCount > 0) "$sourceCount source(s) configured, not yet indexed" else "No sources configured"
-                    is EpgIndexState.Failed -> "Error: ${idx.reason}"
-                }
+                val summaryText =
+                    when (val idx = indexState) {
+                        is EpgIndexState.Indexed -> "${formatProgrammeCount(
+                            idx.channelCount,
+                        )} channels, ${formatProgrammeCount(idx.programmeCount)} programmes"
+                        is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
+                        is EpgIndexState.NotIndexed ->
+                            if (sourceCount >
+                                0
+                            ) {
+                                "$sourceCount source(s) configured, not yet indexed"
+                            } else {
+                                "No sources configured"
+                            }
+                        is EpgIndexState.Failed -> "Error: ${idx.reason}"
+                    }
                 Text(
                     text = summaryText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Button(
                     onClick = onManageEpg,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Manage EPG Data")
                 }
@@ -440,13 +465,13 @@ fun MobileSettingsScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Enable stats for nerds and debug features",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -454,7 +479,7 @@ fun MobileSettingsScreen(
                         checked = uiState.isDevMode,
                         onCheckedChange = { enabled ->
                             viewModel.updateDevMode(enabled)
-                        }
+                        },
                     )
                 }
 
@@ -462,7 +487,7 @@ fun MobileSettingsScreen(
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                     Button(
                         onClick = onCellularBuffers,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("Configure Cellular Buffers")
                     }
@@ -474,7 +499,7 @@ fun MobileSettingsScreen(
                 Text(
                     text = "Sync provider settings across devices using your Google account",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -482,39 +507,41 @@ fun MobileSettingsScreen(
                     // Signed in: show account + sync controls
                     Text(
                         text = signedInEmail ?: "",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    val statusText = when (syncStatus) {
-                        is DriveSettingsSyncManager.SyncStatus.Syncing -> "Syncing..."
-                        is DriveSettingsSyncManager.SyncStatus.Synced -> "Synced"
-                        is DriveSettingsSyncManager.SyncStatus.Error ->
-                            "Error: ${(syncStatus as DriveSettingsSyncManager.SyncStatus.Error).message}"
-                        else -> "Ready"
-                    }
+                    val statusText =
+                        when (syncStatus) {
+                            is DriveSettingsSyncManager.SyncStatus.Syncing -> "Syncing..."
+                            is DriveSettingsSyncManager.SyncStatus.Synced -> "Synced"
+                            is DriveSettingsSyncManager.SyncStatus.Error ->
+                                "Error: ${(syncStatus as DriveSettingsSyncManager.SyncStatus.Error).message}"
+                            else -> "Ready"
+                        }
                     Text(
                         text = statusText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = when (syncStatus) {
-                            is DriveSettingsSyncManager.SyncStatus.Synced -> MaterialTheme.colorScheme.primary
-                            is DriveSettingsSyncManager.SyncStatus.Error -> CinemaError
-                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                        }
+                        color =
+                            when (syncStatus) {
+                                is DriveSettingsSyncManager.SyncStatus.Synced -> MaterialTheme.colorScheme.primary
+                                is DriveSettingsSyncManager.SyncStatus.Error -> CinemaError
+                                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                            },
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Button(
                             onClick = { coroutineScope.launch { syncManager.syncNow() } },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         ) {
                             Text("Sync Now")
                         }
                         OutlinedButton(
                             onClick = { coroutineScope.launch { syncManager.signOut() } },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         ) {
                             Text("Sign Out")
                         }
@@ -526,7 +553,7 @@ fun MobileSettingsScreen(
                             signInError = null
                             signInLauncher.launch(syncManager.getSignInIntent())
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("Sign in with Google")
                     }
@@ -535,7 +562,7 @@ fun MobileSettingsScreen(
                         Text(
                             text = signInError ?: "",
                             style = MaterialTheme.typography.bodySmall,
-                            color = CinemaError
+                            color = CinemaError,
                         )
                     }
                 }
@@ -546,22 +573,22 @@ fun MobileSettingsScreen(
                 Text(
                     text = "Export all settings to a file or import from another device",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Button(
                         onClick = { exportLauncher.launch("fijerena_settings.json") },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     ) {
                         Text("Export")
                     }
                     OutlinedButton(
                         onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     ) {
                         Text("Import")
                     }
@@ -576,7 +603,7 @@ fun MobileSettingsScreen(
                             viewModel.setExportImportMessage("Settings file not found in Downloads or app folder")
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Quick Import from Downloads")
                 }
@@ -585,7 +612,7 @@ fun MobileSettingsScreen(
                     Text(
                         text = uiState.exportImportMessage ?: "",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                     )
                 }
             }
@@ -594,12 +621,12 @@ fun MobileSettingsScreen(
             SettingsSection(title = "About") {
                 Text(
                     text = "Fijerena v1.0.0",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
                     text = "Premium native media player for Android",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
             }
         }
@@ -609,17 +636,17 @@ fun MobileSettingsScreen(
 @Composable
 fun SettingsSection(
     title: String,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     GlassPanel(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Box(modifier = Modifier.padding(CinemaSpacing.md)) {
             Column {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 content()
@@ -628,9 +655,8 @@ fun SettingsSection(
     }
 }
 
-private fun formatProgrammeCount(count: Int): String {
-    return when {
+private fun formatProgrammeCount(count: Int): String =
+    when {
         count >= 1000 -> "%.1fk".format(count / 1000.0)
         else -> count.toString()
     }
-}

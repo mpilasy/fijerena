@@ -1,0 +1,2 @@
+[*.{kt,kts}]
+no-unused-imports = true

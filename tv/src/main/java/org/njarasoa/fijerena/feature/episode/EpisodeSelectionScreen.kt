@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -59,26 +58,27 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
-import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.scaled
-import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 
 /**
@@ -97,7 +97,7 @@ fun EpisodeSelectionScreen(
     seriesName: String,
     categoryId: String,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -120,21 +120,22 @@ fun EpisodeSelectionScreen(
         error = null
 
         // Initialize repository asynchronously (avoids runBlocking on main thread)
-        val repo = mediaRepository ?: run {
-            val appContext = context.applicationContext
-            val providerRepo = ProviderRepository(appContext)
-            val entity = providerRepo.getActiveProvider()
-            val r = MediaRepository(appContext, entity?.id ?: 0L)
-            if (entity != null) {
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                provider.connect()
-                r.setProvider(provider)
+        val repo =
+            mediaRepository ?: run {
+                val appContext = context.applicationContext
+                val providerRepo = ProviderRepository(appContext)
+                val entity = providerRepo.getActiveProvider()
+                val r = MediaRepository(appContext, entity?.id ?: 0L)
+                if (entity != null) {
+                    val password = providerRepo.getPassword(entity.id) ?: ""
+                    val provider = MediaProviderFactory.create(entity, appContext, password)
+                    provider.connect()
+                    r.setProvider(provider)
+                }
+                mediaRepository = r
+                isFavorite = r.isFavorite(seriesId, ContentType.TV_SHOWS)
+                r
             }
-            mediaRepository = r
-            isFavorite = r.isFavorite(seriesId, ContentType.TV_SHOWS)
-            r
-        }
 
         val result = repo.getSeriesDetail(seriesId)
         result.fold(
@@ -145,7 +146,7 @@ fun EpisodeSelectionScreen(
             onFailure = { e ->
                 error = e.message ?: "Failed to load series info"
                 isLoading = false
-            }
+            },
         )
     }
 
@@ -158,7 +159,7 @@ fun EpisodeSelectionScreen(
             error != null -> {
                 ErrorScreen(
                     message = error ?: "Unknown error",
-                    onBack = onBack
+                    onBack = onBack,
                 )
             }
             seriesDetail != null -> {
@@ -179,7 +180,7 @@ fun EpisodeSelectionScreen(
                     },
                     onEpisodeSelected = onEpisodeSelected,
                     onRefresh = { refresh() },
-                    onBack = onBack
+                    onBack = onBack,
                 )
             }
         }
@@ -196,7 +197,7 @@ private fun EpisodeListContent(
     onToggleFavorite: () -> Unit,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onRefresh: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -204,15 +205,16 @@ private fun EpisodeListContent(
     val listState = rememberLazyListState()
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val scaledStyles = remember(scale, typography) {
-        object {
-            val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
-            val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
-            val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-            val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
-            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+    val scaledStyles =
+        remember(scale, typography) {
+            object {
+                val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
+                val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
+                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+                val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+            }
         }
-    }
 
     // Selected episode for detail panel
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
@@ -229,7 +231,7 @@ private fun EpisodeListContent(
     val rotation by animateFloatAsState(
         targetValue = targetRotation,
         animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
-        label = "refresh_rotation"
+        label = "refresh_rotation",
     )
 
     LaunchedEffect(isRefreshing) {
@@ -242,28 +244,41 @@ private fun EpisodeListContent(
     }
 
     // Use API seasons if available, otherwise derive from episode map keys
-    val sortedSeasons = remember(seriesDetail) {
-        val apiSeasons = seriesDetail.seasons.sortedBy { it.seasonNumber }
-        if (apiSeasons.isNotEmpty()) apiSeasons
-        else seriesDetail.episodes.keys
-            .mapNotNull { key -> key.toIntOrNull() }
-            .sorted()
-            .map { num -> SeasonInfo(seasonNumber = num, name = "Season $num", episodeCount = seriesDetail.episodes[num.toString()]?.size ?: 0) }
-    }
+    val sortedSeasons =
+        remember(seriesDetail) {
+            val apiSeasons = seriesDetail.seasons.sortedBy { it.seasonNumber }
+            if (apiSeasons.isNotEmpty()) {
+                apiSeasons
+            } else {
+                seriesDetail.episodes.keys
+                    .mapNotNull { key -> key.toIntOrNull() }
+                    .sorted()
+                    .map { num ->
+                        SeasonInfo(
+                            seasonNumber = num,
+                            name = "Season $num",
+                            episodeCount =
+                                seriesDetail.episodes[num.toString()]?.size ?: 0,
+                        )
+                    }
+            }
+        }
 
     // Pre-sort episodes per season — avoid re-sorting inside LazyColumn on every recomposition
-    val sortedEpisodesBySeason = remember(seriesDetail) {
-        seriesDetail.episodes.mapValues { (_, eps) -> eps.sortedBy { it.episodeNumber } }
-    }
-    val totalEpisodes = remember(seriesDetail) {
-        seriesDetail.episodes.values.sumOf { it.size }
-    }
+    val sortedEpisodesBySeason =
+        remember(seriesDetail) {
+            seriesDetail.episodes.mapValues { (_, eps) -> eps.sortedBy { it.episodeNumber } }
+        }
+    val totalEpisodes =
+        remember(seriesDetail) {
+            seriesDetail.episodes.values.sumOf { it.size }
+        }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
     // Accordion: only one season expanded at a time (first season by default)
     var expandedSeasons by remember(seriesDetail) {
         mutableStateOf(
-            if (hasMultipleSeasons && sortedSeasons.isNotEmpty()) setOf(sortedSeasons.first().seasonNumber) else emptySet()
+            if (hasMultipleSeasons && sortedSeasons.isNotEmpty()) setOf(sortedSeasons.first().seasonNumber) else emptySet(),
         )
     }
 
@@ -272,9 +287,10 @@ private fun EpisodeListContent(
         if (!hasMultipleSeasons) return@LaunchedEffect
         for (season in sortedSeasons) {
             val seasonKey = season.seasonNumber.toString()
-            val episodes = seriesDetail.episodes[seasonKey]
-                ?.sortedBy { it.episodeNumber }
-                ?: continue
+            val episodes =
+                seriesDetail.episodes[seasonKey]
+                    ?.sortedBy { it.episodeNumber }
+                    ?: continue
             for (episode in episodes) {
                 val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
                 if (watched == null || !watched.isCompleted) {
@@ -297,43 +313,45 @@ private fun EpisodeListContent(
             onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
                 onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
             },
-            onBack = { selectedEpisode = null }
+            onBack = { selectedEpisode = null },
         )
     } else {
         // Show episode list
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
         ) {
             // Header with series info and back button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.Top,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                     ) {
                         Text(
                             text = seriesName,
                             style = scaledStyles.displaySmall,
-                            color = CinemaTextPrimary
+                            color = CinemaTextPrimary,
                         )
                         // Favorite button
                         IconButton(
                             onClick = onToggleFavorite,
-                            modifier = Modifier
-                                .size(TvDimensions.iconMedium.scaled(scale))
-                                .tvFocusableNoScale()
+                            modifier =
+                                Modifier
+                                    .size(TvDimensions.iconMedium.scaled(scale))
+                                    .tvFocusableNoScale(),
                         ) {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
                                 contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
                                 tint = if (isFavorite) CinemaAccent else CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale))
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
                         }
                         // Refresh button
@@ -344,15 +362,16 @@ private fun EpisodeListContent(
                                 isRefreshing = false
                             },
                             enabled = !isRefreshing,
-                            modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale))
+                            modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Refresh series info",
                                 tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                modifier = Modifier
-                                    .size(TvDimensions.iconSmall.scaled(scale))
-                                    .rotate(rotation)
+                                modifier =
+                                    Modifier
+                                        .size(TvDimensions.iconSmall.scaled(scale))
+                                        .rotate(rotation),
                             )
                         }
                     }
@@ -360,7 +379,7 @@ private fun EpisodeListContent(
                     Text(
                         text = "$totalEpisodes episodes",
                         style = scaledStyles.labelSmall,
-                        color = CinemaTextSecondary
+                        color = CinemaTextSecondary,
                     )
                     seriesDetail.metadata.plot?.let { plot ->
                         Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
@@ -369,17 +388,18 @@ private fun EpisodeListContent(
                             style = scaledStyles.bodyMedium,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     // Series metadata: genre, rating, cast
-                    val metadataParts = remember(seriesDetail) {
-                        listOfNotNull(
-                            seriesDetail.metadata.genre,
-                            seriesDetail.metadata.rating?.let { "Rating: $it" },
-                            seriesDetail.metadata.cast?.let { "Cast: $it" }
-                        )
-                    }
+                    val metadataParts =
+                        remember(seriesDetail) {
+                            listOfNotNull(
+                                seriesDetail.metadata.genre,
+                                seriesDetail.metadata.rating?.let { "Rating: $it" },
+                                seriesDetail.metadata.cast?.let { "Cast: $it" },
+                            )
+                        }
                     if (metadataParts.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                         Text(
@@ -387,7 +407,7 @@ private fun EpisodeListContent(
                             style = scaledStyles.labelMedium,
                             color = CinemaAccentLight,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -395,7 +415,7 @@ private fun EpisodeListContent(
                 Text(
                     text = providerName,
                     style = scaledStyles.titleSmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
             }
 
@@ -406,7 +426,7 @@ private fun EpisodeListContent(
                 state = listState,
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 sortedSeasons.forEach { season ->
                     val seasonKey = season.seasonNumber.toString()
@@ -421,12 +441,13 @@ private fun EpisodeListContent(
                                 episodeCount = seasonEpisodes.size,
                                 isExpanded = isExpanded,
                                 onToggle = {
-                                    expandedSeasons = if (isExpanded) {
-                                        emptySet()
-                                    } else {
-                                        setOf(season.seasonNumber)
-                                    }
-                                }
+                                    expandedSeasons =
+                                        if (isExpanded) {
+                                            emptySet()
+                                        } else {
+                                            setOf(season.seasonNumber)
+                                        }
+                                },
                             )
                         }
                     }
@@ -437,7 +458,7 @@ private fun EpisodeListContent(
                                 episode = episode,
                                 onClick = {
                                     selectedEpisode = episode
-                                }
+                                },
                             )
                         }
                     }
@@ -456,22 +477,23 @@ private fun EpisodeDetailPanel(
     providerName: String,
     mediaRepository: MediaRepository,
     onPlay: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val extension = episode.extension ?: "mp4"
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val detailScaledStyles = remember(scale, typography) {
-        object {
-            val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
-            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-            val headlineSmall = typography.headlineSmall.copy(fontSize = typography.headlineSmall.fontSize.scaled(scale))
-            val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-            val bodyLarge = typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale))
-            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+    val detailScaledStyles =
+        remember(scale, typography) {
+            object {
+                val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
+                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+                val headlineSmall = typography.headlineSmall.copy(fontSize = typography.headlineSmall.fontSize.scaled(scale))
+                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+                val bodyLarge = typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale))
+                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+            }
         }
-    }
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
@@ -491,46 +513,51 @@ private fun EpisodeDetailPanel(
 
     // Request focus on Play/Resume button when screen loads or resume data arrives
     LaunchedEffect(resumePositionMs) {
-        try { playButtonFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
+        try {
+            playButtonFocusRequester.requestFocus()
+        } catch (_: IllegalStateException) {
+        }
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .focusable()
-            .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .focusable()
+                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
     ) {
         // Header with back button
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.Top,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = seriesName,
                     style = detailScaledStyles.displaySmall,
-                    color = CinemaTextPrimary
+                    color = CinemaTextPrimary,
                 )
                 // Season / episode label
                 val seasonLabel = episode.seasonNumber?.let { "Season $it" } ?: ""
                 val episodeLabel = "Episode ${episode.episodeNumber}"
-                val subLabel = listOfNotNull(
-                    seasonLabel.ifEmpty { null },
-                    episodeLabel
-                ).joinToString(" · ")
+                val subLabel =
+                    listOfNotNull(
+                        seasonLabel.ifEmpty { null },
+                        episodeLabel,
+                    ).joinToString(" · ")
                 Text(
                     text = subLabel,
                     style = detailScaledStyles.titleMedium,
-                    color = CinemaAccentLight
+                    color = CinemaAccentLight,
                 )
             }
             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
             Text(
                 text = providerName,
                 style = detailScaledStyles.titleSmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
         }
 
@@ -539,16 +566,17 @@ private fun EpisodeDetailPanel(
         // Episode content: thumbnail + metadata
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale))
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
         ) {
             // Episode thumbnail
             CinemaThumbnail(
                 url = episode.thumbnailUrl,
                 fallbackLetter = episode.title.firstOrNull(),
                 contentType = ThumbnailContentType.TV_SHOW,
-                modifier = Modifier
-                    .width(TvDimensions.posterWidth.scaled(scale))
-                    .height(TvDimensions.posterHeightLarge.scaled(scale))
+                modifier =
+                    Modifier
+                        .width(TvDimensions.posterWidth.scaled(scale))
+                        .height(TvDimensions.posterHeightLarge.scaled(scale)),
             )
 
             // Metadata in glass panel
@@ -558,7 +586,7 @@ private fun EpisodeDetailPanel(
                     Text(
                         text = episode.title,
                         style = detailScaledStyles.headlineSmall,
-                        color = CinemaTextPrimary
+                        color = CinemaTextPrimary,
                     )
 
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -566,7 +594,7 @@ private fun EpisodeDetailPanel(
                     // Metadata row: rating | duration | ends at
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // Prefer episode rating, fallback to series rating
                         val rating = episode.metadata.rating ?: seriesDetail.metadata.rating
@@ -574,26 +602,27 @@ private fun EpisodeDetailPanel(
                             Text(
                                 text = "★ $it",
                                 style = detailScaledStyles.titleMedium,
-                                color = CinemaAccent
+                                color = CinemaAccent,
                             )
                         }
                         episode.metadata.duration?.let { duration ->
                             Text(
                                 text = formatDuration(duration),
                                 style = detailScaledStyles.titleMedium,
-                                color = CinemaTextSecondary
+                                color = CinemaTextSecondary,
                             )
                         }
                         // "Ends at" based on remaining duration
                         val endsAtContext = LocalContext.current
-                        val endsAtText = remember(episode.metadata.duration, resumePositionMs) {
-                            computeEndsAt(endsAtContext, episode.metadata.duration, resumePositionMs)
-                        }
+                        val endsAtText =
+                            remember(episode.metadata.duration, resumePositionMs) {
+                                computeEndsAt(endsAtContext, episode.metadata.duration, resumePositionMs)
+                            }
                         if (endsAtText != null) {
                             Text(
                                 text = "Ends at $endsAtText",
                                 style = detailScaledStyles.titleMedium,
-                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium)
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
                             )
                         }
                     }
@@ -604,7 +633,7 @@ private fun EpisodeDetailPanel(
                         Text(
                             text = genre,
                             style = detailScaledStyles.bodyMedium,
-                            color = CinemaAccent
+                            color = CinemaAccent,
                         )
                     }
 
@@ -614,7 +643,7 @@ private fun EpisodeDetailPanel(
                     val hasResume = resumePositionMs > 0L
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (hasResume) {
                             val resumeTimeText = formatMillis(resumePositionMs)
@@ -623,13 +652,13 @@ private fun EpisodeDetailPanel(
                                     onPlay(episode.id, episode.title, extension, false)
                                 },
                                 text = "▶ Resume from $resumeTimeText",
-                                modifier = Modifier.focusRequester(playButtonFocusRequester)
+                                modifier = Modifier.focusRequester(playButtonFocusRequester),
                             )
                             CinemaSecondaryButton(
                                 onClick = {
                                     onPlay(episode.id, episode.title, extension, true)
                                 },
-                                text = "Start from Beginning"
+                                text = "Start from Beginning",
                             )
                         } else {
                             CinemaPrimaryButton(
@@ -637,7 +666,7 @@ private fun EpisodeDetailPanel(
                                     onPlay(episode.id, episode.title, extension, false)
                                 },
                                 text = "▶ Play Episode",
-                                modifier = Modifier.focusRequester(playButtonFocusRequester)
+                                modifier = Modifier.focusRequester(playButtonFocusRequester),
                             )
                         }
                     }
@@ -650,7 +679,7 @@ private fun EpisodeDetailPanel(
                             style = detailScaledStyles.bodyLarge,
                             color = CinemaTextPrimary,
                             maxLines = 6,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
 
@@ -664,7 +693,7 @@ private fun EpisodeDetailPanel(
                             style = detailScaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     }
@@ -675,7 +704,7 @@ private fun EpisodeDetailPanel(
                         Text(
                             text = "Director: $it",
                             style = detailScaledStyles.bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         )
                     }
                 } // GlassPanel Column
@@ -689,23 +718,24 @@ private fun SeasonHeader(
     season: SeasonInfo,
     episodeCount: Int,
     isExpanded: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
 ) {
     val scale = LocalUiScale.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .tvFocusableNoScale()
-            .clickable { onToggle() }
-            .padding(vertical = Spacing.sm.scaled(scale)),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .tvFocusableNoScale()
+                .clickable { onToggle() }
+                .padding(vertical = Spacing.sm.scaled(scale)),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
     ) {
         Icon(
             imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
             contentDescription = if (isExpanded) "Collapse" else "Expand",
             tint = CinemaAccentLight,
-            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale))
+            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
         )
         // Season cover thumbnail (if available)
         season.coverUrl?.let { url ->
@@ -713,25 +743,32 @@ private fun SeasonHeader(
                 url = url,
                 fallbackLetter = null,
                 contentType = ThumbnailContentType.TV_SHOW,
-                modifier = Modifier.size(
-                    width = TvDimensions.posterHeight.scaled(scale),
-                    height = TvDimensions.posterHeight.scaled(scale)
-                )
+                modifier =
+                    Modifier.size(
+                        width = TvDimensions.posterHeight.scaled(scale),
+                        height = TvDimensions.posterHeight.scaled(scale),
+                    ),
             )
         }
         Text(
             text = "Season ${season.seasonNumber}",
-            style = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = MaterialTheme.typography.headlineSmall.fontSize.scaled(scale)
-            ),
-            color = CinemaAccentLight
+            style =
+                MaterialTheme.typography.headlineSmall.copy(
+                    fontSize =
+                        MaterialTheme.typography.headlineSmall.fontSize
+                            .scaled(scale),
+                ),
+            color = CinemaAccentLight,
         )
         Text(
             text = "$episodeCount episodes",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = MaterialTheme.typography.labelMedium.fontSize.scaled(scale)
-            ),
-            color = CinemaTextSecondary
+            style =
+                MaterialTheme.typography.labelMedium.copy(
+                    fontSize =
+                        MaterialTheme.typography.labelMedium.fontSize
+                            .scaled(scale),
+                ),
+            color = CinemaTextSecondary,
         )
     }
 }
@@ -739,53 +776,61 @@ private fun SeasonHeader(
 @Composable
 private fun EpisodeCard(
     episode: DomainEpisodeItem,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val cardScaledStyles = remember(scale, typography) {
-        object {
-            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-            val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+    val cardScaledStyles =
+        remember(scale, typography) {
+            object {
+                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+                val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+            }
         }
-    }
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(TvDimensions.cardHeight.scaled(scale)),
-        colors = CardDefaults.colors(
-            containerColor = CinemaSurface,
-            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint)
-        ),
-        scale = CardDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleContent,
-            pressedScale = TvFocusTokens.pressedScaleSubtle
-        ),
-        glow = CardDefaults.glow(
-            focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                elevation = TvFocusTokens.focusShadowElevation
-            )
-        )
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(TvDimensions.cardHeight.scaled(scale)),
+        colors =
+            CardDefaults.colors(
+                containerColor = CinemaSurface,
+                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+            ),
+        scale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    androidx.tv.material3.Glow(
+                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(Spacing.md.scaled(scale)),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(Spacing.md.scaled(scale)),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Episode thumbnail
             CinemaThumbnail(
                 url = episode.thumbnailUrl,
                 fallbackLetter = episode.title.firstOrNull(),
                 contentType = ThumbnailContentType.TV_SHOW,
-                modifier = Modifier.size(
-                    width = TvDimensions.posterWidth.scaled(scale),
-                    height = TvDimensions.posterHeight.scaled(scale)
-                )
+                modifier =
+                    Modifier.size(
+                        width = TvDimensions.posterWidth.scaled(scale),
+                        height = TvDimensions.posterHeight.scaled(scale),
+                    ),
             )
             Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
 
@@ -794,21 +839,21 @@ private fun EpisodeCard(
                 text = "E${episode.episodeNumber}",
                 style = cardScaledStyles.titleMedium,
                 color = CinemaAccentLight,
-                modifier = Modifier.width(Spacing.xxl.scaled(scale))
+                modifier = Modifier.width(Spacing.xxl.scaled(scale)),
             )
 
             Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
 
             // Episode title and plot
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     text = episode.title,
                     style = cardScaledStyles.titleMedium,
                     color = CinemaTextPrimary,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 episode.metadata.plot?.let { plot ->
                     Text(
@@ -816,7 +861,7 @@ private fun EpisodeCard(
                         style = cardScaledStyles.bodySmall,
                         color = CinemaTextSecondary,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -827,7 +872,7 @@ private fun EpisodeCard(
                 Text(
                     text = duration,
                     style = cardScaledStyles.labelMedium,
-                    color = CinemaTextSecondary
+                    color = CinemaTextSecondary,
                 )
             }
         }
@@ -839,22 +884,25 @@ private fun LoadingScreen() {
     val scale = LocalUiScale.current
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             CircularProgressIndicator(
                 modifier = Modifier.size(TvDimensions.progressIndicator.scaled(scale)),
-                color = CinemaAccent
+                color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = "Loading episodes...",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleLarge.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary,
             )
         }
     }
@@ -863,36 +911,42 @@ private fun LoadingScreen() {
 @Composable
 private fun ErrorScreen(
     message: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val scale = LocalUiScale.current
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(Spacing.xl.scaled(scale))
+            modifier = Modifier.padding(Spacing.xl.scaled(scale)),
         ) {
             Text(
                 text = "Error Loading Episodes",
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaError
+                style =
+                    MaterialTheme.typography.displayMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.displayMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaError,
             )
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary
+                style =
+                    MaterialTheme.typography.bodyLarge.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodyLarge.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary,
             )
             Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onBack,
-                text = "Back to Series List"
+                text = "Back to Series List",
             )
         }
     }
@@ -924,7 +978,11 @@ private fun parseDurationToSeconds(duration: String): Long? {
 /**
  * Computes "Ends at" time based on duration and optional resume position.
  */
-private fun computeEndsAt(context: android.content.Context, duration: String?, resumePositionMs: Long): String? {
+private fun computeEndsAt(
+    context: android.content.Context,
+    duration: String?,
+    resumePositionMs: Long,
+): String? {
     if (duration == null) return null
     val totalSeconds = parseDurationToSeconds(duration) ?: return null
     if (totalSeconds <= 0) return null
@@ -932,7 +990,8 @@ private fun computeEndsAt(context: android.content.Context, duration: String?, r
     val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
     val calendar = java.util.Calendar.getInstance()
     calendar.add(java.util.Calendar.MILLISECOND, remainingMs.toInt())
-    return org.njarasoa.fijerena.core.player.model.TimeFormat.formatClockTime(context, calendar.time)
+    return org.njarasoa.fijerena.core.player.model.TimeFormat
+        .formatClockTime(context, calendar.time)
 }
 
 /**

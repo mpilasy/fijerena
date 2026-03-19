@@ -15,7 +15,7 @@ fun PlayerEffects(
     state: PlayerScreenState,
     playbackState: PlaybackState,
     currentMetadata: PlayerMetadata,
-    viewModel: PlaybackViewModel? = null
+    viewModel: PlaybackViewModel? = null,
 ) {
     val isDeveloperMode = state.isDeveloperMode
 
@@ -102,7 +102,8 @@ fun PlayerEffects(
     LaunchedEffect(currentMetadata.title, playbackState) {
         // Only update displayed metadata when stream is actually playing/buffering
         if (currentMetadata.title.isNotEmpty() &&
-            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
+            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)
+        ) {
             state.displayedMetadata = currentMetadata
         }
     }
@@ -111,7 +112,8 @@ fun PlayerEffects(
     LaunchedEffect(playbackState) {
         if (playbackState is PlaybackState.Paused ||
             playbackState is PlaybackState.Ended ||
-            playbackState is PlaybackState.Error) {
+            playbackState is PlaybackState.Error
+        ) {
             if (state.seekSpeedLabel != null) {
                 viewModel?.setPlaybackSpeed(1f)
                 state.seekSpeedLabel = null
@@ -124,8 +126,8 @@ fun PlayerEffects(
         // Show only stream info when title changes on initial load from menu
         if (currentMetadata.title.isNotEmpty() &&
             currentMetadata.title != state.previousMetadataTitle &&
-            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
-
+            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)
+        ) {
             if (state.isInitialLoad) {
                 // From menu selection - show only stream info
                 state.showStreamInfo = true

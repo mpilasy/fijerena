@@ -28,42 +28,44 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun DeveloperSettingsCard(
     isDevMode: Boolean,
     onDevModeChanged: (Boolean) -> Unit,
-    scale: Float
+    scale: Float,
 ) {
     GlassPanel(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.md.scaled(scale))
-                .tvFocusableNoScale(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.md.scaled(scale))
+                    .tvFocusableNoScale(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Developer Mode",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
                 Text(
                     text = "Enable stats for nerds and debug features",
                     style = MaterialTheme.typography.bodySmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
             }
             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
             Switch(
                 checked = isDevMode,
                 onCheckedChange = onDevModeChanged,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = CinemaAccent,
-                    checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                    uncheckedThumbColor = CinemaTextSecondary,
-                    uncheckedTrackColor = CinemaSurfaceVariant
-                )
+                colors =
+                    SwitchDefaults.colors(
+                        checkedThumbColor = CinemaAccent,
+                        checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                        uncheckedThumbColor = CinemaTextSecondary,
+                        uncheckedTrackColor = CinemaSurfaceVariant,
+                    ),
             )
         }
     }

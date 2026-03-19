@@ -6,11 +6,13 @@ import kotlinx.serialization.Serializable
  * Unicode script types for category language filtering.
  */
 @Serializable
-enum class ScriptType(val displayName: String) {
+enum class ScriptType(
+    val displayName: String,
+) {
     LATIN("Latin"),
     ARABIC("Arabic"),
     CYRILLIC("Cyrillic"),
-    GREEK("Greek")
+    GREEK("Greek"),
 }
 
 /**
@@ -18,7 +20,6 @@ enum class ScriptType(val displayName: String) {
  * Uses majority-vote sampling of up to 10 alphabetic characters.
  */
 object ScriptDetector {
-
     fun detectScript(text: String): ScriptType {
         val votes = mutableMapOf<ScriptType, Int>()
         var sampled = 0
@@ -42,21 +43,25 @@ object ScriptDetector {
             Character.UnicodeBlock.ARABIC,
             Character.UnicodeBlock.ARABIC_SUPPLEMENT,
             Character.UnicodeBlock.ARABIC_PRESENTATION_FORMS_A,
-            Character.UnicodeBlock.ARABIC_PRESENTATION_FORMS_B -> ScriptType.ARABIC
+            Character.UnicodeBlock.ARABIC_PRESENTATION_FORMS_B,
+            -> ScriptType.ARABIC
 
             Character.UnicodeBlock.CYRILLIC,
             Character.UnicodeBlock.CYRILLIC_SUPPLEMENTARY,
             Character.UnicodeBlock.CYRILLIC_EXTENDED_A,
-            Character.UnicodeBlock.CYRILLIC_EXTENDED_B -> ScriptType.CYRILLIC
+            Character.UnicodeBlock.CYRILLIC_EXTENDED_B,
+            -> ScriptType.CYRILLIC
 
             Character.UnicodeBlock.GREEK,
-            Character.UnicodeBlock.GREEK_EXTENDED -> ScriptType.GREEK
+            Character.UnicodeBlock.GREEK_EXTENDED,
+            -> ScriptType.GREEK
 
             Character.UnicodeBlock.BASIC_LATIN,
             Character.UnicodeBlock.LATIN_1_SUPPLEMENT,
             Character.UnicodeBlock.LATIN_EXTENDED_A,
             Character.UnicodeBlock.LATIN_EXTENDED_B,
-            Character.UnicodeBlock.LATIN_EXTENDED_ADDITIONAL -> ScriptType.LATIN
+            Character.UnicodeBlock.LATIN_EXTENDED_ADDITIONAL,
+            -> ScriptType.LATIN
 
             else -> ScriptType.LATIN
         }

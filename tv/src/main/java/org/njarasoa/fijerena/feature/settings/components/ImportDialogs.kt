@@ -26,16 +26,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -65,81 +60,87 @@ fun ImportOptionsDialog(
     parsed: SettingsExportManager.ParsedImport,
     initialOptions: SettingsExportManager.ImportOptions,
     onConfirm: (SettingsExportManager.ImportOptions) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
 ) {
     var optProviders by remember { mutableStateOf(initialOptions.importProviders) }
     var optEpg by remember { mutableStateOf(initialOptions.importEpgSources) }
     var optGlobal by remember { mutableStateOf(initialOptions.importGlobalSettings) }
     var optFavorites by remember { mutableStateOf(initialOptions.importFavorites) }
-    
+
     val firstOptionFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        try { firstOptionFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
+        try {
+            firstOptionFocusRequester.requestFocus()
+        } catch (_: IllegalStateException) {
+        }
     }
 
     Dialog(
         onDismissRequest = onCancel,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+            contentAlignment = Alignment.Center,
         ) {
             Surface(
-                modifier = Modifier
-                    .width(TvDimensions.dialogWidth)
-                    .height(600.dp)
-                    .padding(Spacing.xxl),
+                modifier =
+                    Modifier
+                        .width(TvDimensions.dialogWidth)
+                        .height(600.dp)
+                        .padding(Spacing.xxl),
                 color = CinemaSurface,
-                shape = RoundedCornerShape(CornerRadius.medium)
+                shape = RoundedCornerShape(CornerRadius.medium),
             ) {
                 Column(
-                    modifier = Modifier.padding(Spacing.xxl)
+                    modifier = Modifier.padding(Spacing.xxl),
                 ) {
                     Text(
                         text = "Select What to Import",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = CinemaAccent
+                        color = CinemaAccent,
                     )
 
                     Spacer(modifier = Modifier.height(Spacing.md))
 
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .focusRestorer { firstOptionFocusRequester },
-                        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                                .focusRestorer { firstOptionFocusRequester },
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         OptionRow(
-                            label = "General Settings", 
+                            label = "General Settings",
                             checked = optGlobal,
                             onToggle = { optGlobal = !optGlobal },
-                            modifier = Modifier.focusRequester(firstOptionFocusRequester)
+                            modifier = Modifier.focusRequester(firstOptionFocusRequester),
                         )
-                        
+
                         if (parsed.hasProviders) {
                             OptionRow(
-                                label = "Providers (${parsed.settings.providers.size})", 
+                                label = "Providers (${parsed.settings.providers.size})",
                                 checked = optProviders,
-                                onToggle = { optProviders = !optProviders }
+                                onToggle = { optProviders = !optProviders },
                             )
                         }
                         if (parsed.hasEpgSources) {
                             OptionRow(
-                                label = "EPG Sources (${parsed.settings.epgSources.size})", 
+                                label = "EPG Sources (${parsed.settings.epgSources.size})",
                                 checked = optEpg,
-                                onToggle = { optEpg = !optEpg }
+                                onToggle = { optEpg = !optEpg },
                             )
                         }
                         if (parsed.hasFavorites) {
                             OptionRow(
-                                label = "Favorites", 
+                                label = "Favorites",
                                 checked = optFavorites,
-                                onToggle = { optFavorites = !optFavorites }
+                                onToggle = { optFavorites = !optFavorites },
                             )
                         }
                     }
@@ -148,24 +149,26 @@ fun ImportOptionsDialog(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         CinemaPrimaryButton(
                             onClick = {
-                                onConfirm(SettingsExportManager.ImportOptions(
-                                    importProviders = optProviders,
-                                    importEpgSources = optEpg,
-                                    importGlobalSettings = optGlobal,
-                                    importFavorites = optFavorites
-                                ))
+                                onConfirm(
+                                    SettingsExportManager.ImportOptions(
+                                        importProviders = optProviders,
+                                        importEpgSources = optEpg,
+                                        importGlobalSettings = optGlobal,
+                                        importFavorites = optFavorites,
+                                    ),
+                                )
                             },
                             text = "Import",
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                         CinemaSecondaryButton(
                             onClick = onCancel,
                             text = "Cancel",
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                     }
                 }
@@ -180,7 +183,7 @@ private fun OptionRow(
     label: String,
     checked: Boolean,
     onToggle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     // Interactive TV Surface for D-pad focus
@@ -188,39 +191,44 @@ private fun OptionRow(
         onClick = {
             onToggle()
         },
-        modifier = modifier
-            .fillMaxWidth()
-            .onFocusChanged { isFocused = it.isFocused },
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .onFocusChanged { isFocused = it.isFocused },
         shape = ClickableSurfaceDefaults.shape(shape = RoundedCornerShape(CornerRadius.small)),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.Transparent,
-            focusedContainerColor = CinemaSurfaceVariant,
-            contentColor = CinemaTextPrimary,
-            focusedContentColor = CinemaTextPrimary
-        ),
+        colors =
+            ClickableSurfaceDefaults.colors(
+                containerColor = Color.Transparent,
+                focusedContainerColor = CinemaSurfaceVariant,
+                contentColor = CinemaTextPrimary,
+                focusedContentColor = CinemaTextPrimary,
+            ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = androidx.tv.material3.Border(
-                border = androidx.compose.foundation.BorderStroke(2.dp, CinemaAccentLight),
-                shape = RoundedCornerShape(CornerRadius.small)
-            )
-        )
+        border =
+            ClickableSurfaceDefaults.border(
+                focusedBorder =
+                    androidx.tv.material3.Border(
+                        border = androidx.compose.foundation.BorderStroke(2.dp, CinemaAccentLight),
+                        shape = RoundedCornerShape(CornerRadius.small),
+                    ),
+            ),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(Spacing.sm)
+            modifier = Modifier.padding(Spacing.sm),
         ) {
             Checkbox(
                 checked = checked,
                 onCheckedChange = null,
-                colors = CheckboxDefaults.colors(
-                    checkedColor = CinemaAccent,
-                    uncheckedColor = CinemaTextSecondary,
-                    checkmarkColor = CinemaTextPrimary,
-                    disabledCheckedColor = CinemaAccent,
-                    disabledUncheckedColor = CinemaTextSecondary
-                ),
-                enabled = false
+                colors =
+                    CheckboxDefaults.colors(
+                        checkedColor = CinemaAccent,
+                        uncheckedColor = CinemaTextSecondary,
+                        checkmarkColor = CinemaTextPrimary,
+                        disabledCheckedColor = CinemaAccent,
+                        disabledUncheckedColor = CinemaTextSecondary,
+                    ),
+                enabled = false,
             )
             Spacer(modifier = Modifier.width(CinemaSpacing.sm))
             Text(label, style = MaterialTheme.typography.bodyMedium)
@@ -232,66 +240,73 @@ private fun OptionRow(
 fun ConflictResolutionDialog(
     conflicts: List<String>,
     onResolve: (SettingsExportManager.ConflictResolution) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
 ) {
     val conflictDialogFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        try { conflictDialogFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
+        try {
+            conflictDialogFocusRequester.requestFocus()
+        } catch (_: IllegalStateException) {
+        }
     }
 
     Dialog(
         onDismissRequest = onCancel,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+            contentAlignment = Alignment.Center,
         ) {
             Surface(
-                modifier = Modifier
-                    .width(TvDimensions.dialogWidth)
-                    .height(600.dp)
-                    .padding(Spacing.xxl),
+                modifier =
+                    Modifier
+                        .width(TvDimensions.dialogWidth)
+                        .height(600.dp)
+                        .padding(Spacing.xxl),
                 color = CinemaSurface,
-                shape = RoundedCornerShape(CornerRadius.medium)
+                shape = RoundedCornerShape(CornerRadius.medium),
             ) {
                 Column(
-                    modifier = Modifier
-                        .padding(Spacing.xxl)
-                        .focusRestorer { conflictDialogFocusRequester }
-                        .focusProperties { exit = { FocusRequester.Cancel } }
+                    modifier =
+                        Modifier
+                            .padding(Spacing.xxl)
+                            .focusRestorer { conflictDialogFocusRequester }
+                            .focusProperties { exit = { FocusRequester.Cancel } },
                 ) {
                     Text(
                         text = "Provider Conflict",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = CinemaAccent
+                        color = CinemaAccent,
                     )
-                    
+
                     Spacer(modifier = Modifier.height(Spacing.sm))
-                    
+
                     Text(
                         text = "The following provider(s) already exist:",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary
+                        color = CinemaTextPrimary,
                     )
 
                     Spacer(modifier = Modifier.height(Spacing.md))
 
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         conflicts.forEach { name ->
                             Text(
                                 text = "\u2022 $name",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = CinemaTextSecondary,
-                                modifier = Modifier.padding(start = Spacing.sm)
+                                modifier = Modifier.padding(start = Spacing.sm),
                             )
                         }
                     }
@@ -301,30 +316,31 @@ fun ConflictResolutionDialog(
                     Text(
                         text = "What would you like to do?",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary
+                        color = CinemaTextPrimary,
                     )
 
                     Spacer(modifier = Modifier.height(Spacing.md))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         CinemaPrimaryButton(
                             onClick = {
                                 onResolve(SettingsExportManager.ConflictResolution.OVERWRITE)
                             },
                             text = "Overwrite",
-                            modifier = Modifier
-                                .weight(1f)
-                                .focusRequester(conflictDialogFocusRequester)
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .focusRequester(conflictDialogFocusRequester),
                         )
                         CinemaSecondaryButton(
                             onClick = {
                                 onResolve(SettingsExportManager.ConflictResolution.DUPLICATE)
                             },
                             text = "Duplicate",
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                     }
 
@@ -332,19 +348,19 @@ fun ConflictResolutionDialog(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         CinemaSecondaryButton(
                             onClick = {
                                 onResolve(SettingsExportManager.ConflictResolution.SKIP)
                             },
                             text = "Skip Duplicates",
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                         CinemaSecondaryButton(
                             onClick = onCancel,
                             text = "Cancel",
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                     }
                 }

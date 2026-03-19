@@ -29,7 +29,6 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
  * ```
  */
 class AuthViewModel : ViewModel() {
-
     /**
      * Current authentication response.
      * Null if user is not authenticated.
@@ -52,7 +51,10 @@ class AuthViewModel : ViewModel() {
      * @param response The authentication response from Xtream API
      * @param url The server URL used for authentication
      */
-    fun setAuthSession(response: XtreamAuthResponse, url: String) {
+    fun setAuthSession(
+        response: XtreamAuthResponse,
+        url: String,
+    ) {
         _authResponse.value = response
         _serverUrl.value = url
     }
@@ -75,8 +77,8 @@ class AuthViewModel : ViewModel() {
     fun isAuthenticated(): Boolean {
         val response = _authResponse.value
         return response != null &&
-                response.userInfo.auth == 1 &&
-                response.userInfo.status == "Active"
+            response.userInfo.auth == 1 &&
+            response.userInfo.status == "Active"
     }
 
     /**
@@ -84,18 +86,14 @@ class AuthViewModel : ViewModel() {
      *
      * @return username or null if not authenticated
      */
-    fun getUsername(): String? {
-        return _authResponse.value?.userInfo?.username
-    }
+    fun getUsername(): String? = _authResponse.value?.userInfo?.username
 
     /**
      * Gets the expiration date of the current session.
      *
      * @return expiration date string or null if not authenticated
      */
-    fun getExpirationDate(): String? {
-        return _authResponse.value?.userInfo?.expDate
-    }
+    fun getExpirationDate(): String? = _authResponse.value?.userInfo?.expDate
 
     /**
      * Checks if the session is expired.

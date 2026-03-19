@@ -5,5 +5,5 @@ data class PlayableStream(
     val headers: Map<String, String> = emptyMap(),
     val isLive: Boolean = false,
     val title: String = "",
-    val mimeType: String? = null
+    val mimeType: String? = null,
 )

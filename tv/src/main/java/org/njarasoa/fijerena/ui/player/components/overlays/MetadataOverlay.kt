@@ -26,19 +26,17 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
-import org.njarasoa.fijerena.ui.player.utils.formatTime
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.ui.player.utils.formatTime
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -56,38 +54,41 @@ fun MetadataOverlay(
     isFavorite: Boolean = false,
     onToggleFavorite: (() -> Unit)? = null,
 ) {
-    val position = when (playbackState) {
-        is PlaybackState.Playing -> playbackState.position
-        is PlaybackState.Paused -> playbackState.position
-        else -> 0L
-    }
+    val position =
+        when (playbackState) {
+            is PlaybackState.Playing -> playbackState.position
+            is PlaybackState.Paused -> playbackState.position
+            else -> 0L
+        }
 
-    val duration = when (playbackState) {
-        is PlaybackState.Playing -> playbackState.duration
-        is PlaybackState.Paused -> playbackState.duration
-        else -> 0L
-    }
+    val duration =
+        when (playbackState) {
+            is PlaybackState.Playing -> playbackState.duration
+            is PlaybackState.Paused -> playbackState.duration
+            else -> 0L
+        }
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 32.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 48.dp, vertical = 32.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Channel name and title
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = metadata.channelName,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = metadata.title,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = CinemaTextPrimary
+                    color = CinemaTextPrimary,
                 )
             }
 
@@ -96,26 +97,27 @@ fun MetadataOverlay(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     LinearProgressIndicator(
                         progress = { if (duration > 0) position.toFloat() / duration.toFloat() else 0f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(TvDimensions.progressBar),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(TvDimensions.progressBar),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint)
+                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
                             text = formatTime(position),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.overlayMedium)
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.overlayMedium),
                         )
                         Text(
                             text = formatTime(duration),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.overlayMedium)
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.overlayMedium),
                         )
                     }
                 }
@@ -123,17 +125,18 @@ fun MetadataOverlay(
                 // Live indicator
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(TvDimensions.statsDotSize)
-                            .background(org.njarasoa.fijerena.ui.theme.CinemaLive, shape = RoundedCornerShape(6.dp))
+                        modifier =
+                            Modifier
+                                .size(TvDimensions.statsDotSize)
+                                .background(org.njarasoa.fijerena.ui.theme.CinemaLive, shape = RoundedCornerShape(6.dp)),
                     )
                     Text(
                         text = "LIVE",
                         style = MaterialTheme.typography.titleMedium,
-                        color = CinemaTextPrimary
+                        color = CinemaTextPrimary,
                     )
                 }
             }
@@ -142,7 +145,7 @@ fun MetadataOverlay(
             TvLazyRow(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 // Play/Pause button (VOD only, not for live streams)
                 if (!metadata.isLive) {
@@ -151,7 +154,7 @@ fun MetadataOverlay(
                             Button(onClick = { onResume?.invoke() }) {
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Icon(Icons.Filled.PlayArrow, contentDescription = null)
                                     Text("Resume")
@@ -161,7 +164,7 @@ fun MetadataOverlay(
                             Button(onClick = { onPause?.invoke() }) {
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Icon(Icons.Filled.Pause, contentDescription = null)
                                     Text("Pause")
@@ -175,7 +178,7 @@ fun MetadataOverlay(
                     Button(onClick = { onAudioTrack?.invoke() }) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null)
                             Text("Audio")
@@ -187,7 +190,7 @@ fun MetadataOverlay(
                     Button(onClick = { onSubtitle?.invoke() }) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Filled.Subtitles, contentDescription = null)
                             Text("Subtitle")
@@ -199,7 +202,7 @@ fun MetadataOverlay(
                     Button(onClick = { onQuality?.invoke() }) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Filled.Tune, contentDescription = null)
                             Text("Quality")
@@ -212,7 +215,7 @@ fun MetadataOverlay(
                         Button(onClick = { onStats.invoke() }) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(Icons.Filled.BarChart, contentDescription = null)
                                 Text("Stats")
@@ -226,20 +229,23 @@ fun MetadataOverlay(
                     item {
                         Button(
                             onClick = { onToggleFavorite() },
-                            colors = ButtonDefaults.colors(
-                                containerColor = if (isFavorite)
-                                    MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.scrim)
-                                else
-                                    MaterialTheme.colorScheme.surface.copy(alpha = CinemaAlpha.textMedium)
-                            )
+                            colors =
+                                ButtonDefaults.colors(
+                                    containerColor =
+                                        if (isFavorite) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.scrim)
+                                        } else {
+                                            MaterialTheme.colorScheme.surface.copy(alpha = CinemaAlpha.textMedium)
+                                        },
+                                ),
                         ) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
                                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                    contentDescription = null
+                                    contentDescription = null,
                                 )
                                 Text(if (isFavorite) "Favorited" else "Favorite")
                             }
@@ -252,7 +258,7 @@ fun MetadataOverlay(
             Text(
                 text = "Press OK to hide controls • Press BACK to exit",
                 style = MaterialTheme.typography.bodySmall,
-                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow)
+                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
             )
         }
     }

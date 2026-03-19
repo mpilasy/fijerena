@@ -1,10 +1,13 @@
 package org.njarasoa.fijerena.feature.search
 
-import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Folder
@@ -13,9 +16,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.saveable.rememberSaveable
-import java.util.Locale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,20 +24,19 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,12 +45,14 @@ fun MobileSearchScreen(
     onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String) -> Unit,
     onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
-    viewModel: SearchViewModel = viewModel(
-        factory = SearchViewModelFactory(
-            context = LocalContext.current.applicationContext,
-            contentType = contentType
-        )
-    )
+    viewModel: SearchViewModel =
+        viewModel(
+            factory =
+                SearchViewModelFactory(
+                    context = LocalContext.current.applicationContext,
+                    contentType = contentType,
+                ),
+        ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
@@ -70,7 +72,7 @@ fun MobileSearchScreen(
                             target.categoryId,
                             target.categoryName,
                             target.contentType,
-                            target.isFavorite
+                            target.isFavorite,
                         )
                     }
                     is MobileSearchFavoriteTarget.Stream -> {
@@ -79,12 +81,12 @@ fun MobileSearchScreen(
                             target.itemName,
                             target.categoryId,
                             target.contentType,
-                            target.isFavorite
+                            target.isFavorite,
                         )
                     }
                 }
             },
-            onDismiss = { favoriteMenuTarget = null }
+            onDismiss = { favoriteMenuTarget = null },
         )
     }
 
@@ -104,23 +106,25 @@ fun MobileSearchScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
         ) {
             // Search bar — search triggers on magnifying glass tap or keyboard search action
             val keyboardController = LocalSoftwareKeyboardController.current
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(Spacing.md),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.md),
                 placeholder = { Text("Search streams...") },
                 leadingIcon = {
                     IconButton(onClick = {
@@ -134,31 +138,34 @@ fun MobileSearchScreen(
                 },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        if (searchQuery.isNotBlank()) {
-                            viewModel.performSearch(searchQuery)
-                            keyboardController?.hide()
-                        }
-                    }
-                ),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textDisabled),
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.tint),
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
+                keyboardActions =
+                    KeyboardActions(
+                        onSearch = {
+                            if (searchQuery.isNotBlank()) {
+                                viewModel.performSearch(searchQuery)
+                                keyboardController?.hide()
+                            }
+                        },
+                    ),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textDisabled),
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.tint),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    ),
             )
 
             // Content
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = Spacing.md)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = Spacing.md),
             ) {
                 when (val state = uiState) {
                     is SearchViewModel.UiState.Loading -> {
@@ -170,9 +177,12 @@ fun MobileSearchScreen(
                     is SearchViewModel.UiState.Success -> {
                         val failedSuffix = if (state.failedCalls > 0) " (${state.failedCalls} failed)" else ""
                         val errorSuffix = if (state.firstError != null) "\n${state.firstError}" else ""
-                        val devStats = if (appSettings.isDevMode && state.searchDataSize != null) {
-                            "${state.searchDataSize} fetched | ${state.totalDuration} total | network: ${state.networkWallDuration} wall / ${state.networkAccumDuration} accum | ${state.networkCalls} calls$failedSuffix$errorSuffix"
-                        } else null
+                        val devStats =
+                            if (appSettings.isDevMode && state.searchDataSize != null) {
+                                "${state.searchDataSize} fetched | ${state.totalDuration} total | network: ${state.networkWallDuration} wall / ${state.networkAccumDuration} accum | ${state.networkCalls} calls$failedSuffix$errorSuffix"
+                            } else {
+                                null
+                            }
                         SearchResults(
                             categoryResults = state.categoryResults,
                             results = state.filteredResults,
@@ -186,29 +196,31 @@ fun MobileSearchScreen(
                                     result.itemId,
                                     result.streamName,
                                     result.categoryId,
-                                    result.contentType
+                                    result.contentType,
                                 )
                             },
                             onResultLongPress = { result ->
-                                favoriteMenuTarget = MobileSearchFavoriteTarget.Stream(
-                                    itemId = result.itemId,
-                                    itemName = result.streamName,
-                                    categoryId = result.categoryId,
-                                    contentType = result.contentType,
-                                    isFavorite = viewModel.isFavorite(result.itemId, result.contentType)
-                                )
+                                favoriteMenuTarget =
+                                    MobileSearchFavoriteTarget.Stream(
+                                        itemId = result.itemId,
+                                        itemName = result.streamName,
+                                        categoryId = result.categoryId,
+                                        contentType = result.contentType,
+                                        isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
+                                    )
                             },
                             onCategoryClick = { catResult ->
                                 onCategorySelected(catResult.categoryId, catResult.contentType)
                             },
                             onCategoryLongPress = { catResult ->
-                                favoriteMenuTarget = MobileSearchFavoriteTarget.Category(
-                                    categoryId = catResult.categoryId,
-                                    categoryName = catResult.categoryName,
-                                    contentType = catResult.contentType,
-                                    isFavorite = viewModel.isFavoriteCategory(catResult.categoryId, catResult.contentType)
-                                )
-                            }
+                                favoriteMenuTarget =
+                                    MobileSearchFavoriteTarget.Category(
+                                        categoryId = catResult.categoryId,
+                                        categoryName = catResult.categoryName,
+                                        contentType = catResult.contentType,
+                                        isFavorite = viewModel.isFavoriteCategory(catResult.categoryId, catResult.contentType),
+                                    )
+                            },
                         )
                     }
                 }
@@ -221,16 +233,16 @@ fun MobileSearchScreen(
 private fun LoadingView() {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.md)
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             CircularProgressIndicator()
             Text(
                 text = "Loading categories...",
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
             )
         }
     }
@@ -240,21 +252,21 @@ private fun LoadingView() {
 private fun ErrorView(message: String) {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            modifier = Modifier.padding(Spacing.xl)
+            modifier = Modifier.padding(Spacing.xl),
         ) {
             Text(
                 text = "Error",
                 style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
             )
         }
     }
@@ -272,74 +284,77 @@ private fun SearchResults(
     onResultClick: (SearchViewModel.SearchResult) -> Unit,
     onResultLongPress: (SearchViewModel.SearchResult) -> Unit,
     onCategoryClick: (SearchViewModel.CategorySearchResult) -> Unit,
-    onCategoryLongPress: (SearchViewModel.CategorySearchResult) -> Unit
+    onCategoryLongPress: (SearchViewModel.CategorySearchResult) -> Unit,
 ) {
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
 
     fun toggleGroup(contentType: String) {
-        expandedGroups = if (expandedGroups.contains(contentType)) {
-            expandedGroups - contentType
-        } else {
-            expandedGroups + contentType
-        }
+        expandedGroups =
+            if (expandedGroups.contains(contentType)) {
+                expandedGroups - contentType
+            } else {
+                expandedGroups + contentType
+            }
     }
 
     val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
     if (!hasResults && query.isBlank()) {
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "Search categories and streams across all categories",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
             )
         }
     } else if (!isSearching && categoryResults.isEmpty() && results.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "No results found for '$query'\nTry different keywords",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
             )
         }
     } else {
         // Pre-compute grouped results outside LazyColumn to avoid O(N×types) filter per recomposition
-        val groupedByType = remember(categoryResults, results) {
-            val catsByType = categoryResults.groupBy { it.contentType }
-            val streamsByType = results.groupBy { it.contentType }
-            val allTypes = (catsByType.keys + streamsByType.keys).distinct()
-            val sortedTypes = listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (allTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
-            sortedTypes.map { type ->
-                Triple(type, catsByType[type].orEmpty(), streamsByType[type].orEmpty())
+        val groupedByType =
+            remember(categoryResults, results) {
+                val catsByType = categoryResults.groupBy { it.contentType }
+                val streamsByType = results.groupBy { it.contentType }
+                val allTypes = (catsByType.keys + streamsByType.keys).distinct()
+                val sortedTypes = listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (allTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
+                sortedTypes.map { type ->
+                    Triple(type, catsByType[type].orEmpty(), streamsByType[type].orEmpty())
+                }
             }
-        }
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            contentPadding = PaddingValues(bottom = Spacing.md)
+            contentPadding = PaddingValues(bottom = Spacing.md),
         ) {
             // Progress / complete message
             if (isSearching && searchProgress != null) {
                 item(key = "search_progress", contentType = "status") {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = Spacing.xs),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = Spacing.xs),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(MobileDimensions.progressIndicatorSmall),
-                            strokeWidth = MobileDimensions.strokeWidth
+                            strokeWidth = MobileDimensions.strokeWidth,
                         )
                         Text(
                             text = searchProgress,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -349,7 +364,7 @@ private fun SearchResults(
                         text = searchProgress,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = Spacing.xs)
+                        modifier = Modifier.padding(vertical = Spacing.xs),
                     )
                 }
             }
@@ -359,12 +374,13 @@ private fun SearchResults(
                 item(key = "dev_stats", contentType = "status") {
                     Text(
                         text = devStats,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = MaterialTheme.typography.labelSmall.fontSize * CinemaAlpha.textMedium
-                        ),
+                        style =
+                            MaterialTheme.typography.labelSmall.copy(
+                                fontSize = MaterialTheme.typography.labelSmall.fontSize * CinemaAlpha.textMedium,
+                            ),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                         modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.End
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End,
                     )
                 }
             }
@@ -375,7 +391,7 @@ private fun SearchResults(
                     Text(
                         text = "${categoryResults.size + results.size} results",
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
                 }
             }
@@ -389,7 +405,7 @@ private fun SearchResults(
                             MobileCollapsibleHeader(
                                 title = getContentTypeLabel(type),
                                 isExpanded = isExpanded,
-                                onToggle = { toggleGroup(type) }
+                                onToggle = { toggleGroup(type) },
                             )
                         }
 
@@ -398,14 +414,18 @@ private fun SearchResults(
                                 CategoryResultCard(
                                     result = catResult,
                                     onClick = { onCategoryClick(catResult) },
-                                    onLongClick = { onCategoryLongPress(catResult) }
+                                    onLongClick = { onCategoryLongPress(catResult) },
                                 )
                             }
-                            items(typeStreams, key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" }, contentType = { "stream" }) { result ->
+                            items(
+                                typeStreams,
+                                key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" },
+                                contentType = { "stream" },
+                            ) { result ->
                                 SearchResultCard(
                                     result = result,
                                     onClick = { onResultClick(result) },
-                                    onLongClick = { onResultLongPress(result) }
+                                    onLongClick = { onResultLongPress(result) },
                                 )
                             }
                         }
@@ -418,14 +438,14 @@ private fun SearchResults(
                             text = "Categories",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = Spacing.xxs)
+                            modifier = Modifier.padding(vertical = Spacing.xxs),
                         )
                     }
                     items(categoryResults, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
                         CategoryResultCard(
                             result = catResult,
                             onClick = { onCategoryClick(catResult) },
-                            onLongClick = { onCategoryLongPress(catResult) }
+                            onLongClick = { onCategoryLongPress(catResult) },
                         )
                     }
                 }
@@ -435,14 +455,18 @@ private fun SearchResults(
                             text = "Streams",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = Spacing.xxs)
+                            modifier = Modifier.padding(vertical = Spacing.xxs),
                         )
                     }
-                    items(results, key = { "search_${it.contentType}_${it.categoryId}_${it.itemId}" }, contentType = { "stream" }) { result ->
+                    items(
+                        results,
+                        key = { "search_${it.contentType}_${it.categoryId}_${it.itemId}" },
+                        contentType = { "stream" },
+                    ) { result ->
                         SearchResultCard(
                             result = result,
                             onClick = { onResultClick(result) },
-                            onLongClick = { onResultLongPress(result) }
+                            onLongClick = { onResultLongPress(result) },
                         )
                     }
                 }
@@ -455,83 +479,87 @@ private fun SearchResults(
 private fun MobileCollapsibleHeader(
     title: String,
     isExpanded: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
 ) {
     Surface(
         onClick = onToggle,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = Spacing.xxs),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = Spacing.xxs),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CinemaAlpha.tint),
-        shape = RoundedCornerShape(CinemaCornerRadius.small)
+        shape = RoundedCornerShape(CinemaCornerRadius.small),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
             Icon(
                 imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                 contentDescription = if (isExpanded) "Collapse" else "Expand",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(MobileDimensions.iconSmall)
+                modifier = Modifier.size(MobileDimensions.iconSmall),
             )
         }
     }
 }
 
-private fun getContentTypeLabel(contentType: String): String {
-    return when (contentType) {
+private fun getContentTypeLabel(contentType: String): String =
+    when (contentType) {
         "LIVE_TV" -> "Live TV"
         "MOVIES" -> "Movies"
         "TV_SHOWS" -> "TV Shows"
         else -> contentType.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
     }
-}
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun CategoryResultCard(
     result: SearchViewModel.CategorySearchResult,
     onClick: () -> Unit,
-    onLongClick: () -> Unit = {}
+    onLongClick: () -> Unit = {},
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = CinemaAlpha.tint),
             ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = CinemaAlpha.tint)
-        )
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.md),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.md),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 Icons.Default.Folder,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
             Text(
                 text = result.categoryName,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -542,49 +570,53 @@ private fun CategoryResultCard(
 private fun SearchResultCard(
     result: SearchViewModel.SearchResult,
     onClick: () -> Unit,
-    onLongClick: () -> Unit = {}
+    onLongClick: () -> Unit = {},
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(MobileDimensions.streamCardHeight)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(MobileDimensions.streamCardHeight)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(CinemaSpacing.xs),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(CinemaSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
             CinemaThumbnail(
                 url = result.thumbnailUrl,
                 fallbackLetter = result.streamName.firstOrNull(),
                 contentType = ThumbnailContentType.DEFAULT,
-                modifier = Modifier.size(
-                    width = MobileDimensions.posterWidth,
-                    height = MobileDimensions.posterHeight
-                )
+                modifier =
+                    Modifier.size(
+                        width = MobileDimensions.posterWidth,
+                        height = MobileDimensions.posterHeight,
+                    ),
             )
             Column(
-                verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
+                verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
                 Text(
                     text = result.streamName,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = "Category: ${result.categoryName}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
             }
         }
@@ -596,7 +628,7 @@ private sealed class MobileSearchFavoriteTarget {
         val categoryId: String,
         val categoryName: String,
         val contentType: String,
-        val isFavorite: Boolean
+        val isFavorite: Boolean,
     ) : MobileSearchFavoriteTarget()
 
     data class Stream(
@@ -604,7 +636,7 @@ private sealed class MobileSearchFavoriteTarget {
         val itemName: String,
         val categoryId: String,
         val contentType: String,
-        val isFavorite: Boolean
+        val isFavorite: Boolean,
     ) : MobileSearchFavoriteTarget()
 }
 
@@ -612,12 +644,13 @@ private sealed class MobileSearchFavoriteTarget {
 private fun MobileSearchFavoriteDialog(
     target: MobileSearchFavoriteTarget,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
-    val (itemName, isFavorite) = when (target) {
-        is MobileSearchFavoriteTarget.Category -> target.categoryName to target.isFavorite
-        is MobileSearchFavoriteTarget.Stream -> target.itemName to target.isFavorite
-    }
+    val (itemName, isFavorite) =
+        when (target) {
+            is MobileSearchFavoriteTarget.Category -> target.categoryName to target.isFavorite
+            is MobileSearchFavoriteTarget.Stream -> target.itemName to target.isFavorite
+        }
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 
     AlertDialog(
@@ -626,7 +659,7 @@ private fun MobileSearchFavoriteDialog(
             Text(
                 text = itemName,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 2
+                maxLines = 2,
             )
         },
         confirmButton = {
@@ -634,7 +667,7 @@ private fun MobileSearchFavoriteDialog(
                 onClick = {
                     onConfirm()
                     onDismiss()
-                }
+                },
             ) {
                 Text(actionText)
             }
@@ -644,6 +677,6 @@ private fun MobileSearchFavoriteDialog(
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(CinemaCornerRadius.large)
+        shape = RoundedCornerShape(CinemaCornerRadius.large),
     )
 }

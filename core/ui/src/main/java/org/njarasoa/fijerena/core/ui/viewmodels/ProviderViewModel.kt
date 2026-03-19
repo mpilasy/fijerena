@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
-
 import android.content.Context
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +23,7 @@ data class ParsedUrlCredentials(
     val username: String?,
     val password: String?,
     val streamOutputFormat: String? = null,
-    val playlistType: String? = null
+    val playlistType: String? = null,
 )
 
 /**
@@ -36,13 +35,19 @@ data class ParsedUrlCredentials(
 fun parseUrlCredentials(input: String): ParsedUrlCredentials? {
     if ('?' !in input) return null
     try {
-        val uri = Uri.parse(input)
+        val uri = input.toUri()
         if (uri.queryParameterNames.isNullOrEmpty()) return null
 
-        val username = (uri.getQueryParameter("username")
-            ?: uri.getQueryParameter("user"))?.takeIf { it.isNotEmpty() }
-        val password = (uri.getQueryParameter("password")
-            ?: uri.getQueryParameter("pass"))?.takeIf { it.isNotEmpty() }
+        val username =
+            (
+                uri.getQueryParameter("username")
+                    ?: uri.getQueryParameter("user")
+            )?.takeIf { it.isNotEmpty() }
+        val password =
+            (
+                uri.getQueryParameter("password")
+                    ?: uri.getQueryParameter("pass")
+            )?.takeIf { it.isNotEmpty() }
 
         if (username == null && password == null) return null
 
@@ -69,33 +74,52 @@ fun parseUrlCredentials(input: String): ParsedUrlCredentials? {
 
 sealed interface ProviderUiState {
     data object Loading : ProviderUiState
+
     data object NoProviders : ProviderUiState
-    data class SingleProvider(val provider: ProviderEntity) : ProviderUiState
-    data class MultipleProviders(val providers: List<ProviderEntity>) : ProviderUiState
-    data class Error(val message: String) : ProviderUiState
+
+    data class SingleProvider(
+        val provider: ProviderEntity,
+    ) : ProviderUiState
+
+    data class MultipleProviders(
+        val providers: List<ProviderEntity>,
+    ) : ProviderUiState
+
+    data class Error(
+        val message: String,
+    ) : ProviderUiState
 }
 
 sealed interface SaveState {
     data object Idle : SaveState
+
     data object Validating : SaveState
-    data class ValidationFailed(val errorMessage: String) : SaveState
+
+    data class ValidationFailed(
+        val errorMessage: String,
+    ) : SaveState
+
     data object Saving : SaveState
 }
 
 sealed interface SyncState {
     data object Idle : SyncState
+
     data object Syncing : SyncState
+
     data object Success : SyncState
-    data class Error(val message: String) : SyncState
+
+    data class Error(
+        val message: String,
+    ) : SyncState
 }
 
 class ProviderViewModel(
     private val providerRepository: ProviderRepository,
     private val accountManager: AccountManager,
     private val appSettings: AppSettings,
-    private val context: Context
+    private val context: Context,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow<ProviderUiState>(ProviderUiState.Loading)
     val uiState: StateFlow<ProviderUiState> = _uiState.asStateFlow()
 
@@ -125,11 +149,12 @@ class ProviderViewModel(
                 val providers = providerRepository.getAllProvidersList()
                 _activeProvider.value = providerRepository.getActiveProvider()
 
-                _uiState.value = when {
-                    providers.isEmpty() -> ProviderUiState.NoProviders
-                    providers.size == 1 -> ProviderUiState.SingleProvider(providers.first())
-                    else -> ProviderUiState.MultipleProviders(providers)
-                }
+                _uiState.value =
+                    when {
+                        providers.isEmpty() -> ProviderUiState.NoProviders
+                        providers.size == 1 -> ProviderUiState.SingleProvider(providers.first())
+                        else -> ProviderUiState.MultipleProviders(providers)
+                    }
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(e.message ?: "Failed to load providers")
             }
@@ -161,7 +186,7 @@ class ProviderViewModel(
         password: String,
         type: String = "XTREAM",
         config: String = "",
-        onComplete: () -> Unit = {}
+        onComplete: () -> Unit = {},
     ) {
         viewModelScope.launch {
             try {
@@ -210,7 +235,7 @@ class ProviderViewModel(
         password: String,
         type: String? = null,
         config: String? = null,
-        onComplete: () -> Unit = {}
+        onComplete: () -> Unit = {},
     ) {
         viewModelScope.launch {
             try {
@@ -223,9 +248,7 @@ class ProviderViewModel(
         }
     }
 
-    fun getPassword(providerId: Long): String? {
-        return providerRepository.getPassword(providerId)
-    }
+    fun getPassword(providerId: Long): String? = providerRepository.getPassword(providerId)
 
     fun validateAndSave(
         id: Long?,
@@ -236,7 +259,7 @@ class ProviderViewModel(
         type: String,
         config: String,
         onComplete: () -> Unit,
-        initialSettings: ProviderSettings = ProviderSettings.DEFAULT
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
     ) {
         viewModelScope.launch {
             if (type == "LOCAL") {
@@ -248,9 +271,10 @@ class ProviderViewModel(
             if (result.isSuccess) {
                 performSave(id, name, url, username, password, type, config, onComplete, initialSettings)
             } else {
-                _saveState.value = SaveState.ValidationFailed(
-                    result.exceptionOrNull()?.message ?: "Connection failed"
-                )
+                _saveState.value =
+                    SaveState.ValidationFailed(
+                        result.exceptionOrNull()?.message ?: "Connection failed",
+                    )
             }
         }
     }
@@ -264,7 +288,7 @@ class ProviderViewModel(
         type: String,
         config: String,
         onComplete: () -> Unit,
-        initialSettings: ProviderSettings = ProviderSettings.DEFAULT
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
     ) {
         viewModelScope.launch {
             performSave(id, name, url, username, password, type, config, onComplete, initialSettings)
@@ -281,7 +305,7 @@ class ProviderViewModel(
         username: String,
         token: String,
         userId: String,
-        onComplete: () -> Unit
+        onComplete: () -> Unit,
     ) {
         viewModelScope.launch {
             _saveState.value = SaveState.Saving
@@ -336,7 +360,7 @@ class ProviderViewModel(
         type: String,
         config: String,
         onComplete: () -> Unit,
-        initialSettings: ProviderSettings = ProviderSettings.DEFAULT
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
     ) {
         _saveState.value = SaveState.Saving
         try {
@@ -359,77 +383,80 @@ class ProviderViewModel(
         url: String,
         username: String,
         password: String,
-        config: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        when (type) {
-            "XTREAM" -> {
-                try {
-                    val service = XtreamApiService(url, username, password)
-                    val response = service.authenticate()
-                    if (response.userInfo.auth != 1) {
-                        Result.failure(Exception("Invalid credentials"))
-                    } else if (response.userInfo.status != "Active") {
-                        Result.failure(Exception("Account is not active: ${response.userInfo.status}"))
-                    } else {
-                        Result.success(Unit)
-                    }
-                } catch (e: Exception) {
-                    Result.failure(e)
-                }
-            }
-            "REMOTE_M3U" -> {
-                try {
-                    val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-                    connection.connectTimeout = 15_000
-                    connection.readTimeout = 15_000
-                    connection.instanceFollowRedirects = true
-                    connection.setRequestProperty("Accept-Encoding", "identity")
+        config: String,
+    ): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            when (type) {
+                "XTREAM" -> {
                     try {
-                        val statusCode = connection.responseCode
-                        if (statusCode !in 200..299) {
-                            Result.failure(Exception("Server returned HTTP $statusCode"))
+                        val service = XtreamApiService(url, username, password)
+                        val response = service.authenticate()
+                        if (response.userInfo.auth != 1) {
+                            Result.failure(Exception("Invalid credentials"))
+                        } else if (response.userInfo.status != "Active") {
+                            Result.failure(Exception("Account is not active: ${response.userInfo.status}"))
                         } else {
-                            val header = connection.inputStream.bufferedReader().use { reader ->
-                                val buf = CharArray(256)
-                                val read = reader.read(buf)
-                                if (read > 0) String(buf, 0, read) else ""
-                            }
-                            if (header.trimStart().startsWith("#EXTM3U")) {
-                                Result.success(Unit)
-                            } else {
-                                Result.failure(Exception("Not a valid M3U file: missing #EXTM3U header"))
-                            }
+                            Result.success(Unit)
                         }
-                    } finally {
-                        connection.disconnect()
-                    }
-                } catch (e: Exception) {
-                    Result.failure(e)
-                }
-            }
-            "JELLYFIN", "SMB" -> {
-                val tempEntity = ProviderEntity(
-                    id = 0L,
-                    name = "validation",
-                    url = url,
-                    username = username,
-                    type = type,
-                    config = config
-                )
-                try {
-                    val provider = MediaProviderFactory.create(tempEntity, context, password)
-                    val result = provider.connect()
-                    try {
-                        provider.disconnect()
                     } catch (e: Exception) {
-                        android.util.Log.e("ProviderViewModel", "Error disconnecting provider", e)
+                        Result.failure(e)
                     }
-                    result
-                } catch (e: Exception) {
-                    Result.failure(e)
                 }
+                "REMOTE_M3U" -> {
+                    try {
+                        val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                        connection.connectTimeout = 15_000
+                        connection.readTimeout = 15_000
+                        connection.instanceFollowRedirects = true
+                        connection.setRequestProperty("Accept-Encoding", "identity")
+                        try {
+                            val statusCode = connection.responseCode
+                            if (statusCode !in 200..299) {
+                                Result.failure(Exception("Server returned HTTP $statusCode"))
+                            } else {
+                                val header =
+                                    connection.inputStream.bufferedReader().use { reader ->
+                                        val buf = CharArray(256)
+                                        val read = reader.read(buf)
+                                        if (read > 0) String(buf, 0, read) else ""
+                                    }
+                                if (header.trimStart().startsWith("#EXTM3U")) {
+                                    Result.success(Unit)
+                                } else {
+                                    Result.failure(Exception("Not a valid M3U file: missing #EXTM3U header"))
+                                }
+                            }
+                        } finally {
+                            connection.disconnect()
+                        }
+                    } catch (e: Exception) {
+                        Result.failure(e)
+                    }
+                }
+                "JELLYFIN", "SMB" -> {
+                    val tempEntity =
+                        ProviderEntity(
+                            id = 0L,
+                            name = "validation",
+                            url = url,
+                            username = username,
+                            type = type,
+                            config = config,
+                        )
+                    try {
+                        val provider = MediaProviderFactory.create(tempEntity, context, password)
+                        val result = provider.connect()
+                        try {
+                            provider.disconnect()
+                        } catch (e: Exception) {
+                            android.util.Log.e("ProviderViewModel", "Error disconnecting provider", e)
+                        }
+                        result
+                    } catch (e: Exception) {
+                        Result.failure(e)
+                    }
+                }
+                else -> Result.success(Unit)
             }
-            else -> Result.success(Unit)
         }
-    }
 }

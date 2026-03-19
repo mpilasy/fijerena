@@ -15,7 +15,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 @Stable
 class PlayerScreenState(
     context: Context,
-    initialMetadata: PlayerMetadata = PlayerMetadata()
+    initialMetadata: PlayerMetadata = PlayerMetadata(),
 ) {
     // UI visibility states
     var showControls by mutableStateOf(false)
@@ -67,9 +67,8 @@ class PlayerScreenState(
 @Composable
 fun rememberPlayerScreenState(
     context: Context,
-    initialMetadata: PlayerMetadata = PlayerMetadata()
-): PlayerScreenState {
-    return remember {
+    initialMetadata: PlayerMetadata = PlayerMetadata(),
+): PlayerScreenState =
+    remember {
         PlayerScreenState(context, initialMetadata)
     }
-}
