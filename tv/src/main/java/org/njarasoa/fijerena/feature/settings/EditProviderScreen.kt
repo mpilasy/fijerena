@@ -31,13 +31,13 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -48,7 +48,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 @Composable
 fun EditProviderScreen(
     onBack: () -> Unit,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
 ) {
     val context = LocalContext.current
     val accountManager = remember { AccountManager(context.applicationContext) }
@@ -61,25 +61,26 @@ fun EditProviderScreen(
     val scope = rememberCoroutineScope()
 
     Surface(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    horizontal = Spacing.tvSafeMarginHorizontal,
-                    vertical = Spacing.tvSafeMarginVertical
-                ),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = Spacing.tvSafeMarginHorizontal,
+                        vertical = Spacing.tvSafeMarginVertical,
+                    ),
+            contentAlignment = Alignment.Center,
         ) {
             Column(
                 modifier = Modifier.width(TvDimensions.formFieldWidth),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
                     text = "Edit Provider URL",
                     style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Spacer(modifier = Modifier.height(Spacing.xl))
@@ -87,7 +88,7 @@ fun EditProviderScreen(
                 Text(
                     text = "Current URL: $currentUrl",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
 
                 Spacer(modifier = Modifier.height(Spacing.lg))
@@ -103,17 +104,18 @@ fun EditProviderScreen(
                     placeholder = { Text("Enter new provider URL") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextSecondary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        focusedPlaceholderColor = CinemaTextSecondary,
-                        unfocusedPlaceholderColor = CinemaTextSecondary
-                    )
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            cursorColor = CinemaAccent,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaTextSecondary,
+                            focusedLabelColor = CinemaAccent,
+                            unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            focusedPlaceholderColor = CinemaTextSecondary,
+                            unfocusedPlaceholderColor = CinemaTextSecondary,
+                        ),
                 )
 
                 Spacer(modifier = Modifier.height(Spacing.md))
@@ -123,7 +125,7 @@ fun EditProviderScreen(
                     Text(
                         text = errorMsg,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaError
+                        color = CinemaError,
                     )
                     Spacer(modifier = Modifier.height(Spacing.md))
                 }
@@ -133,12 +135,12 @@ fun EditProviderScreen(
                 // Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md, Alignment.CenterHorizontally)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md, Alignment.CenterHorizontally),
                 ) {
                     CinemaSecondaryButton(
                         onClick = onBack,
                         enabled = !isLoading,
-                        text = "Cancel"
+                        text = "Cancel",
                     )
 
                     CinemaPrimaryButton(
@@ -165,7 +167,7 @@ fun EditProviderScreen(
                             }
                         },
                         enabled = !isLoading && urlInput.trim() != currentUrl,
-                        text = if (isLoading) "Saving..." else "Save & Re-authenticate"
+                        text = if (isLoading) "Saving..." else "Save & Re-authenticate",
                     )
                 }
             }

@@ -36,24 +36,30 @@ fun CloudSyncSettingsCard(
     onSyncNow: () -> Unit,
     onSignOut: () -> Unit,
     onSignIn: () -> Unit,
-    scale: Float
+    scale: Float,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
                 text = "Cloud Sync",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaAccent
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
                 text = "Sync provider settings across devices using your Google account",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodySmall.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
@@ -61,44 +67,52 @@ fun CloudSyncSettingsCard(
                 // Signed in: show account info + sync controls
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = signedInEmail,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                            ),
-                            color = CinemaTextPrimary
+                            style =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize =
+                                        MaterialTheme.typography.bodyMedium.fontSize
+                                            .scaled(scale),
+                                ),
+                            color = CinemaTextPrimary,
                         )
-                        val statusText = when (syncStatus) {
-                            is DriveSettingsSyncManager.SyncStatus.Syncing -> "Syncing..."
-                            is DriveSettingsSyncManager.SyncStatus.Synced -> "Synced"
-                            is DriveSettingsSyncManager.SyncStatus.Error ->
-                                "Error: ${syncStatus.message}"
-                            else -> "Ready"
-                        }
+                        val statusText =
+                            when (syncStatus) {
+                                is DriveSettingsSyncManager.SyncStatus.Syncing -> "Syncing..."
+                                is DriveSettingsSyncManager.SyncStatus.Synced -> "Synced"
+                                is DriveSettingsSyncManager.SyncStatus.Error ->
+                                    "Error: ${syncStatus.message}"
+                                else -> "Ready"
+                            }
                         Text(
                             text = statusText,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                            ),
-                            color = when (syncStatus) {
-                                is DriveSettingsSyncManager.SyncStatus.Synced -> CinemaAccent
-                                is DriveSettingsSyncManager.SyncStatus.Error -> CinemaError
-                                else -> CinemaTextSecondary
-                            }
+                            style =
+                                MaterialTheme.typography.bodySmall.copy(
+                                    fontSize =
+                                        MaterialTheme.typography.bodySmall.fontSize
+                                            .scaled(scale),
+                                ),
+                            color =
+                                when (syncStatus) {
+                                    is DriveSettingsSyncManager.SyncStatus.Synced -> CinemaAccent
+                                    is DriveSettingsSyncManager.SyncStatus.Error -> CinemaError
+                                    else -> CinemaTextSecondary
+                                },
                         )
                     }
                     Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                     CinemaIconButton(
                         onClick = onSyncNow,
-                        icon = { Icon(Icons.Default.Sync, contentDescription = "Sync Now") }
+                        icon = { Icon(Icons.Default.Sync, contentDescription = "Sync Now") },
                     )
                     Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                     CinemaDangerButton(
                         onClick = onSignOut,
-                        text = "Sign Out"
+                        text = "Sign Out",
                     )
                 }
             } else {
@@ -107,16 +121,19 @@ fun CloudSyncSettingsCard(
                     onClick = {
                         onSignIn()
                     },
-                    text = "Sign in with Google"
+                    text = "Sign in with Google",
                 )
                 if (signInError != null) {
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     Text(
                         text = signInError,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                        ),
-                        color = CinemaError
+                        style =
+                            MaterialTheme.typography.bodySmall.copy(
+                                fontSize =
+                                    MaterialTheme.typography.bodySmall.fontSize
+                                        .scaled(scale),
+                            ),
+                        color = CinemaError,
                     )
                 }
             }

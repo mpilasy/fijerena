@@ -8,12 +8,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -22,7 +22,6 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -32,16 +31,19 @@ fun EpgSettingsCard(
     context: Context,
     epgRefreshTrigger: Int,
     onManageEpg: () -> Unit,
-    scale: Float
+    scale: Float,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
                 text = "EPG Data",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaAccent
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
 
@@ -51,23 +53,36 @@ fun EpgSettingsCard(
             LaunchedEffect(epgRefreshTrigger) {
                 sourceCount = epgIndexer.getSourceCount()
             }
-            val summaryText = when (val idx = indexState) {
-                is EpgIndexState.Indexed -> "${formatProgrammeCount(idx.channelCount)} channels, ${formatProgrammeCount(idx.programmeCount)} programmes"
-                is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
-                is EpgIndexState.NotIndexed -> if (sourceCount > 0) "$sourceCount source(s) configured, not yet indexed" else "No sources configured"
-                is EpgIndexState.Failed -> "Error: ${idx.reason}"
-            }
+            val summaryText =
+                when (val idx = indexState) {
+                    is EpgIndexState.Indexed -> "${formatProgrammeCount(
+                        idx.channelCount,
+                    )} channels, ${formatProgrammeCount(idx.programmeCount)} programmes"
+                    is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
+                    is EpgIndexState.NotIndexed ->
+                        if (sourceCount >
+                            0
+                        ) {
+                            "$sourceCount source(s) configured, not yet indexed"
+                        } else {
+                            "No sources configured"
+                        }
+                    is EpgIndexState.Failed -> "Error: ${idx.reason}"
+                }
             Text(
                 text = summaryText,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodySmall.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onManageEpg,
-                text = "Manage EPG Data"
+                text = "Manage EPG Data",
             )
         }
     }

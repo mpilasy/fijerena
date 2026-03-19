@@ -1,6 +1,6 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
-
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -23,12 +23,13 @@ import org.njarasoa.fijerena.core.player.model.EpgResponse
 class XtreamEpgManager(
     private val sessionManager: XtreamSessionManager,
     private val sharedPreferences: SharedPreferences,
-    private val providerSettings: ProviderSettings
+    private val providerSettings: ProviderSettings,
 ) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     /** Whether caching is enabled for this provider */
     private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
@@ -36,30 +37,31 @@ class XtreamEpgManager(
     /**
      * Fetches EPG data for a specific stream with caching
      */
-    suspend fun getEpgForStream(streamId: Int): Result<EpgResponse> = withContext(Dispatchers.IO) {
-        suspendResultOf {
-            val service = sessionManager.apiService ?: throw Exception("Not authenticated")
+    suspend fun getEpgForStream(streamId: Int): Result<EpgResponse> =
+        withContext(Dispatchers.IO) {
+            suspendResultOf {
+                val service = sessionManager.apiService ?: throw Exception("Not authenticated")
 
-            // Try cache first
-            val cached = getCachedEpg(streamId)
-            if (cached != null) {
-                // Refresh in background
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        val fresh = service.getEpgForStream(streamId)
-                        cacheEpg(streamId, fresh)
-                    } catch (e: Exception) {
-                        // Ignore network errors when refreshing
+                // Try cache first
+                val cached = getCachedEpg(streamId)
+                if (cached != null) {
+                    // Refresh in background
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val fresh = service.getEpgForStream(streamId)
+                            cacheEpg(streamId, fresh)
+                        } catch (e: Exception) {
+                            // Ignore network errors when refreshing
+                        }
                     }
+                    return@suspendResultOf cached
                 }
-                return@suspendResultOf cached
-            }
 
-            val epg = service.getEpgForStream(streamId)
-            cacheEpg(streamId, epg)
-            epg
+                val epg = service.getEpgForStream(streamId)
+                cacheEpg(streamId, epg)
+                epg
+            }
         }
-    }
 
     /**
      * Fetches EPG data for multiple streams in parallel with concurrency limiting.
@@ -74,14 +76,15 @@ class XtreamEpgManager(
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated")
                 coroutineScope {
                     val semaphore = Semaphore(10)
-                    val deferreds = streamIds.map { streamId ->
-                        async {
-                            semaphore.withPermit {
-                                val epg = fetchEpgDirect(streamId, service)
-                                if (epg != null) streamId to epg else null
+                    val deferreds =
+                        streamIds.map { streamId ->
+                            async {
+                                semaphore.withPermit {
+                                    val epg = fetchEpgDirect(streamId, service)
+                                    if (epg != null) streamId to epg else null
+                                }
                             }
                         }
-                    }
 
                     val results = mutableMapOf<Int, EpgResponse>()
                     deferreds.awaitAll().forEach { pair ->
@@ -104,7 +107,7 @@ class XtreamEpgManager(
      */
     private suspend fun fetchEpgDirect(
         streamId: Int,
-        service: org.njarasoa.fijerena.core.player.api.XtreamApiService
+        service: org.njarasoa.fijerena.core.player.api.XtreamApiService,
     ): EpgResponse? {
         return try {
             val cached = getCachedEpg(streamId)
@@ -138,31 +141,35 @@ class XtreamEpgManager(
     /**
      * Cache EPG data for a stream
      */
-    private fun cacheEpg(streamId: Int, epg: EpgResponse) {
+    private fun cacheEpg(
+        streamId: Int,
+        epg: EpgResponse,
+    ) {
         if (!cachingEnabled) return
-        sharedPreferences.edit()
-            .putString(KEY_EPG_PREFIX + streamId, json.encodeToString(epg))
-            .putLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, System.currentTimeMillis())
-            .apply()
+        sharedPreferences.edit {
+            putString(KEY_EPG_PREFIX + streamId, json.encodeToString(epg))
+                .putLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, System.currentTimeMillis())
+        }
     }
 
     /**
      * Clear EPG cache for a specific stream
      */
     fun clearEpgCache(streamId: Int) {
-        sharedPreferences.edit()
-            .remove(KEY_EPG_PREFIX + streamId)
-            .remove(KEY_EPG_TIMESTAMP_PREFIX + streamId)
-            .apply()
+        sharedPreferences.edit {
+            remove(KEY_EPG_PREFIX + streamId)
+                .remove(KEY_EPG_TIMESTAMP_PREFIX + streamId)
+        }
     }
 
     /**
      * Clear all EPG cache
      */
     fun clearAllEpgCache() {
-        val editor = sharedPreferences.edit()
-        sharedPreferences.all.keys.filter { it.startsWith(KEY_EPG_PREFIX) || it.startsWith(KEY_EPG_TIMESTAMP_PREFIX) }
-            .forEach { editor.remove(it) }
-        editor.apply()
+        sharedPreferences.edit {
+            sharedPreferences.all.keys
+                .filter { it.startsWith(KEY_EPG_PREFIX) || it.startsWith(KEY_EPG_TIMESTAMP_PREFIX) }
+                .forEach { remove(it) }
+        }
     }
 }

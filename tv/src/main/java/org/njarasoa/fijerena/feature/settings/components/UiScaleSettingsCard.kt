@@ -17,46 +17,53 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
-private val SCALE_OPTIONS = listOf(
-    0.4f to "40%",
-    0.6f to "60%",
-    0.8f to "80%",
-    1.0f to "100%"
-).chunked(2)
+private val SCALE_OPTIONS =
+    listOf(
+        0.4f to "40%",
+        0.6f to "60%",
+        0.8f to "80%",
+        1.0f to "100%",
+    ).chunked(2)
 
 @Composable
 fun UiScaleSettingsCard(
     uiScale: Float,
     onScaleSelected: (Float) -> Unit,
-    scale: Float
+    scale: Float,
 ) {
     Column {
         Text(
             text = "Category/Grid UI Scale",
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-            ),
-            color = MaterialTheme.colorScheme.onSurface
+            style =
+                MaterialTheme.typography.titleMedium.copy(
+                    fontSize =
+                        MaterialTheme.typography.titleMedium.fontSize
+                            .scaled(scale),
+                ),
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
         Text(
             text = "Adjust font, spacing, and element sizes for category/grid views",
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-            ),
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+            style =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontSize =
+                        MaterialTheme.typography.bodySmall.fontSize
+                            .scaled(scale),
+                ),
+            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
         // Scale options as buttons
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         ) {
             SCALE_OPTIONS.forEach { rowItems ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                 ) {
                     rowItems.forEach { (scaleValue, label) ->
                         val isSelected = uiScale == scaleValue
@@ -64,7 +71,7 @@ fun UiScaleSettingsCard(
                             CinemaPrimaryButton(
                                 onClick = { },
                                 text = label,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             )
                         } else {
                             CinemaSecondaryButton(
@@ -72,7 +79,7 @@ fun UiScaleSettingsCard(
                                     onScaleSelected(scaleValue)
                                 },
                                 text = label,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             )
                         }
                     }

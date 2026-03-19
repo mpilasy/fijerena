@@ -25,35 +25,41 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun ThemeSettingsCard(
     selectedThemeId: String,
     onThemeSelected: (String) -> Unit,
-    scale: Float
+    scale: Float,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
                 text = "Theme",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaAccent
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
                 text = "Select a color theme for the app",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodySmall.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
             ) {
                 AllPalettes.chunked(2).forEachIndexed { rowIndex, rowPalettes ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                     ) {
                         rowPalettes.forEach { palette ->
                             val isSelected = selectedThemeId == palette.id
@@ -61,7 +67,7 @@ fun ThemeSettingsCard(
                                 CinemaPrimaryButton(
                                     onClick = { },
                                     text = palette.displayName,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
                                 )
                             } else {
                                 CinemaSecondaryButton(
@@ -69,7 +75,7 @@ fun ThemeSettingsCard(
                                         onThemeSelected(palette.id)
                                     },
                                     text = palette.displayName,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
                                 )
                             }
                         }

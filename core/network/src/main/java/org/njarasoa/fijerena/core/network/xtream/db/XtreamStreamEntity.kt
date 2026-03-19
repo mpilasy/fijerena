@@ -10,14 +10,13 @@ import androidx.room.Index
         Index(value = ["providerId", "type"]),
         Index(value = ["categoryId", "providerId"]),
         // Composite index covering getStreamsByCategory query (providerId + type + categoryId)
-        Index(value = ["providerId", "type", "categoryId"])
-    ]
+        Index(value = ["providerId", "type", "categoryId"]),
+    ],
 )
 data class XtreamStreamEntity(
     val streamId: Int,
     val providerId: Long,
     val type: String, // LIVE, VOD
-
     val num: Int,
     val name: String,
     val streamType: String,
@@ -31,7 +30,6 @@ data class XtreamStreamEntity(
     val tvArchiveDuration: Int = 0,
     val contentHash: Int = 0,
     val description: String? = null,
-
     // VOD metadata
     val cast: String? = null,
     val director: String? = null,
@@ -39,7 +37,7 @@ data class XtreamStreamEntity(
     val releaseDate: String? = null,
     val rating: String? = null,
     val duration: String? = null,
-    val youtubeTrailer: String? = null
+    val youtubeTrailer: String? = null,
 ) {
     companion object {
         const val TYPE_LIVE = "LIVE"
@@ -67,7 +65,7 @@ data class XtreamStreamEntity(
             releaseDate: String? = null,
             rating: String? = null,
             duration: String? = null,
-            youtubeTrailer: String? = null
+            youtubeTrailer: String? = null,
         ): Int {
             var result = streamId
             result = 31 * result + providerId.hashCode()

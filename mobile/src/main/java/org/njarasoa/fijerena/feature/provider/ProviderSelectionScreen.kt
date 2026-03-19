@@ -11,11 +11,11 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -32,12 +32,13 @@ fun MobileProviderSelectionScreen(
     onProviderSelected: (ProviderEntity) -> Unit,
     onAddProvider: () -> Unit,
     onEditProvider: (Long) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    val viewModel: ProviderViewModel = viewModel(
-        factory = ProviderViewModelFactory(context)
-    )
+    val viewModel: ProviderViewModel =
+        viewModel(
+            factory = ProviderViewModelFactory(context),
+        )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
 
@@ -59,21 +60,22 @@ fun MobileProviderSelectionScreen(
                     IconButton(onClick = onAddProvider) {
                         Icon(Icons.Default.Add, contentDescription = "Add Provider")
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(CinemaSpacing.md)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(CinemaSpacing.md),
         ) {
             when (val state = uiState) {
                 is ProviderUiState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
                     }
@@ -81,12 +83,12 @@ fun MobileProviderSelectionScreen(
                 is ProviderUiState.NoProviders -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = "No providers configured",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                         )
                     }
                 }
@@ -94,7 +96,7 @@ fun MobileProviderSelectionScreen(
                     Text(
                         text = state.message,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = CinemaError
+                        color = CinemaError,
                     )
                 }
                 is ProviderUiState.SingleProvider -> {
@@ -102,7 +104,7 @@ fun MobileProviderSelectionScreen(
                         providers = listOf(state.provider),
                         onSelect = onProviderSelected,
                         onEdit = onEditProvider,
-                        onDelete = { deleteConfirmProvider = it }
+                        onDelete = { deleteConfirmProvider = it },
                     )
                 }
                 is ProviderUiState.MultipleProviders -> {
@@ -110,7 +112,7 @@ fun MobileProviderSelectionScreen(
                         providers = state.providers,
                         onSelect = onProviderSelected,
                         onEdit = onEditProvider,
-                        onDelete = { deleteConfirmProvider = it }
+                        onDelete = { deleteConfirmProvider = it },
                     )
                 }
             }
@@ -131,7 +133,7 @@ fun MobileProviderSelectionScreen(
                         viewModel.deleteProvider(provider.id)
                         deleteConfirmProvider = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
+                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                 ) {
                     Text("Delete")
                 }
@@ -140,7 +142,7 @@ fun MobileProviderSelectionScreen(
                 OutlinedButton(onClick = { deleteConfirmProvider = null }) {
                     Text("Cancel")
                 }
-            }
+            },
         )
     }
 }
@@ -150,11 +152,11 @@ private fun MobileProviderList(
     providers: List<ProviderEntity>,
     onSelect: (ProviderEntity) -> Unit,
     onEdit: (Long) -> Unit,
-    onDelete: (ProviderEntity) -> Unit
+    onDelete: (ProviderEntity) -> Unit,
 ) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
     ) {
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             GlassPanel(modifier = Modifier.fillMaxWidth()) {
@@ -165,13 +167,13 @@ private fun MobileProviderList(
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.weight(1f),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                         if (provider.isActive) {
                             Text(
                                 text = "Active",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -180,26 +182,26 @@ private fun MobileProviderList(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = provider.username,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End)
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End),
                     ) {
                         if (!provider.isActive) {
                             IconButton(onClick = { onSelect(provider) }) {
                                 Icon(
                                     Icons.Default.CheckCircle,
                                     contentDescription = "Select",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         }
@@ -207,14 +209,14 @@ private fun MobileProviderList(
                             Icon(
                                 Icons.Default.Edit,
                                 contentDescription = "Edit",
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         IconButton(onClick = { onDelete(provider) }) {
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = "Delete",
-                                tint = CinemaError
+                                tint = CinemaError,
                             )
                         }
                     }

@@ -26,55 +26,64 @@ fun ExportImportSettingsCard(
     onImport: () -> Unit,
     onQuickImport: () -> Unit,
     exportImportMessage: String?,
-    scale: Float
+    scale: Float,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
                 text = "Export / Import",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaAccent
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
                 text = "Export all settings to a file or import from another device",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodySmall.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
             ) {
                 CinemaPrimaryButton(
                     onClick = onExport,
                     text = "Export Settings",
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 CinemaSecondaryButton(
                     onClick = onImport,
                     text = "Import Settings",
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             }
             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onQuickImport,
                 text = "Quick Import from Downloads",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
             if (exportImportMessage != null) {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 Text(
                     text = exportImportMessage,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)
-                    ),
-                    color = CinemaTextSecondary
+                    style =
+                        MaterialTheme.typography.bodySmall.copy(
+                            fontSize =
+                                MaterialTheme.typography.bodySmall.fontSize
+                                    .scaled(scale),
+                        ),
+                    color = CinemaTextSecondary,
                 )
             }
         }

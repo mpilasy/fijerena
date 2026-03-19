@@ -2,6 +2,7 @@
 # Core Build Tools
 agp = "9.1.0"
 kotlin = "2.3.0"
+ktlint = "12.1.2"
 
 # Core Android
 coreKtx = "1.15.0"
@@ -163,6 +164,7 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 
 [bundles]
 networking = ["ktor-client-core", "ktor-client-android", "ktor-client-okhttp", "ktor-client-content-negotiation", "ktor-client-encoding", "ktor-serialization-kotlinx-json", "kotlinx-serialization-json"]

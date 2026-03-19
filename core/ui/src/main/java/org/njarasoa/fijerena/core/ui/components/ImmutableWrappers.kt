@@ -15,28 +15,29 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 
 @Immutable
 data class ImmutableNowPlaying(
-    val map: Map<String, EpgProgram> = emptyMap()
+    val map: Map<String, EpgProgram> = emptyMap(),
 ) {
     operator fun get(key: String): EpgProgram? = map[key]
+
     val isEmpty: Boolean get() = map.isEmpty()
 }
 
 @Immutable
 data class ImmutableCategoryList(
-    private val items: List<MediaCategory> = emptyList()
+    private val items: List<MediaCategory> = emptyList(),
 ) : List<MediaCategory> by items
 
 @Immutable
 data class ImmutableMediaList(
-    private val items: List<MediaItem> = emptyList()
+    private val items: List<MediaItem> = emptyList(),
 ) : List<MediaItem> by items
 
 @Immutable
 data class ImmutableStringSet(
-    private val items: Set<String> = emptySet()
+    private val items: Set<String> = emptySet(),
 ) : Set<String> by items
 
 @Immutable
 data class ImmutableWatchProgress(
-    private val map: Map<String, Float> = emptyMap()
+    private val map: Map<String, Float> = emptyMap(),
 ) : Map<String, Float> by map

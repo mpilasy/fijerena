@@ -27,7 +27,7 @@ data class SelectorItem(
     val title: String,
     val subtitle: String? = null,
     val isSelected: Boolean,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
 )
 
 /**
@@ -40,7 +40,7 @@ fun SelectorDialog(
     onDismissRequest: () -> Unit,
     items: List<SelectorItem>,
     modifier: Modifier = Modifier,
-    emptyText: String = "No items available"
+    emptyText: String = "No items available",
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -51,7 +51,7 @@ fun SelectorDialog(
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     items.forEach { item ->
                         SelectorItemRow(item)
@@ -62,7 +62,7 @@ fun SelectorDialog(
         confirmButton = {
             TextButton(onClick = onDismissRequest) { Text("Close") }
         },
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -71,28 +71,30 @@ private fun SelectorItemRow(item: SelectorItem) {
     Surface(
         onClick = item.onClick,
         modifier = Modifier.fillMaxWidth(),
-        color = if (item.isSelected)
-            MaterialTheme.colorScheme.primaryContainer
-        else
-            MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(CinemaCornerRadius.small)
+        color =
+            if (item.isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+        shape = RoundedCornerShape(CinemaCornerRadius.small),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (item.isSelected) FontWeight.Bold else FontWeight.Normal
+                    fontWeight = if (item.isSelected) FontWeight.Bold else FontWeight.Normal,
                 )
                 if (item.isSelected) {
                     Text(
                         text = "Active",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -100,7 +102,7 @@ private fun SelectorItemRow(item: SelectorItem) {
                 Text(
                     text = item.subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

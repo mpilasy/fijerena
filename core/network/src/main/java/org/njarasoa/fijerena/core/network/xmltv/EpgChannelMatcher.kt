@@ -7,16 +7,21 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
  * then answers match(channelId, channelName) -> EpgBrowserMatchedStream? queries
  * using a 5-level fallback.
  */
-class EpgChannelMatcher(streams: List<XtreamStreamEntity>) {
-
+class EpgChannelMatcher(
+    streams: List<XtreamStreamEntity>,
+) {
     // Level 1: exact epgChannelId -> stream
     private val byEpgId = mutableMapOf<String, XtreamStreamEntity>()
+
     // Level 2: lowercase epgChannelId -> stream
     private val byEpgIdLower = mutableMapOf<String, XtreamStreamEntity>()
+
     // Level 3: exact stream name -> stream
     private val byName = mutableMapOf<String, XtreamStreamEntity>()
+
     // Level 4: normalized stream name -> stream
     private val byNormalized = mutableMapOf<String, XtreamStreamEntity>()
+
     // Level 5: (normalized name, stream) pairs for contains matching
     private val normalizedEntries = mutableListOf<Pair<String, XtreamStreamEntity>>()
 
@@ -36,7 +41,10 @@ class EpgChannelMatcher(streams: List<XtreamStreamEntity>) {
         }
     }
 
-    fun match(channelId: String, channelName: String): EpgBrowserMatchedStream? {
+    fun match(
+        channelId: String,
+        channelName: String,
+    ): EpgBrowserMatchedStream? {
         // 1. Exact epgChannelId == XMLTV channelId
         byEpgId[channelId]?.let { return it.toMatched() }
 
@@ -66,9 +74,10 @@ class EpgChannelMatcher(streams: List<XtreamStreamEntity>) {
         return null
     }
 
-    private fun XtreamStreamEntity.toMatched() = EpgBrowserMatchedStream(
-        streamId = streamId,
-        streamName = name,
-        categoryId = categoryId
-    )
+    private fun XtreamStreamEntity.toMatched() =
+        EpgBrowserMatchedStream(
+            streamId = streamId,
+            streamName = name,
+            categoryId = categoryId,
+        )
 }

@@ -26,13 +26,12 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun MobileEpgManagementScreen(
-    onBack: () -> Unit
-) {
+fun MobileEpgManagementScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val viewModel: EpgManagementViewModel = viewModel(
-        factory = remember { SettingsViewModelFactory(context.applicationContext) }
-    )
+    val viewModel: EpgManagementViewModel =
+        viewModel(
+            factory = remember { SettingsViewModelFactory(context.applicationContext) },
+        )
 
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
@@ -48,7 +47,9 @@ fun MobileEpgManagementScreen(
 
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
-            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast
+                .makeText(context, message, android.widget.Toast.LENGTH_SHORT)
+                .show()
         }
     }
 
@@ -70,15 +71,15 @@ fun MobileEpgManagementScreen(
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Add Source")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(CinemaSpacing.md),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             ) {
                 // Quick Actions
                 if (staleSourceCount > 0 || failedSourceCount > 0 || selectedIds.isNotEmpty()) {
@@ -90,7 +91,7 @@ fun MobileEpgManagementScreen(
                                         viewModel.refreshSelected(selectedIds)
                                         viewModel.clearSelection()
                                     },
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Icon(Icons.Default.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                     Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
@@ -100,12 +101,12 @@ fun MobileEpgManagementScreen(
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                             ) {
                                 if (staleSourceCount > 0) {
                                     Button(
                                         onClick = { viewModel.refreshStale() },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
                                     ) {
                                         Text("Refresh Stale ($staleSourceCount)")
                                     }
@@ -113,7 +114,7 @@ fun MobileEpgManagementScreen(
                                 if (failedSourceCount > 0) {
                                     Button(
                                         onClick = { viewModel.refreshFailed() },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
                                     ) {
                                         Text("Retry Failed ($failedSourceCount)")
                                     }
@@ -138,24 +139,24 @@ fun MobileEpgManagementScreen(
                                 Text(
                                     "Manage local database and temporary files.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                 )
-                                
+
                                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                                
+
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                                 ) {
                                     OutlinedButton(
                                         onClick = { viewModel.cleanupFiles() },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
                                     ) {
                                         Text("Cleanup")
                                     }
                                     OutlinedButton(
                                         onClick = { viewModel.purgeOldProgrammes() },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
                                     ) {
                                         Text("Purge")
                                     }
@@ -166,9 +167,13 @@ fun MobileEpgManagementScreen(
                                 Button(
                                     onClick = { showClearConfirm = true },
                                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
                                 ) {
-                                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                    Icon(
+                                        Icons.Default.DeleteForever,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(ButtonDefaults.IconSize),
+                                    )
                                     Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                                     Text("Clear All Data")
                                 }
@@ -178,22 +183,23 @@ fun MobileEpgManagementScreen(
                         // Automation Card
                         GlassPanel {
                             Row(
-                                modifier = Modifier
-                                    .padding(CinemaSpacing.md)
-                                    .clickable { showTimePicker = true },
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier =
+                                    Modifier
+                                        .padding(CinemaSpacing.md)
+                                        .clickable { showTimePicker = true },
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
                                     Text(
                                         "Daily update at ${viewModel.epgRefreshTime}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                     )
                                 }
                                 Switch(
                                     checked = viewModel.autoRefreshEnabled,
-                                    onCheckedChange = { viewModel.setAutoRefreshEnabled(it) }
+                                    onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
                                 )
                             }
                         }
@@ -208,11 +214,14 @@ fun MobileEpgManagementScreen(
                 items(sources, key = { it.id }) { source ->
                     val isSelected = selectedIds.contains(source.id)
                     val latestTime = latestProgrammeTimes[source.id] ?: 0L
-                    
+
                     // Look for active progress for this source
-                    val activeProgress = if (processingState is MultiSourceState.Processing) {
-                        (processingState as MultiSourceState.Processing).activeProgress[source.id]
-                    } else null
+                    val activeProgress =
+                        if (processingState is MultiSourceState.Processing) {
+                            (processingState as MultiSourceState.Processing).activeProgress[source.id]
+                        } else {
+                            null
+                        }
 
                     EpgSourceCard(
                         source = source,
@@ -223,7 +232,7 @@ fun MobileEpgManagementScreen(
                         onRefresh = { viewModel.refreshSource(source.id) },
                         onEdit = { editingSource = source },
                         onDelete = { viewModel.deleteSource(source.id) },
-                        onToggleSelection = { viewModel.toggleSelection(source.id) }
+                        onToggleSelection = { viewModel.toggleSelection(source.id) },
                     )
                 }
             }
@@ -236,7 +245,7 @@ fun MobileEpgManagementScreen(
             onConfirm = { url, label, tz, method, enabled ->
                 viewModel.addSource(url, label, tz, method, enabled)
                 showAddDialog = false
-            }
+            },
         )
     }
 
@@ -245,9 +254,11 @@ fun MobileEpgManagementScreen(
             initialSource = source,
             onDismiss = { editingSource = null },
             onConfirm = { url, label, tz, method, enabled ->
-                viewModel.updateSource(source.copy(url = url, label = label, timezoneOffsetHours = tz, ingestMethod = method, enabled = enabled))
+                viewModel.updateSource(
+                    source.copy(url = url, label = label, timezoneOffsetHours = tz, ingestMethod = method, enabled = enabled),
+                )
                 editingSource = null
-            }
+            },
         )
     }
 
@@ -260,14 +271,14 @@ fun MobileEpgManagementScreen(
                         viewModel.clearDatabase()
                         showClearConfirm = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
+                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                 ) { Text("Clear Everything") }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) { Text("Cancel") }
             },
             title = { Text("Clear EPG Data?") },
-            text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") }
+            text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") },
         )
     }
 
@@ -282,7 +293,7 @@ fun MobileEpgManagementScreen(
                     onValueChange = { timeInput = it },
                     label = { Text("Time (HH:mm)") },
                     placeholder = { Text("e.g. 04:00") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             },
             confirmButton = {
@@ -290,12 +301,12 @@ fun MobileEpgManagementScreen(
                     onClick = {
                         viewModel.setEpgRefreshTime(timeInput)
                         showTimePicker = false
-                    }
+                    },
                 ) { Text("Save") }
             },
             dismissButton = {
                 TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
-            }
+            },
         )
     }
 }
@@ -311,7 +322,7 @@ private fun EpgSourceCard(
     onRefresh: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onToggleSelection: () -> Unit
+    onToggleSelection: () -> Unit,
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -320,35 +331,35 @@ private fun EpgSourceCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Checkbox(
                         checked = isSelected,
-                        onCheckedChange = { onToggleSelection() }
+                        onCheckedChange = { onToggleSelection() },
                     )
-                    
+
                     StatusIndicator(source, nowMs)
 
                     Column {
                         Text(
                             text = source.label.ifBlank { "Unnamed Source" },
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
                             text = source.url,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                             maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         )
                     }
                 }
-                
+
                 IconButton(onClick = onRefresh) {
                     Icon(Icons.Default.Refresh, "Refresh")
                 }
@@ -359,24 +370,24 @@ private fun EpgSourceCard(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
                             text = "${activeProgress.phase}...",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
                         )
                         Text(
                             text = "${activeProgress.progressPercent}%",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                     LinearProgressIndicator(
                         progress = { activeProgress.progressPercent / 100f },
                         modifier = Modifier.fillMaxWidth().height(4.dp),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                     )
                 }
             } else {
@@ -385,17 +396,25 @@ private fun EpgSourceCard(
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
-                    val lastIngested = if (source.lastIngestedAtMs > 0) {
-                        java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                            .format(java.util.Date(source.lastIngestedAtMs))
-                    } else "Never"
+                    val lastIngested =
+                        if (source.lastIngestedAtMs > 0) {
+                            java.text
+                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                .format(java.util.Date(source.lastIngestedAtMs))
+                        } else {
+                            "Never"
+                        }
 
-                    val latestProgStr = if (latestProgrammeTime > 0) {
-                        java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                            .format(java.util.Date(latestProgrammeTime * 1000L))
-                    } else "None"
+                    val latestProgStr =
+                        if (latestProgrammeTime > 0) {
+                            java.text
+                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                .format(java.util.Date(latestProgrammeTime * 1000L))
+                        } else {
+                            "None"
+                        }
 
                     SourceStat("Last Sync", lastIngested)
                     SourceStat("Download", NumberUtils.formatDuration(source.lastDownloadDurationMs))
@@ -411,7 +430,7 @@ private fun EpgSourceCard(
                     text = "Error: ${source.lastError}",
                     style = MaterialTheme.typography.labelSmall,
                     color = CinemaError,
-                    modifier = Modifier.padding(top = CinemaSpacing.xs)
+                    modifier = Modifier.padding(top = CinemaSpacing.xs),
                 )
             }
 
@@ -420,14 +439,14 @@ private fun EpgSourceCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onEdit) {
                     Text("Edit")
                 }
                 TextButton(
                     onClick = { showDeleteConfirm = true },
-                    colors = ButtonDefaults.textButtonColors(contentColor = CinemaError)
+                    colors = ButtonDefaults.textButtonColors(contentColor = CinemaError),
                 ) {
                     Text("Delete")
                 }
@@ -444,27 +463,31 @@ private fun EpgSourceCard(
                         onDelete()
                         showDeleteConfirm = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
+                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                 ) { Text("Delete") }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             },
             title = { Text("Delete Source?") },
-            text = { Text("Are you sure you want to remove '${source.label}'? All associated EPG data will be deleted.") }
+            text = { Text("Are you sure you want to remove '${source.label}'? All associated EPG data will be deleted.") },
         )
     }
 }
 
 @Composable
-private fun StatusIndicator(source: EpgSourceEntity, nowMs: Long) {
-    val color = when {
-        !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-        source.lastError != null -> CinemaError
-        source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-        nowMs - source.lastIngestedAtMs > 24 * 3600 * 1000 -> org.njarasoa.fijerena.ui.theme.CinemaWarning
-        else -> CinemaSuccess
-    }
+private fun StatusIndicator(
+    source: EpgSourceEntity,
+    nowMs: Long,
+) {
+    val color =
+        when {
+            !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+            source.lastError != null -> CinemaError
+            source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+            nowMs - source.lastIngestedAtMs > 24 * 3600 * 1000 -> org.njarasoa.fijerena.ui.theme.CinemaWarning
+            else -> CinemaSuccess
+        }
 
     androidx.compose.foundation.Canvas(modifier = Modifier.size(10.dp)) {
         drawCircle(color = color)
@@ -472,16 +495,19 @@ private fun StatusIndicator(source: EpgSourceEntity, nowMs: Long) {
 }
 
 @Composable
-private fun SourceStat(label: String, value: String) {
+private fun SourceStat(
+    label: String,
+    value: String,
+) {
     Column {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall,
         )
     }
 }
@@ -491,7 +517,7 @@ private fun EpgStatusCard(
     multiState: MultiSourceState,
     indexState: EpgIndexState,
     queuedTaskIds: Set<String>,
-    lastRun: org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity?
+    lastRun: org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity?,
 ) {
     GlassPanel {
         Column(modifier = Modifier.padding(CinemaSpacing.md)) {
@@ -499,27 +525,29 @@ private fun EpgStatusCard(
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
             // Indexer State
-            val indexText = when (indexState) {
-                is EpgIndexState.Indexed -> "Database: ${NumberUtils.formatCount(indexState.programmeCount)} programmes indexed"
-                is EpgIndexState.Indexing -> "Database: Indexing in progress..."
-                is EpgIndexState.NotIndexed -> "Database: Empty"
-                is EpgIndexState.Failed -> "Database Error: ${indexState.reason}"
-            }
+            val indexText =
+                when (indexState) {
+                    is EpgIndexState.Indexed -> "Database: ${NumberUtils.formatCount(indexState.programmeCount)} programmes indexed"
+                    is EpgIndexState.Indexing -> "Database: Indexing in progress..."
+                    is EpgIndexState.NotIndexed -> "Database: Empty"
+                    is EpgIndexState.Failed -> "Database Error: ${indexState.reason}"
+                }
             Text(indexText, style = MaterialTheme.typography.bodySmall)
 
             // Current Pipeline State
-            val currentStatusText = when (multiState) {
-                is MultiSourceState.Idle -> {
-                    val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
-                    if (queued > 0) "Current Status: $queued refresh tasks queued" else "Current Status: Idle"
+            val currentStatusText =
+                when (multiState) {
+                    is MultiSourceState.Idle -> {
+                        val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
+                        if (queued > 0) "Current Status: $queued refresh tasks queued" else "Current Status: Idle"
+                    }
+                    is MultiSourceState.Processing -> "Current Status: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
+                    is MultiSourceState.Completed -> "Current Status: Finished run"
+                    is MultiSourceState.Finalizing -> "Current Status: Finalizing (${multiState.phase})..."
+                    is MultiSourceState.Clearing -> "Current Status: Clearing data..."
+                    is MultiSourceState.Error -> "Current Status Error: ${multiState.reason}"
+                    else -> "Current Status: Idle"
                 }
-                is MultiSourceState.Processing -> "Current Status: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
-                is MultiSourceState.Completed -> "Current Status: Finished run"
-                is MultiSourceState.Finalizing -> "Current Status: Finalizing (${multiState.phase})..."
-                is MultiSourceState.Clearing -> "Current Status: Clearing data..."
-                is MultiSourceState.Error -> "Current Status Error: ${multiState.reason}"
-                else -> "Current Status: Idle"
-            }
             Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
 
             // Last Pipeline Run
@@ -531,7 +559,7 @@ private fun EpgStatusCard(
                 Text(
                     text = "Last Run: Finished at $time • ${stats.sourcesProcessed} sources in $duration$errorText",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 )
             }
         }
@@ -542,21 +570,27 @@ private fun EpgStatusCard(
 private fun EpgSourceEditDialog(
     initialSource: EpgSourceEntity? = null,
     onDismiss: () -> Unit,
-    onConfirm: (url: String, label: String, tz: Int, method: String, enabled: Boolean) -> Unit
+    onConfirm: (url: String, label: String, tz: Int, method: String, enabled: Boolean) -> Unit,
 ) {
     var url by remember { mutableStateOf(initialSource?.url ?: "") }
     var label by remember { mutableStateOf(initialSource?.label ?: "") }
     var tzOffset by remember { mutableStateOf(initialSource?.timezoneOffsetHours?.toString() ?: "0") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initialSource == null) "Add EPG Source" else "Edit EPG Source") },
         confirmButton = {
             Button(
-                onClick = { 
-                    onConfirm(url, label, tzOffset.toIntOrNull() ?: 0, initialSource?.ingestMethod ?: "DOWNLOADED", initialSource?.enabled ?: true) 
+                onClick = {
+                    onConfirm(
+                        url,
+                        label,
+                        tzOffset.toIntOrNull() ?: 0,
+                        initialSource?.ingestMethod ?: "DOWNLOADED",
+                        initialSource?.enabled ?: true,
+                    )
                 },
-                enabled = url.isNotBlank()
+                enabled = url.isNotBlank(),
             ) { Text("Save") }
         },
         dismissButton = {
@@ -569,23 +603,23 @@ private fun EpgSourceEditDialog(
                     onValueChange = { url = it },
                     label = { Text("XMLTV URL") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
                     label = { Text("Label (Optional)") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
                     label = { Text("Timezone Offset (Hours)") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
             }
-        }
+        },
     )
 }

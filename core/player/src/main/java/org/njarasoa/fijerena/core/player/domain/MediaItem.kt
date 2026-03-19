@@ -5,7 +5,7 @@ enum class MediaType {
     MOVIE,
     SERIES,
     EPISODE,
-    VIDEO_FILE
+    VIDEO_FILE,
 }
 
 data class MediaMetadata(
@@ -16,7 +16,7 @@ data class MediaMetadata(
     val releaseDate: String? = null,
     val rating: String? = null,
     val duration: String? = null,
-    val year: Int? = null
+    val year: Int? = null,
 )
 
 data class MediaItem(
@@ -27,5 +27,5 @@ data class MediaItem(
     val thumbnailUrl: String? = null,
     val streamUri: String? = null,
     val metadata: MediaMetadata = MediaMetadata(),
-    val providerData: Map<String, String> = emptyMap()
+    val providerData: Map<String, String> = emptyMap(),
 )

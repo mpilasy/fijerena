@@ -10,7 +10,6 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
-import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 
 data class SettingsUiState(
@@ -28,63 +27,69 @@ data class SettingsUiState(
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val uiScale: Float = AppSettings.DEFAULT_UI_SCALE,
     val exportImportMessage: String? = null,
-    val epgRefreshTrigger: Int = 0
+    val epgRefreshTrigger: Int = 0,
 )
 
 class SettingsViewModel(
     private val context: Context,
     private val appSettings: AppSettings,
     private val providerRepo: ProviderRepository,
-    private val exportManager: SettingsExportManager
+    private val exportManager: SettingsExportManager,
 ) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(SettingsUiState(
-        themeId = appSettings.themeId,
-        isDevMode = appSettings.isDevMode,
-        watchDelaySeconds = appSettings.watchDelaySeconds,
-        uiScale = appSettings.uiScale
-    ))
+    private val _uiState =
+        MutableStateFlow(
+            SettingsUiState(
+                themeId = appSettings.themeId,
+                isDevMode = appSettings.isDevMode,
+                watchDelaySeconds = appSettings.watchDelaySeconds,
+                uiScale = appSettings.uiScale,
+            ),
+        )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
         refreshProviderInfo()
         // Sync EPG indexer state to ensure status card is accurate
         viewModelScope.launch {
-            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer.getInstance(context).initialize()
+            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+                .getInstance(context)
+                .initialize()
         }
     }
 
     fun refreshProviderInfo() {
         viewModelScope.launch {
             val activeProvider = providerRepo.getActiveProvider()
-            
+
             // Base provider info
-            var newState = _uiState.value.copy(
-                providerName = activeProvider?.name ?: "No provider",
-                currentUrl = activeProvider?.url ?: "",
-                currentUsername = activeProvider?.username ?: "",
-                activeProviderId = activeProvider?.id,
-                providerType = activeProvider?.type ?: "",
-                // Reset subscription info before re-fetching
-                subscriptionExpiry = null,
-                subscriptionStatus = null,
-                subscriptionMaxCons = null,
-                subscriptionIsTrial = false
-            )
+            var newState =
+                _uiState.value.copy(
+                    providerName = activeProvider?.name ?: "No provider",
+                    currentUrl = activeProvider?.url ?: "",
+                    currentUsername = activeProvider?.username ?: "",
+                    activeProviderId = activeProvider?.id,
+                    providerType = activeProvider?.type ?: "",
+                    // Reset subscription info before re-fetching
+                    subscriptionExpiry = null,
+                    subscriptionStatus = null,
+                    subscriptionMaxCons = null,
+                    subscriptionIsTrial = false,
+                )
 
             // Xtream-specific subscription info
             if (activeProvider?.type == "XTREAM") {
                 val accountManager = AccountManager(context.applicationContext)
                 accountManager.getAuthResponse()?.userInfo?.let { info ->
-                    newState = newState.copy(
-                        subscriptionStatus = info.status,
-                        subscriptionMaxCons = info.maxConnections,
-                        subscriptionIsTrial = info.isTrial == "1",
-                        subscriptionExpiry = formatExpiryDate(info.expDate)
-                    )
+                    newState =
+                        newState.copy(
+                            subscriptionStatus = info.status,
+                            subscriptionMaxCons = info.maxConnections,
+                            subscriptionIsTrial = info.isTrial == "1",
+                            subscriptionExpiry = formatExpiryDate(info.expDate),
+                        )
                 }
             }
-            
+
             _uiState.value = newState
         }
     }
@@ -105,7 +110,7 @@ class SettingsViewModel(
     }
 
     fun updateUiScale(scale: Float) {
-        // uiScale is typically handled via a global callback in the screens, 
+        // uiScale is typically handled via a global callback in the screens,
         // but we keep it here for state consistency.
         _uiState.value = _uiState.value.copy(uiScale = scale)
     }
@@ -117,30 +122,32 @@ class SettingsViewModel(
     fun doImport(
         parsed: SettingsExportManager.ParsedImport,
         resolution: SettingsExportManager.ConflictResolution,
-        options: SettingsExportManager.ImportOptions
+        options: SettingsExportManager.ImportOptions,
     ) {
         viewModelScope.launch {
             val result = exportManager.importFromParsed(parsed, resolution, options)
-            
+
             val message = result.toSummary()
-            
+
             if (result.isSuccess) {
                 // Refresh global settings from AppSettings (they were updated inside exportManager.importFromJson)
                 if (options.importGlobalSettings) {
-                    _uiState.value = _uiState.value.copy(
-                        themeId = appSettings.themeId,
-                        isDevMode = appSettings.isDevMode,
-                        watchDelaySeconds = appSettings.watchDelaySeconds,
-                        uiScale = appSettings.uiScale
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            themeId = appSettings.themeId,
+                            isDevMode = appSettings.isDevMode,
+                            watchDelaySeconds = appSettings.watchDelaySeconds,
+                            uiScale = appSettings.uiScale,
+                        )
                 }
-                
+
                 // Trigger UI refresh for providers and EPG
                 refreshProviderInfo()
-                _uiState.value = _uiState.value.copy(
-                    exportImportMessage = message,
-                    epgRefreshTrigger = _uiState.value.epgRefreshTrigger + 1
-                )
+                _uiState.value =
+                    _uiState.value.copy(
+                        exportImportMessage = message,
+                        epgRefreshTrigger = _uiState.value.epgRefreshTrigger + 1,
+                    )
             } else {
                 _uiState.value = _uiState.value.copy(exportImportMessage = message)
             }
@@ -151,23 +158,29 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(exportImportMessage = message)
     }
 
-    private fun formatExpiryDate(expDate: String?): String? {
-        return when {
+    private fun formatExpiryDate(expDate: String?): String? =
+        when {
             expDate.isNullOrEmpty() -> null
             expDate.equals("Unlimited", ignoreCase = true) -> "Unlimited"
             else -> {
                 val epoch = expDate.toLongOrNull()
                 if (epoch != null) {
                     try {
-                        val date = java.time.Instant.ofEpochSecond(epoch)
-                            .atZone(java.time.ZoneId.systemDefault())
-                            .toLocalDate()
-                        date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy"))
+                        val date =
+                            java.time.Instant
+                                .ofEpochSecond(epoch)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDate()
+                        date.format(
+                            java.time.format.DateTimeFormatter
+                                .ofPattern("MMM d, yyyy"),
+                        )
                     } catch (_: Exception) {
                         expDate
                     }
-                } else expDate
+                } else {
+                    expDate
+                }
             }
         }
-    }
 }

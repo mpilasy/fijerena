@@ -17,12 +17,14 @@ object NetworkModule {
      */
     val okHttpClient: OkHttpClient by lazy {
         // Restrict concurrency to prevent OOM but allow enough for concurrent tasks
-        val dispatcher = Dispatcher().apply {
-            maxRequests = 16
-            maxRequestsPerHost = 4
-        }
+        val dispatcher =
+            Dispatcher().apply {
+                maxRequests = 16
+                maxRequestsPerHost = 4
+            }
 
-        OkHttpClient.Builder()
+        OkHttpClient
+            .Builder()
             .dispatcher(dispatcher)
             .followRedirects(true)
             .followSslRedirects(true)

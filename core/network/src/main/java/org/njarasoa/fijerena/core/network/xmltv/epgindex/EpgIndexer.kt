@@ -1,25 +1,24 @@
 package org.njarasoa.fijerena.core.network.xmltv.epgindex
-
 import android.content.Context
 import android.util.Log
+import androidx.core.content.edit
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.XmltvParser
+import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
-import org.njarasoa.fijerena.core.player.model.EpgResponse
 import java.io.InputStream
-import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
-import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
-import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Singleton that indexes XMLTV data into SQLite for fast FTS search.
@@ -31,8 +30,9 @@ import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
  * Append-only: uses REPLACE on unique (channel_id, source_id, start_epoch) index
  * so the database stays searchable during sync.
  */
-class EpgIndexer private constructor(private val context: Context) {
-
+class EpgIndexer private constructor(
+    private val context: Context,
+) {
     private val writeMutex = Mutex()
 
     private val ftsStale = AtomicBoolean(false)
@@ -44,12 +44,12 @@ class EpgIndexer private constructor(private val context: Context) {
 
     fun markFtsStale() {
         ftsStale.set(true)
-        stalePrefs.edit().putBoolean("fts_stale", true).apply()
+        stalePrefs.edit { putBoolean("fts_stale", true) }
     }
 
     fun markFtsClean() {
         ftsStale.set(false)
-        stalePrefs.edit().remove("fts_stale").apply()
+        stalePrefs.edit { remove("fts_stale") }
     }
 
     companion object {
@@ -64,50 +64,54 @@ class EpgIndexer private constructor(private val context: Context) {
         // We drop them before bulk ingestion and recreate afterwards so that
         // per-row FTS maintenance is skipped entirely; a single rebuild() at
         // the end of the session is cheaper than millions of incremental updates.
-        private val FTS_TRIGGER_NAMES = listOf(
-            "room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE",
-            "room_fts_content_sync_epg_programme_fts_BEFORE_DELETE",
-            "room_fts_content_sync_epg_programme_fts_AFTER_UPDATE",
-            "room_fts_content_sync_epg_programme_fts_AFTER_INSERT"
-        )
+        private val FTS_TRIGGER_NAMES =
+            listOf(
+                "room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE",
+                "room_fts_content_sync_epg_programme_fts_BEFORE_DELETE",
+                "room_fts_content_sync_epg_programme_fts_AFTER_UPDATE",
+                "room_fts_content_sync_epg_programme_fts_AFTER_INSERT",
+            )
+
         // FTS5 uses `rowid` instead of `docid` in content-table triggers.
-        private val FTS_TRIGGER_DDL = listOf(
-            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE` BEFORE UPDATE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END",
-            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END",
-            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END",
-            "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END"
-        )
+        private val FTS_TRIGGER_DDL =
+            listOf(
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE` BEFORE UPDATE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END",
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END",
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END",
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END",
+            )
 
         // Query-only indexes on epg_programme that are dropped during bulk
         // ingestion and rebuilt afterwards.  The dedup unique index is kept
         // because INSERT … REPLACE needs it for conflict resolution.
-        private val BULK_DROP_INDEX_NAMES = listOf(
-            "idx_programme_start",
-            "idx_programme_end",
-            "idx_programme_time_range",
-            "idx_programme_channel",
-            "idx_programme_title_lower",
-            "idx_programme_source",
-            "idx_programme_channel_source"
-        )
-        private val BULK_DROP_INDEX_DDL = listOf(
-            "CREATE INDEX IF NOT EXISTS `idx_programme_start` ON `epg_programme` (`start_epoch`)",
-            "CREATE INDEX IF NOT EXISTS `idx_programme_end` ON `epg_programme` (`end_epoch`)",
-            "CREATE INDEX IF NOT EXISTS `idx_programme_time_range` ON `epg_programme` (`start_epoch`, `end_epoch`)",
-            "CREATE INDEX IF NOT EXISTS `idx_programme_channel` ON `epg_programme` (`channel_id`)",
-            "CREATE INDEX IF NOT EXISTS `idx_programme_title_lower` ON `epg_programme` (`title_lowercase`)",
-            "CREATE INDEX IF NOT EXISTS `idx_programme_source` ON `epg_programme` (`source_id`)",
-            "CREATE INDEX IF NOT EXISTS `idx_programme_channel_source` ON `epg_programme` (`channel_id`, `source_id`)"
-        )
+        private val BULK_DROP_INDEX_NAMES =
+            listOf(
+                "idx_programme_start",
+                "idx_programme_end",
+                "idx_programme_time_range",
+                "idx_programme_channel",
+                "idx_programme_title_lower",
+                "idx_programme_source",
+                "idx_programme_channel_source",
+            )
+        private val BULK_DROP_INDEX_DDL =
+            listOf(
+                "CREATE INDEX IF NOT EXISTS `idx_programme_start` ON `epg_programme` (`start_epoch`)",
+                "CREATE INDEX IF NOT EXISTS `idx_programme_end` ON `epg_programme` (`end_epoch`)",
+                "CREATE INDEX IF NOT EXISTS `idx_programme_time_range` ON `epg_programme` (`start_epoch`, `end_epoch`)",
+                "CREATE INDEX IF NOT EXISTS `idx_programme_channel` ON `epg_programme` (`channel_id`)",
+                "CREATE INDEX IF NOT EXISTS `idx_programme_title_lower` ON `epg_programme` (`title_lowercase`)",
+                "CREATE INDEX IF NOT EXISTS `idx_programme_source` ON `epg_programme` (`source_id`)",
+                "CREATE INDEX IF NOT EXISTS `idx_programme_channel_source` ON `epg_programme` (`channel_id`, `source_id`)",
+            )
 
         @Volatile
         private var instance: EpgIndexer? = null
 
-        fun getInstance(context: Context): EpgIndexer {
-            return instance ?: synchronized(this) {
+        fun getInstance(context: Context): EpgIndexer =
+            instance ?: synchronized(this) {
                 instance ?: EpgIndexer(context.applicationContext).also { instance = it }
             }
-        }
     }
 
     private val _state = MutableStateFlow<EpgIndexState>(EpgIndexState.NotIndexed)
@@ -119,7 +123,7 @@ class EpgIndexer private constructor(private val context: Context) {
      */
     data class IngestionStats(
         val channelsIngested: Int = 0,
-        val programmesIngested: Int = 0
+        val programmesIngested: Int = 0,
     )
 
     @Volatile
@@ -132,54 +136,57 @@ class EpgIndexer private constructor(private val context: Context) {
      * the previous session was interrupted before the FTS index was refreshed.
      * Returns true if the FTS index is stale and a background rebuild should be launched.
      */
-    suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
-        val wasStale = stalePrefs.getBoolean("fts_stale", false)
-        if (wasStale) {
-            ftsStale.set(true)
-        }
-        try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
-            val metadata = dao.getMetadata()
-            
-            if (metadata != null && metadata.programmeCount > 0) {
-                _state.value = EpgIndexState.Indexed(
-                    channelCount = metadata.channelCount,
-                    programmeCount = metadata.programmeCount,
-                    indexedAtMs = metadata.indexedAtMs
-                )
-            } else {
-                // Fallback: check actual counts in case metadata is missing/out of sync
-                val actualChannels = dao.getChannelCount()
-                val actualProgrammes = dao.getProgrammeCount()
-                if (actualProgrammes > 0) {
-                    val now = System.currentTimeMillis()
-                    _state.value = EpgIndexState.Indexed(
-                        channelCount = actualChannels,
-                        programmeCount = actualProgrammes,
-                        indexedAtMs = now
-                    )
-                    // Repair metadata table
-                    dao.insertMetadata(
-                        EpgIndexMetadata(
-                            fileSizeBytes = 0,
-                            fileLastModifiedMs = 0,
-                            indexedAtMs = now,
-                            channelCount = actualChannels,
-                            programmeCount = actualProgrammes,
-                            timezoneOffsetHours = 0
-                        )
-                    )
-                } else {
-                    _state.value = EpgIndexState.NotIndexed
-                }
+    suspend fun initialize(): Boolean =
+        withContext(Dispatchers.IO) {
+            val wasStale = stalePrefs.getBoolean("fts_stale", false)
+            if (wasStale) {
+                ftsStale.set(true)
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to restore index state", e)
-            _state.value = EpgIndexState.NotIndexed
+            try {
+                val db = EpgIndexDatabase.getInstance(context)
+                val dao = db.epgIndexDao()
+                val metadata = dao.getMetadata()
+
+                if (metadata != null && metadata.programmeCount > 0) {
+                    _state.value =
+                        EpgIndexState.Indexed(
+                            channelCount = metadata.channelCount,
+                            programmeCount = metadata.programmeCount,
+                            indexedAtMs = metadata.indexedAtMs,
+                        )
+                } else {
+                    // Fallback: check actual counts in case metadata is missing/out of sync
+                    val actualChannels = dao.getChannelCount()
+                    val actualProgrammes = dao.getProgrammeCount()
+                    if (actualProgrammes > 0) {
+                        val now = System.currentTimeMillis()
+                        _state.value =
+                            EpgIndexState.Indexed(
+                                channelCount = actualChannels,
+                                programmeCount = actualProgrammes,
+                                indexedAtMs = now,
+                            )
+                        // Repair metadata table
+                        dao.insertMetadata(
+                            EpgIndexMetadata(
+                                fileSizeBytes = 0,
+                                fileLastModifiedMs = 0,
+                                indexedAtMs = now,
+                                channelCount = actualChannels,
+                                programmeCount = actualProgrammes,
+                                timezoneOffsetHours = 0,
+                            ),
+                        )
+                    } else {
+                        _state.value = EpgIndexState.NotIndexed
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to restore index state", e)
+                _state.value = EpgIndexState.NotIndexed
+            }
+            wasStale
         }
-        wasStale
-    }
 
     /**
      * Ingest EPG data from an InputStream into the SQLite index.
@@ -188,17 +195,19 @@ class EpgIndexer private constructor(private val context: Context) {
      * Commits transactions every 5000 items to prevent Room/SQLite from buffering
      * too much data in memory for a single massive transaction.
      */
+
     /**
      * Set state to Indexing if not already Indexed.
      * Call once before parallel ingestion begins.
      */
     fun setIndexing() {
         if (_state.value !is EpgIndexState.Indexed) {
-            _state.value = EpgIndexState.Indexing(
-                progressPercent = 0,
-                channelsIndexed = 0,
-                programmesIndexed = 0
-            )
+            _state.value =
+                EpgIndexState.Indexing(
+                    progressPercent = 0,
+                    channelsIndexed = 0,
+                    programmesIndexed = 0,
+                )
         }
     }
 
@@ -208,127 +217,126 @@ class EpgIndexer private constructor(private val context: Context) {
         timezoneOverrideHours: Int = 0,
         batchSize: Int = BATCH_SIZE,
         isPlaybackActive: () -> Boolean = { false },
-        onProgress: ((channels: Int, programmes: Int) -> Unit)? = null
-    ): IngestionStats = withContext(Dispatchers.IO) {
+        onProgress: ((channels: Int, programmes: Int) -> Unit)? = null,
+    ): IngestionStats =
+        withContext(Dispatchers.IO) {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            var channelCount = 0
+            var programmeCount = 0
 
-        val db = EpgIndexDatabase.getInstance(context)
-        val dao = db.epgIndexDao()
-        var channelCount = 0
-        var programmeCount = 0
+            // Skip programmes that ended before yesterday
+            val cutoffEpoch = (System.currentTimeMillis() / 1000) - 86400
 
-        // Skip programmes that ended before yesterday
-        val cutoffEpoch = (System.currentTimeMillis() / 1000) - 86400
+            try {
+                val channelBatch = mutableListOf<EpgChannelEntity>()
+                val programmeBatch = mutableListOf<EpgProgrammeEntity>()
+                var itemsSinceLastProgressUpdate = 0
 
-        try {
-            val channelBatch = mutableListOf<EpgChannelEntity>()
-            val programmeBatch = mutableListOf<EpgProgrammeEntity>()
-            var itemsSinceLastProgressUpdate = 0
+                val factory = XmlPullParserFactory.newInstance()
+                factory.isNamespaceAware = false
+                val parser = factory.newPullParser()
+                parser.setInput(inputStream, null)
 
-            val factory = XmlPullParserFactory.newInstance()
-            factory.isNamespaceAware = false
-            val parser = factory.newPullParser()
-            parser.setInput(inputStream, null)
+                var eventType = parser.eventType
 
-            var eventType = parser.eventType
+                while (eventType != XmlPullParser.END_DOCUMENT) {
+                    if (eventType == XmlPullParser.START_TAG) {
+                        when (parser.name) {
+                            "channel" -> {
+                                XmltvParser.parseChannelForIndex(parser, sourceId)?.let {
+                                    channelBatch.add(it)
+                                    channelCount++
 
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG) {
-                    when (parser.name) {
-                        "channel" -> {
-                            XmltvParser.parseChannelForIndex(parser, sourceId)?.let {
-                                channelBatch.add(it)
-                                channelCount++
-
-                                if (channelBatch.size >= batchSize) {
+                                    if (channelBatch.size >= batchSize) {
+                                        writeMutex.withLock {
+                                            db.withTransaction {
+                                                dao.insertChannelsIgnore(channelBatch)
+                                            }
+                                        }
+                                        channelBatch.clear()
+                                        // Yield CPU briefly only when video is actively decoding
+                                        if (isPlaybackActive()) delay(5)
+                                    }
+                                }
+                            }
+                            "programme" -> {
+                                // Flush any remaining channels before starting programmes
+                                if (channelBatch.isNotEmpty()) {
                                     writeMutex.withLock {
                                         db.withTransaction {
                                             dao.insertChannelsIgnore(channelBatch)
                                         }
                                     }
                                     channelBatch.clear()
-                                    // Yield CPU briefly only when video is actively decoding
-                                    if (isPlaybackActive()) delay(5)
                                 }
-                            }
-                        }
-                        "programme" -> {
-                            // Flush any remaining channels before starting programmes
-                            if (channelBatch.isNotEmpty()) {
-                                writeMutex.withLock {
-                                    db.withTransaction {
-                                        dao.insertChannelsIgnore(channelBatch)
-                                    }
-                                }
-                                channelBatch.clear()
-                            }
 
-                            XmltvParser.parseProgrammeForIndex(parser, sourceId, timezoneOverrideHours)?.let {
-                                if (it.endEpoch < cutoffEpoch) return@let
-                                programmeBatch.add(it)
-                                programmeCount++
-                                itemsSinceLastProgressUpdate++
+                                XmltvParser.parseProgrammeForIndex(parser, sourceId, timezoneOverrideHours)?.let {
+                                    if (it.endEpoch < cutoffEpoch) return@let
+                                    programmeBatch.add(it)
+                                    programmeCount++
+                                    itemsSinceLastProgressUpdate++
 
-                                if (programmeBatch.size >= batchSize) {
-                                    writeMutex.withLock {
-                                        db.withTransaction {
-                                            dao.insertProgrammes(programmeBatch)
+                                    if (programmeBatch.size >= batchSize) {
+                                        writeMutex.withLock {
+                                            db.withTransaction {
+                                                dao.insertProgrammes(programmeBatch)
+                                            }
                                         }
-                                    }
-                                    programmeBatch.clear()
+                                        programmeBatch.clear()
 
-                                    // Throttled UI updates to reduce main thread pressure during playback
-                                    if (itemsSinceLastProgressUpdate >= 50000) {
-                                        onProgress?.invoke(channelCount, programmeCount)
-                                        itemsSinceLastProgressUpdate = 0
-                                    }
+                                        // Throttled UI updates to reduce main thread pressure during playback
+                                        if (itemsSinceLastProgressUpdate >= 50000) {
+                                            onProgress?.invoke(channelCount, programmeCount)
+                                            itemsSinceLastProgressUpdate = 0
+                                        }
 
-                                    // Only yield when video is actively playing; skip the sleep entirely
-                                    // when the Shield is idle to avoid the multi-hour ingestion caused
-                                    // by accumulated 100ms sleeps across millions of programme rows.
-                                    if (isPlaybackActive()) delay(100)
+                                        // Only yield when video is actively playing; skip the sleep entirely
+                                        // when the Shield is idle to avoid the multi-hour ingestion caused
+                                        // by accumulated 100ms sleeps across millions of programme rows.
+                                        if (isPlaybackActive()) delay(100)
+                                    }
                                 }
                             }
                         }
                     }
+                    eventType = parser.next()
                 }
-                eventType = parser.next()
-            }
 
-            // Flush remaining
-            if (channelBatch.isNotEmpty()) {
-                writeMutex.withLock {
-                    db.withTransaction { dao.insertChannelsIgnore(channelBatch) }
+                // Flush remaining
+                if (channelBatch.isNotEmpty()) {
+                    writeMutex.withLock {
+                        db.withTransaction { dao.insertChannelsIgnore(channelBatch) }
+                    }
                 }
-            }
-            if (programmeBatch.isNotEmpty()) {
-                writeMutex.withLock {
-                    db.withTransaction { dao.insertProgrammes(programmeBatch) }
+                if (programmeBatch.isNotEmpty()) {
+                    writeMutex.withLock {
+                        db.withTransaction { dao.insertProgrammes(programmeBatch) }
+                    }
                 }
+
+                val stats = IngestionStats(channelCount, programmeCount)
+                lastIngestionStats = stats
+                stats
+            } catch (e: OutOfMemoryError) {
+                System.gc()
+                val msg = "Out of memory during stream indexing ($channelCount ch, $programmeCount prg ingested before failure)"
+                Log.e(TAG, msg, e)
+                lastIngestionStats = IngestionStats(channelCount, programmeCount)
+                throw java.io.IOException(msg, e)
+            } catch (e: Exception) {
+                val msg = "Stream indexing failed: ${e.message} ($channelCount ch, $programmeCount prg ingested before failure)"
+                Log.e(TAG, msg, e)
+                lastIngestionStats = IngestionStats(channelCount, programmeCount)
+                throw e
             }
-
-            val stats = IngestionStats(channelCount, programmeCount)
-            lastIngestionStats = stats
-            stats
-
-        } catch (e: OutOfMemoryError) {
-            System.gc()
-            val msg = "Out of memory during stream indexing ($channelCount ch, $programmeCount prg ingested before failure)"
-            Log.e(TAG, msg, e)
-            lastIngestionStats = IngestionStats(channelCount, programmeCount)
-            throw java.io.IOException(msg, e)
-        } catch (e: Exception) {
-            val msg = "Stream indexing failed: ${e.message} ($channelCount ch, $programmeCount prg ingested before failure)"
-            Log.e(TAG, msg, e)
-            lastIngestionStats = IngestionStats(channelCount, programmeCount)
-            throw e
         }
-    }
 
     data class XtreamStreamInfo(
         val streamId: Int,
         val name: String,
         val epgChannelId: String?,
-        val iconUrl: String?
+        val iconUrl: String?,
     )
 
     /**
@@ -341,7 +349,7 @@ class EpgIndexer private constructor(private val context: Context) {
     suspend fun ingestFromXtreamEpg(
         epgByStreamId: Map<Int, EpgResponse>,
         streamInfo: Map<Int, XtreamStreamInfo>,
-        providerId: Long
+        providerId: Long,
     ) = withContext(Dispatchers.IO) {
         if (epgByStreamId.isEmpty()) return@withContext
 
@@ -354,20 +362,21 @@ class EpgIndexer private constructor(private val context: Context) {
 
             // Upsert EpgSource
             val sourceUrl = "xtream://$providerId"
-            val (sourceId, existingSource) = writeMutex.withLock {
-                val existing = sourceDao.getSourceByUrl(sourceUrl)
-                if (existing != null) {
-                    existing.id to existing
-                } else {
-                    sourceDao.insertSource(
-                        EpgSourceEntity(
-                            url = sourceUrl,
-                            label = "Xtream Provider $providerId",
-                            ingestMethod = "XTREAM_API"
-                        )
-                    ) to null
+            val (sourceId, existingSource) =
+                writeMutex.withLock {
+                    val existing = sourceDao.getSourceByUrl(sourceUrl)
+                    if (existing != null) {
+                        existing.id to existing
+                    } else {
+                        sourceDao.insertSource(
+                            EpgSourceEntity(
+                                url = sourceUrl,
+                                label = "Xtream Provider $providerId",
+                                ingestMethod = "XTREAM_API",
+                            ),
+                        ) to null
+                    }
                 }
-            }
 
             // Clean slate for this source in the index
             writeMutex.withLock {
@@ -391,8 +400,8 @@ class EpgIndexer private constructor(private val context: Context) {
                         xmltvId = channelId,
                         displayName = info.name,
                         iconUrl = info.iconUrl,
-                        sourceId = sourceId
-                    )
+                        sourceId = sourceId,
+                    ),
                 )
 
                 for (prog in epgResponse.listings) {
@@ -405,8 +414,8 @@ class EpgIndexer private constructor(private val context: Context) {
                             description = prog.description,
                             startEpoch = prog.startTime,
                             endEpoch = prog.endTime,
-                            sourceId = sourceId
-                        )
+                            sourceId = sourceId,
+                        ),
                     )
                     totalProgrammes++
 
@@ -440,7 +449,7 @@ class EpgIndexer private constructor(private val context: Context) {
                     programmes = totalProgrammes,
                     downloadBytes = 0,
                     ingestMethod = "XTREAM_API",
-                    ingestionDurationMs = System.currentTimeMillis() - ingestStartMs
+                    ingestionDurationMs = System.currentTimeMillis() - ingestStartMs,
                 )
             }
 
@@ -455,43 +464,44 @@ class EpgIndexer private constructor(private val context: Context) {
     /**
      * Rebuild FTS index and update metadata/state from current DB contents.
      */
-    suspend fun rebuildFtsAndUpdateState() = withContext(Dispatchers.IO) {
-        try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
+    suspend fun rebuildFtsAndUpdateState() =
+        withContext(Dispatchers.IO) {
+            try {
+                val db = EpgIndexDatabase.getInstance(context)
+                val dao = db.epgIndexDao()
 
-
-            writeMutex.withLock {
-                db.openHelper.writableDatabase.execSQL(
-                    "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')"
-                )
-
-                val now = System.currentTimeMillis()
-                val finalChannelCount = dao.getChannelCount()
-                val finalProgrammeCount = dao.getProgrammeCount()
-
-                dao.insertMetadata(
-                    EpgIndexMetadata(
-                        fileSizeBytes = 0,
-                        fileLastModifiedMs = 0,
-                        indexedAtMs = now,
-                        channelCount = finalChannelCount,
-                        programmeCount = finalProgrammeCount,
-                        timezoneOffsetHours = 0
+                writeMutex.withLock {
+                    db.openHelper.writableDatabase.execSQL(
+                        "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')",
                     )
-                )
 
-                _state.value = EpgIndexState.Indexed(
-                    channelCount = finalChannelCount,
-                    programmeCount = finalProgrammeCount,
-                    indexedAtMs = now
-                )
+                    val now = System.currentTimeMillis()
+                    val finalChannelCount = dao.getChannelCount()
+                    val finalProgrammeCount = dao.getProgrammeCount()
+
+                    dao.insertMetadata(
+                        EpgIndexMetadata(
+                            fileSizeBytes = 0,
+                            fileLastModifiedMs = 0,
+                            indexedAtMs = now,
+                            channelCount = finalChannelCount,
+                            programmeCount = finalProgrammeCount,
+                            timezoneOffsetHours = 0,
+                        ),
+                    )
+
+                    _state.value =
+                        EpgIndexState.Indexed(
+                            channelCount = finalChannelCount,
+                            programmeCount = finalProgrammeCount,
+                            indexedAtMs = now,
+                        )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
+                _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild failed")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
-            _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild failed")
         }
-    }
 
     /**
      * Prepare the database for a bulk ingestion session:
@@ -503,24 +513,25 @@ class EpgIndexer private constructor(private val context: Context) {
      *
      * Always call endBulkIngestion() in a finally block to restore state.
      */
-    suspend fun beginBulkIngestion() = withContext(Dispatchers.IO) {
-        try {
-            val db = EpgIndexDatabase.getInstance(context)
-            db.openHelper.writableDatabase.apply {
-                FTS_TRIGGER_NAMES.forEach { name ->
-                    execSQL("DROP TRIGGER IF EXISTS `$name`")
+    suspend fun beginBulkIngestion() =
+        withContext(Dispatchers.IO) {
+            try {
+                val db = EpgIndexDatabase.getInstance(context)
+                db.openHelper.writableDatabase.apply {
+                    FTS_TRIGGER_NAMES.forEach { name ->
+                        execSQL("DROP TRIGGER IF EXISTS `$name`")
+                    }
+                    BULK_DROP_INDEX_NAMES.forEach { name ->
+                        execSQL("DROP INDEX IF EXISTS `$name`")
+                    }
+                    execSQL("PRAGMA synchronous = OFF")
+                    execSQL("PRAGMA temp_store = MEMORY")
+                    execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
                 }
-                BULK_DROP_INDEX_NAMES.forEach { name ->
-                    execSQL("DROP INDEX IF EXISTS `$name`")
-                }
-                execSQL("PRAGMA synchronous = OFF")
-                execSQL("PRAGMA temp_store = MEMORY")
-                execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
+            } catch (e: Exception) {
+                Log.w(TAG, "beginBulkIngestion setup failed (non-fatal): ${e.message}", e)
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "beginBulkIngestion setup failed (non-fatal): ${e.message}", e)
         }
-    }
 
     /**
      * Restore the database after a bulk ingestion session:
@@ -530,121 +541,130 @@ class EpgIndexer private constructor(private val context: Context) {
      * Call this before rebuildFtsAndUpdateState() so the triggers are in place
      * for all incremental updates after the session completes.
      */
-    suspend fun endBulkIngestion() = withContext(Dispatchers.IO) {
-        try {
-            val db = EpgIndexDatabase.getInstance(context)
-            db.openHelper.writableDatabase.apply {
-                // Rebuild query indexes before restoring normal mode
-                BULK_DROP_INDEX_DDL.forEach { ddl -> execSQL(ddl) }
-                execSQL("PRAGMA synchronous = NORMAL")
-                execSQL("PRAGMA temp_store = DEFAULT")
-                execSQL("PRAGMA cache_size = -8000") // restore 8 MB
-                FTS_TRIGGER_DDL.forEach { ddl -> execSQL(ddl) }
+    suspend fun endBulkIngestion() =
+        withContext(Dispatchers.IO) {
+            try {
+                val db = EpgIndexDatabase.getInstance(context)
+                db.openHelper.writableDatabase.apply {
+                    // Rebuild query indexes before restoring normal mode
+                    BULK_DROP_INDEX_DDL.forEach { ddl -> execSQL(ddl) }
+                    execSQL("PRAGMA synchronous = NORMAL")
+                    execSQL("PRAGMA temp_store = DEFAULT")
+                    execSQL("PRAGMA cache_size = -8000") // restore 8 MB
+                    FTS_TRIGGER_DDL.forEach { ddl -> execSQL(ddl) }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "endBulkIngestion teardown failed (non-fatal): ${e.message}", e)
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "endBulkIngestion teardown failed (non-fatal): ${e.message}", e)
         }
-    }
 
     /**
      * Clear all EPG data from the database and reset state to NotIndexed.
      * User-configured sources are now stored in SettingsDatabase and are preserved.
      */
-    suspend fun clearAll() = withContext(Dispatchers.IO) {
-        try {
-            writeMutex.withLock {
-                // SettingsDatabase handles sources persistently. 
-                // We only need to destroy and recreate the indexing database.
-                EpgIndexDatabase.destroy(context)
+    suspend fun clearAll() =
+        withContext(Dispatchers.IO) {
+            try {
+                writeMutex.withLock {
+                    // SettingsDatabase handles sources persistently.
+                    // We only need to destroy and recreate the indexing database.
+                    EpgIndexDatabase.destroy(context)
 
-                // Reopen: Room recreates all tables from schema
-                EpgIndexDatabase.getInstance(context)
+                    // Reopen: Room recreates all tables from schema
+                    EpgIndexDatabase.getInstance(context)
 
-                _state.value = EpgIndexState.NotIndexed
+                    _state.value = EpgIndexState.NotIndexed
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to clear EPG data: ${e.message}", e)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to clear EPG data: ${e.message}", e)
         }
-    }
 
     /**
      * Delete programmes older than the given epoch and rebuild FTS.
      */
-    suspend fun countStaleProgrammes(cutoffEpoch: Long): Int = withContext(Dispatchers.IO) {
-        try {
-            EpgIndexDatabase.getInstance(context).epgIndexDao().countStaleProgrammes(cutoffEpoch)
-        } catch (e: Exception) {
-            0
-        }
-    }
-
-    suspend fun purgeOldProgrammes(cutoffEpoch: Long): Int = withContext(Dispatchers.IO) {
-        try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
-
-            writeMutex.withLock {
-                val countBefore = dao.getProgrammeCount()
-                dao.deleteStaleProgrammes(cutoffEpoch)
-
-                db.openHelper.writableDatabase.execSQL(
-                    "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')"
-                )
-
-                val now = System.currentTimeMillis()
-                val channelCount = dao.getChannelCount()
-                val programmeCount = dao.getProgrammeCount()
-                val deleted = countBefore - programmeCount
-
-                dao.insertMetadata(
-                    EpgIndexMetadata(
-                        fileSizeBytes = 0,
-                        fileLastModifiedMs = 0,
-                        indexedAtMs = now,
-                        channelCount = channelCount,
-                        programmeCount = programmeCount,
-                        timezoneOffsetHours = 0
-                    )
-                )
-
-                _state.value = if (programmeCount > 0) {
-                    EpgIndexState.Indexed(channelCount, programmeCount, now)
-                } else {
-                    EpgIndexState.NotIndexed
-                }
-
-                incrementalVacuum()
-                deleted
+    suspend fun countStaleProgrammes(cutoffEpoch: Long): Int =
+        withContext(Dispatchers.IO) {
+            try {
+                EpgIndexDatabase.getInstance(context).epgIndexDao().countStaleProgrammes(cutoffEpoch)
+            } catch (e: Exception) {
+                0
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Purge failed: ${e.message}", e)
-            0
         }
-    }
+
+    suspend fun purgeOldProgrammes(cutoffEpoch: Long): Int =
+        withContext(Dispatchers.IO) {
+            try {
+                val db = EpgIndexDatabase.getInstance(context)
+                val dao = db.epgIndexDao()
+
+                writeMutex.withLock {
+                    val countBefore = dao.getProgrammeCount()
+                    dao.deleteStaleProgrammes(cutoffEpoch)
+
+                    db.openHelper.writableDatabase.execSQL(
+                        "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')",
+                    )
+
+                    val now = System.currentTimeMillis()
+                    val channelCount = dao.getChannelCount()
+                    val programmeCount = dao.getProgrammeCount()
+                    val deleted = countBefore - programmeCount
+
+                    dao.insertMetadata(
+                        EpgIndexMetadata(
+                            fileSizeBytes = 0,
+                            fileLastModifiedMs = 0,
+                            indexedAtMs = now,
+                            channelCount = channelCount,
+                            programmeCount = programmeCount,
+                            timezoneOffsetHours = 0,
+                        ),
+                    )
+
+                    _state.value =
+                        if (programmeCount > 0) {
+                            EpgIndexState.Indexed(channelCount, programmeCount, now)
+                        } else {
+                            EpgIndexState.NotIndexed
+                        }
+
+                    incrementalVacuum()
+                    deleted
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Purge failed: ${e.message}", e)
+                0
+            }
+        }
 
     /**
      * Reclaim free pages left by delete-heavy operations.
      * Requires auto_vacuum=INCREMENTAL (set in EpgIndexDatabase onOpen callback).
      * No page limit = free all available pages.
      */
+
     /**
      * Get the number of configured EPG sources (regardless of index state).
      */
-    suspend fun getSourceCount(): Int = withContext(Dispatchers.IO) {
-        try {
-            SettingsDatabase.getInstance(context).epgSourceDao().getSourceCount()
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to get source count: ${e.message}")
-            0
+    suspend fun getSourceCount(): Int =
+        withContext(Dispatchers.IO) {
+            try {
+                SettingsDatabase.getInstance(context).epgSourceDao().getSourceCount()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to get source count: ${e.message}")
+                0
+            }
         }
-    }
 
     fun incrementalVacuum() {
         try {
             val db = EpgIndexDatabase.getInstance(context)
             // Use query() instead of execSQL() — Android's SQLite wrapper rejects
             // execSQL for PRAGMAs that may return results.
-            db.openHelper.writableDatabase.query("PRAGMA incremental_vacuum").close()
+            db.openHelper.writableDatabase
+                .query("PRAGMA incremental_vacuum")
+                .close()
         } catch (e: Exception) {
             Log.w(TAG, "Incremental vacuum failed: ${e.message}", e)
         }

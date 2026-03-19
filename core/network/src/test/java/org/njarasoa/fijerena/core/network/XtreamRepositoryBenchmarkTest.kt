@@ -18,7 +18,6 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
 import kotlin.system.measureNanoTime
 
 class XtreamRepositoryBenchmarkTest {
-
     private lateinit var context: Context
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var accountManager: AccountManager
@@ -28,7 +27,11 @@ class XtreamRepositoryBenchmarkTest {
     private lateinit var seriesDao: XtreamSeriesDao
     private lateinit var repository: XtreamRepository
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
     private val KEY_WATCH_HISTORY = "watch_history"
 
     @Before
@@ -61,18 +64,19 @@ class XtreamRepositoryBenchmarkTest {
     fun benchmarkGetWatchHistory() {
         // Create a large watch history
         val historySize = 25 // Default size
-        val history = (1..historySize).map {
-            WatchedStream(
-                streamId = it,
-                streamName = "Stream $it",
-                categoryId = "Category $it",
-                contentType = "LIVE_TV",
-                timestamp = System.currentTimeMillis(),
-                playbackPosition = 1000L * it,
-                duration = 2000L * it,
-                isCompleted = false
-            )
-        }
+        val history =
+            (1..historySize).map {
+                WatchedStream(
+                    streamId = it,
+                    streamName = "Stream $it",
+                    categoryId = "Category $it",
+                    contentType = "LIVE_TV",
+                    timestamp = System.currentTimeMillis(),
+                    playbackPosition = 1000L * it,
+                    duration = 2000L * it,
+                    isCompleted = false,
+                )
+            }
         val historyJson = json.encodeToString(history)
 
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
@@ -86,11 +90,12 @@ class XtreamRepositoryBenchmarkTest {
 
         // Measure
         val iterations = 50000
-        val time = measureNanoTime {
-            repeat(iterations) {
-                repository.getWatchHistory()
+        val time =
+            measureNanoTime {
+                repeat(iterations) {
+                    repository.getWatchHistory()
+                }
             }
-        }
 
         println("BENCHMARK_RESULT: Time for $iterations iterations: ${time / 1_000_000} ms")
         println("BENCHMARK_RESULT: Average time per call: ${time.toDouble() / iterations} ns")

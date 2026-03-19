@@ -11,9 +11,6 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.exoplayer.Renderer
-import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
-import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.CoroutineScope
@@ -75,7 +72,11 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _measuredFps = MutableStateFlow(0f)
     val measuredFps: StateFlow<Float> = _measuredFps.asStateFlow()
 
-    private val _audioDspStats = MutableStateFlow(org.njarasoa.fijerena.core.player.model.AudioDspStats())
+    private val _audioDspStats =
+        MutableStateFlow(
+            org.njarasoa.fijerena.core.player.model
+                .AudioDspStats(),
+        )
     val audioDspStats: StateFlow<org.njarasoa.fijerena.core.player.model.AudioDspStats> = _audioDspStats.asStateFlow()
 
     private var onPositionSaveListener: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null
@@ -90,7 +91,9 @@ class StreamingPlaybackService : MediaSessionService() {
 
     // Audio enhancement
     val nightModeManager = NightModeManager()
-    val nightModeProcessor = org.njarasoa.fijerena.core.player.audio.NightModeProcessor()
+    val nightModeProcessor =
+        org.njarasoa.fijerena.core.player.audio
+            .NightModeProcessor()
 
     override fun onCreate() {
         super.onCreate()
@@ -125,7 +128,11 @@ class StreamingPlaybackService : MediaSessionService() {
         // If Night Mode is desired but the HAL (DynamicsProcessing) is NOT active,
         // we enable our internal app-level processor instead.
         val nmDesired = nightModeManager.enabled
-        val isMobile = org.njarasoa.fijerena.core.player.device.DeviceDetector.detect().deviceType == org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE
+        val isMobile =
+            org.njarasoa.fijerena.core.player.device.DeviceDetector
+                .detect()
+                .deviceType ==
+                org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE
 
         if (nmDesired) {
             // On mobile, always use internal processor for reliability (HAL is often buggy).
@@ -135,110 +142,125 @@ class StreamingPlaybackService : MediaSessionService() {
             nightModeProcessor.enabled = false
         }
 
-        _audioDspStats.value = org.njarasoa.fijerena.core.player.model.AudioDspStats(
-            nightModeEnabled = nightModeManager.enabled,
-            nmEncoding = nightModeProcessor.configuredEncoding,
-            nmEnabled = nightModeProcessor.enabled,
-            nmCallCount = nightModeProcessor.queueInputCallCount
-        )
+        _audioDspStats.value =
+            org.njarasoa.fijerena.core.player.model.AudioDspStats(
+                nightModeEnabled = nightModeManager.enabled,
+                nmEncoding = nightModeProcessor.configuredEncoding,
+                nmEnabled = nightModeProcessor.enabled,
+                nmCallCount = nightModeProcessor.queueInputCallCount,
+            )
     }
 
     private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {
         val ffmpegAvailable = FfmpegLibrary.isAvailable()
         Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
 
-        val renderersFactory = DefaultRenderersFactory(this)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        val renderersFactory =
+            DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 
         val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
         val cellularVodMultiplier = prefs.getFloat("cellular_vod_multiplier", 1.0f)
 
-        val loadControl = AdaptiveLoadControl(
-            contentType = contentType,
-            cellularLiveMultiplier = cellularLiveMultiplier,
-            cellularVodMultiplier = cellularVodMultiplier
-        )
+        val loadControl =
+            AdaptiveLoadControl(
+                contentType = contentType,
+                cellularLiveMultiplier = cellularLiveMultiplier,
+                cellularVodMultiplier = cellularVodMultiplier,
+            )
         adaptiveLoadControl = loadControl
 
-        val bm = androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(this)
+        val bm =
+            androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+                .getSingletonInstance(this)
         bandwidthMeter = bm
 
         // Build ExoPlayer with standard factory
-        val playerBuilder = androidx.media3.exoplayer.ExoPlayer.Builder(this)
-            .setRenderersFactory(renderersFactory)
-            .setLoadControl(loadControl)
-            .setBandwidthMeter(bm)
-            .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-                    .setUsage(C.USAGE_MEDIA)
-                    .build(),
-                true
-            )
-            .setWakeMode(C.WAKE_MODE_NETWORK)
+        val playerBuilder =
+            androidx.media3.exoplayer.ExoPlayer
+                .Builder(this)
+                .setRenderersFactory(renderersFactory)
+                .setLoadControl(loadControl)
+                .setBandwidthMeter(bm)
+                .setTrackSelector(PlayerConfigFactory.createTrackSelector(this))
+                .setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                        .setUsage(C.USAGE_MEDIA)
+                        .build(),
+                    true,
+                ).setWakeMode(C.WAKE_MODE_NETWORK)
 
         val player = playerBuilder.build()
 
         mediaSession = MediaSession.Builder(this, player).build()
 
-        playerListener = PlayerListener(
-            onStateChanged = { newState ->
-                if (newState is PlaybackState.Playing) {
-                    liveRetryCount = 0
-                }
-                _playbackState.value = newState
-            },
-            onWakeLockRequired = {
-                acquireWakeLock()
-            },
-            player = player,
-            onPositionSave = { position, duration, isPaused, audioIndex, subtitleIndex ->
-                onPositionSaveListener?.invoke(position, duration, isPaused, audioIndex, subtitleIndex)
-            },
-            onStreamEndedOrError = { errorMessage ->
-                handleStreamEndedOrError(errorMessage)
-            }
-        )
+        playerListener =
+            PlayerListener(
+                onStateChanged = { newState ->
+                    if (newState is PlaybackState.Playing) {
+                        liveRetryCount = 0
+                    }
+                    _playbackState.value = newState
+                },
+                onWakeLockRequired = {
+                    acquireWakeLock()
+                },
+                player = player,
+                onPositionSave = { position, duration, isPaused, audioIndex, subtitleIndex ->
+                    onPositionSaveListener?.invoke(position, duration, isPaused, audioIndex, subtitleIndex)
+                },
+                onStreamEndedOrError = { errorMessage ->
+                    handleStreamEndedOrError(errorMessage)
+                },
+            )
         player.addListener(playerListener!!)
 
         // Night Mode: attach DynamicsProcessing to the player's audio session
-        player.addListener(object : Player.Listener {
-            override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                // On mobile, we prefer the internal NightModeProcessor for reliability.
-                // Only attach the HAL (DynamicsProcessing) on non-mobile devices (TV).
-                val isTv = org.njarasoa.fijerena.core.player.device.DeviceDetector.detect().deviceType != org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE
-                if (isTv) {
-                    nightModeManager.attach(audioSessionId)
-                } else {
-                    Log.d(TAG, "Mobile device detected, skipping HAL Night Mode attachment in favor of internal processor.")
+        player.addListener(
+            object : Player.Listener {
+                override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    // On mobile, we prefer the internal NightModeProcessor for reliability.
+                    // Only attach the HAL (DynamicsProcessing) on non-mobile devices (TV).
+                    val isTv =
+                        org.njarasoa.fijerena.core.player.device.DeviceDetector
+                            .detect()
+                            .deviceType !=
+                            org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE
+                    if (isTv) {
+                        nightModeManager.attach(audioSessionId)
+                    } else {
+                        Log.d(TAG, "Mobile device detected, skipping HAL Night Mode attachment in favor of internal processor.")
+                    }
                 }
-            }
-        })
-
-        analyticsListener = PerformanceAnalyticsListener(
-            onMetricsUpdate = { dropped, total ->
-                _droppedFrames.value = dropped
-                _totalFrames.value = total
             },
-            onRebuffer = { count, totalTimeMs ->
-                _rebufferCount.value = count
-                _totalRebufferTimeMs.value = totalTimeMs
-            },
-            onExhaustionRebuffer = { count ->
-                _exhaustionRebufferCount.value = count
-            },
-            onBandwidthUpdate = { bitrateEstimate ->
-                _bandwidthEstimate.value = bitrateEstimate
-            },
-            onQualitySwitch = { count ->
-                _qualitySwitchCount.value = count
-            },
-            onFpsUpdate = { fps ->
-                _measuredFps.value = fps
-            }
         )
+
+        analyticsListener =
+            PerformanceAnalyticsListener(
+                onMetricsUpdate = { dropped, total ->
+                    _droppedFrames.value = dropped
+                    _totalFrames.value = total
+                },
+                onRebuffer = { count, totalTimeMs ->
+                    _rebufferCount.value = count
+                    _totalRebufferTimeMs.value = totalTimeMs
+                },
+                onExhaustionRebuffer = { count ->
+                    _exhaustionRebufferCount.value = count
+                },
+                onBandwidthUpdate = { bitrateEstimate ->
+                    _bandwidthEstimate.value = bitrateEstimate
+                },
+                onQualitySwitch = { count ->
+                    _qualitySwitchCount.value = count
+                },
+                onFpsUpdate = { fps ->
+                    _measuredFps.value = fps
+                },
+            )
         player.addAnalyticsListener(analyticsListener!!)
     }
 
@@ -252,11 +274,16 @@ class StreamingPlaybackService : MediaSessionService() {
         initializePlayer(contentType)
     }
 
-    fun setPositionSaveListener(listener: (position: Long, duration: Long, isPaused: Boolean, audioIndex: Int?, subtitleIndex: Int?) -> Unit) {
+    fun setPositionSaveListener(
+        listener: (position: Long, duration: Long, isPaused: Boolean, audioIndex: Int?, subtitleIndex: Int?) -> Unit,
+    ) {
         onPositionSaveListener = listener
     }
 
-    fun playStream(metadata: PlayerMetadata, startPositionMs: Long = 0L) {
+    fun playStream(
+        metadata: PlayerMetadata,
+        startPositionMs: Long = 0L,
+    ) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         cancelPendingRetry()
         playerListener?.resetErrorState()
@@ -270,14 +297,15 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
 
-        val mediaSource = StreamingMediaSourceFactory.createMediaSource(
-            context = this,
-            streamUrl = metadata.streamUrl,
-            headers = metadata.headers,
-            isLive = metadata.isLive,
-            onRetry = { _streamRetryCount.value++ },
-            transferListener = bandwidthMeter
-        )
+        val mediaSource =
+            StreamingMediaSourceFactory.createMediaSource(
+                context = this,
+                streamUrl = metadata.streamUrl,
+                headers = metadata.headers,
+                isLive = metadata.isLive,
+                onRetry = { _streamRetryCount.value++ },
+                transferListener = bandwidthMeter,
+            )
 
         player.setMediaSource(mediaSource)
         if (startPositionMs > 0) {
@@ -292,10 +320,11 @@ class StreamingPlaybackService : MediaSessionService() {
         val metadata = _currentMetadata.value
         if (!metadata.isLive || liveRetryCount >= MAX_LIVE_RETRIES) {
             if (metadata.isLive && liveRetryCount >= MAX_LIVE_RETRIES) {
-                _playbackState.value = PlaybackState.Error(
-                    "Live stream unavailable after $MAX_LIVE_RETRIES retries. " +
-                    "The channel may be offline."
-                )
+                _playbackState.value =
+                    PlaybackState.Error(
+                        "Live stream unavailable after $MAX_LIVE_RETRIES retries. " +
+                            "The channel may be offline.",
+                    )
             }
             return
         }
@@ -307,22 +336,24 @@ class StreamingPlaybackService : MediaSessionService() {
 
         _playbackState.value = PlaybackState.Buffering
 
-        val retryRunnable = Runnable {
-            val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@Runnable
-            playerListener?.resetErrorState()
+        val retryRunnable =
+            Runnable {
+                val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@Runnable
+                playerListener?.resetErrorState()
 
-            val mediaSource = StreamingMediaSourceFactory.createMediaSource(
-                context = this,
-                streamUrl = metadata.streamUrl,
-                headers = metadata.headers,
-                isLive = metadata.isLive,
-                onRetry = { _streamRetryCount.value++ }
-            )
+                val mediaSource =
+                    StreamingMediaSourceFactory.createMediaSource(
+                        context = this,
+                        streamUrl = metadata.streamUrl,
+                        headers = metadata.headers,
+                        isLive = metadata.isLive,
+                        onRetry = { _streamRetryCount.value++ },
+                    )
 
-            player.setMediaSource(mediaSource)
-            player.playWhenReady = true
-            player.prepare()
-        }
+                player.setMediaSource(mediaSource)
+                player.playWhenReady = true
+                player.prepare()
+            }
         pendingRetry = retryRunnable
         mainHandler.postDelayed(retryRunnable, delayMs)
     }
@@ -391,8 +422,8 @@ class StreamingPlaybackService : MediaSessionService() {
                             channelCount = format.channelCount,
                             sampleRate = format.sampleRate,
                             bitrate = format.bitrate,
-                            isSelected = isSelected
-                        )
+                            isSelected = isSelected,
+                        ),
                     )
                 }
             }
@@ -427,8 +458,8 @@ class StreamingPlaybackService : MediaSessionService() {
                             language = format.language ?: "Unknown",
                             label = format.label ?: format.language ?: "Subtitle ${trackIndex + 1}",
                             mimeType = format.sampleMimeType ?: "unknown",
-                            isSelected = isSelected
-                        )
+                            isSelected = isSelected,
+                        ),
                     )
                 }
             }
@@ -448,7 +479,10 @@ class StreamingPlaybackService : MediaSessionService() {
         }
     }
 
-    fun selectAudioTrack(groupIndex: Int, trackIndex: Int) {
+    fun selectAudioTrack(
+        groupIndex: Int,
+        trackIndex: Int,
+    ) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
 
@@ -458,15 +492,17 @@ class StreamingPlaybackService : MediaSessionService() {
         val trackGroup = currentTracks.groups[groupIndex]
         if (trackIndex < 0 || trackIndex >= trackGroup.length) return
 
-        val trackSelectionOverride = androidx.media3.common.TrackSelectionOverride(
-            trackGroup.mediaTrackGroup,
-            listOf(trackIndex)
-        )
+        val trackSelectionOverride =
+            androidx.media3.common.TrackSelectionOverride(
+                trackGroup.mediaTrackGroup,
+                listOf(trackIndex),
+            )
 
-        val parameters = trackSelector.parameters
-            .buildUpon()
-            .setOverrideForType(trackSelectionOverride)
-            .build()
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                .setOverrideForType(trackSelectionOverride)
+                .build()
 
         trackSelector.parameters = parameters
 
@@ -474,7 +510,10 @@ class StreamingPlaybackService : MediaSessionService() {
         onPositionSaveListener?.invoke(player.currentPosition, player.duration, !player.isPlaying, trackIndex, null)
     }
 
-    fun selectSubtitleTrack(groupIndex: Int, trackIndex: Int) {
+    fun selectSubtitleTrack(
+        groupIndex: Int,
+        trackIndex: Int,
+    ) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
 
@@ -484,15 +523,17 @@ class StreamingPlaybackService : MediaSessionService() {
         val trackGroup = currentTracks.groups[groupIndex]
         if (trackIndex < 0 || trackIndex >= trackGroup.length) return
 
-        val trackSelectionOverride = androidx.media3.common.TrackSelectionOverride(
-            trackGroup.mediaTrackGroup,
-            listOf(trackIndex)
-        )
+        val trackSelectionOverride =
+            androidx.media3.common.TrackSelectionOverride(
+                trackGroup.mediaTrackGroup,
+                listOf(trackIndex),
+            )
 
-        val parameters = trackSelector.parameters
-            .buildUpon()
-            .setOverrideForType(trackSelectionOverride)
-            .build()
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                .setOverrideForType(trackSelectionOverride)
+                .build()
 
         trackSelector.parameters = parameters
 
@@ -504,10 +545,11 @@ class StreamingPlaybackService : MediaSessionService() {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
 
-        val parameters = trackSelector.parameters
-            .buildUpon()
-            .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
-            .build()
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
+                .build()
 
         trackSelector.parameters = parameters
 
@@ -515,7 +557,10 @@ class StreamingPlaybackService : MediaSessionService() {
         onPositionSaveListener?.invoke(player.currentPosition, player.duration, !player.isPlaying, null, -1)
     }
 
-    fun selectVideoQuality(groupIndex: Int, trackIndex: Int) {
+    fun selectVideoQuality(
+        groupIndex: Int,
+        trackIndex: Int,
+    ) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
 
@@ -525,15 +570,17 @@ class StreamingPlaybackService : MediaSessionService() {
         val trackGroup = currentTracks.groups[groupIndex]
         if (trackIndex < 0 || trackIndex >= trackGroup.length) return
 
-        val trackSelectionOverride = androidx.media3.common.TrackSelectionOverride(
-            trackGroup.mediaTrackGroup,
-            listOf(trackIndex)
-        )
+        val trackSelectionOverride =
+            androidx.media3.common.TrackSelectionOverride(
+                trackGroup.mediaTrackGroup,
+                listOf(trackIndex),
+            )
 
-        val parameters = trackSelector.parameters
-            .buildUpon()
-            .setOverrideForType(trackSelectionOverride)
-            .build()
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                .setOverrideForType(trackSelectionOverride)
+                .build()
 
         trackSelector.parameters = parameters
     }
@@ -542,31 +589,30 @@ class StreamingPlaybackService : MediaSessionService() {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
         val trackSelector = player.trackSelector as? androidx.media3.exoplayer.trackselection.DefaultTrackSelector ?: return
 
-        val parameters = trackSelector.parameters
-            .buildUpon()
-            .clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO)
-            .build()
+        val parameters =
+            trackSelector.parameters
+                .buildUpon()
+                .clearOverridesOfType(androidx.media3.common.C.TRACK_TYPE_VIDEO)
+                .build()
 
         trackSelector.parameters = parameters
     }
 
-    fun getPlayer(): androidx.media3.common.Player? {
-        return mediaSession?.player
-    }
+    fun getPlayer(): androidx.media3.common.Player? = mediaSession?.player
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        return mediaSession
-    }
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
     private fun acquireWakeLock() {
         if (wakeLock == null) {
             val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-            wakeLock = powerManager.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK,
-                "StreamingPlayback:WakeLock"
-            ).apply {
-                setReferenceCounted(false)
-            }
+            wakeLock =
+                powerManager
+                    .newWakeLock(
+                        PowerManager.PARTIAL_WAKE_LOCK,
+                        "StreamingPlayback:WakeLock",
+                    ).apply {
+                        setReferenceCounted(false)
+                    }
         }
         if (wakeLock?.isHeld == false) {
             wakeLock?.acquire()
@@ -612,7 +658,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onWakeLockRequired: () -> Unit,
         private val player: Player,
         private val onPositionSave: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null,
-        private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {}
+        private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {},
     ) : Player.Listener {
         private var isInErrorState = false
         private var lastSavedPosition = 0L
@@ -621,6 +667,7 @@ class StreamingPlaybackService : MediaSessionService() {
         fun resetErrorState() {
             isInErrorState = false
         }
+
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_READY) {
                 val currentPosition = player.currentPosition
@@ -637,7 +684,10 @@ class StreamingPlaybackService : MediaSessionService() {
             updatePlaybackState()
         }
 
-        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        override fun onPlayWhenReadyChanged(
+            playWhenReady: Boolean,
+            reason: Int,
+        ) {
             super.onPlayWhenReadyChanged(playWhenReady, reason)
             if (playWhenReady) {
                 onWakeLockRequired()
@@ -666,12 +716,13 @@ class StreamingPlaybackService : MediaSessionService() {
             onStreamEndedOrError(errorMessage)
         }
 
-        private fun parsePlaybackError(error: PlaybackException): String {
-            return when (error.errorCode) {
+        private fun parsePlaybackError(error: PlaybackException): String =
+            when (error.errorCode) {
                 PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
                 PlaybackException.ERROR_CODE_DECODING_FAILED,
                 PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
-                PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED -> {
+                PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+                -> {
                     val codecInfo = extractCodecInfo(error.message ?: "")
                     if (codecInfo.isNotEmpty()) {
                         "Video codec not supported on this device: $codecInfo"
@@ -680,7 +731,8 @@ class StreamingPlaybackService : MediaSessionService() {
                     }
                 }
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> {
+                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+                -> {
                     "Network connection failed. Check your internet connection."
                 }
                 PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
@@ -700,18 +752,19 @@ class StreamingPlaybackService : MediaSessionService() {
                     "Playback timeout. The stream may be too slow or unavailable."
                 }
                 PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
-                PlaybackException.ERROR_CODE_IO_NO_PERMISSION -> {
+                PlaybackException.ERROR_CODE_IO_NO_PERMISSION,
+                -> {
                     "Stream not found or access denied."
                 }
                 PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
-                PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED -> {
+                PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+                -> {
                     "Invalid stream format. The stream may be corrupted."
                 }
                 else -> {
                     "Playback error: ${error.errorCodeName}"
                 }
             }
-        }
 
         private fun extractHttpStatusCode(error: PlaybackException): Int? {
             var cause: Throwable? = error.cause
@@ -737,28 +790,29 @@ class StreamingPlaybackService : MediaSessionService() {
         private fun updatePlaybackState() {
             if (isInErrorState) return
 
-            val state = when (player.playbackState) {
-                Player.STATE_IDLE -> PlaybackState.Idle
-                Player.STATE_BUFFERING -> PlaybackState.Buffering
-                Player.STATE_READY -> {
-                    if (player.playWhenReady) {
-                        PlaybackState.Playing(
-                            position = player.currentPosition,
-                            duration = player.duration.coerceAtLeast(0L)
-                        )
-                    } else {
-                        PlaybackState.Paused(
-                            position = player.currentPosition,
-                            duration = player.duration.coerceAtLeast(0L)
-                        )
+            val state =
+                when (player.playbackState) {
+                    Player.STATE_IDLE -> PlaybackState.Idle
+                    Player.STATE_BUFFERING -> PlaybackState.Buffering
+                    Player.STATE_READY -> {
+                        if (player.playWhenReady) {
+                            PlaybackState.Playing(
+                                position = player.currentPosition,
+                                duration = player.duration.coerceAtLeast(0L),
+                            )
+                        } else {
+                            PlaybackState.Paused(
+                                position = player.currentPosition,
+                                duration = player.duration.coerceAtLeast(0L),
+                            )
+                        }
                     }
+                    Player.STATE_ENDED -> {
+                        onStreamEndedOrError(null)
+                        return
+                    }
+                    else -> PlaybackState.Idle
                 }
-                Player.STATE_ENDED -> {
-                    onStreamEndedOrError(null)
-                    return
-                }
-                else -> PlaybackState.Idle
-            }
             onStateChanged(state)
         }
     }
@@ -769,7 +823,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onExhaustionRebuffer: (count: Int) -> Unit,
         private val onBandwidthUpdate: (bitrateEstimate: Long) -> Unit,
         private val onQualitySwitch: (count: Int) -> Unit,
-        private val onFpsUpdate: (fps: Float) -> Unit
+        private val onFpsUpdate: (fps: Float) -> Unit,
     ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
         private var droppedFrames = 0L
         private var totalFrames = 0L
@@ -788,7 +842,7 @@ class StreamingPlaybackService : MediaSessionService() {
         override fun onVideoFrameProcessingOffset(
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
             totalProcessingOffsetUs: Long,
-            frameCount: Int
+            frameCount: Int,
         ) {
             totalFrames += frameCount
             val currentTime = SystemClock.elapsedRealtime()
@@ -810,7 +864,7 @@ class StreamingPlaybackService : MediaSessionService() {
         override fun onDroppedVideoFrames(
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
             droppedFrames: Int,
-            elapsedMs: Long
+            elapsedMs: Long,
         ) {
             this.droppedFrames += droppedFrames
             onMetricsUpdate(this.droppedFrames, totalFrames)
@@ -820,7 +874,7 @@ class StreamingPlaybackService : MediaSessionService() {
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
             oldPosition: Player.PositionInfo,
             newPosition: Player.PositionInfo,
-            reason: Int
+            reason: Int,
         ) {
             if (reason == Player.DISCONTINUITY_REASON_SEEK) {
                 seekPending = true
@@ -829,7 +883,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
         override fun onPlaybackStateChanged(
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
-            state: Int
+            state: Int,
         ) {
             when (state) {
                 Player.STATE_BUFFERING -> {
@@ -864,14 +918,14 @@ class StreamingPlaybackService : MediaSessionService() {
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
             totalLoadTimeMs: Int,
             totalBytesLoaded: Long,
-            bitrateEstimate: Long
+            bitrateEstimate: Long,
         ) {
             onBandwidthUpdate(bitrateEstimate)
         }
 
         override fun onDownstreamFormatChanged(
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
-            mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData
+            mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData,
         ) {
             if (mediaLoadData.trackType == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
                 val newHeight = mediaLoadData.trackFormat?.height ?: return
@@ -898,12 +952,8 @@ class StreamingPlaybackService : MediaSessionService() {
 
         suspend fun awaitInstance(): StreamingPlaybackService = instanceReady.await()
 
-        fun getPlaybackState(service: StreamingPlaybackService): StateFlow<PlaybackState> {
-            return service.playbackState
-        }
+        fun getPlaybackState(service: StreamingPlaybackService): StateFlow<PlaybackState> = service.playbackState
 
-        fun getCurrentMetadata(service: StreamingPlaybackService): StateFlow<PlayerMetadata> {
-            return service.currentMetadata
-        }
+        fun getCurrentMetadata(service: StreamingPlaybackService): StateFlow<PlayerMetadata> = service.currentMetadata
     }
 }

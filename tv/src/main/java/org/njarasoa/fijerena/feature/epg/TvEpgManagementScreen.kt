@@ -2,54 +2,45 @@ package org.njarasoa.fijerena.feature.epg
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
-import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
-import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
-import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
-fun TvEpgManagementScreen(
-    onBack: () -> Unit
-) {
+fun TvEpgManagementScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val viewModel: EpgManagementViewModel = viewModel(
-        factory = remember { SettingsViewModelFactory(context.applicationContext) }
-    )
+    val viewModel: EpgManagementViewModel =
+        viewModel(
+            factory = remember { SettingsViewModelFactory(context.applicationContext) },
+        )
 
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
@@ -65,7 +56,9 @@ fun TvEpgManagementScreen(
 
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
-            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast
+                .makeText(context, message, android.widget.Toast.LENGTH_SHORT)
+                .show()
         }
     }
 
@@ -78,17 +71,18 @@ fun TvEpgManagementScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    horizontal = Spacing.tvSafeMarginHorizontal,
-                    vertical = Spacing.tvSafeMarginVertical
-                )
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = Spacing.tvSafeMarginHorizontal,
+                        vertical = Spacing.tvSafeMarginVertical,
+                    ),
         ) {
             Text(
                 text = "EPG Management",
                 style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
@@ -96,40 +90,40 @@ fun TvEpgManagementScreen(
             TvLazyColumn(
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 // Header Actions
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     ) {
                         CinemaPrimaryButton(
                             onClick = { showAddDialog = true },
-                            text = "Add Source"
+                            text = "Add Source",
                         )
 
                         if (selectedIds.isNotEmpty()) {
                             CinemaSecondaryButton(
-                                onClick = { 
+                                onClick = {
                                     viewModel.refreshSelected(selectedIds)
                                     viewModel.clearSelection()
                                 },
-                                text = "Refresh Selected (${selectedIds.size})"
+                                text = "Refresh Selected (${selectedIds.size})",
                             )
                         }
 
                         if (staleSourceCount > 0) {
                             CinemaSecondaryButton(
                                 onClick = { viewModel.refreshStale() },
-                                text = "Refresh Stale ($staleSourceCount)"
+                                text = "Refresh Stale ($staleSourceCount)",
                             )
                         }
 
                         if (failedSourceCount > 0) {
                             CinemaSecondaryButton(
                                 onClick = { viewModel.refreshFailed() },
-                                text = "Retry Failed ($failedSourceCount)"
+                                text = "Retry Failed ($failedSourceCount)",
                             )
                         }
                     }
@@ -144,37 +138,37 @@ fun TvEpgManagementScreen(
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     ) {
                         // Maintenance Card
                         GlassPanel(modifier = Modifier.weight(1f)) {
                             Row(
                                 modifier = Modifier.padding(Spacing.md.scaled(scale)),
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text("Maintenance", style = MaterialTheme.typography.titleMedium)
                                     Text(
                                         "Clean up temporary files and old programmes.",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                     )
                                 }
-                                
+
                                 CinemaSecondaryButton(
                                     onClick = { viewModel.cleanupFiles() },
-                                    text = "Cleanup"
+                                    text = "Cleanup",
                                 )
-                                
+
                                 CinemaSecondaryButton(
                                     onClick = { viewModel.purgeOldProgrammes() },
-                                    text = "Purge"
+                                    text = "Purge",
                                 )
 
                                 CinemaDangerButton(
                                     onClick = { showClearConfirm = true },
-                                    text = "Clear All"
+                                    text = "Clear All",
                                 )
                             }
                         }
@@ -184,24 +178,25 @@ fun TvEpgManagementScreen(
                             Row(
                                 modifier = Modifier.padding(Spacing.md.scaled(scale)),
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { showTimePicker = true }
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .clickable { showTimePicker = true },
                                 ) {
                                     Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium)
                                     Text(
                                         "Daily update at ${viewModel.epgRefreshTime}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                     )
                                 }
 
                                 androidx.compose.material3.Switch(
                                     checked = viewModel.autoRefreshEnabled,
-                                    onCheckedChange = { viewModel.setAutoRefreshEnabled(it) }
+                                    onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
                                 )
                             }
                         }
@@ -212,35 +207,40 @@ fun TvEpgManagementScreen(
                 items(sources, key = { it.id }, contentType = { "source" }) { source ->
                     val isSelected = selectedIds.contains(source.id)
                     val latestTime = latestProgrammeTimes[source.id] ?: 0L
-                    
+
                     // Look for active progress for this source
-                    val activeProgress = if (processingState is MultiSourceState.Processing) {
-                        (processingState as MultiSourceState.Processing).activeProgress[source.id]
-                    } else null
+                    val activeProgress =
+                        if (processingState is MultiSourceState.Processing) {
+                            (processingState as MultiSourceState.Processing).activeProgress[source.id]
+                        } else {
+                            null
+                        }
 
                     GlassPanel(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.toggleSelection(source.id) }
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.toggleSelection(source.id) },
                     ) {
                         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
                                 ) {
                                     androidx.compose.material3.Checkbox(
                                         checked = isSelected,
                                         onCheckedChange = { viewModel.toggleSelection(source.id) },
-                                        colors = androidx.compose.material3.CheckboxDefaults.colors(
-                                            checkedColor = MaterialTheme.colorScheme.primary,
-                                            uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
+                                        colors =
+                                            androidx.compose.material3.CheckboxDefaults.colors(
+                                                checkedColor = MaterialTheme.colorScheme.primary,
+                                                uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                            ),
                                     )
 
                                     StatusIndicator(source, nowMs, scale)
@@ -248,14 +248,14 @@ fun TvEpgManagementScreen(
                                     Column {
                                         Text(
                                             text = source.label.ifBlank { "Unnamed Source" },
-                                            style = MaterialTheme.typography.titleMedium
+                                            style = MaterialTheme.typography.titleMedium,
                                         )
                                         Text(
                                             text = source.url,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                             maxLines = 1,
-                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                         )
                                     }
                                 }
@@ -263,11 +263,11 @@ fun TvEpgManagementScreen(
                                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                                     CinemaSecondaryButton(
                                         onClick = { viewModel.refreshSource(source.id) },
-                                        text = "Refresh"
+                                        text = "Refresh",
                                     )
                                     CinemaSecondaryButton(
                                         onClick = { editingSource = source },
-                                        text = "Edit"
+                                        text = "Edit",
                                     )
                                 }
                             }
@@ -277,24 +277,24 @@ fun TvEpgManagementScreen(
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp.scaled(scale))) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
+                                        horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
                                         Text(
                                             text = "${activeProgress.phase}...",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary
+                                            color = MaterialTheme.colorScheme.primary,
                                         )
                                         Text(
                                             text = "${activeProgress.progressPercent}%",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary
+                                            color = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                     LinearProgressIndicator(
                                         progress = { activeProgress.progressPercent / 100f },
                                         modifier = Modifier.fillMaxWidth().height(4.dp.scaled(scale)),
                                         color = MaterialTheme.colorScheme.primary,
-                                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                                     )
                                 }
                             } else {
@@ -303,17 +303,25 @@ fun TvEpgManagementScreen(
                                 // Source Stats Row
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale))
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
                                 ) {
-                                    val lastIngested = if (source.lastIngestedAtMs > 0) {
-                                        java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                                            .format(java.util.Date(source.lastIngestedAtMs))
-                                    } else "Never"
+                                    val lastIngested =
+                                        if (source.lastIngestedAtMs > 0) {
+                                            java.text
+                                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                                .format(java.util.Date(source.lastIngestedAtMs))
+                                        } else {
+                                            "Never"
+                                        }
 
-                                    val latestProgStr = if (latestTime > 0) {
-                                        java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                                            .format(java.util.Date(latestTime * 1000L))
-                                    } else "None"
+                                    val latestProgStr =
+                                        if (latestTime > 0) {
+                                            java.text
+                                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                                .format(java.util.Date(latestTime * 1000L))
+                                        } else {
+                                            "None"
+                                        }
 
                                     SourceStat("Last Sync", lastIngested, scale)
                                     SourceStat("Download", NumberUtils.formatDuration(source.lastDownloadDurationMs), scale)
@@ -321,12 +329,12 @@ fun TvEpgManagementScreen(
                                     SourceStat("Latest Prog", latestProgStr, scale)
                                     SourceStat("Channels", NumberUtils.formatCount(source.lastChannels), scale)
                                     SourceStat("Programmes", NumberUtils.formatCount(source.lastProgrammes), scale)
-                                    
+
                                     if (source.lastError != null) {
                                         Text(
                                             text = "Error: ${source.lastError}",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.error
+                                            color = MaterialTheme.colorScheme.error,
                                         )
                                     }
                                 }
@@ -345,7 +353,7 @@ fun TvEpgManagementScreen(
                 viewModel.addSource(url, label, tz, method, enabled)
                 showAddDialog = false
             },
-            scale = scale
+            scale = scale,
         )
     }
 
@@ -354,10 +362,12 @@ fun TvEpgManagementScreen(
             initialSource = source,
             onDismiss = { editingSource = null },
             onConfirm = { url, label, tz, method, enabled ->
-                viewModel.updateSource(source.copy(url = url, label = label, timezoneOffsetHours = tz, ingestMethod = method, enabled = enabled))
+                viewModel.updateSource(
+                    source.copy(url = url, label = label, timezoneOffsetHours = tz, ingestMethod = method, enabled = enabled),
+                )
                 editingSource = null
             },
-            scale = scale
+            scale = scale,
         )
     }
 
@@ -370,23 +380,23 @@ fun TvEpgManagementScreen(
                         viewModel.clearDatabase()
                         showClearConfirm = false
                     },
-                    text = "Clear Everything"
+                    text = "Clear Everything",
                 )
             },
             dismissButton = {
                 CinemaSecondaryButton(
                     onClick = { showClearConfirm = false },
-                    text = "Cancel"
+                    text = "Cancel",
                 )
             },
             title = { Text("Clear EPG Data?") },
-            text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") }
-            )
-            }
+            text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") },
+        )
+    }
 
-            if (showTimePicker) {
-            var timeInput by remember { mutableStateOf(viewModel.epgRefreshTime) }
-            AlertDialog(
+    if (showTimePicker) {
+        var timeInput by remember { mutableStateOf(viewModel.epgRefreshTime) }
+        AlertDialog(
             onDismissRequest = { showTimePicker = false },
             title = { Text("Set Refresh Time") },
             text = {
@@ -395,7 +405,7 @@ fun TvEpgManagementScreen(
                     onValueChange = { timeInput = it },
                     label = { Text("Time (HH:mm)") },
                     placeholder = { Text("e.g. 04:00") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             },
             confirmButton = {
@@ -404,26 +414,30 @@ fun TvEpgManagementScreen(
                         viewModel.setEpgRefreshTime(timeInput)
                         showTimePicker = false
                     },
-                    text = "Save"
+                    text = "Save",
                 )
             },
             dismissButton = {
                 CinemaSecondaryButton(onClick = { showTimePicker = false }, text = "Cancel")
-            }
-            )
-            }
-            }
-
+            },
+        )
+    }
+}
 
 @Composable
-private fun StatusIndicator(source: EpgSourceEntity, nowMs: Long, scale: Float) {
-    val color = when {
-        !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-        source.lastError != null -> MaterialTheme.colorScheme.error
-        source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-        nowMs - source.lastIngestedAtMs > 24 * 3600 * 1000 -> org.njarasoa.fijerena.ui.theme.CinemaWarning
-        else -> org.njarasoa.fijerena.ui.theme.CinemaSuccess
-    }
+private fun StatusIndicator(
+    source: EpgSourceEntity,
+    nowMs: Long,
+    scale: Float,
+) {
+    val color =
+        when {
+            !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+            source.lastError != null -> MaterialTheme.colorScheme.error
+            source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+            nowMs - source.lastIngestedAtMs > 24 * 3600 * 1000 -> org.njarasoa.fijerena.ui.theme.CinemaWarning
+            else -> org.njarasoa.fijerena.ui.theme.CinemaSuccess
+        }
 
     androidx.compose.foundation.Canvas(modifier = Modifier.size(12.dp.scaled(scale))) {
         drawCircle(color = color)
@@ -432,16 +446,20 @@ private fun StatusIndicator(source: EpgSourceEntity, nowMs: Long, scale: Float) 
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun SourceStat(label: String, value: String, scale: Float) {
+private fun SourceStat(
+    label: String,
+    value: String,
+    scale: Float,
+) {
     Column {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall,
         )
     }
 }
@@ -453,7 +471,7 @@ private fun EpgStatusCard(
     indexState: EpgIndexState,
     queuedTaskIds: Set<String>,
     lastRun: org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity?,
-    scale: Float
+    scale: Float,
 ) {
     GlassPanel {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
@@ -461,27 +479,29 @@ private fun EpgStatusCard(
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
             // Indexer State
-            val indexText = when (indexState) {
-                is EpgIndexState.Indexed -> "Database: ${NumberUtils.formatCount(indexState.programmeCount)} programmes indexed"
-                is EpgIndexState.Indexing -> "Database: Indexing in progress..."
-                is EpgIndexState.NotIndexed -> "Database: Empty"
-                is EpgIndexState.Failed -> "Database Error: ${indexState.reason}"
-            }
+            val indexText =
+                when (indexState) {
+                    is EpgIndexState.Indexed -> "Database: ${NumberUtils.formatCount(indexState.programmeCount)} programmes indexed"
+                    is EpgIndexState.Indexing -> "Database: Indexing in progress..."
+                    is EpgIndexState.NotIndexed -> "Database: Empty"
+                    is EpgIndexState.Failed -> "Database Error: ${indexState.reason}"
+                }
             Text(indexText, style = MaterialTheme.typography.bodySmall)
 
             // Current Pipeline State
-            val currentStatusText = when (multiState) {
-                is MultiSourceState.Idle -> {
-                    val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
-                    if (queued > 0) "Current Status: $queued refresh tasks queued" else "Current Status: Idle"
+            val currentStatusText =
+                when (multiState) {
+                    is MultiSourceState.Idle -> {
+                        val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
+                        if (queued > 0) "Current Status: $queued refresh tasks queued" else "Current Status: Idle"
+                    }
+                    is MultiSourceState.Processing -> "Current Status: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
+                    is MultiSourceState.Completed -> "Current Status: Finished run"
+                    is MultiSourceState.Finalizing -> "Current Status: Finalizing (${multiState.phase})..."
+                    is MultiSourceState.Clearing -> "Current Status: Clearing data..."
+                    is MultiSourceState.Error -> "Current Status Error: ${multiState.reason}"
+                    else -> "Current Status: Idle"
                 }
-                is MultiSourceState.Processing -> "Current Status: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
-                is MultiSourceState.Completed -> "Current Status: Finished run"
-                is MultiSourceState.Finalizing -> "Current Status: Finalizing (${multiState.phase})..."
-                is MultiSourceState.Clearing -> "Current Status: Clearing data..."
-                is MultiSourceState.Error -> "Current Status Error: ${multiState.reason}"
-                else -> "Current Status: Idle"
-            }
             Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
 
             // Last Pipeline Run
@@ -493,7 +513,7 @@ private fun EpgStatusCard(
                 Text(
                     text = "Last Run: Finished at $time • ${stats.sourcesProcessed} sources in $duration$errorText",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 )
             }
         }
@@ -506,22 +526,28 @@ private fun EpgSourceEditDialog(
     initialSource: EpgSourceEntity? = null,
     onDismiss: () -> Unit,
     onConfirm: (url: String, label: String, tz: Int, method: String, enabled: Boolean) -> Unit,
-    scale: Float
+    scale: Float,
 ) {
     var url by remember { mutableStateOf(initialSource?.url ?: "") }
     var label by remember { mutableStateOf(initialSource?.label ?: "") }
     var tzOffset by remember { mutableStateOf(initialSource?.timezoneOffsetHours?.toString() ?: "0") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initialSource == null) "Add EPG Source" else "Edit EPG Source") },
         confirmButton = {
             CinemaPrimaryButton(
-                onClick = { 
-                    onConfirm(url, label, tzOffset.toIntOrNull() ?: 0, initialSource?.ingestMethod ?: "DOWNLOADED", initialSource?.enabled ?: true) 
+                onClick = {
+                    onConfirm(
+                        url,
+                        label,
+                        tzOffset.toIntOrNull() ?: 0,
+                        initialSource?.ingestMethod ?: "DOWNLOADED",
+                        initialSource?.enabled ?: true,
+                    )
                 },
                 text = "Save",
-                enabled = url.isNotBlank()
+                enabled = url.isNotBlank(),
             )
         },
         dismissButton = {
@@ -534,23 +560,23 @@ private fun EpgSourceEditDialog(
                     onValueChange = { url = it },
                     label = { Text("XMLTV URL") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
                     label = { Text("Label (Optional)") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
                     label = { Text("Timezone Offset (Hours)") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
             }
-        }
+        },
     )
 }

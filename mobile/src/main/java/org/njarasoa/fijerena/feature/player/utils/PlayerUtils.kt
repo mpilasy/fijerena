@@ -17,12 +17,13 @@ fun formatTime(millis: Long): String {
     }
 }
 
-fun formatEpochTime(context: Context, epochSeconds: Long): String {
-    return TimeFormat.formatTime(context, epochSeconds)
-}
+fun formatEpochTime(
+    context: Context,
+    epochSeconds: Long,
+): String = TimeFormat.formatTime(context, epochSeconds)
 
-fun formatBitrate(bitrate: Int): String {
-    return if (bitrate > 0) {
+fun formatBitrate(bitrate: Int): String =
+    if (bitrate > 0) {
         val kbps = bitrate / 1000
         if (kbps > 1000) {
             String.format(Locale.getDefault(), "%.1f Mbps", kbps / 1000f)
@@ -32,4 +33,3 @@ fun formatBitrate(bitrate: Int): String {
     } else {
         "Unknown"
     }
-}
