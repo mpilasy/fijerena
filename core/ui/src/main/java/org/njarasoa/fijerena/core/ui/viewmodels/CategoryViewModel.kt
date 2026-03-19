@@ -419,12 +419,14 @@ class CategoryViewModel(
                     .filter { repository.isFavoriteCategory(it.id, ct) }
                     .mapTo(HashSet()) { it.id }
 
-            // Build watch progress map
-            val progressMap = HashMap<String, Float>(streams.size)
-            for (item in streams) {
-                val watched = repository.getPlaybackPosition(item.id, ct)
-                if (watched != null && watched.duration > 0) {
-                    progressMap[item.id] = (watched.playbackPosition.toFloat() / watched.duration.toFloat()).coerceIn(0f, 1f)
+            // Build watch progress map (optimized bulk lookup)
+            val itemIds = streams.map { it.id }
+            val positions = repository.getPlaybackPositions(itemIds, ct)
+
+            val progressMap = HashMap<String, Float>(positions.size)
+            for ((id, watched) in positions) {
+                if (watched.duration > 0) {
+                    progressMap[id] = (watched.playbackPosition.toFloat() / watched.duration.toFloat()).coerceIn(0f, 1f)
                 }
             }
             _watchProgress.value = progressMap
