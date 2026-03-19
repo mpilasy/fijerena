@@ -11,11 +11,10 @@ data class M3uEntry(
     val logo: String?,
     val tvgId: String?,
     val url: String,
-    val isLive: Boolean
+    val isLive: Boolean,
 )
 
 object M3uParser {
-
     private const val GROUP_TITLE_PREFIX = "group-title=\""
     private const val LOGO_PREFIX = "tvg-logo=\""
     private const val ID_PREFIX = "tvg-id=\""
@@ -26,83 +25,89 @@ object M3uParser {
         val name: String,
         val groupTitle: String,
         val logo: String?,
-        val tvgId: String?
+        val tvgId: String?,
     )
 
-    fun parse(reader: BufferedReader): Sequence<M3uEntry> = sequence {
-        val iterator = reader.lineSequence().iterator()
+    fun parse(reader: BufferedReader): Sequence<M3uEntry> =
+        sequence {
+            val iterator = reader.lineSequence().iterator()
 
-        if (!iterator.hasNext()) return@sequence
+            if (!iterator.hasNext()) return@sequence
 
-        val firstLine = iterator.next()
-        // Use trimStart to avoid full string allocation
-        if (!firstLine.trimStart().startsWith(EXTM3U_HEADER)) {
-            return@sequence
-        }
+            val firstLine = iterator.next()
+            // Use trimStart to avoid full string allocation
+            if (!firstLine.trimStart().startsWith(EXTM3U_HEADER)) {
+                return@sequence
+            }
 
-        var pendingEntry: PendingEntry? = null
+            var pendingEntry: PendingEntry? = null
 
-        while (iterator.hasNext()) {
-            val line = iterator.next()
+            while (iterator.hasNext()) {
+                val line = iterator.next()
 
-            // Skip empty lines efficiently
-            if (line.isEmpty()) continue
+                // Skip empty lines efficiently
+                if (line.isEmpty()) continue
 
-            // Check using startsWith on the original line (assuming standard formatting)
-            // or trimStart only if needed. Most M3U files don't have leading spaces, but we should be safe.
-            // Using trimStart() creates a new string only if there is whitespace.
-            val trimmedLine = if (line.isNotEmpty() && line[0].isWhitespace()) line.trimStart() else line
-            if (trimmedLine.isEmpty()) continue
+                // Check using startsWith on the original line (assuming standard formatting)
+                // or trimStart only if needed. Most M3U files don't have leading spaces, but we should be safe.
+                // Using trimStart() creates a new string only if there is whitespace.
+                val trimmedLine = if (line.isNotEmpty() && line[0].isWhitespace()) line.trimStart() else line
+                if (trimmedLine.isEmpty()) continue
 
-            if (trimmedLine.startsWith(EXTINF_PREFIX)) {
-                // Pass the original string and offset to avoid removing prefix allocation
-                val offset = EXTINF_PREFIX.length
+                if (trimmedLine.startsWith(EXTINF_PREFIX)) {
+                    // Pass the original string and offset to avoid removing prefix allocation
+                    val offset = EXTINF_PREFIX.length
 
-                // Extract directly from the line with offset
-                val name = extractName(trimmedLine, offset)
-                val groupTitle = extractAttribute(trimmedLine, GROUP_TITLE_PREFIX, offset) ?: "Uncategorized"
-                val logo = extractAttribute(trimmedLine, LOGO_PREFIX, offset)
-                val tvgId = extractAttribute(trimmedLine, ID_PREFIX, offset)
+                    // Extract directly from the line with offset
+                    val name = extractName(trimmedLine, offset)
+                    val groupTitle = extractAttribute(trimmedLine, GROUP_TITLE_PREFIX, offset) ?: "Uncategorized"
+                    val logo = extractAttribute(trimmedLine, LOGO_PREFIX, offset)
+                    val tvgId = extractAttribute(trimmedLine, ID_PREFIX, offset)
 
-                pendingEntry = PendingEntry(name, groupTitle, logo, tvgId)
-            } else if (!trimmedLine.startsWith("#")) {
-                if (pendingEntry != null) {
-                    // Ensure URL is clean by trimming the end (handles trailing spaces/newlines)
-                    val url = trimmedLine.trimEnd()
+                    pendingEntry = PendingEntry(name, groupTitle, logo, tvgId)
+                } else if (!trimmedLine.startsWith("#")) {
+                    if (pendingEntry != null) {
+                        // Ensure URL is clean by trimming the end (handles trailing spaces/newlines)
+                        val url = trimmedLine.trimEnd()
 
-                    if (url.isNotBlank()) {
-                        val isLive = isLiveUrl(url)
-                        yield(
-                            M3uEntry(
-                                pendingEntry.name,
-                                pendingEntry.groupTitle,
-                                pendingEntry.logo,
-                                pendingEntry.tvgId,
-                                url,
-                                isLive
+                        if (url.isNotBlank()) {
+                            val isLive = isLiveUrl(url)
+                            yield(
+                                M3uEntry(
+                                    pendingEntry.name,
+                                    pendingEntry.groupTitle,
+                                    pendingEntry.logo,
+                                    pendingEntry.tvgId,
+                                    url,
+                                    isLive,
+                                ),
                             )
-                        )
+                        }
+                        pendingEntry = null
                     }
-                    pendingEntry = null
                 }
             }
         }
-    }
 
-    fun processEntries(reader: BufferedReader, idPrefix: String = "local"): Pair<List<MediaCategory>, List<MediaItem>> {
+    fun processEntries(
+        reader: BufferedReader,
+        idPrefix: String = "local",
+    ): Pair<List<MediaCategory>, List<MediaItem>> {
         val categories = mutableListOf<MediaCategory>()
         val categoryMap = mutableMapOf<String, MediaCategory>()
         val items = mutableListOf<MediaItem>()
 
         parse(reader).forEachIndexed { index, entry ->
-            val category = categoryMap.getOrPut(entry.groupTitle) {
-                val newCat = MediaCategory(
-                    id = "${idPrefix}_cat_${categories.size}",
-                    name = entry.groupTitle
-                )
-                categories.add(newCat)
-                newCat
-            }
+            val category =
+                categoryMap.getOrPut(entry.groupTitle) {
+                    val newCat =
+                        MediaCategory(
+                            id = "${idPrefix}_cat_${categories.size}",
+                            name = entry.groupTitle,
+                        )
+                    categories.add(newCat)
+                    newCat
+                }
 
             items.add(
                 MediaItem(
@@ -112,28 +117,35 @@ object M3uParser {
                     categoryId = category.id,
                     thumbnailUrl = entry.logo,
                     streamUri = entry.url,
-                    providerData = buildMap {
-                        entry.tvgId?.let { put("epgChannelId", it) }
-                    }
-                )
+                    providerData =
+                        buildMap {
+                            entry.tvgId?.let { put("epgChannelId", it) }
+                        },
+                ),
             )
         }
         return categories to items
     }
 
-    fun entriesToCategories(entries: List<M3uEntry>, idPrefix: String = "local"): List<MediaCategory> {
-        return entries
+    fun entriesToCategories(
+        entries: List<M3uEntry>,
+        idPrefix: String = "local",
+    ): List<MediaCategory> =
+        entries
             .map { it.groupTitle }
             .distinct()
             .mapIndexed { index, group ->
                 MediaCategory(
                     id = "${idPrefix}_cat_$index",
-                    name = group
+                    name = group,
                 )
             }
-    }
 
-    fun entriesToItems(entries: List<M3uEntry>, categories: List<MediaCategory>, idPrefix: String = "local"): List<MediaItem> {
+    fun entriesToItems(
+        entries: List<M3uEntry>,
+        categories: List<MediaCategory>,
+        idPrefix: String = "local",
+    ): List<MediaItem> {
         val categoryMap = categories.associateBy { it.name }
         return entries.mapIndexed { index, entry ->
             val category = categoryMap[entry.groupTitle]
@@ -144,24 +156,32 @@ object M3uParser {
                 categoryId = category?.id ?: "local_cat_0",
                 thumbnailUrl = entry.logo,
                 streamUri = entry.url,
-                providerData = buildMap {
-                    entry.tvgId?.let { put("epgChannelId", it) }
-                }
+                providerData =
+                    buildMap {
+                        entry.tvgId?.let { put("epgChannelId", it) }
+                    },
             )
         }
     }
 
-    private fun extractName(line: String, startIndex: Int): String {
+    private fun extractName(
+        line: String,
+        startIndex: Int,
+    ): String {
         val commaIndex = line.lastIndexOf(',')
         // Ensure comma is after the metadata start
         return if (commaIndex >= startIndex) {
-             line.substring(commaIndex + 1).trim()
+            line.substring(commaIndex + 1).trim()
         } else {
             "Unknown"
         }
     }
 
-    private fun extractAttribute(line: String, prefix: String, startIndex: Int): String? {
+    private fun extractAttribute(
+        line: String,
+        prefix: String,
+        startIndex: Int,
+    ): String? {
         val foundIndex = line.indexOf(prefix, startIndex)
         if (foundIndex == -1) return null
 
@@ -178,8 +198,10 @@ object M3uParser {
         // This is likely because the allocation cost is amortized compared to multiple
         // character-by-character comparisons.
         val lower = url.lowercase()
-        return lower.endsWith(".m3u8") || lower.endsWith(".ts") ||
-            lower.contains("/live/") || lower.contains(":8080/") ||
+        return lower.endsWith(".m3u8") ||
+            lower.endsWith(".ts") ||
+            lower.contains("/live/") ||
+            lower.contains(":8080/") ||
             lower.contains(":25461/")
     }
 }

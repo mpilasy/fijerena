@@ -6,5 +6,5 @@ data class ProviderCapabilities(
     val supportsSearch: Boolean,
     val supportsAuthentication: Boolean,
     val supportsProgressSync: Boolean,
-    val supportsServerUserData: Boolean = false
+    val supportsServerUserData: Boolean = false,
 )

@@ -9,9 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
@@ -31,42 +31,50 @@ fun GlassPanel(
     blurRadius: Float = 20f,
     backgroundAlpha: Float = 1f,
     panelShape: Shape = RoundedCornerShape(CinemaCornerRadius.large),
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val palette = CinemaThemeHolder.current
     val shape = panelShape
-    val bg = remember(palette.glassBackground, backgroundAlpha) {
-        if (backgroundAlpha < 1f) palette.glassBackground.copy(alpha = palette.glassBackground.alpha * backgroundAlpha)
-        else palette.glassBackground
-    }
+    val bg =
+        remember(palette.glassBackground, backgroundAlpha) {
+            if (backgroundAlpha < 1f) {
+                palette.glassBackground.copy(alpha = palette.glassBackground.alpha * backgroundAlpha)
+            } else {
+                palette.glassBackground
+            }
+        }
 
     Box(
-        modifier = modifier
-            .clip(shape)
-            .border(
-                width = 1.dp,
-                color = palette.glassBorder,
-                shape = shape
-            )
+        modifier =
+            modifier
+                .clip(shape)
+                .border(
+                    width = 1.dp,
+                    color = palette.glassBorder,
+                    shape = shape,
+                ),
     ) {
         // Background layer: blurred on API 31+, solid on older
         Box(
-            modifier = Modifier
-                .matchParentSize()
-                .then(
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        @Suppress("NewApi")
-                        Modifier.graphicsLayer {
-                            renderEffect = android.graphics.RenderEffect.createBlurEffect(
-                                blurRadius, blurRadius,
-                                android.graphics.Shader.TileMode.CLAMP
-                            ).asComposeRenderEffect()
-                        }
-                    } else {
-                        Modifier
-                    }
-                )
-                .background(bg)
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .then(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            @Suppress("NewApi")
+                            Modifier.graphicsLayer {
+                                renderEffect =
+                                    android.graphics.RenderEffect
+                                        .createBlurEffect(
+                                            blurRadius,
+                                            blurRadius,
+                                            android.graphics.Shader.TileMode.CLAMP,
+                                        ).asComposeRenderEffect()
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ).background(bg),
         )
         // Content layer: always sharp, rendered on top
         content()

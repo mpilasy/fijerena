@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -24,9 +24,9 @@ import androidx.tv.material3.Surface
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.navigation.Screen
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -69,7 +69,7 @@ fun TvNavHost(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel(),
     onThemeChanged: (String) -> Unit = {},
-    onUiScaleChanged: (Float) -> Unit = {}
+    onUiScaleChanged: (Float) -> Unit = {},
 ) {
     val context = LocalContext.current
     val accountManager = remember { AccountManager(context.applicationContext) }
@@ -90,20 +90,25 @@ fun TvNavHost(
         // Fast path: use cached value to show UI immediately
         if (cachedHasProvider) {
             // Read last content type in parallel with provider verification
-            val contentTypeDeferred = async {
-                val activeProvider = providerRepo.getActiveProvider()
-                if (activeProvider != null) {
-                    val prefs = context.applicationContext.getSharedPreferences(
-                        "media_cache_${activeProvider.id}",
-                        android.content.Context.MODE_PRIVATE
-                    )
-                    prefs.getString("last_content_type", null)
-                } else null
-            }
+            val contentTypeDeferred =
+                async {
+                    val activeProvider = providerRepo.getActiveProvider()
+                    if (activeProvider != null) {
+                        val prefs =
+                            context.applicationContext.getSharedPreferences(
+                                "media_cache_${activeProvider.id}",
+                                android.content.Context.MODE_PRIVATE,
+                            )
+                        prefs.getString("last_content_type", null)
+                    } else {
+                        null
+                    }
+                }
 
-            val providerCountDeferred = async {
-                providerRepo.getProviderCount()
-            }
+            val providerCountDeferred =
+                async {
+                    providerRepo.getProviderCount()
+                }
 
             lastContentType = contentTypeDeferred.await()
             val providerCount = providerCountDeferred.await()
@@ -128,10 +133,11 @@ fun TvNavHost(
             if (providerCount > 0) {
                 val activeProvider = providerRepo.getActiveProvider()
                 if (activeProvider != null) {
-                    val prefs = context.applicationContext.getSharedPreferences(
-                        "media_cache_${activeProvider.id}",
-                        android.content.Context.MODE_PRIVATE
-                    )
+                    val prefs =
+                        context.applicationContext.getSharedPreferences(
+                            "media_cache_${activeProvider.id}",
+                            android.content.Context.MODE_PRIVATE,
+                        )
                     lastContentType = prefs.getString("last_content_type", null)
                 }
             }
@@ -142,14 +148,16 @@ fun TvNavHost(
     val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()
 
     // Determine initial destination based on provider configuration
-    val startDestination = remember(initializationComplete, hasProvider) {
-        if (!initializationComplete) null
-        else if (hasProvider == true) {
-            Screen.ContentTypeSelection
-        } else {
-            Screen.Settings
+    val startDestination =
+        remember(initializationComplete, hasProvider) {
+            if (!initializationComplete) {
+                null
+            } else if (hasProvider == true) {
+                Screen.ContentTypeSelection
+            } else {
+                Screen.Settings
+            }
         }
-    }
 
     // Auto-navigate to last content type (and category) on startup
     LaunchedEffect(lastContentType, initializationComplete) {
@@ -157,19 +165,24 @@ fun TvNavHost(
         if (initializationComplete && ct != null) {
             val providerRepo = ProviderRepository(context.applicationContext)
             val activeProvider = providerRepo.getActiveProvider()
-            val lastCategoryId = if (activeProvider != null) {
-                val prefs = context.applicationContext.getSharedPreferences(
-                    "media_cache_${activeProvider.id}",
-                    android.content.Context.MODE_PRIVATE
-                )
-                val key = when (ct) {
-                    org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV -> "last_live_category"
-                    org.njarasoa.fijerena.core.player.domain.ContentType.MOVIES -> "last_movies_category"
-                    org.njarasoa.fijerena.core.player.domain.ContentType.TV_SHOWS -> "last_tvshows_category"
-                    else -> null
+            val lastCategoryId =
+                if (activeProvider != null) {
+                    val prefs =
+                        context.applicationContext.getSharedPreferences(
+                            "media_cache_${activeProvider.id}",
+                            android.content.Context.MODE_PRIVATE,
+                        )
+                    val key =
+                        when (ct) {
+                            org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV -> "last_live_category"
+                            org.njarasoa.fijerena.core.player.domain.ContentType.MOVIES -> "last_movies_category"
+                            org.njarasoa.fijerena.core.player.domain.ContentType.TV_SHOWS -> "last_tvshows_category"
+                            else -> null
+                        }
+                    key?.let { prefs.getString(it, null) }
+                } else {
+                    null
                 }
-                key?.let { prefs.getString(it, null) }
-            } else null
             navController.navigate(Screen.CategoryList(ct, lastCategoryId)) {
                 popUpTo(Screen.ContentTypeSelection) { inclusive = false }
             }
@@ -182,9 +195,12 @@ fun TvNavHost(
             val providerRepo = ProviderRepository(context.applicationContext)
             val activeProvider = providerRepo.getActiveProvider()
             if (activeProvider != null && activeProvider.type == "XTREAM") {
-                val repository = XtreamRepository(
-                    accountManager, context.applicationContext, activeProvider.id
-                )
+                val repository =
+                    XtreamRepository(
+                        accountManager,
+                        context.applicationContext,
+                        activeProvider.id,
+                    )
                 when (val result = repository.restoreSession()) {
                     is Result.Success -> {
                         val url = repository.getCurrentUrl() ?: ""
@@ -200,393 +216,401 @@ fun TvNavHost(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        shape = RectangleShape
+        shape = RectangleShape,
     ) {
         if (initializationComplete && startDestination != null) {
             NavHost(
                 navController = navController,
-                startDestination = startDestination
+                startDestination = startDestination,
             ) {
-            // Content Type Selection Screen
-            composable<Screen.ContentTypeSelection> {
-                // Prevent back button from exiting the app on the root screen
-                BackHandler {}
-                ContentTypeSelectionScreen(
-                    onContentTypeSelected = { contentType ->
-                        navController.navigate(Screen.CategoryList(contentType.name)) {
-                            popUpTo(Screen.ContentTypeSelection) { inclusive = false }
-                        }
-                    },
-                    onSettings = {
-                        navController.navigate(Screen.Settings)
-                    },
-                    onSearch = {
-                        navController.navigate(Screen.Search("ALL"))
-                    },
-                    onEpgBrowser = {
-                        navController.navigate(Screen.EpgBrowser)
-                    }
-                )
-            }
+                // Content Type Selection Screen
+                composable<Screen.ContentTypeSelection> {
+                    // Prevent back button from exiting the app on the root screen
+                    BackHandler {}
+                    ContentTypeSelectionScreen(
+                        onContentTypeSelected = { contentType ->
+                            navController.navigate(Screen.CategoryList(contentType.name)) {
+                                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                            }
+                        },
+                        onSettings = {
+                            navController.navigate(Screen.Settings)
+                        },
+                        onSearch = {
+                            navController.navigate(Screen.Search("ALL"))
+                        },
+                        onEpgBrowser = {
+                            navController.navigate(Screen.EpgBrowser)
+                        },
+                    )
+                }
 
-            // EPG Browser Screen
-            composable<Screen.EpgBrowser> {
-                EpgBrowserScreen(
-                    onBack = { navController.navigateUp() },
-                    onNavigateToPlayer = { streamId, streamName, categoryId ->
-                        navController.navigate(Screen.Player(streamId, streamName, categoryId, ContentType.LIVE_TV))
-                    }
-                )
-            }
+                // EPG Browser Screen
+                composable<Screen.EpgBrowser> {
+                    EpgBrowserScreen(
+                        onBack = { navController.navigateUp() },
+                        onNavigateToPlayer = { streamId, streamName, categoryId ->
+                            navController.navigate(Screen.Player(streamId, streamName, categoryId, ContentType.LIVE_TV))
+                        },
+                    )
+                }
 
-            // Edit Provider Screen
-            composable<Screen.EditProvider> {
-                EditProviderScreen(
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                    onSuccess = {
-                        // After successful update, navigate back to category list
-                        navController.navigateUp()
-                    }
-                )
-            }
+                // Edit Provider Screen
+                composable<Screen.EditProvider> {
+                    EditProviderScreen(
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                        onSuccess = {
+                            // After successful update, navigate back to category list
+                            navController.navigateUp()
+                        },
+                    )
+                }
 
-            // Category List Screen
-            composable<Screen.CategoryList> { backStackEntry ->
-                val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
-                CategoryGridScreen(
-                    contentType = categoryListScreen.contentType,
-                    initialCategoryId = categoryListScreen.initialCategoryId,
-                    onStreamSelected = { itemId, streamName, categoryId, providerData ->
-                        when (categoryListScreen.contentType) {
-                            ContentType.TV_SHOWS -> {
-                                val episodeId = providerData["episodeId"]
-                                if (episodeId != null) {
-                                    // Last-watched episode: go directly to player
+                // Category List Screen
+                composable<Screen.CategoryList> { backStackEntry ->
+                    val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
+                    CategoryGridScreen(
+                        contentType = categoryListScreen.contentType,
+                        initialCategoryId = categoryListScreen.initialCategoryId,
+                        onStreamSelected = { itemId, streamName, categoryId, providerData ->
+                            when (categoryListScreen.contentType) {
+                                ContentType.TV_SHOWS -> {
+                                    val episodeId = providerData["episodeId"]
+                                    if (episodeId != null) {
+                                        // Last-watched episode: go directly to player
+                                        navController.navigate(
+                                            Screen.Player(
+                                                streamId = itemId,
+                                                streamName = streamName,
+                                                categoryId = categoryId,
+                                                contentType = ContentType.TV_SHOWS,
+                                                episodeId = episodeId,
+                                                episodeExtension = providerData["episodeExtension"],
+                                                seriesId = providerData["seriesId"],
+                                                seriesName = providerData["seriesName"],
+                                            ),
+                                        )
+                                    } else {
+                                        // Regular series: navigate to episode selection
+                                        navController.navigate(
+                                            Screen.EpisodeSelection(
+                                                seriesId = itemId,
+                                                seriesName = streamName,
+                                                categoryId = categoryId,
+                                            ),
+                                        )
+                                    }
+                                }
+                                ContentType.MOVIES -> {
+                                    // For movies, navigate to movie details
+                                    navController.navigate(
+                                        Screen.MovieDetails(
+                                            movieId = itemId,
+                                            movieName = streamName,
+                                            categoryId = categoryId,
+                                        ),
+                                    )
+                                }
+                                else -> {
+                                    // For Live TV, go directly to player
                                     navController.navigate(
                                         Screen.Player(
                                             streamId = itemId,
                                             streamName = streamName,
                                             categoryId = categoryId,
-                                            contentType = ContentType.TV_SHOWS,
-                                            episodeId = episodeId,
-                                            episodeExtension = providerData["episodeExtension"],
-                                            seriesId = providerData["seriesId"],
-                                            seriesName = providerData["seriesName"]
-                                        )
+                                            contentType = categoryListScreen.contentType,
+                                        ),
                                     )
-                                } else {
-                                    // Regular series: navigate to episode selection
+                                }
+                            }
+                        },
+                        onSearchClick = {
+                            navController.navigate(Screen.Search(categoryListScreen.contentType))
+                        },
+                        onEpgClick = { categoryId, categoryName ->
+                            // Navigate to EPG Guide for the selected category
+                            navController.navigate(
+                                Screen.EpgGuide(
+                                    categoryId = categoryId,
+                                    categoryName = categoryName,
+                                ),
+                            )
+                        },
+                        onBack = {
+                            // Go back to content type selection to access Movies/TV Shows
+                            navController.navigate(Screen.ContentTypeSelection) {
+                                popUpTo(Screen.CategoryList(ContentType.LIVE_TV)) { inclusive = true }
+                            }
+                        },
+                    )
+                }
+
+                // Search Screen
+                composable<Screen.Search> { backStackEntry ->
+                    val searchScreen = backStackEntry.toRoute<Screen.Search>()
+                    SearchScreen(
+                        contentType = searchScreen.contentType,
+                        onStreamSelected = { itemId, streamName, categoryId, streamContentType ->
+                            // Navigate based on content type
+                            when (streamContentType) {
+                                ContentType.TV_SHOWS ->
                                     navController.navigate(
                                         Screen.EpisodeSelection(
                                             seriesId = itemId,
                                             seriesName = streamName,
-                                            categoryId = categoryId
-                                        )
+                                            categoryId = categoryId,
+                                        ),
                                     )
-                                }
-                            }
-                            ContentType.MOVIES -> {
-                                // For movies, navigate to movie details
-                                navController.navigate(
-                                    Screen.MovieDetails(
-                                        movieId = itemId,
-                                        movieName = streamName,
-                                        categoryId = categoryId
+                                ContentType.MOVIES ->
+                                    navController.navigate(
+                                        Screen.MovieDetails(
+                                            movieId = itemId,
+                                            movieName = streamName,
+                                            categoryId = categoryId,
+                                        ),
                                     )
-                                )
-                            }
-                            else -> {
-                                // For Live TV, go directly to player
-                                navController.navigate(
-                                    Screen.Player(
-                                        streamId = itemId,
-                                        streamName = streamName,
-                                        categoryId = categoryId,
-                                        contentType = categoryListScreen.contentType
+                                else ->
+                                    navController.navigate(
+                                        Screen.Player(
+                                            streamId = itemId,
+                                            streamName = streamName,
+                                            categoryId = categoryId,
+                                            contentType = streamContentType,
+                                        ),
                                     )
-                                )
                             }
-                        }
-                    },
-                    onSearchClick = {
-                        navController.navigate(Screen.Search(categoryListScreen.contentType))
-                    },
-                    onEpgClick = { categoryId, categoryName ->
-                        // Navigate to EPG Guide for the selected category
-                        navController.navigate(
-                            Screen.EpgGuide(
-                                categoryId = categoryId,
-                                categoryName = categoryName
+                        },
+                        onCategorySelected = { categoryId, contentType ->
+                            navController.navigate(
+                                Screen.CategoryList(
+                                    contentType = contentType,
+                                    initialCategoryId = categoryId,
+                                ),
                             )
-                        )
-                    },
-                    onBack = {
-                        // Go back to content type selection to access Movies/TV Shows
-                        navController.navigate(Screen.ContentTypeSelection) {
-                            popUpTo(Screen.CategoryList(ContentType.LIVE_TV)) { inclusive = true }
-                        }
-                    }
-                )
-            }
+                        },
+                        onBack = { navController.navigateUp() },
+                    )
+                }
 
-            // Search Screen
-            composable<Screen.Search> { backStackEntry ->
-                val searchScreen = backStackEntry.toRoute<Screen.Search>()
-                SearchScreen(
-                    contentType = searchScreen.contentType,
-                    onStreamSelected = { itemId, streamName, categoryId, streamContentType ->
-                        // Navigate based on content type
-                        when (streamContentType) {
-                            ContentType.TV_SHOWS -> navController.navigate(
-                                Screen.EpisodeSelection(
-                                    seriesId = itemId,
-                                    seriesName = streamName,
-                                    categoryId = categoryId
-                                )
-                            )
-                            ContentType.MOVIES -> navController.navigate(
-                                Screen.MovieDetails(
-                                    movieId = itemId,
-                                    movieName = streamName,
-                                    categoryId = categoryId
-                                )
-                            )
-                            else -> navController.navigate(
+                // Movie Details Screen (for VOD Movies)
+                composable<Screen.MovieDetails> { backStackEntry ->
+                    val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
+                    MovieDetailsScreen(
+                        movieId = movieDetailsScreen.movieId,
+                        movieName = movieDetailsScreen.movieName,
+                        categoryId = movieDetailsScreen.categoryId,
+                        onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
+                            navController.navigate(
                                 Screen.Player(
-                                    streamId = itemId,
+                                    streamId = movieId,
+                                    streamName = movieName,
+                                    categoryId = movieDetailsScreen.categoryId,
+                                    contentType = ContentType.MOVIES,
+                                    episodeExtension = extension,
+                                    startFromBeginning = startFromBeginning,
+                                ),
+                            )
+                        },
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                    )
+                }
+
+                // Episode Selection Screen (for TV Shows)
+                composable<Screen.EpisodeSelection> { backStackEntry ->
+                    val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
+                    EpisodeSelectionScreen(
+                        seriesId = episodeSelectionScreen.seriesId,
+                        seriesName = episodeSelectionScreen.seriesName,
+                        categoryId = episodeSelectionScreen.categoryId,
+                        onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning ->
+                            navController.navigate(
+                                Screen.Player(
+                                    streamId = episodeId,
+                                    streamName = episodeTitle,
+                                    categoryId = episodeSelectionScreen.categoryId,
+                                    contentType = ContentType.TV_SHOWS,
+                                    episodeId = episodeId,
+                                    episodeExtension = extension,
+                                    seriesId = episodeSelectionScreen.seriesId,
+                                    seriesName = episodeSelectionScreen.seriesName,
+                                    startFromBeginning = startFromBeginning,
+                                ),
+                            )
+                        },
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                    )
+                }
+
+                // EPG Guide Screen
+                composable<Screen.EpgGuide> { backStackEntry ->
+                    val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
+                    EpgGuideScreen(
+                        categoryId = epgScreen.categoryId,
+                        categoryName = epgScreen.categoryName,
+                        onProgramSelected = { program, channel ->
+                            // Navigate to player for the selected program
+                            navController.navigate(
+                                Screen.Player(
+                                    streamId = channel.id,
+                                    streamName = channel.name,
+                                    categoryId = channel.categoryId,
+                                    contentType = ContentType.LIVE_TV,
+                                ),
+                            )
+                        },
+                        onChannelSelected = { streamId, streamName, categoryId ->
+                            // Navigate to player for the selected channel
+                            navController.navigate(
+                                Screen.Player(
+                                    streamId = streamId,
                                     streamName = streamName,
                                     categoryId = categoryId,
-                                    contentType = streamContentType
-                                )
+                                    contentType = ContentType.LIVE_TV,
+                                ),
                             )
-                        }
-                    },
-                    onCategorySelected = { categoryId, contentType ->
-                        navController.navigate(
-                            Screen.CategoryList(
-                                contentType = contentType,
-                                initialCategoryId = categoryId
-                            )
-                        )
-                    },
-                    onBack = { navController.navigateUp() }
-                )
-            }
+                        },
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                    )
+                }
 
-            // Movie Details Screen (for VOD Movies)
-            composable<Screen.MovieDetails> { backStackEntry ->
-                val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
-                MovieDetailsScreen(
-                    movieId = movieDetailsScreen.movieId,
-                    movieName = movieDetailsScreen.movieName,
-                    categoryId = movieDetailsScreen.categoryId,
-                    onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
-                        navController.navigate(
-                            Screen.Player(
-                                streamId = movieId,
-                                streamName = movieName,
-                                categoryId = movieDetailsScreen.categoryId,
-                                contentType = ContentType.MOVIES,
-                                episodeExtension = extension,
-                                startFromBeginning = startFromBeginning
-                            )
-                        )
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    }
-                )
-            }
+                // Player Screen
+                composable<Screen.Player> { backStackEntry ->
+                    val playerScreen = backStackEntry.toRoute<Screen.Player>()
+                    TvPlayerScreen(
+                        streamId = playerScreen.streamId,
+                        streamName = playerScreen.streamName,
+                        categoryId = playerScreen.categoryId,
+                        contentType = playerScreen.contentType,
+                        episodeId = playerScreen.episodeId,
+                        episodeExtension = playerScreen.episodeExtension,
+                        seriesId = playerScreen.seriesId,
+                        seriesName = playerScreen.seriesName,
+                        startFromBeginning = playerScreen.startFromBeginning,
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                    )
+                }
 
-            // Episode Selection Screen (for TV Shows)
-            composable<Screen.EpisodeSelection> { backStackEntry ->
-                val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
-                EpisodeSelectionScreen(
-                    seriesId = episodeSelectionScreen.seriesId,
-                    seriesName = episodeSelectionScreen.seriesName,
-                    categoryId = episodeSelectionScreen.categoryId,
-                    onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning ->
-                        navController.navigate(
-                            Screen.Player(
-                                streamId = episodeId,
-                                streamName = episodeTitle,
-                                categoryId = episodeSelectionScreen.categoryId,
-                                contentType = ContentType.TV_SHOWS,
-                                episodeId = episodeId,
-                                episodeExtension = extension,
-                                seriesId = episodeSelectionScreen.seriesId,
-                                seriesName = episodeSelectionScreen.seriesName,
-                                startFromBeginning = startFromBeginning
-                            )
-                        )
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    }
-                )
-            }
+                // Add/Edit Provider Screen
+                composable<Screen.AddProvider> { backStackEntry ->
+                    val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
+                    TvAddProviderScreen(
+                        editId = addProviderScreen.editId,
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                        onSuccess = {
+                            appSettings.hasProviderCache = true
+                            navController.navigateUp()
+                        },
+                    )
+                }
 
-            // EPG Guide Screen
-            composable<Screen.EpgGuide> { backStackEntry ->
-                val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
-                EpgGuideScreen(
-                    categoryId = epgScreen.categoryId,
-                    categoryName = epgScreen.categoryName,
-                    onProgramSelected = { program, channel ->
-                        // Navigate to player for the selected program
-                        navController.navigate(
-                            Screen.Player(
-                                streamId = channel.id,
-                                streamName = channel.name,
-                                categoryId = channel.categoryId,
-                                contentType = ContentType.LIVE_TV
-                            )
-                        )
-                    },
-                    onChannelSelected = { streamId, streamName, categoryId ->
-                        // Navigate to player for the selected channel
-                        navController.navigate(
-                            Screen.Player(
-                                streamId = streamId,
-                                streamName = streamName,
-                                categoryId = categoryId,
-                                contentType = ContentType.LIVE_TV
-                            )
-                        )
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    }
-                )
-            }
+                // Provider Selection Screen
+                composable<Screen.ProviderSelection> {
+                    TvProviderSelectionScreen(
+                        onProviderSelected = { provider ->
+                            coroutineScope.launch {
+                                // Activate the selected provider in Room
+                                val providerRepo = ProviderRepository(context.applicationContext)
+                                providerRepo.setActiveProvider(provider.id)
 
-            // Player Screen
-            composable<Screen.Player> { backStackEntry ->
-                val playerScreen = backStackEntry.toRoute<Screen.Player>()
-                TvPlayerScreen(
-                    streamId = playerScreen.streamId,
-                    streamName = playerScreen.streamName,
-                    categoryId = playerScreen.categoryId,
-                    contentType = playerScreen.contentType,
-                    episodeId = playerScreen.episodeId,
-                    episodeExtension = playerScreen.episodeExtension,
-                    seriesId = playerScreen.seriesId,
-                    seriesName = playerScreen.seriesName,
-                    startFromBeginning = playerScreen.startFromBeginning,
-                    onBack = {
-                        navController.navigateUp()
-                    }
-                )
-            }
-
-            // Add/Edit Provider Screen
-            composable<Screen.AddProvider> { backStackEntry ->
-                val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
-                TvAddProviderScreen(
-                    editId = addProviderScreen.editId,
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                    onSuccess = {
-                        appSettings.hasProviderCache = true
-                        navController.navigateUp()
-                    }
-                )
-            }
-
-            // Provider Selection Screen
-            composable<Screen.ProviderSelection> {
-                TvProviderSelectionScreen(
-                    onProviderSelected = { provider ->
-                        coroutineScope.launch {
-                            // Activate the selected provider in Room
-                            val providerRepo = ProviderRepository(context.applicationContext)
-                            providerRepo.setActiveProvider(provider.id)
-
-                            // For Xtream providers, restore session for backward compatibility
-                            if (provider.type == "XTREAM") {
-                                val xtreamRepo = XtreamRepository(
-                                    accountManager, context.applicationContext, provider.id
-                                )
-                                when (val result = xtreamRepo.restoreSession()) {
-                                    is Result.Success -> {
-                                        val url = xtreamRepo.getCurrentUrl() ?: ""
-                                        authViewModel.setAuthSession(result.data, url)
+                                // For Xtream providers, restore session for backward compatibility
+                                if (provider.type == "XTREAM") {
+                                    val xtreamRepo =
+                                        XtreamRepository(
+                                            accountManager,
+                                            context.applicationContext,
+                                            provider.id,
+                                        )
+                                    when (val result = xtreamRepo.restoreSession()) {
+                                        is Result.Success -> {
+                                            val url = xtreamRepo.getCurrentUrl() ?: ""
+                                            authViewModel.setAuthSession(result.data, url)
+                                        }
+                                        is Result.Error -> { /* factories will handle connection */ }
                                     }
-                                    is Result.Error -> { /* factories will handle connection */ }
+                                }
+
+                                // Navigate to content selection for all provider types
+                                navController.navigate(Screen.ContentTypeSelection) {
+                                    popUpTo(Screen.ProviderSelection) { inclusive = true }
                                 }
                             }
+                        },
+                        onAddProvider = {
+                            navController.navigate(Screen.AddProvider())
+                        },
+                        onEditProvider = { id ->
+                            navController.navigate(Screen.AddProvider(editId = id))
+                        },
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                    )
+                }
 
-                            // Navigate to content selection for all provider types
-                            navController.navigate(Screen.ContentTypeSelection) {
-                                popUpTo(Screen.ProviderSelection) { inclusive = true }
-                            }
-                        }
-                    },
-                    onAddProvider = {
-                        navController.navigate(Screen.AddProvider())
-                    },
-                    onEditProvider = { id ->
-                        navController.navigate(Screen.AddProvider(editId = id))
-                    },
-                    onBack = {
-                        navController.navigateUp()
-                    }
-                )
-            }
+                // EPG Management Screen
+                composable<Screen.EpgManagement> {
+                    TvEpgManagementScreen(
+                        onBack = { navController.navigateUp() },
+                    )
+                }
 
-            // EPG Management Screen
-            composable<Screen.EpgManagement> {
-                TvEpgManagementScreen(
-                    onBack = { navController.navigateUp() }
-                )
-            }
+                // Settings Screen
+                composable<Screen.Settings> {
+                    // Prevent back from exiting if Settings is the start destination (no provider)
+                    BackHandler(enabled = navController.previousBackStackEntry == null) {}
+                    SettingsScreen(
+                        onBack = {
+                            navController.navigateUp()
+                        },
+                        onThemeChanged = onThemeChanged,
+                        onUiScaleChanged = onUiScaleChanged,
+                        onManageProviders = {
+                            navController.navigate(Screen.ProviderSelection)
+                        },
+                        onManageEpg = {
+                            navController.navigate(Screen.EpgManagement)
+                        },
+                        onProviderChanged = {
+                            coroutineScope.launch {
+                                val providerRepo = ProviderRepository(context.applicationContext)
+                                val activeProvider = providerRepo.getActiveProvider()
 
-            // Settings Screen
-            composable<Screen.Settings> {
-                // Prevent back from exiting if Settings is the start destination (no provider)
-                BackHandler(enabled = navController.previousBackStackEntry == null) {}
-                SettingsScreen(
-                    onBack = {
-                        navController.navigateUp()
-                    },
-                    onThemeChanged = onThemeChanged,
-                    onUiScaleChanged = onUiScaleChanged,
-                    onManageProviders = {
-                        navController.navigate(Screen.ProviderSelection)
-                    },
-                    onManageEpg = {
-                        navController.navigate(Screen.EpgManagement)
-                    },
-                    onProviderChanged = {
-                        coroutineScope.launch {
-                            val providerRepo = ProviderRepository(context.applicationContext)
-                            val activeProvider = providerRepo.getActiveProvider()
-
-                            if (activeProvider != null && activeProvider.type == "XTREAM") {
-                                val xtreamRepo = XtreamRepository(
-                                    accountManager, context.applicationContext, activeProvider.id
-                                )
-                                when (val result = xtreamRepo.restoreSession()) {
-                                    is Result.Success -> {
-                                        val url = xtreamRepo.getCurrentUrl() ?: ""
-                                        authViewModel.setAuthSession(result.data, url)
+                                if (activeProvider != null && activeProvider.type == "XTREAM") {
+                                    val xtreamRepo =
+                                        XtreamRepository(
+                                            accountManager,
+                                            context.applicationContext,
+                                            activeProvider.id,
+                                        )
+                                    when (val result = xtreamRepo.restoreSession()) {
+                                        is Result.Success -> {
+                                            val url = xtreamRepo.getCurrentUrl() ?: ""
+                                            authViewModel.setAuthSession(result.data, url)
+                                        }
+                                        is Result.Error -> { /* factories will handle connection */ }
                                     }
-                                    is Result.Error -> { /* factories will handle connection */ }
+                                }
+
+                                navController.navigate(Screen.ContentTypeSelection) {
+                                    popUpTo(Screen.Settings) { inclusive = false }
                                 }
                             }
-
-                            navController.navigate(Screen.ContentTypeSelection) {
-                                popUpTo(Screen.Settings) { inclusive = false }
-                            }
-                        }
-                    }
-                )
+                        },
+                    )
+                }
             }
         }
     }
 }
-}
-

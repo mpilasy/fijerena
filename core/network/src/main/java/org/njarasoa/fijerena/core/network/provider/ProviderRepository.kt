@@ -1,6 +1,6 @@
 package org.njarasoa.fijerena.core.network.provider
-
 import android.content.Context
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.Flow
@@ -14,13 +14,15 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
  * Passwords are stored in per-provider EncryptedSharedPreferences files.
  * Cache data uses per-provider namespaced SharedPreferences (handled by XtreamRepository).
  */
-class ProviderRepository(private val context: Context) {
-
+class ProviderRepository(
+    private val context: Context,
+) {
     private val db = SettingsDatabase.getInstance(context)
     private val dao = db.providerDao()
 
     private val masterKey: MasterKey by lazy {
-        MasterKey.Builder(context)
+        MasterKey
+            .Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
     }
@@ -48,19 +50,20 @@ class ProviderRepository(private val context: Context) {
         password: String,
         type: String = "XTREAM",
         config: String = "",
-        initialSettings: ProviderSettings = ProviderSettings.DEFAULT
+        initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
     ): Long {
         dao.deactivateAll()
         val settingsJson = json.encodeToString(initialSettings)
-        val entity = ProviderEntity(
-            name = name,
-            url = url,
-            username = username,
-            type = type,
-            config = config,
-            providerSettings = settingsJson,
-            isActive = true
-        )
+        val entity =
+            ProviderEntity(
+                name = name,
+                url = url,
+                username = username,
+                type = type,
+                config = config,
+                providerSettings = settingsJson,
+                isActive = true,
+            )
         val id = dao.insertProvider(entity)
         savePassword(id, password)
         return id
@@ -76,7 +79,7 @@ class ProviderRepository(private val context: Context) {
         username: String,
         password: String,
         type: String? = null,
-        config: String? = null
+        config: String? = null,
     ) {
         val existing = dao.getProviderById(id) ?: return
         dao.updateProvider(
@@ -85,18 +88,18 @@ class ProviderRepository(private val context: Context) {
                 url = url,
                 username = username,
                 type = type ?: existing.type,
-                config = config ?: existing.config
-            )
+                config = config ?: existing.config,
+            ),
         )
         savePassword(id, password)
         // If Jellyfin credentials changed, discard the cached session token so the
         // provider re-authenticates with the new username/password on next use.
         val effectiveType = type ?: existing.type
         if (effectiveType == "JELLYFIN") {
-            getProviderPrefs(id).edit()
-                .remove("jellyfin_token")
-                .remove("jellyfin_user_id")
-                .apply()
+            getProviderPrefs(id).edit {
+                remove("jellyfin_token")
+                    .remove("jellyfin_user_id")
+            }
         }
         // Clear cached provider instance since credentials may have changed
         MediaProviderFactory.clearCache(id)
@@ -127,19 +130,21 @@ class ProviderRepository(private val context: Context) {
     /**
      * Get the stored password for a provider.
      */
-    fun getPassword(providerId: Long): String? {
-        return getProviderPrefs(providerId).getString("password", null)
-    }
+    fun getPassword(providerId: Long): String? = getProviderPrefs(providerId).getString("password", null)
 
     /**
      * Persist a Jellyfin session token (from Quick Connect or normal auth) so the
      * provider can restore it on next launch without re-authenticating.
      */
-    fun saveJellyfinSession(providerId: Long, token: String, userId: String) {
-        getProviderPrefs(providerId).edit()
-            .putString("jellyfin_token", token)
-            .putString("jellyfin_user_id", userId)
-            .apply()
+    fun saveJellyfinSession(
+        providerId: Long,
+        token: String,
+        userId: String,
+    ) {
+        getProviderPrefs(providerId).edit {
+            putString("jellyfin_token", token)
+                .putString("jellyfin_user_id", userId)
+        }
     }
 
     // --- Provider Settings ---
@@ -159,16 +164,18 @@ class ProviderRepository(private val context: Context) {
      * Get provider settings synchronously (for use in non-suspend contexts).
      * Note: This performs a blocking database call - use getProviderSettings() when possible.
      */
-    fun getProviderSettingsSync(providerId: Long): ProviderSettings {
-        return kotlinx.coroutines.runBlocking {
+    fun getProviderSettingsSync(providerId: Long): ProviderSettings =
+        kotlinx.coroutines.runBlocking {
             getProviderSettings(providerId)
         }
-    }
 
     /**
      * Update the settings for a provider.
      */
-    suspend fun updateProviderSettings(providerId: Long, settings: ProviderSettings) {
+    suspend fun updateProviderSettings(
+        providerId: Long,
+        settings: ProviderSettings,
+    ) {
         val entity = dao.getProviderById(providerId) ?: return
         val settingsJson = json.encodeToString(settings)
         dao.updateProvider(entity.copy(providerSettings = settingsJson))
@@ -195,34 +202,46 @@ class ProviderRepository(private val context: Context) {
         // We need an instance of XtreamRepository to get accurate DB stats.
         // Since we don't have dependency injection here, we create a temporary instance.
         // This is safe because XtreamRepository uses singletons (Database) internally.
-        val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context)
+        val accountManager =
+            org.njarasoa.fijerena.core.network
+                .AccountManager(context)
         val repo = XtreamRepository(accountManager, context, providerId)
         return repo.getCacheStats()
     }
 
     suspend fun clearAllCacheForProvider(providerId: Long) {
-        val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context)
+        val accountManager =
+            org.njarasoa.fijerena.core.network
+                .AccountManager(context)
         val repo = XtreamRepository(accountManager, context, providerId)
         repo.clearCache()
     }
 
-    suspend fun clearCacheForProviderContentType(providerId: Long, contentType: String) {
-        val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context)
+    suspend fun clearCacheForProviderContentType(
+        providerId: Long,
+        contentType: String,
+    ) {
+        val accountManager =
+            org.njarasoa.fijerena.core.network
+                .AccountManager(context)
         val repo = XtreamRepository(accountManager, context, providerId)
         repo.clearCacheForContentType(contentType)
     }
 
     // --- Private helpers ---
 
-    private fun savePassword(providerId: Long, password: String) {
-        getProviderPrefs(providerId).edit()
-            .putString("password", password)
-            .apply()
+    private fun savePassword(
+        providerId: Long,
+        password: String,
+    ) {
+        getProviderPrefs(providerId).edit {
+            putString("password", password)
+        }
     }
 
     private fun clearProviderPassword(providerId: Long) {
         try {
-            getProviderPrefs(providerId).edit().clear().apply()
+            getProviderPrefs(providerId).edit { clear() }
             encryptedPrefsCache.remove(providerId)
         } catch (_: Exception) {
             // Ignore errors clearing prefs for deleted provider
@@ -232,22 +251,22 @@ class ProviderRepository(private val context: Context) {
     private fun clearProviderCache(providerId: Long) {
         try {
             val cacheName = "xtream_cache_$providerId"
-            context.getSharedPreferences(cacheName, Context.MODE_PRIVATE)
-                .edit().clear().apply()
+            context
+                .getSharedPreferences(cacheName, Context.MODE_PRIVATE)
+                .edit { clear() }
         } catch (_: Exception) {
             // Ignore errors clearing cache for deleted provider
         }
     }
 
-    private fun getProviderPrefs(providerId: Long): android.content.SharedPreferences {
-        return encryptedPrefsCache.getOrPut(providerId) {
+    private fun getProviderPrefs(providerId: Long): android.content.SharedPreferences =
+        encryptedPrefsCache.getOrPut(providerId) {
             EncryptedSharedPreferences.create(
                 context,
                 "provider_creds_$providerId",
                 masterKey,
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
             )
         }
-    }
 }

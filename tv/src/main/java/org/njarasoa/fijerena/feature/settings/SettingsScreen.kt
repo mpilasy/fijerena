@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -64,12 +64,12 @@ fun SettingsScreen(
     onUiScaleChanged: (Float) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onManageEpg: () -> Unit = {},
-    onProviderChanged: () -> Unit
+    onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    
+
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
@@ -88,14 +88,16 @@ fun SettingsScreen(
     var pendingImportOptions by remember { mutableStateOf(SettingsExportManager.ImportOptions()) }
 
     // SAF launcher for export (create file)
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri -> pendingExportUri = uri }
+    val exportLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("application/json"),
+        ) { uri -> pendingExportUri = uri }
 
     // SAF launcher for import (open file)
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri -> pendingImportUri = uri }
+    val importLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+        ) { uri -> pendingImportUri = uri }
 
     // Process export in LaunchedEffect (survives recomposition)
     LaunchedEffect(pendingExportUri) {
@@ -109,13 +111,14 @@ fun SettingsScreen(
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportUri(uri)
-        parseResult.onSuccess { parsed ->
-            pendingParsedImport = parsed
-            pendingImportOptions = SettingsExportManager.ImportOptions()
-            showImportOptionsDialog = true
-        }.onFailure { e ->
-            viewModel.setExportImportMessage("Import failed: ${e.message}")
-        }
+        parseResult
+            .onSuccess { parsed ->
+                pendingParsedImport = parsed
+                pendingImportOptions = SettingsExportManager.ImportOptions()
+                showImportOptionsDialog = true
+            }.onFailure { e ->
+                viewModel.setExportImportMessage("Import failed: ${e.message}")
+            }
         pendingImportUri = null
     }
 
@@ -123,13 +126,14 @@ fun SettingsScreen(
     LaunchedEffect(pendingImportPath) {
         val path = pendingImportPath ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportPath(path)
-        parseResult.onSuccess { parsed ->
-            pendingParsedImport = parsed
-            pendingImportOptions = SettingsExportManager.ImportOptions()
-            showImportOptionsDialog = true
-        }.onFailure { e ->
-            viewModel.setExportImportMessage("Import failed: ${e.message}")
-        }
+        parseResult
+            .onSuccess { parsed ->
+                pendingParsedImport = parsed
+                pendingImportOptions = SettingsExportManager.ImportOptions()
+                showImportOptionsDialog = true
+            }.onFailure { e ->
+                viewModel.setExportImportMessage("Import failed: ${e.message}")
+            }
         pendingImportPath = null
     }
 
@@ -141,18 +145,19 @@ fun SettingsScreen(
     var signInError by remember { mutableStateOf<String?>(null) }
 
     // Google Sign-In launcher
-    val signInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        coroutineScope.launch {
-            val success = syncManager.handleSignInResult(result.data)
-            if (!success) {
-                signInError = "Sign-in failed. Check Google Play Services."
-            } else {
-                signInError = null
+    val signInLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            coroutineScope.launch {
+                val success = syncManager.handleSignInResult(result.data)
+                if (!success) {
+                    signInError = "Sign-in failed. Check Google Play Services."
+                } else {
+                    signInError = null
+                }
             }
         }
-    }
 
     // Initialize sync on startup
     LaunchedEffect(Unit) {
@@ -167,7 +172,7 @@ fun SettingsScreen(
             val activeProvider = providerRepo.getActiveProvider()
             val hadOnLoad = hadProviderOnLoad
             viewModel.refreshProviderInfo()
-            
+
             if (hadOnLoad == null) {
                 hadProviderOnLoad = activeProvider != null
             } else if (hadOnLoad == false && activeProvider != null) {
@@ -181,23 +186,24 @@ fun SettingsScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    horizontal = Spacing.tvSafeMarginHorizontal,
-                    vertical = Spacing.tvSafeMarginVertical
-                )
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = Spacing.tvSafeMarginHorizontal,
+                        vertical = Spacing.tvSafeMarginVertical,
+                    ),
         ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "Settings",
                     style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -207,7 +213,7 @@ fun SettingsScreen(
             TvLazyColumn(
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 // Provider Details
                 item {
@@ -219,7 +225,7 @@ fun SettingsScreen(
                         subscriptionIsTrial = uiState.subscriptionIsTrial,
                         subscriptionStatus = uiState.subscriptionStatus,
                         onManageProviders = onManageProviders,
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -230,7 +236,7 @@ fun SettingsScreen(
                         onWatchDelayChanged = { seconds ->
                             viewModel.updateWatchDelay(seconds)
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -242,7 +248,7 @@ fun SettingsScreen(
                             viewModel.updateTheme(newThemeId)
                             onThemeChanged(newThemeId)
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -252,7 +258,7 @@ fun SettingsScreen(
                         context = context,
                         epgRefreshTrigger = uiState.epgRefreshTrigger,
                         onManageEpg = onManageEpg,
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -264,7 +270,7 @@ fun SettingsScreen(
                             viewModel.updateUiScale(newScale)
                             onUiScaleChanged(newScale)
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -275,7 +281,7 @@ fun SettingsScreen(
                         onDevModeChanged = { enabled ->
                             viewModel.updateDevMode(enabled)
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -291,7 +297,7 @@ fun SettingsScreen(
                             signInError = null
                             signInLauncher.launch(syncManager.getSignInIntent())
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -309,7 +315,7 @@ fun SettingsScreen(
                             }
                         },
                         exportImportMessage = uiState.exportImportMessage,
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -340,7 +346,7 @@ fun SettingsScreen(
                 onCancel = {
                     showImportOptionsDialog = false
                     if (!showConflictDialog) pendingParsedImport = null
-                }
+                },
             )
         }
 
@@ -359,7 +365,7 @@ fun SettingsScreen(
                 onCancel = {
                     showConflictDialog = false
                     pendingParsedImport = null
-                }
+                },
             )
         }
     }

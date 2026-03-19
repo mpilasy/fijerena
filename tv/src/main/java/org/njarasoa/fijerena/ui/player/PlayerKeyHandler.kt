@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.ui.player
 
-import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -9,6 +8,7 @@ import androidx.compose.ui.input.key.type
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import android.view.KeyEvent as AndroidKeyEvent
 
 fun handlePlayerKeyEvent(
     keyEvent: KeyEvent,
@@ -18,7 +18,7 @@ fun handlePlayerKeyEvent(
     currentMetadata: PlayerMetadata,
     onBack: () -> Unit,
     onNextChannel: () -> Unit,
-    onPreviousChannel: () -> Unit
+    onPreviousChannel: () -> Unit,
 ): Boolean {
     // Handle KeyUp to reset fast-forward/rewind speed
     if (keyEvent.type == KeyEventType.KeyUp) {
@@ -28,13 +28,17 @@ fun handlePlayerKeyEvent(
                     viewModel.setPlaybackSpeed(1f)
                     state.seekSpeedLabel = null
                     true
-                } else false
+                } else {
+                    false
+                }
             }
             Key.DirectionLeft -> {
                 if (!currentMetadata.isLive && state.seekSpeedLabel != null) {
                     state.seekSpeedLabel = null
                     true
-                } else false
+                } else {
+                    false
+                }
             }
             else -> false
         }
@@ -111,24 +115,27 @@ fun handlePlayerKeyEvent(
             } else if (!state.showControls && !currentMetadata.isLive) {
                 // VOD: rewind with acceleration on hold
                 val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                val position = when (val ps = playbackState) {
-                    is PlaybackState.Playing -> ps.position
-                    is PlaybackState.Paused -> ps.position
-                    else -> null
-                }
+                val position =
+                    when (val ps = playbackState) {
+                        is PlaybackState.Playing -> ps.position
+                        is PlaybackState.Paused -> ps.position
+                        else -> null
+                    }
                 if (position != null) {
-                    val seekAmount = when {
-                        repeatCount < 10 -> 10_000L
-                        repeatCount < 20 -> 30_000L
-                        repeatCount < 35 -> 60_000L
-                        else -> 120_000L
-                    }
-                    state.seekSpeedLabel = when {
-                        repeatCount < 10 -> null
-                        repeatCount < 20 -> "<< 3x"
-                        repeatCount < 35 -> "<< 6x"
-                        else -> "<< 12x"
-                    }
+                    val seekAmount =
+                        when {
+                            repeatCount < 10 -> 10_000L
+                            repeatCount < 20 -> 30_000L
+                            repeatCount < 35 -> 60_000L
+                            else -> 120_000L
+                        }
+                    state.seekSpeedLabel =
+                        when {
+                            repeatCount < 10 -> null
+                            repeatCount < 20 -> "<< 3x"
+                            repeatCount < 35 -> "<< 6x"
+                            else -> "<< 12x"
+                        }
                     viewModel.seekTo((position - seekAmount).coerceAtLeast(0L))
                     state.showStreamInfo = true
                 }
@@ -149,28 +156,31 @@ fun handlePlayerKeyEvent(
             } else if (!state.showControls && !currentMetadata.isLive) {
                 // VOD: fast-forward with acceleration on hold
                 val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                val position = when (val ps = playbackState) {
-                    is PlaybackState.Playing -> ps.position
-                    is PlaybackState.Paused -> ps.position
-                    else -> null
-                }
-                val duration = when (val ps = playbackState) {
-                    is PlaybackState.Playing -> ps.duration
-                    is PlaybackState.Paused -> ps.duration
-                    else -> null
-                }
+                val position =
+                    when (val ps = playbackState) {
+                        is PlaybackState.Playing -> ps.position
+                        is PlaybackState.Paused -> ps.position
+                        else -> null
+                    }
+                val duration =
+                    when (val ps = playbackState) {
+                        is PlaybackState.Playing -> ps.duration
+                        is PlaybackState.Paused -> ps.duration
+                        else -> null
+                    }
                 if (position != null && duration != null) {
                     if (repeatCount == 0) {
                         // Single tap: seek +10s
                         viewModel.seekTo((position + 10_000L).coerceAtMost(duration))
                     } else {
                         // Held: accelerate playback speed
-                        val speed = when {
-                            repeatCount < 10 -> 2f
-                            repeatCount < 20 -> 4f
-                            repeatCount < 35 -> 8f
-                            else -> 16f
-                        }
+                        val speed =
+                            when {
+                                repeatCount < 10 -> 2f
+                                repeatCount < 20 -> 4f
+                                repeatCount < 35 -> 8f
+                                else -> 16f
+                            }
                         viewModel.setPlaybackSpeed(speed)
                         state.seekSpeedLabel = ">> ${speed.toInt()}x"
                     }
@@ -185,8 +195,14 @@ fun handlePlayerKeyEvent(
         Key.Back -> {
             // Close any visible overlays first, then exit
             when {
-                state.showCategoryOverlay -> { state.showCategoryOverlay = false; true }
-                state.showLastWatchedOverlay -> { state.showLastWatchedOverlay = false; true }
+                state.showCategoryOverlay -> {
+                    state.showCategoryOverlay = false
+                    true
+                }
+                state.showLastWatchedOverlay -> {
+                    state.showLastWatchedOverlay = false
+                    true
+                }
                 state.showStats || state.showControls || state.showStreamInfo -> {
                     state.showStats = false
                     state.showControls = false

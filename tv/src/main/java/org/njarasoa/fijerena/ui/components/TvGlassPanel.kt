@@ -15,13 +15,13 @@ fun TvGlassPanel(
     modifier: Modifier = Modifier,
     blurRadius: Float = 20f,
     backgroundAlpha: Float = 1f,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     GlassPanel(
         modifier = modifier,
         blurRadius = blurRadius,
         backgroundAlpha = backgroundAlpha,
         panelShape = RoundedCornerShape(CornerRadius.large),
-        content = content
+        content = content,
     )
 }

@@ -27,14 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
-import org.njarasoa.fijerena.ui.theme.CinemaBackground
-import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -44,8 +40,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.feature.player.utils.formatBitrate
 import org.njarasoa.fijerena.feature.player.utils.formatTime
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -53,7 +51,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 fun MobileStatsOverlay(
     playbackState: PlaybackState,
     metadata: PlayerMetadata,
-    onClose: () -> Unit
+    onClose: () -> Unit,
 ) {
     var videoCodec by remember { mutableStateOf("N/A") }
     var videoResolution by remember { mutableStateOf("N/A") }
@@ -70,23 +68,38 @@ fun MobileStatsOverlay(
     var networkSpeed by remember { mutableStateOf("N/A") }
     var bufferHealth by remember { mutableStateOf(0) }
 
-    val serviceDroppedFrames by StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
-    val serviceTotalFrames by StreamingPlaybackService.getInstance()?.totalFrames?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
+    val serviceDroppedFrames by StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsStateWithLifecycle(0L)
+        ?: remember { mutableStateOf(0L) }
+    val serviceTotalFrames by StreamingPlaybackService.getInstance()?.totalFrames?.collectAsStateWithLifecycle(0L)
+        ?: remember { mutableStateOf(0L) }
 
     // Collect stream stats from service
-    val serviceRetryCount by StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsStateWithLifecycle(0) ?: remember { mutableStateOf(0) }
-    val serviceStartTimeMs by StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
-    val serviceRebufferCount by StreamingPlaybackService.getInstance()?.rebufferCount?.collectAsStateWithLifecycle(0) ?: remember { mutableStateOf(0) }
-    val serviceRebufferTimeMs by StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
-    val serviceBandwidth by StreamingPlaybackService.getInstance()?.bandwidthEstimate?.collectAsStateWithLifecycle(0L) ?: remember { mutableStateOf(0L) }
-    val serviceQualitySwitches by StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsStateWithLifecycle(0) ?: remember { mutableStateOf(0) }
-    val serviceMeasuredFps by StreamingPlaybackService.getInstance()?.measuredFps?.collectAsStateWithLifecycle(0f) ?: remember { mutableStateOf(0f) }
+    val serviceRetryCount by StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsStateWithLifecycle(0)
+        ?: remember { mutableStateOf(0) }
+    val serviceStartTimeMs by StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsStateWithLifecycle(0L)
+        ?: remember { mutableStateOf(0L) }
+    val serviceRebufferCount by StreamingPlaybackService.getInstance()?.rebufferCount?.collectAsStateWithLifecycle(0)
+        ?: remember { mutableStateOf(0) }
+    val serviceRebufferTimeMs by StreamingPlaybackService.getInstance()?.totalRebufferTimeMs?.collectAsStateWithLifecycle(0L)
+        ?: remember { mutableStateOf(0L) }
+    val serviceBandwidth by StreamingPlaybackService.getInstance()?.bandwidthEstimate?.collectAsStateWithLifecycle(0L)
+        ?: remember { mutableStateOf(0L) }
+    val serviceQualitySwitches by StreamingPlaybackService.getInstance()?.qualitySwitchCount?.collectAsStateWithLifecycle(0)
+        ?: remember { mutableStateOf(0) }
+    val serviceMeasuredFps by StreamingPlaybackService.getInstance()?.measuredFps?.collectAsStateWithLifecycle(0f)
+        ?: remember { mutableStateOf(0f) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
     // Audio DSP stats
     val audioDspStats by StreamingPlaybackService.getInstance()?.audioDspStats?.collectAsStateWithLifecycle(
-        org.njarasoa.fijerena.core.player.model.AudioDspStats()
-    ) ?: remember { mutableStateOf(org.njarasoa.fijerena.core.player.model.AudioDspStats()) }
+        org.njarasoa.fijerena.core.player.model
+            .AudioDspStats(),
+    ) ?: remember {
+        mutableStateOf(
+            org.njarasoa.fijerena.core.player.model
+                .AudioDspStats(),
+        )
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -96,9 +109,12 @@ fun MobileStatsOverlay(
 
                 val currentPos = p.currentPosition
                 val buffered = p.bufferedPosition
-                bufferHealth = if (buffered > currentPos) {
-                    ((buffered - currentPos) / 1000).toInt().coerceIn(0, 100)
-                } else 0
+                bufferHealth =
+                    if (buffered > currentPos) {
+                        ((buffered - currentPos) / 1000).toInt().coerceIn(0, 100)
+                    } else {
+                        0
+                    }
 
                 val tracks = p.currentTracks
                 var currentVideoBitrate = 0
@@ -121,28 +137,35 @@ fun MobileStatsOverlay(
                                 if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
                                     videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
                                     videoResolution = "${format.width} x ${format.height}"
-                                    
+
                                     val mFps = serviceMeasuredFps
-                                    videoFrameRate = if (format.frameRate > 0) {
-                                        "${format.frameRate.toInt()} fps"
-                                    } else if (mFps > 0) {
-                                        String.format(java.util.Locale.getDefault(), "%.1f fps (measured)", mFps)
-                                    } else {
-                                        "N/A"
-                                    }
-                                    
+                                    videoFrameRate =
+                                        if (format.frameRate > 0) {
+                                            "${format.frameRate.toInt()} fps"
+                                        } else if (mFps > 0) {
+                                            String.format(java.util.Locale.getDefault(), "%.1f fps (measured)", mFps)
+                                        } else {
+                                            "N/A"
+                                        }
+
                                     currentVideoBitrate = format.bitrate
                                     videoBitrate = if (currentVideoBitrate > 0) formatBitrate(currentVideoBitrate) else "Unknown"
                                 }
                                 if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
                                     audioCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
                                     audioSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else "N/A"
-                                    audioChannels = if (format.channelCount > 0) {
-                                        when (format.channelCount) {
-                                            1 -> "Mono"; 2 -> "Stereo"; 6 -> "5.1"; 8 -> "7.1"
-                                            else -> "${format.channelCount}ch"
+                                    audioChannels =
+                                        if (format.channelCount > 0) {
+                                            when (format.channelCount) {
+                                                1 -> "Mono"
+                                                2 -> "Stereo"
+                                                6 -> "5.1"
+                                                8 -> "7.1"
+                                                else -> "${format.channelCount}ch"
+                                            }
+                                        } else {
+                                            "N/A"
                                         }
-                                    } else "N/A"
                                     currentAudioBitrate = format.bitrate
                                     audioBitrate = if (currentAudioBitrate > 0) formatBitrate(currentAudioBitrate) else "Unknown"
                                 }
@@ -161,11 +184,15 @@ fun MobileStatsOverlay(
                 }
 
                 // Use bandwidth estimate for network speed
-                networkSpeed = if (bw > 0) formatBitrate(bw.toInt()) else {
-                    val totalBitrate = (if (currentVideoBitrate > 0) currentVideoBitrate else 0) + 
-                                     (if (currentAudioBitrate > 0) currentAudioBitrate else 0)
-                    if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
-                }
+                networkSpeed =
+                    if (bw > 0) {
+                        formatBitrate(bw.toInt())
+                    } else {
+                        val totalBitrate =
+                            (if (currentVideoBitrate > 0) currentVideoBitrate else 0) +
+                                (if (currentAudioBitrate > 0) currentAudioBitrate else 0)
+                        if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
+                    }
             }
 
             // Update stream elapsed time
@@ -175,73 +202,80 @@ fun MobileStatsOverlay(
                 val hours = elapsedSec / 3600
                 val minutes = (elapsedSec % 3600) / 60
                 val seconds = elapsedSec % 60
-                streamElapsed = if (hours > 0) {
-                    String.format("%d:%02d:%02d", hours, minutes, seconds)
-                } else {
-                    String.format("%d:%02d", minutes, seconds)
-                }
+                streamElapsed =
+                    if (hours > 0) {
+                        String.format("%d:%02d:%02d", hours, minutes, seconds)
+                    } else {
+                        String.format("%d:%02d", minutes, seconds)
+                    }
             }
 
             delay(CinemaAnimation.statsUpdateMs)
         }
     }
 
-    val position = when (playbackState) {
-        is PlaybackState.Playing -> playbackState.position
-        is PlaybackState.Paused -> playbackState.position
-        else -> 0L
-    }
-    val duration = when (playbackState) {
-        is PlaybackState.Playing -> playbackState.duration
-        is PlaybackState.Paused -> playbackState.duration
-        else -> 0L
-    }
+    val position =
+        when (playbackState) {
+            is PlaybackState.Playing -> playbackState.position
+            is PlaybackState.Paused -> playbackState.position
+            else -> 0L
+        }
+    val duration =
+        when (playbackState) {
+            is PlaybackState.Playing -> playbackState.duration
+            is PlaybackState.Paused -> playbackState.duration
+            else -> 0L
+        }
     val totalFrames = serviceTotalFrames
     val dropRate = if (totalFrames > 0) (droppedFrames.toFloat() / totalFrames * 100) else 0f
-    val dropColor = when {
-        dropRate < 0.5f -> CinemaSuccess
-        dropRate < 2.0f -> CinemaWarning
-        else -> CinemaError
-    }
+    val dropColor =
+        when {
+            dropRate < 0.5f -> CinemaSuccess
+            dropRate < 2.0f -> CinemaWarning
+            else -> CinemaError
+        }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CinemaBackground.copy(alpha = CinemaAlpha.scrim))
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(CinemaBackground.copy(alpha = CinemaAlpha.scrim)),
     ) {
         GlassPanel(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(CinemaSpacing.md)
-                .widthIn(max = MobileDimensions.statsOverlayMaxWidth)
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(CinemaSpacing.md)
+                    .widthIn(max = MobileDimensions.statsOverlayMaxWidth),
         ) {
             val typography = MaterialTheme.typography
             Column(
-                modifier = Modifier
-                    .padding(CinemaSpacing.md)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)
+                modifier =
+                    Modifier
+                        .padding(CinemaSpacing.md)
+                        .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = "Stats for Nerds",
                         style = typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     IconButton(
                         onClick = onClose,
-                        modifier = Modifier.size(MobileDimensions.iconLarge)
+                        modifier = Modifier.size(MobileDimensions.iconLarge),
                     ) {
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Close",
                             tint = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                            modifier = Modifier.size(MobileDimensions.iconSmall)
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                     }
                 }
@@ -266,11 +300,12 @@ fun MobileStatsOverlay(
                 StatRow("Buffered", formatTime(bufferedPosition))
                 val rebuffers = serviceRebufferCount
                 val rebufferTimeMs = serviceRebufferTimeMs
-                val rebufferColor = when {
-                    rebuffers == 0 -> CinemaSuccess
-                    rebuffers <= 3 -> CinemaWarning
-                    else -> CinemaError
-                }
+                val rebufferColor =
+                    when {
+                        rebuffers == 0 -> CinemaSuccess
+                        rebuffers <= 3 -> CinemaWarning
+                        else -> CinemaError
+                    }
                 StatRowColored("Rebuffers", "$rebuffers", rebufferColor)
                 if (rebufferTimeMs > 0) {
                     StatRowColored("Rebuf Time", "${rebufferTimeMs / 1000}.${(rebufferTimeMs % 1000) / 100}s", rebufferColor)
@@ -308,40 +343,46 @@ fun MobileStatsOverlay(
                 if (nmEnabled) {
                     val nmActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.enabled ?: false }
                     val isHalActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.isActuallyActive ?: false }
-                    val sessionId = remember {
-                        val p = StreamingPlaybackService.getInstance()?.getPlayer()
-                        if (p is androidx.media3.exoplayer.ExoPlayer) p.audioSessionId else 0
-                    }
+                    val sessionId =
+                        remember {
+                            val p = StreamingPlaybackService.getInstance()?.getPlayer()
+                            if (p is androidx.media3.exoplayer.ExoPlayer) p.audioSessionId else 0
+                        }
                     StatRow("Audio Session", "$sessionId")
                     StatRow("DSP Active", if (nmActive && sessionId != 0) "YES" else "NO")
                     if (nmActive) {
                         StatRow("NM Engine", if (isHalActive) "HAL (System)" else "APP (Internal)")
                     }
-                    val encodingName = when (audioDspStats.nmEncoding) {
-                        androidx.media3.common.C.ENCODING_PCM_16BIT -> "PCM_16BIT"
-                        androidx.media3.common.C.ENCODING_PCM_FLOAT -> "PCM_FLOAT"
-                        androidx.media3.common.C.ENCODING_PCM_24BIT -> "PCM_24BIT"
-                        androidx.media3.common.C.ENCODING_PCM_32BIT -> "PCM_32BIT"
-                        0 -> "NOT_SET"
-                        else -> "UNKNOWN(${audioDspStats.nmEncoding})"
-                    }
+                    val encodingName =
+                        when (audioDspStats.nmEncoding) {
+                            androidx.media3.common.C.ENCODING_PCM_16BIT -> "PCM_16BIT"
+                            androidx.media3.common.C.ENCODING_PCM_FLOAT -> "PCM_FLOAT"
+                            androidx.media3.common.C.ENCODING_PCM_24BIT -> "PCM_24BIT"
+                            androidx.media3.common.C.ENCODING_PCM_32BIT -> "PCM_32BIT"
+                            0 -> "NOT_SET"
+                            else -> "UNKNOWN(${audioDspStats.nmEncoding})"
+                        }
                     StatRow("NM Encoding", encodingName)
                     StatRow("NM Proc Enabled", "${audioDspStats.nmEnabled}")
                     StatRow("NM Calls", "${audioDspStats.nmCallCount}")
                 }
 
-                val caps = remember { org.njarasoa.fijerena.core.player.device.DeviceDetector.detect() }
+                val caps =
+                    remember {
+                        org.njarasoa.fijerena.core.player.device.DeviceDetector
+                            .detect()
+                    }
                 Text(
                     text = "Build: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME} (${org.njarasoa.fijerena.BuildConfig.GIT_HASH})",
                     style = typography.labelSmall,
                     color = CinemaTextPrimary.copy(alpha = 0.3f),
-                    modifier = Modifier.padding(top = 12.dp)
+                    modifier = Modifier.padding(top = 12.dp),
                 )
 
                 Text(
                     text = "Type: ${caps.deviceType}",
                     style = typography.labelSmall,
-                    color = CinemaTextPrimary.copy(alpha = 0.3f)
+                    color = CinemaTextPrimary.copy(alpha = 0.3f),
                 )
             }
         }
@@ -354,46 +395,53 @@ private fun SectionHeader(title: String) {
         text = title,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 6.dp)
+        modifier = Modifier.padding(top = 6.dp),
     )
 }
 
 @Composable
-private fun StatRow(label: String, value: String) {
+private fun StatRow(
+    label: String,
+    value: String,
+) {
     val typography = MaterialTheme.typography
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
             text = label,
             style = typography.bodySmall,
-            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
+            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
         )
         Text(
             text = value,
             style = typography.bodySmall,
-            color = CinemaTextPrimary
+            color = CinemaTextPrimary,
         )
     }
 }
 
 @Composable
-private fun StatRowColored(label: String, value: String, valueColor: Color) {
+private fun StatRowColored(
+    label: String,
+    value: String,
+    valueColor: Color,
+) {
     val typography = MaterialTheme.typography
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
             text = label,
             style = typography.bodySmall,
-            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
+            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
         )
         Text(
             text = value,
             style = typography.bodySmall,
-            color = valueColor
+            color = valueColor,
         )
     }
 }

@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,18 +20,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.player.domain.ContentType
-import org.njarasoa.fijerena.core.player.domain.MediaCategory
-import org.njarasoa.fijerena.core.player.domain.MediaItem
-import org.njarasoa.fijerena.core.player.model.EpgProgram
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -68,7 +65,7 @@ internal fun TwoColumnLayout(
     onRefreshStreams: (String) -> Unit,
     onSearchClick: () -> Unit,
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -78,21 +75,24 @@ internal fun TwoColumnLayout(
 
     // Load actual provider name from database (AppSettings default is "My Provider")
     LaunchedEffect(Unit) {
-        val repo = org.njarasoa.fijerena.core.network.provider.ProviderRepository(context.applicationContext)
+        val repo =
+            org.njarasoa.fijerena.core.network.provider
+                .ProviderRepository(context.applicationContext)
         repo.getActiveProvider()?.let { providerName = it.name }
     }
 
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val scaledStyles = remember(scale, typography) {
-        object {
-            val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
-            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-            val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
-            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+    val scaledStyles =
+        remember(scale, typography) {
+            object {
+                val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
+                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+                val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
+                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+            }
         }
-    }
 
     // Long-press favorite menu state
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
@@ -107,7 +107,7 @@ internal fun TwoColumnLayout(
                         categoryViewModel.toggleFavoriteCategory(
                             target.categoryId,
                             target.categoryName,
-                            target.contentType
+                            target.contentType,
                         )
                     }
                     is FavoriteMenuTarget.Stream -> {
@@ -115,46 +115,48 @@ internal fun TwoColumnLayout(
                             target.itemId,
                             target.itemName,
                             target.categoryId,
-                            target.contentType
+                            target.contentType,
                         )
                     }
                 }
             },
-            onDismiss = { favoriteMenuTarget = null }
+            onDismiss = { favoriteMenuTarget = null },
         )
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = Spacing.lg.scaled(scale)),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = Spacing.lg.scaled(scale)),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 CinemaIconButton(
                     onClick = onSearchClick,
                     icon = {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "Search"
+                            contentDescription = "Search",
                         )
-                    }
+                    },
                 )
                 // EPG button - show for Live TV when native EPG or XMLTV index is available
-                val hasEpgData = supportsNativeEpg ||
-                    epgIndexState is EpgIndexState.Indexed
+                val hasEpgData =
+                    supportsNativeEpg ||
+                        epgIndexState is EpgIndexState.Indexed
                 if (contentType == ContentType.LIVE_TV && selectedCategoryId != null && hasEpgData) {
                     val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name
                     if (selectedCategoryName != null) {
                         CinemaSecondaryButton(
                             onClick = { onEpgClick(selectedCategoryId, selectedCategoryName) },
-                            text = "TV Guide"
+                            text = "TV Guide",
                         )
                     }
                 }
@@ -162,44 +164,46 @@ internal fun TwoColumnLayout(
                     Text(
                         text = providerName,
                         style = scaledStyles.displaySmall,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = contentType.replace("_", " "),
                         style = scaledStyles.titleMedium,
-                        color = CinemaAccent
+                        color = CinemaAccent,
                     )
                     Text(
                         text = "${categories.size} categories",
                         style = scaledStyles.labelSmall,
-                        color = CinemaTextSecondary
+                        color = CinemaTextSecondary,
                     )
                 }
             }
             Text(
                 text = providerName,
                 style = scaledStyles.titleSmall,
-                color = CinemaTextSecondaryHigh
+                color = CinemaTextSecondaryHigh,
             )
         }
 
         // EPG error/status banner (Live TV only)
         if (contentType == ContentType.LIVE_TV) {
-            val epgErrorMessage = when (epgIndexState) {
-                is EpgIndexState.Failed -> "EPG indexing failed"
-                is EpgIndexState.Indexing -> "EPG indexing ${epgIndexState.progressPercent}%..."
-                else -> null
-            }
+            val epgErrorMessage =
+                when (epgIndexState) {
+                    is EpgIndexState.Failed -> "EPG indexing failed"
+                    is EpgIndexState.Indexing -> "EPG indexing ${epgIndexState.progressPercent}%..."
+                    else -> null
+                }
             if (epgErrorMessage != null) {
                 Text(
                     text = epgErrorMessage,
                     style = scaledStyles.bodySmall,
-                    color = if (epgIndexState is EpgIndexState.Indexing) {
-                        CinemaTextSecondary
-                    } else {
-                        CinemaError
-                    },
-                    modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale))
+                    color =
+                        if (epgIndexState is EpgIndexState.Indexing) {
+                            CinemaTextSecondary
+                        } else {
+                            CinemaError
+                        },
+                    modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale)),
                 )
             }
         }
@@ -207,7 +211,7 @@ internal fun TwoColumnLayout(
         // Two-column content
         Row(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Left column: Categories (30% width)
             CategoryList(
@@ -220,16 +224,18 @@ internal fun TwoColumnLayout(
                 onCategorySelected = onCategorySelected,
                 onRefreshCategories = onRefreshCategories,
                 onCategoryLongPress = { category ->
-                    favoriteMenuTarget = FavoriteMenuTarget.Category(
-                        categoryId = category.id,
-                        categoryName = category.name,
-                        contentType = contentType,
-                        isFavorite = categoryViewModel.isFavoriteCategory(category.id, contentType)
-                    )
+                    favoriteMenuTarget =
+                        FavoriteMenuTarget.Category(
+                            categoryId = category.id,
+                            categoryName = category.name,
+                            contentType = contentType,
+                            isFavorite = categoryViewModel.isFavoriteCategory(category.id, contentType),
+                        )
                 },
-                modifier = Modifier
-                    .weight(0.3f)
-                    .fillMaxHeight()
+                modifier =
+                    Modifier
+                        .weight(0.3f)
+                        .fillMaxHeight(),
             )
 
             // Right column: Streams (70% width)
@@ -238,9 +244,10 @@ internal fun TwoColumnLayout(
                 streamsLoading = streamsLoading,
                 selectedCategoryId = selectedCategoryId,
                 // Memoize linear search — only recompute when inputs change
-                selectedCategoryName = remember(categories, selectedCategoryId) {
-                    categories.find { it.id == selectedCategoryId }?.name
-                },
+                selectedCategoryName =
+                    remember(categories, selectedCategoryId) {
+                        categories.find { it.id == selectedCategoryId }?.name
+                    },
                 lastPlayedItemId = lastPlayedItemId,
                 nowPlaying = nowPlaying,
                 contentType = contentType,
@@ -264,26 +271,29 @@ internal fun TwoColumnLayout(
                     // should toggle the category favorite, not create a stream favorite
                     val realCategoryId = item.providerData["categoryId"]
                     if (item.providerData["isCategoryRef"] == "true" && realCategoryId != null) {
-                        favoriteMenuTarget = FavoriteMenuTarget.Category(
-                            categoryId = realCategoryId,
-                            categoryName = item.name,
-                            contentType = contentType,
-                            isFavorite = categoryViewModel.isFavoriteCategory(realCategoryId, contentType)
-                        )
+                        favoriteMenuTarget =
+                            FavoriteMenuTarget.Category(
+                                categoryId = realCategoryId,
+                                categoryName = item.name,
+                                contentType = contentType,
+                                isFavorite = categoryViewModel.isFavoriteCategory(realCategoryId, contentType),
+                            )
                     } else {
-                        favoriteMenuTarget = FavoriteMenuTarget.Stream(
-                            itemId = item.id,
-                            itemName = item.name,
-                            categoryId = item.categoryId,
-                            contentType = contentType,
-                            isFavorite = categoryViewModel.isFavorite(item.id, contentType)
-                        )
+                        favoriteMenuTarget =
+                            FavoriteMenuTarget.Stream(
+                                itemId = item.id,
+                                itemName = item.name,
+                                categoryId = item.categoryId,
+                                contentType = contentType,
+                                isFavorite = categoryViewModel.isFavorite(item.id, contentType),
+                            )
                     }
                 },
                 onRefreshStreams = onRefreshStreams,
-                modifier = Modifier
-                    .weight(0.7f)
-                    .fillMaxHeight()
+                modifier =
+                    Modifier
+                        .weight(0.7f)
+                        .fillMaxHeight(),
             )
         }
     }
