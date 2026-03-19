@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -168,32 +170,42 @@ class EpgViewModel(
         }
         // Debounce: cancel previous search, wait 200ms before scanning all programs
         searchJob?.cancel()
-        searchJob =
-            viewModelScope.launch(Dispatchers.Default) {
-                delay(200)
-                val state = _uiState.value
-                if (state !is UiState.Success) return@launch
-                val now = System.currentTimeMillis() / 1000
-                // Use partition instead of sortedByDescending on boolean — O(n) vs O(n log n)
-                val results =
-                    buildList {
-                        for (row in state.channelRows) {
-                            for (program in row.programs) {
-                                if (program.title.contains(query, ignoreCase = true)) {
-                                    add(
-                                        EpgSearchResult(
-                                            program = program,
-                                            channel = row.channel,
-                                            isCurrent = now in program.startTime..program.endTime,
-                                        ),
-                                    )
-                                }
+        searchJob = viewModelScope.launch(Dispatchers.Default) {
+            delay(200)
+            val state = _uiState.value
+            if (state !is UiState.Success) return@launch
+            val now = System.currentTimeMillis() / 1000
+
+            val processors = Runtime.getRuntime().availableProcessors()
+            val chunkSize = maxOf(1, state.channelRows.size / processors)
+
+            val deferredResults = state.channelRows.chunked(chunkSize).map { chunk ->
+                async(Dispatchers.Default) {
+                    val current = mutableListOf<EpgSearchResult>()
+                    val others = mutableListOf<EpgSearchResult>()
+                    for (row in chunk) {
+                        val channel = row.channel
+                        for (program in row.programs) {
+                            if (program.title.indexOf(query, ignoreCase = true) >= 0) {
+                                val isCurrent = now in program.startTime..program.endTime
+                                val result = EpgSearchResult(program, channel, isCurrent)
+                                if (isCurrent) current.add(result) else others.add(result)
                             }
                         }
                     }
-                val (current, others) = results.partition { it.isCurrent }
-                _searchResults.value = current + others
+                    Pair(current, others)
+                }
             }
+
+            val finalCurrent = mutableListOf<EpgSearchResult>()
+            val finalOthers = mutableListOf<EpgSearchResult>()
+            deferredResults.awaitAll().forEach { (current, others) ->
+                finalCurrent.addAll(current)
+                finalOthers.addAll(others)
+            }
+
+            _searchResults.value = finalCurrent + finalOthers
+        }
     }
 
     fun clearSearch() {
