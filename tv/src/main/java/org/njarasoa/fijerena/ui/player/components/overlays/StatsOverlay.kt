@@ -52,7 +52,6 @@ import org.njarasoa.fijerena.ui.player.utils.formatBitrate
 import org.njarasoa.fijerena.ui.player.utils.formatTime
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
-@OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun StatsOverlay(
     playbackState: PlaybackState,
