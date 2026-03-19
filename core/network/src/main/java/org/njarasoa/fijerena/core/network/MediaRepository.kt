@@ -859,6 +859,20 @@ class MediaRepository(
         }
     }
 
+    fun getPlaybackPositions(itemIds: List<String>, contentType: String): Map<String, WatchedItem> {
+        synchronized(watchHistoryLock) {
+            val map = watchHistoryLookup ?: getWatchHistoryLocked()
+                .associateBy { it.itemId to it.contentType }
+                .also { watchHistoryLookup = it }
+
+            val result = HashMap<String, WatchedItem>()
+            for (id in itemIds) {
+                map[id to contentType]?.let { result[id] = it }
+            }
+            return result
+        }
+    }
+
     fun getInProgressItems(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
         return getWatchHistory()
