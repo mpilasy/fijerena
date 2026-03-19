@@ -1,7 +1,7 @@
 package org.njarasoa.fijerena.core.player.viewmodel
-
 import android.app.Application
 import android.content.Intent
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
@@ -22,7 +22,9 @@ import org.njarasoa.fijerena.core.player.model.VideoQualityInfo
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 
-class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
+class PlaybackViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     private val context = application
     private val serviceConnection = PlaybackServiceConnection(context)
 
@@ -45,56 +47,61 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private var isInErrorState = false
     private var focusLostJob: Job? = null
 
-    private val playerListener = object : Player.Listener {
-        override fun onPlaybackStateChanged(playbackState: Int) {
-            updatePlaybackState()
-        }
-
-        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-            updatePlaybackState()
-        }
-
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            updatePlaybackState()
-        }
-
-        override fun onPlayerError(error: PlaybackException) {
-            isInErrorState = true
-            // Service handles the specific error message and propagates it via flow
-            // (observeServiceState collects service.playbackState).
-            // Only set a fallback here if the service isn't reachable.
-            if (StreamingPlaybackService.getInstance() == null) {
-                _playbackState.value = PlaybackState.Error("Playback error occurred", error)
+    private val playerListener =
+        object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                updatePlaybackState()
             }
-        }
 
-        private fun updatePlaybackState() {
-            // Don't overwrite error state
-            if (isInErrorState) return
+            override fun onPlayWhenReadyChanged(
+                playWhenReady: Boolean,
+                reason: Int,
+            ) {
+                updatePlaybackState()
+            }
 
-            val controller = _controller.value ?: return
-            val state = when (controller.playbackState) {
-                Player.STATE_IDLE -> PlaybackState.Idle
-                Player.STATE_BUFFERING -> PlaybackState.Buffering
-                Player.STATE_READY -> {
-                    if (controller.playWhenReady) {
-                        PlaybackState.Playing(
-                            position = controller.currentPosition,
-                            duration = controller.duration.coerceAtLeast(0L)
-                        )
-                    } else {
-                        PlaybackState.Paused(
-                            position = controller.currentPosition,
-                            duration = controller.duration.coerceAtLeast(0L)
-                        )
-                    }
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                updatePlaybackState()
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                isInErrorState = true
+                // Service handles the specific error message and propagates it via flow
+                // (observeServiceState collects service.playbackState).
+                // Only set a fallback here if the service isn't reachable.
+                if (StreamingPlaybackService.getInstance() == null) {
+                    _playbackState.value = PlaybackState.Error("Playback error occurred", error)
                 }
-                Player.STATE_ENDED -> PlaybackState.Ended
-                else -> PlaybackState.Idle
             }
-            _playbackState.value = state
+
+            private fun updatePlaybackState() {
+                // Don't overwrite error state
+                if (isInErrorState) return
+
+                val controller = _controller.value ?: return
+                val state =
+                    when (controller.playbackState) {
+                        Player.STATE_IDLE -> PlaybackState.Idle
+                        Player.STATE_BUFFERING -> PlaybackState.Buffering
+                        Player.STATE_READY -> {
+                            if (controller.playWhenReady) {
+                                PlaybackState.Playing(
+                                    position = controller.currentPosition,
+                                    duration = controller.duration.coerceAtLeast(0L),
+                                )
+                            } else {
+                                PlaybackState.Paused(
+                                    position = controller.currentPosition,
+                                    duration = controller.duration.coerceAtLeast(0L),
+                                )
+                            }
+                        }
+                        Player.STATE_ENDED -> PlaybackState.Ended
+                        else -> PlaybackState.Idle
+                    }
+                _playbackState.value = state
+            }
         }
-    }
 
     init {
         // Load persisted audio enhancement settings
@@ -141,7 +148,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun playStream(metadata: PlayerMetadata, resumeFromPosition: Long = 0L) {
+    fun playStream(
+        metadata: PlayerMetadata,
+        resumeFromPosition: Long = 0L,
+    ) {
         // Reset error state on new stream
         isInErrorState = false
         onFocusRegained()
@@ -189,10 +199,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         // Always start/reset the stop timer if we were at least in a non-idle state
         if (currentState !is PlaybackState.Idle && currentState !is PlaybackState.Ended) {
             focusLostJob?.cancel()
-            focusLostJob = viewModelScope.launch {
-                delay(30_000L)
-                stop()
-            }
+            focusLostJob =
+                viewModelScope.launch {
+                    delay(30_000L)
+                    stop()
+                }
         }
     }
 
@@ -213,22 +224,26 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     fun seekRelative(offsetMs: Long) {
         val state = _playbackState.value
-        val currentPos = when (state) {
-            is PlaybackState.Playing -> state.position
-            is PlaybackState.Paused -> state.position
-            PlaybackState.Idle,
-            PlaybackState.Buffering,
-            PlaybackState.Ended,
-            is PlaybackState.Error -> return
-        }
-        val duration = when (state) {
-            is PlaybackState.Playing -> state.duration
-            is PlaybackState.Paused -> state.duration
-            PlaybackState.Idle,
-            PlaybackState.Buffering,
-            PlaybackState.Ended,
-            is PlaybackState.Error -> return
-        }
+        val currentPos =
+            when (state) {
+                is PlaybackState.Playing -> state.position
+                is PlaybackState.Paused -> state.position
+                PlaybackState.Idle,
+                PlaybackState.Buffering,
+                PlaybackState.Ended,
+                is PlaybackState.Error,
+                -> return
+            }
+        val duration =
+            when (state) {
+                is PlaybackState.Playing -> state.duration
+                is PlaybackState.Paused -> state.duration
+                PlaybackState.Idle,
+                PlaybackState.Buffering,
+                PlaybackState.Ended,
+                is PlaybackState.Error,
+                -> return
+            }
         seekTo((currentPos + offsetMs).coerceIn(0L, duration))
     }
 
@@ -263,8 +278,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                             channelCount = format.channelCount,
                             sampleRate = format.sampleRate,
                             bitrate = format.bitrate,
-                            isSelected = isSelected
-                        )
+                            isSelected = isSelected,
+                        ),
                     )
                 }
             }
@@ -276,7 +291,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     /**
      * Select an audio track by group and track index.
      */
-    fun selectAudioTrack(groupIndex: Int, trackIndex: Int) {
+    fun selectAudioTrack(
+        groupIndex: Int,
+        trackIndex: Int,
+    ) {
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance()
             service?.selectAudioTrack(groupIndex, trackIndex)
@@ -306,8 +324,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                             language = format.language ?: "Unknown",
                             label = format.label ?: format.language ?: "Subtitle ${trackIndex + 1}",
                             mimeType = format.sampleMimeType ?: "unknown",
-                            isSelected = isSelected
-                        )
+                            isSelected = isSelected,
+                        ),
                     )
                 }
             }
@@ -319,7 +337,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     /**
      * Select a subtitle track by group and track index.
      */
-    fun selectSubtitleTrack(groupIndex: Int, trackIndex: Int) {
+    fun selectSubtitleTrack(
+        groupIndex: Int,
+        trackIndex: Int,
+    ) {
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance()
             service?.selectSubtitleTrack(groupIndex, trackIndex)
@@ -352,20 +373,22 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     val format = group.getTrackFormat(trackIndex)
                     val isSelected = group.isTrackSelected(trackIndex)
 
-                    val resolutionLabel = when {
-                        format.height >= 2160 -> "4K"
-                        format.height >= 1440 -> "1440p"
-                        format.height >= 1080 -> "1080p"
-                        format.height >= 720 -> "720p"
-                        format.height >= 480 -> "480p"
-                        else -> "${format.height}p"
-                    }
+                    val resolutionLabel =
+                        when {
+                            format.height >= 2160 -> "4K"
+                            format.height >= 1440 -> "1440p"
+                            format.height >= 1080 -> "1080p"
+                            format.height >= 720 -> "720p"
+                            format.height >= 480 -> "480p"
+                            else -> "${format.height}p"
+                        }
 
-                    val bitrateLabel = if (format.bitrate > 0) {
-                        String.format("%.1f Mbps", format.bitrate / 1_000_000f)
-                    } else {
-                        "Unknown"
-                    }
+                    val bitrateLabel =
+                        if (format.bitrate > 0) {
+                            String.format("%.1f Mbps", format.bitrate / 1_000_000f)
+                        } else {
+                            "Unknown"
+                        }
 
                     qualities.add(
                         VideoQualityInfo(
@@ -376,8 +399,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                             bitrate = format.bitrate,
                             frameRate = format.frameRate,
                             label = "$resolutionLabel ($bitrateLabel)",
-                            isSelected = isSelected
-                        )
+                            isSelected = isSelected,
+                        ),
                     )
                 }
             }
@@ -407,7 +430,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             ChapterInfo(
                 title = title.ifEmpty { "Chapter ${index + 1}" },
                 startTimeMs = startMs,
-                endTimeMs = endMs
+                endTimeMs = endMs,
             )
         }
     }
@@ -415,7 +438,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     /**
      * Select a specific video quality.
      */
-    fun selectVideoQuality(groupIndex: Int, trackIndex: Int) {
+    fun selectVideoQuality(
+        groupIndex: Int,
+        trackIndex: Int,
+    ) {
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance()
             service?.selectVideoQuality(groupIndex, trackIndex)
@@ -438,7 +464,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     fun setNightMode(enabled: Boolean) {
         _nightModeEnabled.value = enabled
         val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("night_mode_enabled", enabled).apply()
+        prefs.edit { putBoolean("night_mode_enabled", enabled) }
 
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance() ?: return@launch

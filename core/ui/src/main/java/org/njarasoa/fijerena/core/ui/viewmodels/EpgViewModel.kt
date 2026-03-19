@@ -14,31 +14,34 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.TimeSlot
-import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import java.time.LocalDate
 import java.time.ZoneId
 
 class EpgViewModel(
     private val context: Context,
-    private val categoryId: String
+    private val categoryId: String,
 ) : ViewModel() {
-
     sealed class UiState {
         data object Loading : UiState()
+
         data class Success(
             val channelRows: List<EpgChannelRow>,
             val timeSlots: List<TimeSlot>,
             val currentTimeSlot: Int,
             val selectedDate: LocalDate,
             val epgLoadTime: String? = null,
-            val epgMatchInfo: String? = null
+            val epgMatchInfo: String? = null,
         ) : UiState()
-        data class Error(val message: String) : UiState()
+
+        data class Error(
+            val message: String,
+        ) : UiState()
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
@@ -47,7 +50,7 @@ class EpgViewModel(
     data class EpgSearchResult(
         val program: EpgProgram,
         val channel: MediaItem,
-        val isCurrent: Boolean
+        val isCurrent: Boolean,
     )
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -96,10 +99,12 @@ class EpgViewModel(
 
         // Get items for category
         val itemsResult = repository.getItems(categoryId, ContentType.LIVE_TV)
-        val items = itemsResult.getOrElse {
-            _uiState.value = UiState.Error("Failed to load channels: ${it.message}")
-            return
-        }.take(50)
+        val items =
+            itemsResult
+                .getOrElse {
+                    _uiState.value = UiState.Error("Failed to load channels: ${it.message}")
+                    return
+                }.take(50)
 
         if (items.isEmpty()) {
             _uiState.value = UiState.Error("No channels found in this category")
@@ -108,10 +113,11 @@ class EpgViewModel(
 
         // Get EPG for all items (uses XMLTV if configured, falls back to provider EPG)
         val epgResult = repository.getEpgBulkForItems(items)
-        val epgData = epgResult.getOrElse {
-            _uiState.value = UiState.Error("Failed to load EPG data: ${it.message}")
-            return
-        }
+        val epgData =
+            epgResult.getOrElse {
+                _uiState.value = UiState.Error("Failed to load EPG data: ${it.message}")
+                return
+            }
 
         if (epgData.isEmpty()) {
             _uiState.value = UiState.Error("No EPG data available for these channels")
@@ -119,22 +125,24 @@ class EpgViewModel(
         }
 
         // Pre-sort listings once so buildChannelRows can use binary search
-        val sortedEpgData = epgData.mapValues { (_, response) ->
-            EpgResponse(response.listings.sortedBy { it.startTime })
-        }
+        val sortedEpgData =
+            epgData.mapValues { (_, response) ->
+                EpgResponse(response.listings.sortedBy { it.startTime })
+            }
         val channelRows = buildChannelRows(items, sortedEpgData, date)
         val timeSlots = generateTimeSlots(date)
         val currentSlot = calculateCurrentTimeSlot(timeSlots)
         val elapsed = System.currentTimeMillis() - startTime
 
-        _uiState.value = UiState.Success(
-            channelRows = channelRows,
-            timeSlots = timeSlots,
-            currentTimeSlot = currentSlot,
-            selectedDate = date,
-            epgLoadTime = "${elapsed}ms",
-            epgMatchInfo = "${epgData.size}/${items.size} channels matched"
-        )
+        _uiState.value =
+            UiState.Success(
+                channelRows = channelRows,
+                timeSlots = timeSlots,
+                currentTimeSlot = currentSlot,
+                selectedDate = date,
+                epgLoadTime = "${elapsed}ms",
+                epgMatchInfo = "${epgData.size}/${items.size} channels matched",
+            )
     }
 
     fun forceRefresh() {
@@ -208,7 +216,7 @@ class EpgViewModel(
     private fun buildChannelRows(
         items: List<MediaItem>,
         epgData: Map<String, EpgResponse>,
-        date: LocalDate
+        date: LocalDate,
     ): List<EpgChannelRow> {
         val dayStart = date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
         val dayEnd = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
@@ -245,8 +253,8 @@ class EpgViewModel(
                 TimeSlot(
                     startTime = slotStart.toEpochSecond(),
                     endTime = slotEnd.toEpochSecond(),
-                    slotIndex = i
-                )
+                    slotIndex = i,
+                ),
             )
         }
         return slots

@@ -28,10 +28,10 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
  * Content card type determines the accent gradient color.
  */
 enum class ContentCardType {
-    LIVE_TV,    // Orange gradient
-    MOVIE,      // Blue gradient
-    TV_SHOW,    // Light blue gradient
-    DEFAULT     // Surface gradient
+    LIVE_TV, // Orange gradient
+    MOVIE, // Blue gradient
+    TV_SHOW, // Light blue gradient
+    DEFAULT, // Surface gradient
 }
 
 // Pre-allocated brushes — colors are compile-time constants, no need to recreate per composition
@@ -49,23 +49,25 @@ private val DefaultBrush = Brush.verticalGradient(listOf(CinemaSurfaceVariant, C
 fun AccentBlock(
     contentType: ContentCardType,
     modifier: Modifier = Modifier,
-    fallbackLetter: Char? = null
+    fallbackLetter: Char? = null,
 ) {
-    val gradient = when (contentType) {
-        ContentCardType.LIVE_TV -> LiveTvBrush
-        ContentCardType.MOVIE -> MovieBrush
-        ContentCardType.TV_SHOW -> TvShowBrush
-        ContentCardType.DEFAULT -> DefaultBrush
-    }
+    val gradient =
+        when (contentType) {
+            ContentCardType.LIVE_TV -> LiveTvBrush
+            ContentCardType.MOVIE -> MovieBrush
+            ContentCardType.TV_SHOW -> TvShowBrush
+            ContentCardType.DEFAULT -> DefaultBrush
+        }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                brush = gradient,
-                shape = RoundedCornerShape(CornerRadius.medium)
-            ),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(
+                    brush = gradient,
+                    shape = RoundedCornerShape(CornerRadius.medium),
+                ),
+        contentAlignment = Alignment.Center,
     ) {
         if (fallbackLetter != null) {
             Text(
@@ -73,7 +75,7 @@ fun AccentBlock(
                 color = CinemaTextPrimary,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
     }

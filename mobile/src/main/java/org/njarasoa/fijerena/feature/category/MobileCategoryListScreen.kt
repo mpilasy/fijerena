@@ -1,30 +1,27 @@
 package org.njarasoa.fijerena.feature.category
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
-import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -44,10 +41,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,19 +49,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.utils.NumberUtils
-import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -78,17 +75,25 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 fun MobileCategoryListScreen(
     contentType: String,
     initialCategoryId: String? = null,
-    onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String, providerData: Map<String, String>) -> Unit,
+    onStreamSelected: (
+        itemId: String,
+        itemName: String,
+        categoryId: String,
+        contentType: String,
+        providerData: Map<String, String>,
+    ) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
-    viewModel: CategoryViewModel = viewModel(
-        factory = CategoryViewModelFactory(
-            context = LocalContext.current.applicationContext,
-            contentType = contentType,
-            initialCategoryId = initialCategoryId
-        )
-    )
+    viewModel: CategoryViewModel =
+        viewModel(
+            factory =
+                CategoryViewModelFactory(
+                    context = LocalContext.current.applicationContext,
+                    contentType = contentType,
+                    initialCategoryId = initialCategoryId,
+                ),
+        ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val nowPlayingMap by viewModel.nowPlaying.collectAsStateWithLifecycle()
@@ -119,7 +124,7 @@ fun MobileCategoryListScreen(
                         viewModel.toggleFavoriteCategory(
                             target.categoryId,
                             target.categoryName,
-                            target.contentType
+                            target.contentType,
                         )
                     }
                     is MobileFavoriteMenuTarget.Stream -> {
@@ -127,12 +132,12 @@ fun MobileCategoryListScreen(
                             target.itemId,
                             target.itemName,
                             target.categoryId,
-                            target.contentType
+                            target.contentType,
                         )
                     }
                 }
             },
-            onDismiss = { favoriteMenuTarget = null }
+            onDismiss = { favoriteMenuTarget = null },
         )
     }
 
@@ -152,8 +157,9 @@ fun MobileCategoryListScreen(
                         if (state is CategoryViewModel.UiState.Success) {
                             val selectedCatId = state.selectedCategoryId
                             val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
-                            val hasEpgData = supportsNativeEpg ||
-                                epgIndexState is EpgIndexState.Indexed
+                            val hasEpgData =
+                                supportsNativeEpg ||
+                                    epgIndexState is EpgIndexState.Indexed
                             if (selectedCatId != null && selectedCatName != null && hasEpgData) {
                                 IconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) }) {
                                     Icon(Icons.Default.DateRange, "TV Guide")
@@ -164,20 +170,21 @@ fun MobileCategoryListScreen(
                     IconButton(onClick = onSearchClick) {
                         Icon(Icons.Default.Search, "Search")
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
         ) {
             when (val state = uiState) {
                 is CategoryViewModel.UiState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
                     }
@@ -186,25 +193,28 @@ fun MobileCategoryListScreen(
                     Column(modifier = Modifier.fillMaxSize()) {
                         // EPG error/status banner (Live TV only)
                         if (contentType == ContentType.LIVE_TV) {
-                            val epgMessage = when (epgIndexState) {
-                                is EpgIndexState.Failed -> "EPG indexing failed"
-                                is EpgIndexState.Indexing ->
-                                    "EPG indexing ${(epgIndexState as EpgIndexState.Indexing).progressPercent}%..."
-                                else -> null
-                            }
+                            val epgMessage =
+                                when (epgIndexState) {
+                                    is EpgIndexState.Failed -> "EPG indexing failed"
+                                    is EpgIndexState.Indexing ->
+                                        "EPG indexing ${(epgIndexState as EpgIndexState.Indexing).progressPercent}%..."
+                                    else -> null
+                                }
                             if (epgMessage != null) {
                                 Text(
                                     text = epgMessage,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (epgIndexState is EpgIndexState.Indexing) {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    } else {
-                                        MaterialTheme.colorScheme.error
-                                    },
-                                    modifier = Modifier.padding(
-                                        horizontal = CinemaSpacing.md,
-                                        vertical = CinemaSpacing.xs
-                                    )
+                                    color =
+                                        if (epgIndexState is EpgIndexState.Indexing) {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        } else {
+                                            MaterialTheme.colorScheme.error
+                                        },
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal = CinemaSpacing.md,
+                                            vertical = CinemaSpacing.xs,
+                                        ),
                                 )
                             }
                         }
@@ -219,18 +229,19 @@ fun MobileCategoryListScreen(
                                 viewModel.loadStreams(categoryId)
                             },
                             onCategoryLongPress = { category ->
-                                favoriteMenuTarget = MobileFavoriteMenuTarget.Category(
-                                    categoryId = category.id,
-                                    categoryName = category.name,
-                                    contentType = contentType,
-                                    isFavorite = viewModel.isFavoriteCategory(category.id, contentType)
-                                )
-                            }
+                                favoriteMenuTarget =
+                                    MobileFavoriteMenuTarget.Category(
+                                        categoryId = category.id,
+                                        categoryName = category.name,
+                                        contentType = contentType,
+                                        isFavorite = viewModel.isFavoriteCategory(category.id, contentType),
+                                    )
+                            },
                         )
 
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outline,
-                            thickness = MobileDimensions.dividerThin
+                            thickness = MobileDimensions.dividerThin,
                         )
 
                         // Streams list with pull-to-refresh
@@ -239,7 +250,7 @@ fun MobileCategoryListScreen(
                             onRefresh = {
                                 state.selectedCategoryId?.let { viewModel.refreshStreams(it) }
                             },
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
                         ) {
                             StreamsList(
                                 items = state.streams,
@@ -265,22 +276,24 @@ fun MobileCategoryListScreen(
                                     // should toggle the category favorite, not create a stream favorite
                                     val realCategoryId = item.providerData["categoryId"]
                                     if (item.providerData["isCategoryRef"] == "true" && realCategoryId != null) {
-                                        favoriteMenuTarget = MobileFavoriteMenuTarget.Category(
-                                            categoryId = realCategoryId,
-                                            categoryName = item.name,
-                                            contentType = contentType,
-                                            isFavorite = viewModel.isFavoriteCategory(realCategoryId, contentType)
-                                        )
+                                        favoriteMenuTarget =
+                                            MobileFavoriteMenuTarget.Category(
+                                                categoryId = realCategoryId,
+                                                categoryName = item.name,
+                                                contentType = contentType,
+                                                isFavorite = viewModel.isFavoriteCategory(realCategoryId, contentType),
+                                            )
                                     } else {
-                                        favoriteMenuTarget = MobileFavoriteMenuTarget.Stream(
-                                            itemId = item.id,
-                                            itemName = item.name,
-                                            categoryId = item.categoryId,
-                                            contentType = contentType,
-                                            isFavorite = viewModel.isFavorite(item.id, contentType)
-                                        )
+                                        favoriteMenuTarget =
+                                            MobileFavoriteMenuTarget.Stream(
+                                                itemId = item.id,
+                                                itemName = item.name,
+                                                categoryId = item.categoryId,
+                                                contentType = contentType,
+                                                isFavorite = viewModel.isFavorite(item.id, contentType),
+                                            )
                                     }
-                                }
+                                },
                             )
                         }
                     }
@@ -288,21 +301,21 @@ fun MobileCategoryListScreen(
                 is CategoryViewModel.UiState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.padding(32.dp)
+                            modifier = Modifier.padding(32.dp),
                         ) {
                             Text(
                                 text = "Error",
                                 style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
                             )
                             Text(
                                 text = state.message,
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MaterialTheme.typography.bodyLarge,
                             )
                             Button(onClick = { viewModel.retry() }) {
                                 Text("Retry")
@@ -316,13 +329,14 @@ fun MobileCategoryListScreen(
 }
 
 // Extracted as a top-level constant to avoid allocating a new Set on every recomposition
-private val VIRTUAL_CATEGORY_IDS = setOf(
-    CategoryViewModel.FAVORITES_CATEGORY_ID,
-    CategoryViewModel.FAVORITE_CATEGORIES_ID,
-    CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
-    CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
-    CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
-)
+private val VIRTUAL_CATEGORY_IDS =
+    setOf(
+        CategoryViewModel.FAVORITES_CATEGORY_ID,
+        CategoryViewModel.FAVORITE_CATEGORIES_ID,
+        CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
+        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
+        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID,
+    )
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -332,18 +346,20 @@ private fun CategoryChipRow(
     contentType: String,
     categoryViewModel: CategoryViewModel,
     onCategorySelected: (String) -> Unit,
-    onCategoryLongPress: (org.njarasoa.fijerena.core.player.domain.MediaCategory) -> Unit = {}
+    onCategoryLongPress: (org.njarasoa.fijerena.core.player.domain.MediaCategory) -> Unit = {},
 ) {
     // Single-pass partition instead of two separate filter() calls
-    val (virtualCategories, regularCategories) = remember(categories) {
-        categories.partition { it.id in VIRTUAL_CATEGORY_IDS }
-    }
+    val (virtualCategories, regularCategories) =
+        remember(categories) {
+            categories.partition { it.id in VIRTUAL_CATEGORY_IDS }
+        }
 
     val listState = rememberLazyListState()
-    val chipColors = FilterChipDefaults.filterChipColors(
-        selectedContainerColor = MaterialTheme.colorScheme.primary,
-        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-    )
+    val chipColors =
+        FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        )
 
     LaunchedEffect(selectedCategoryId) {
         if (selectedCategoryId != null && selectedCategoryId !in VIRTUAL_CATEGORY_IDS) {
@@ -358,11 +374,12 @@ private fun CategoryChipRow(
         // Virtual categories row (Favorites, Last Watched)
         if (virtualCategories.isNotEmpty()) {
             LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = CinemaSpacing.sm, bottom = CinemaSpacing.xs),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = CinemaSpacing.sm, bottom = CinemaSpacing.xs),
                 contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
                 items(virtualCategories, key = { it.id }, contentType = { "category" }) { category ->
                     FilterChip(
@@ -372,10 +389,10 @@ private fun CategoryChipRow(
                             Text(
                                 text = category.name,
                                 maxLines = 1,
-                                modifier = Modifier.bounceMarquee()
+                                modifier = Modifier.bounceMarquee(),
                             )
                         },
-                        colors = chipColors
+                        colors = chipColors,
                     )
                 }
             }
@@ -384,11 +401,12 @@ private fun CategoryChipRow(
         // Regular categories row
         LazyRow(
             state = listState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = CinemaSpacing.sm),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = CinemaSpacing.sm),
             contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
             items(regularCategories, key = { it.id }, contentType = { "category" }) { category ->
                 val isFavCat = categoryViewModel.isFavoriteCategory(category.id, contentType)
@@ -398,26 +416,27 @@ private fun CategoryChipRow(
                     label = {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (isFavCat) {
                                 Text(
                                     text = "\u2605",
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                             Text(
                                 text = category.name,
                                 maxLines = 1,
-                                modifier = Modifier.bounceMarquee()
+                                modifier = Modifier.bounceMarquee(),
                             )
                         }
                     },
-                    modifier = Modifier.combinedClickable(
-                        onClick = { onCategorySelected(category.id) },
-                        onLongClick = { onCategoryLongPress(category) }
-                    ),
-                    colors = chipColors
+                    modifier =
+                        Modifier.combinedClickable(
+                            onClick = { onCategorySelected(category.id) },
+                            onLongClick = { onCategoryLongPress(category) },
+                        ),
+                    colors = chipColors,
                 )
             }
         }
@@ -432,7 +451,7 @@ private fun StreamsList(
     lastPlayedItemId: String? = null,
     nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
     onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
-    onItemLongPress: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {}
+    onItemLongPress: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
 
@@ -449,19 +468,19 @@ private fun StreamsList(
         selectedCategoryId == null -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "Select a category",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
         streamsLoading -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
@@ -469,7 +488,7 @@ private fun StreamsList(
                     Text(
                         text = "Loading streams...",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -477,12 +496,12 @@ private fun StreamsList(
         items.isNullOrEmpty() -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "No streams in this category",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -491,14 +510,14 @@ private fun StreamsList(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 item(contentType = "header") {
                     Text(
                         text = "${items.size} streams",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
+                        modifier = Modifier.padding(bottom = 4.dp, start = 4.dp),
                     )
                 }
                 items(items, key = { it.id }, contentType = { "stream" }) { item ->
@@ -508,7 +527,7 @@ private fun StreamsList(
                         onClick = {
                             onItemSelected(item.id, item.name, item.categoryId)
                         },
-                        onLongClick = { onItemLongPress(item) }
+                        onLongClick = { onItemLongPress(item) },
                     )
                 }
             }
@@ -524,7 +543,7 @@ private sealed class MobileFavoriteMenuTarget {
         val categoryId: String,
         val categoryName: String,
         val contentType: String,
-        val isFavorite: Boolean
+        val isFavorite: Boolean,
     ) : MobileFavoriteMenuTarget()
 
     data class Stream(
@@ -532,7 +551,7 @@ private sealed class MobileFavoriteMenuTarget {
         val itemName: String,
         val categoryId: String,
         val contentType: String,
-        val isFavorite: Boolean
+        val isFavorite: Boolean,
     ) : MobileFavoriteMenuTarget()
 }
 
@@ -543,12 +562,13 @@ private sealed class MobileFavoriteMenuTarget {
 private fun MobileFavoriteContextMenuDialog(
     target: MobileFavoriteMenuTarget,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
-    val (itemName, isFavorite) = when (target) {
-        is MobileFavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
-        is MobileFavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
-    }
+    val (itemName, isFavorite) =
+        when (target) {
+            is MobileFavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
+            is MobileFavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
+        }
 
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 
@@ -558,7 +578,7 @@ private fun MobileFavoriteContextMenuDialog(
             Text(
                 text = itemName,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 2
+                maxLines = 2,
             )
         },
         confirmButton = {
@@ -566,7 +586,7 @@ private fun MobileFavoriteContextMenuDialog(
                 onClick = {
                     onConfirm()
                     onDismiss()
-                }
+                },
             ) {
                 Text(actionText)
             }
@@ -576,7 +596,9 @@ private fun MobileFavoriteContextMenuDialog(
                 Text("Cancel")
             }
         },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(CinemaCornerRadius.large)
+        shape =
+            androidx.compose.foundation.shape
+                .RoundedCornerShape(CinemaCornerRadius.large),
     )
 }
 
@@ -586,37 +608,43 @@ private fun StreamCard(
     item: org.njarasoa.fijerena.core.player.domain.MediaItem,
     nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
-    onLongClick: () -> Unit = {}
+    onLongClick: () -> Unit = {},
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(MobileDimensions.streamCardHeight)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(MobileDimensions.streamCardHeight)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(CinemaCornerRadius.medium)
+        shape =
+            androidx.compose.foundation.shape
+                .RoundedCornerShape(CinemaCornerRadius.medium),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(CinemaSpacing.xs),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(CinemaSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
             // Poster thumbnail
             CinemaThumbnail(
                 url = item.thumbnailUrl,
                 fallbackLetter = item.name.firstOrNull(),
                 contentType = ThumbnailContentType.DEFAULT,
-                modifier = Modifier.size(
-                    width = MobileDimensions.posterWidth,
-                    height = MobileDimensions.posterHeight
-                )
+                modifier =
+                    Modifier.size(
+                        width = MobileDimensions.posterWidth,
+                        height = MobileDimensions.posterHeight,
+                    ),
             )
             // Stream name + rating
             Column(modifier = Modifier.weight(1f)) {
@@ -624,14 +652,14 @@ private fun StreamCard(
                     text = item.name,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 2,
-                    modifier = Modifier.bounceMarquee()
+                    modifier = Modifier.bounceMarquee(),
                 )
                 item.metadata.rating?.let { rating ->
                     Text(
                         text = "★ $rating",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textMedium),
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
                 // "What's On Now" for Live TV
@@ -641,7 +669,7 @@ private fun StreamCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary,
                         maxLines = 1,
-                        modifier = Modifier.bounceMarquee()
+                        modifier = Modifier.bounceMarquee(),
                     )
                 }
             }

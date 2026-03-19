@@ -6,7 +6,7 @@ import androidx.room.Index
 @Entity(
     tableName = "xtream_categories",
     primaryKeys = ["categoryId", "providerId", "type"],
-    indices = [Index(value = ["providerId", "type"])]
+    indices = [Index(value = ["providerId", "type"])],
 )
 data class XtreamCategoryEntity(
     val categoryId: String,
@@ -14,7 +14,7 @@ data class XtreamCategoryEntity(
     val categoryName: String,
     val parentId: Int = 0,
     val type: String, // LIVE, VOD, SERIES
-    val contentHash: Int = 0
+    val contentHash: Int = 0,
 ) {
     companion object {
         const val TYPE_LIVE = "LIVE"
@@ -26,7 +26,7 @@ data class XtreamCategoryEntity(
             providerId: Long,
             categoryName: String,
             parentId: Int,
-            type: String
+            type: String,
         ): Int {
             var result = categoryId.hashCode()
             result = 31 * result + providerId.hashCode()

@@ -43,7 +43,6 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
-import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -53,13 +52,14 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
+import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
 fun QualitySelectorDialog(
     viewModel: PlaybackViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val videoQualities = remember { viewModel.getVideoQualities() }
     var selectedIndex by remember { mutableStateOf(videoQualities.indexOfFirst { it.isSelected }.coerceAtLeast(-1)) }
@@ -77,30 +77,33 @@ fun QualitySelectorDialog(
     BackHandler { onDismiss() }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+        contentAlignment = Alignment.Center,
     ) {
         TvGlassPanel(
-            modifier = Modifier
-                .width(TvDimensions.dialogWidth)
-                .heightIn(max = screenHeight * 0.8f)
-                .padding(Spacing.xxl)
+            modifier =
+                Modifier
+                    .width(TvDimensions.dialogWidth)
+                    .heightIn(max = screenHeight * 0.8f)
+                    .padding(Spacing.xxl),
         ) {
             Column(
-                modifier = Modifier
-                    .padding(Spacing.xxl)
-                    .verticalScroll(rememberScrollState())
-                    .focusProperties { exit = { FocusRequester.Cancel } },
-                verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                modifier =
+                    Modifier
+                        .padding(Spacing.xxl)
+                        .verticalScroll(rememberScrollState())
+                        .focusProperties { exit = { FocusRequester.Cancel } },
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 // Header
                 Text(
                     text = "Select Quality",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
 
                 // "Auto" option
@@ -111,62 +114,74 @@ fun QualitySelectorDialog(
                         viewModel.enableAutoQuality()
                         onDismiss()
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequesters[0])
-                        .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
-                                selectedIndex = -1
-                            }
-                        },
-                    colors = ButtonDefaults.colors(
-                        containerColor = if (isAutoSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
-                        else CinemaSurfaceVariant,
-                        contentColor = CinemaTextPrimary,
-                        focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                        focusedContentColor = CinemaTextPrimary
-                    ),
-                    border = ButtonDefaults.border(
-                        border = Border(
-                            border = BorderStroke(
-                                width = if (isAutoSelected) TvDimensions.borderFocused else 0.dp,
-                                color = if (isAutoSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                            ),
-                            shape = RoundedCornerShape(CinemaCornerRadius.small)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequesters[0])
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    selectedIndex = -1
+                                }
+                            },
+                    colors =
+                        ButtonDefaults.colors(
+                            containerColor =
+                                if (isAutoSelected) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
+                                } else {
+                                    CinemaSurfaceVariant
+                                },
+                            contentColor = CinemaTextPrimary,
+                            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                            focusedContentColor = CinemaTextPrimary,
                         ),
-                        focusedBorder = Border(
-                            border = BorderStroke(
-                                width = TvDimensions.borderFocused,
-                                color = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = RoundedCornerShape(CinemaCornerRadius.small)
-                        )
-                    )
+                    border =
+                        ButtonDefaults.border(
+                            border =
+                                Border(
+                                    border =
+                                        BorderStroke(
+                                            width = if (isAutoSelected) TvDimensions.borderFocused else 0.dp,
+                                            color = if (isAutoSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                        ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                ),
+                            focusedBorder =
+                                Border(
+                                    border =
+                                        BorderStroke(
+                                            width = TvDimensions.borderFocused,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        ),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                ),
+                        ),
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(Spacing.xs),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(Spacing.xs),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column {
                             Text(
                                 text = "Auto (Adaptive)",
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (isAutoSelected) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (isAutoSelected) FontWeight.Bold else FontWeight.Normal,
                             )
                             Text(
                                 text = "Automatically adjust quality based on network",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextTertiary
+                                color = CinemaTextTertiary,
                             )
                         }
                         if (isAutoSelected) {
                             Text(
                                 text = "Active",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -177,7 +192,7 @@ fun QualitySelectorDialog(
                         text = "No quality options available",
                         style = MaterialTheme.typography.bodyLarge,
                         color = CinemaTextSecondary,
-                        modifier = Modifier.padding(vertical = Spacing.md)
+                        modifier = Modifier.padding(vertical = Spacing.md),
                     )
                 } else {
                     // Quality list
@@ -189,66 +204,78 @@ fun QualitySelectorDialog(
                                 viewModel.selectVideoQuality(quality.groupIndex, quality.trackIndex)
                                 onDismiss()
                             },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequesters[index + 1]) // +1 because "Auto" is first
-                                .onFocusChanged { focusState ->
-                                    if (focusState.isFocused) {
-                                        selectedIndex = index
-                                    }
-                                },
-                            colors = ButtonDefaults.colors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
-                                else CinemaSurfaceVariant,
-                                contentColor = CinemaTextPrimary,
-                                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                                focusedContentColor = CinemaTextPrimary
-                            ),
-                            border = ButtonDefaults.border(
-                                border = Border(
-                                    border = BorderStroke(
-                                        width = if (isSelected) TvDimensions.borderFocused else 0.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                                    ),
-                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequesters[index + 1]) // +1 because "Auto" is first
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            selectedIndex = index
+                                        }
+                                    },
+                            colors =
+                                ButtonDefaults.colors(
+                                    containerColor =
+                                        if (isSelected) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
+                                        } else {
+                                            CinemaSurfaceVariant
+                                        },
+                                    contentColor = CinemaTextPrimary,
+                                    focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                                    focusedContentColor = CinemaTextPrimary,
                                 ),
-                                focusedBorder = Border(
-                                    border = BorderStroke(
-                                        width = TvDimensions.borderFocused,
-                                        color = MaterialTheme.colorScheme.primary
-                                    ),
-                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
-                                )
-                            )
+                            border =
+                                ButtonDefaults.border(
+                                    border =
+                                        Border(
+                                            border =
+                                                BorderStroke(
+                                                    width = if (isSelected) TvDimensions.borderFocused else 0.dp,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                                ),
+                                            shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                        ),
+                                    focusedBorder =
+                                        Border(
+                                            border =
+                                                BorderStroke(
+                                                    width = TvDimensions.borderFocused,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                ),
+                                            shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                        ),
+                                ),
                         ) {
                             Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(Spacing.xs),
-                                verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(Spacing.xs),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
                                         text = quality.label,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     )
                                     if (quality.isSelected) {
                                         Text(
                                             text = "Active",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
+                                            color = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                 }
                                 Text(
                                     text = "${quality.width}×${quality.height} • ${quality.frameRate.toInt()}fps",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextTertiary
+                                    color = CinemaTextTertiary,
                                 )
                             }
                         }
@@ -260,9 +287,10 @@ fun QualitySelectorDialog(
                 // Close button
                 Button(
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .align(CenterHorizontally)
-                        .width(TvDimensions.selectionListWidth)
+                    modifier =
+                        Modifier
+                            .align(CenterHorizontally)
+                            .width(TvDimensions.selectionListWidth),
                 ) {
                     Text("Cancel")
                 }
@@ -273,7 +301,7 @@ fun QualitySelectorDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

@@ -12,10 +12,12 @@ import java.util.Locale
  * Searches programme titles in the SQLite FTS index.
  * All I/O is local — no network calls, no XML files on disk.
  */
-class XmltvSearchService(private val context: Context) {
-
+class XmltvSearchService(
+    private val context: Context,
+) {
     companion object {
         private const val TAG = "XmltvSearchService"
+
         // Pre-compiled regex — avoid recompiling on every search call
         private val WHITESPACE_REGEX = Regex("\\s+")
     }
@@ -81,7 +83,7 @@ class XmltvSearchService(private val context: Context) {
     private suspend fun searchFromIndex(
         query: String,
         windowStart: Long,
-        windowEnd: Long
+        windowEnd: Long,
     ): XmltvSearchResult? {
         val db = EpgIndexDatabase.getInstance(context)
         val dao = db.epgIndexDao()
@@ -91,12 +93,13 @@ class XmltvSearchService(private val context: Context) {
         // The idx_programme_title_lower B-tree index makes LIKE queries fast enough.
         if (!indexer.isFtsStale()) {
             // 1. Try FTS phrase match ("word1 word2"*)
-            val rows: List<EpgSearchResultRow> = try {
-                val ftsQuery = buildFtsQuery(query)
-                dao.searchByTitleFts(ftsQuery, windowStart, windowEnd)
-            } catch (e: Exception) {
-                emptyList()
-            }
+            val rows: List<EpgSearchResultRow> =
+                try {
+                    val ftsQuery = buildFtsQuery(query)
+                    dao.searchByTitleFts(ftsQuery, windowStart, windowEnd)
+                } catch (e: Exception) {
+                    emptyList()
+                }
 
             if (rows.isNotEmpty()) {
                 return rowsToSearchResult(rows, searchedFromIndex = true)
@@ -105,11 +108,12 @@ class XmltvSearchService(private val context: Context) {
             // 2. Try FTS AND match (word1* word2* — each word independently, any order)
             val andFtsQuery = buildFtsAndQuery(query)
             if (andFtsQuery != null) {
-                val andRows = try {
-                    dao.searchByTitleFts(andFtsQuery, windowStart, windowEnd)
-                } catch (e: Exception) {
-                    emptyList()
-                }
+                val andRows =
+                    try {
+                        dao.searchByTitleFts(andFtsQuery, windowStart, windowEnd)
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
                 if (andRows.isNotEmpty()) {
                     return rowsToSearchResult(andRows, searchedFromIndex = true)
                 }
@@ -130,25 +134,25 @@ class XmltvSearchService(private val context: Context) {
         if (words.size >= 2) {
             val shortestWord = words.minBy { it.length }
             val broadRows = dao.searchByTitleLike(shortestWord, windowStart, windowEnd)
-            val filtered = broadRows.filter { row ->
-                val titleLower = row.title.lowercase(Locale.ROOT)
-                words.all { word -> titleLower.contains(word) }
-            }
+            val filtered =
+                broadRows.filter { row ->
+                    val titleLower = row.title.lowercase(Locale.ROOT)
+                    words.all { word -> titleLower.contains(word) }
+                }
             return rowsToSearchResult(filtered, searchedFromIndex = true)
         }
 
         return rowsToSearchResult(emptyList(), searchedFromIndex = true)
     }
 
-    private fun sanitizeQuery(query: String): String {
-        return query
+    private fun sanitizeQuery(query: String): String =
+        query
             .replace("\"", "")
             .replace("*", "")
             .replace("(", "")
             .replace(")", "")
             .replace(":", "")
             .trim()
-    }
 
     private fun buildFtsQuery(query: String): String {
         val sanitized = sanitizeQuery(query)
@@ -170,18 +174,19 @@ class XmltvSearchService(private val context: Context) {
 
     private fun rowsToSearchResult(
         rows: List<EpgSearchResultRow>,
-        searchedFromIndex: Boolean
+        searchedFromIndex: Boolean,
     ): XmltvSearchResult {
         val channels = mutableMapOf<String, XmltvChannel>()
         val programmes = mutableListOf<XmltvProgramme>()
 
         for (row in rows) {
             if (row.channelId !in channels) {
-                channels[row.channelId] = XmltvChannel(
-                    id = row.channelId,
-                    displayName = row.channelDisplayName,
-                    iconUrl = row.channelIconUrl
-                )
+                channels[row.channelId] =
+                    XmltvChannel(
+                        id = row.channelId,
+                        displayName = row.channelDisplayName,
+                        iconUrl = row.channelIconUrl,
+                    )
             }
             programmes.add(
                 XmltvProgramme(
@@ -191,8 +196,8 @@ class XmltvSearchService(private val context: Context) {
                     title = row.title,
                     description = row.description,
                     category = row.category,
-                    sourceId = row.sourceId
-                )
+                    sourceId = row.sourceId,
+                ),
             )
         }
 
@@ -201,7 +206,7 @@ class XmltvSearchService(private val context: Context) {
             programmes = programmes,
             totalScanned = rows.size,
             truncated = rows.size >= 500,
-            searchedFromIndex = searchedFromIndex
+            searchedFromIndex = searchedFromIndex,
         )
     }
 }

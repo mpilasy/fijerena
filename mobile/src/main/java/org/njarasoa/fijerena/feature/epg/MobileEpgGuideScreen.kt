@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.epg
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +33,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,17 +42,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
-import org.njarasoa.fijerena.core.player.model.EpgUtils
-import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -69,12 +66,14 @@ fun MobileEpgGuideScreen(
     onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
     onChannelSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onBack: () -> Unit,
-    viewModel: EpgViewModel = viewModel(
-        factory = EpgViewModelFactory(
-            context = LocalContext.current.applicationContext,
-            categoryId = categoryId
-        )
-    )
+    viewModel: EpgViewModel =
+        viewModel(
+            factory =
+                EpgViewModelFactory(
+                    context = LocalContext.current.applicationContext,
+                    categoryId = categoryId,
+                ),
+        ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
@@ -83,11 +82,14 @@ fun MobileEpgGuideScreen(
     var isSearchActive by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val epgDevStats = (uiState as? EpgViewModel.UiState.Success)?.let { state ->
-        if (appSettings.isDevMode && state.epgLoadTime != null) {
-            " | ${state.epgMatchInfo} | ${state.epgLoadTime}"
-        } else ""
-    } ?: ""
+    val epgDevStats =
+        (uiState as? EpgViewModel.UiState.Success)?.let { state ->
+            if (appSettings.isDevMode && state.epgLoadTime != null) {
+                " | ${state.epgMatchInfo} | ${state.epgLoadTime}"
+            } else {
+                ""
+            }
+        } ?: ""
 
     Scaffold(
         topBar = {
@@ -103,40 +105,41 @@ fun MobileEpgGuideScreen(
                         onClick = {
                             isSearchActive = !isSearchActive
                             if (!isSearchActive) viewModel.clearSearch()
-                        }
+                        },
                     ) {
                         Icon(
                             if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
-                            if (isSearchActive) "Close Search" else "Search"
+                            if (isSearchActive) "Close Search" else "Search",
                         )
                     }
                     IconButton(
                         onClick = { viewModel.forceRefresh() },
-                        enabled = !isRefreshing
+                        enabled = !isRefreshing,
                     ) {
                         if (isRefreshing) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(MobileDimensions.progressIndicatorSmall),
-                                strokeWidth = MobileDimensions.strokeWidth
+                                strokeWidth = MobileDimensions.strokeWidth,
                             )
                         } else {
                             Icon(Icons.Default.Refresh, "Refresh")
                         }
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
         ) {
             when (val state = uiState) {
                 is EpgViewModel.UiState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator()
@@ -144,7 +147,7 @@ fun MobileEpgGuideScreen(
                             Text(
                                 text = "Loading TV Guide...",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -156,7 +159,7 @@ fun MobileEpgGuideScreen(
                             selectedDate = state.selectedDate.format(EPG_SHORT_DATE_FORMATTER),
                             onPreviousDay = { viewModel.selectPreviousDay() },
                             onNextDay = { viewModel.selectNextDay() },
-                            onJumpToNow = { viewModel.jumpToNow() }
+                            onJumpToNow = { viewModel.jumpToNow() },
                         )
 
                         if (isSearchActive) {
@@ -165,17 +168,17 @@ fun MobileEpgGuideScreen(
                                 searchQuery = searchQuery,
                                 searchResults = searchResults,
                                 onSearchQueryChanged = { viewModel.searchPrograms(it) },
-                                onProgramSelected = onProgramSelected
+                                onProgramSelected = onProgramSelected,
                             )
                         } else if (state.channelRows.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+                                contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     text = "No EPG data available",
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         } else {
@@ -185,7 +188,7 @@ fun MobileEpgGuideScreen(
                                 onProgramSelected = onProgramSelected,
                                 onChannelSelected = onChannelSelected,
                                 onRefresh = { viewModel.forceRefresh() },
-                                isRefreshing = isRefreshing
+                                isRefreshing = isRefreshing,
                             )
                         }
                     }
@@ -193,26 +196,26 @@ fun MobileEpgGuideScreen(
                 is EpgViewModel.UiState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(CinemaSpacing.xl)
+                            modifier = Modifier.padding(CinemaSpacing.xl),
                         ) {
                             Text(
                                 text = "Error Loading Guide",
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
                             )
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                             Text(
                                 text = state.message,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(CinemaSpacing.md))
                             androidx.compose.material3.Button(
-                                onClick = { viewModel.loadEpgData() }
+                                onClick = { viewModel.loadEpgData() },
                             ) {
                                 Text("Retry")
                             }
@@ -229,15 +232,16 @@ private fun DateNavigationRow(
     selectedDate: String,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
-    onJumpToNow: () -> Unit
+    onJumpToNow: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.padding(
-            horizontal = CinemaSpacing.sm,
-            vertical = CinemaSpacing.xs
-        ),
+        modifier =
+            Modifier.padding(
+                horizontal = CinemaSpacing.sm,
+                vertical = CinemaSpacing.xs,
+            ),
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onPreviousDay) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous Day")
@@ -245,12 +249,12 @@ private fun DateNavigationRow(
         Text(
             text = selectedDate,
             style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         FilterChip(
             selected = false,
             onClick = onJumpToNow,
-            label = { Text("Now") }
+            label = { Text("Now") },
         )
         IconButton(onClick = onNextDay) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next Day")
@@ -263,44 +267,48 @@ private fun MobileEpgSearchContent(
     searchQuery: String,
     searchResults: List<EpgViewModel.EpgSearchResult>,
     onSearchQueryChanged: (String) -> Unit,
-    onProgramSelected: (EpgProgram, MediaItem) -> Unit
+    onProgramSelected: (EpgProgram, MediaItem) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = CinemaSpacing.sm)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = CinemaSpacing.sm),
     ) {
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChanged,
             label = { Text("Search programs") },
             singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = CinemaSpacing.sm)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = CinemaSpacing.sm),
         )
 
         if (searchQuery.isNotBlank() && searchResults.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "No programs found",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = CinemaSpacing.xs),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
             ) {
-                items(searchResults, key = { "search_${it.channel.id}_${it.program.id}_${it.program.startTime}" }, contentType = { "epg_search_result" }) { result ->
+                items(searchResults, key = {
+                    "search_${it.channel.id}_${it.program.id}_${it.program.startTime}"
+                }, contentType = { "epg_search_result" }) { result ->
                     MobileSearchResultCard(
                         result = result,
-                        onClick = { onProgramSelected(result.program, result.channel) }
+                        onClick = { onProgramSelected(result.program, result.channel) },
                     )
                 }
             }
@@ -311,21 +319,23 @@ private fun MobileEpgSearchContent(
 @Composable
 private fun MobileSearchResultCard(
     result: EpgViewModel.EpgSearchResult,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(CinemaSpacing.sm),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(CinemaSpacing.sm),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -333,21 +343,22 @@ private fun MobileSearchResultCard(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = result.channel.name,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 1,
                 )
                 Text(
-                    text = TimeFormat.formatTimeRange(
-                        result.program.startTime,
-                        result.program.endTime
-                    ),
+                    text =
+                        TimeFormat.formatTimeRange(
+                            result.program.startTime,
+                            result.program.endTime,
+                        ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 result.program.description?.let { desc ->
                     if (desc.isNotBlank()) {
@@ -356,7 +367,7 @@ private fun MobileSearchResultCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -366,7 +377,7 @@ private fun MobileSearchResultCard(
                     text = "NOW",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.tertiary
+                    color = MaterialTheme.colorScheme.tertiary,
                 )
             }
         }

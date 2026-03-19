@@ -10,26 +10,27 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 
 class MovieDetailsViewModel(
     private val context: Context,
     private val movieId: String,
-    private val categoryId: String
+    private val categoryId: String,
 ) : ViewModel() {
-
     sealed class UiState {
         data object Loading : UiState()
+
         data class Success(
             val movieDetail: MovieDetail,
             val resumePositionMs: Long,
             val resumeDurationMs: Long,
-            val isFavorite: Boolean
+            val isFavorite: Boolean,
         ) : UiState()
-        data class Error(val message: String) : UiState()
+
+        data class Error(
+            val message: String,
+        ) : UiState()
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
@@ -67,16 +68,17 @@ class MovieDetailsViewModel(
                         // Check favorite
                         val isFav = repo.isFavorite(movieId, "MOVIES")
 
-                        _uiState.value = UiState.Success(
-                            movieDetail = detail,
-                            resumePositionMs = resumePos,
-                            resumeDurationMs = resumeDur,
-                            isFavorite = isFav
-                        )
+                        _uiState.value =
+                            UiState.Success(
+                                movieDetail = detail,
+                                resumePositionMs = resumePos,
+                                resumeDurationMs = resumeDur,
+                                isFavorite = isFav,
+                            )
                     },
                     onFailure = { e ->
                         _uiState.value = UiState.Error(e.message ?: "Failed to load movie info")
-                    }
+                    },
                 )
             } catch (e: Exception) {
                 _uiState.value = UiState.Error(e.message ?: "Initialization error")
@@ -85,7 +87,9 @@ class MovieDetailsViewModel(
     }
 
     private suspend fun getRepository(): MediaRepository {
-        val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+        val container =
+            org.njarasoa.fijerena.core.ui.di.AppContainer
+                .getInstance(context)
         return container.getMediaRepository()
     }
 
@@ -108,10 +112,9 @@ class MovieDetailsViewModel(
 class MovieDetailsViewModelFactory(
     private val context: Context,
     private val movieId: String,
-    private val categoryId: String
+    private val categoryId: String,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return MovieDetailsViewModel(context.applicationContext, movieId, categoryId) as T
-    }
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        MovieDetailsViewModel(context.applicationContext, movieId, categoryId) as T
 }

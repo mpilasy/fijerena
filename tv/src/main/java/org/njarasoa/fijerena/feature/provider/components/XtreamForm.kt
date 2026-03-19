@@ -22,7 +22,7 @@ fun XtreamForm(
     onPasswordChange: (String) -> Unit,
     onErrorChange: (String?) -> Unit,
     onOutputFormatChange: (String) -> Unit = {},
-    onPlaylistTypeChange: (String) -> Unit = {}
+    onPlaylistTypeChange: (String) -> Unit = {},
 ) {
     val scale = LocalUiScale.current
 
@@ -45,7 +45,7 @@ fun XtreamForm(
         },
         label = "Server URL",
         placeholder = "http://provider.example.com",
-        keyboardType = KeyboardType.Uri
+        keyboardType = KeyboardType.Uri,
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -56,7 +56,7 @@ fun XtreamForm(
             onUsernameChange(it)
             onErrorChange(null)
         },
-        label = "Username"
+        label = "Username",
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -70,6 +70,6 @@ fun XtreamForm(
         label = "Password",
         visualTransformation = PasswordVisualTransformation(),
         keyboardType = KeyboardType.Password,
-        displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else ""
+        displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else "",
     )
 }

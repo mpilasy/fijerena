@@ -1,11 +1,11 @@
 package org.njarasoa.fijerena.core.ui.di
 
 import android.content.Context
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * Dependency Injection container for the app.
@@ -13,8 +13,9 @@ import kotlinx.coroutines.sync.withLock
  * Provides singletons for repositories to avoid redundant instantiation and
  * to ensure consistent state across the app.
  */
-class AppContainer(private val context: Context) {
-
+class AppContainer(
+    private val context: Context,
+) {
     /**
      * Singleton instance of ProviderRepository.
      * Manages all configured media providers and their settings.
@@ -34,24 +35,26 @@ class AppContainer(private val context: Context) {
      * If the ID is 0, the active provider is used.
      */
     suspend fun getMediaRepository(providerId: Long = 0L): MediaRepository {
-        val resolvedId = if (providerId > 0L) {
-            providerId
-        } else {
-            providerRepository.getActiveProvider()?.id ?: 0L
-        }
+        val resolvedId =
+            if (providerId > 0L) {
+                providerId
+            } else {
+                providerRepository.getActiveProvider()?.id ?: 0L
+            }
 
         return mutex.withLock {
             mediaRepositories[resolvedId] ?: run {
                 val settings = providerRepository.getProviderSettings(resolvedId)
                 val repo = MediaRepository(context.applicationContext, resolvedId, settings)
-                
+
                 // Set the provider implementation
-                val entity = if (providerId > 0L) {
-                    providerRepository.getProviderById(providerId)
-                } else {
-                    providerRepository.getActiveProvider()
-                }
-                
+                val entity =
+                    if (providerId > 0L) {
+                        providerRepository.getProviderById(providerId)
+                    } else {
+                        providerRepository.getActiveProvider()
+                    }
+
                 if (entity != null) {
                     val password = providerRepository.getPassword(entity.id) ?: ""
                     val provider = MediaProviderFactory.create(entity, context.applicationContext, password)
@@ -67,10 +70,9 @@ class AppContainer(private val context: Context) {
         @Volatile
         private var instance: AppContainer? = null
 
-        fun getInstance(context: Context): AppContainer {
-            return instance ?: synchronized(this) {
+        fun getInstance(context: Context): AppContainer =
+            instance ?: synchronized(this) {
                 instance ?: AppContainer(context.applicationContext).also { instance = it }
             }
-        }
     }
 }

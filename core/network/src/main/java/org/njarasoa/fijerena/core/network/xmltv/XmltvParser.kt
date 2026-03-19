@@ -11,7 +11,6 @@ import java.util.Locale
 import java.util.TimeZone
 
 object XmltvParser {
-
     private const val TAG = "XmltvParser"
 
     /**
@@ -34,7 +33,7 @@ object XmltvParser {
     fun parse(
         inputStream: InputStream,
         channelFilter: ((Map<String, XmltvChannel>) -> Set<String>)? = null,
-        timeWindowSeconds: Pair<Long, Long>? = null
+        timeWindowSeconds: Pair<Long, Long>? = null,
     ): XmltvData {
         val channels = mutableMapOf<String, XmltvChannel>()
         val programmes = mutableMapOf<String, MutableList<XmltvProgramme>>()
@@ -78,11 +77,14 @@ object XmltvParser {
                             // Time window pre-check on attributes before full child parse
                             val startStr = parser.getAttributeValue(null, "start")
                             val stopStr = parser.getAttributeValue(null, "stop")
-                            val outsideWindow = if (timeWindowSeconds != null && startStr != null && stopStr != null) {
-                                val startEpoch = parseTimestamp(startStr)
-                                val endEpoch = parseTimestamp(stopStr)
-                                endEpoch < timeWindowSeconds.first || startEpoch > timeWindowSeconds.second
-                            } else false
+                            val outsideWindow =
+                                if (timeWindowSeconds != null && startStr != null && stopStr != null) {
+                                    val startEpoch = parseTimestamp(startStr)
+                                    val endEpoch = parseTimestamp(stopStr)
+                                    endEpoch < timeWindowSeconds.first || startEpoch > timeWindowSeconds.second
+                                } else {
+                                    false
+                                }
 
                             if (outsideWindow) {
                                 skipElement(parser)
@@ -90,7 +92,8 @@ object XmltvParser {
                             } else {
                                 val programme = parseProgramme(parser)
                                 if (programme != null) {
-                                    programmes.getOrPut(programme.channelId) { mutableListOf() }
+                                    programmes
+                                        .getOrPut(programme.channelId) { mutableListOf() }
                                         .add(programme)
                                 }
                             }
@@ -151,24 +154,26 @@ object XmltvParser {
         return XmltvChannel(
             id = id,
             displayName = displayName ?: id,
-            iconUrl = iconUrl
+            iconUrl = iconUrl,
         )
     }
 
     /** Max characters to keep from any single text field (title, desc, category). */
     private const val MAX_TEXT_LENGTH = 2000
 
-    private fun safeNextText(parser: XmlPullParser): String {
-        return try {
+    private fun safeNextText(parser: XmlPullParser): String =
+        try {
             val text = parser.nextText()
             if (text.length > MAX_TEXT_LENGTH) text.substring(0, MAX_TEXT_LENGTH) else text
         } catch (e: Exception) {
             Log.w(TAG, "Failed to read text element", e)
             ""
         }
-    }
 
-    private fun parseProgramme(parser: XmlPullParser, timezoneOverrideHours: Int = this.timezoneOverrideHours): XmltvProgramme? {
+    private fun parseProgramme(
+        parser: XmlPullParser,
+        timezoneOverrideHours: Int = this.timezoneOverrideHours,
+    ): XmltvProgramme? {
         val startStr = parser.getAttributeValue(null, "start") ?: return null
         val stopStr = parser.getAttributeValue(null, "stop") ?: return null
         val channelId = parser.getAttributeValue(null, "channel") ?: return null
@@ -221,7 +226,7 @@ object XmltvParser {
             endEpoch = endEpoch,
             title = title,
             description = description,
-            category = category
+            category = category,
         )
     }
 
@@ -239,7 +244,7 @@ object XmltvParser {
         inputStream: InputStream,
         query: String,
         maxResults: Int = 500,
-        timeWindowSeconds: Pair<Long, Long>? = null
+        timeWindowSeconds: Pair<Long, Long>? = null,
     ): XmltvSearchResult {
         val allChannels = mutableMapOf<String, XmltvChannel>()
         val matchedProgrammes = mutableListOf<XmltvProgramme>()
@@ -268,11 +273,14 @@ object XmltvParser {
                             // Time window pre-check on attributes
                             val startStr = parser.getAttributeValue(null, "start")
                             val stopStr = parser.getAttributeValue(null, "stop")
-                            val outsideWindow = if (timeWindowSeconds != null && startStr != null && stopStr != null) {
-                                val startEpoch = parseTimestamp(startStr)
-                                val endEpoch = parseTimestamp(stopStr)
-                                endEpoch < timeWindowSeconds.first || startEpoch > timeWindowSeconds.second
-                            } else false
+                            val outsideWindow =
+                                if (timeWindowSeconds != null && startStr != null && stopStr != null) {
+                                    val startEpoch = parseTimestamp(startStr)
+                                    val endEpoch = parseTimestamp(stopStr)
+                                    endEpoch < timeWindowSeconds.first || startEpoch > timeWindowSeconds.second
+                                } else {
+                                    false
+                                }
 
                             if (outsideWindow) {
                                 skipElement(parser)
@@ -310,7 +318,7 @@ object XmltvParser {
             channels = resultChannels,
             programmes = matchedProgrammes,
             totalScanned = totalScanned,
-            truncated = truncated
+            truncated = truncated,
         )
     }
 
@@ -318,13 +326,16 @@ object XmltvParser {
      * Parse a <channel> element and return a Room entity for indexing.
      * Reuses the same parsing logic as [parseChannel].
      */
-    fun parseChannelForIndex(parser: XmlPullParser, sourceId: Long = 0): EpgChannelEntity? {
+    fun parseChannelForIndex(
+        parser: XmlPullParser,
+        sourceId: Long = 0,
+    ): EpgChannelEntity? {
         val channel = parseChannel(parser) ?: return null
         return EpgChannelEntity(
             xmltvId = channel.id,
             displayName = channel.displayName,
             iconUrl = channel.iconUrl,
-            sourceId = sourceId
+            sourceId = sourceId,
         )
     }
 
@@ -332,7 +343,11 @@ object XmltvParser {
      * Parse a <programme> element and return a Room entity for indexing.
      * Reuses the same parsing logic as [parseProgramme].
      */
-    fun parseProgrammeForIndex(parser: XmlPullParser, sourceId: Long = 0, timezoneOverrideHours: Int = this.timezoneOverrideHours): EpgProgrammeEntity? {
+    fun parseProgrammeForIndex(
+        parser: XmlPullParser,
+        sourceId: Long = 0,
+        timezoneOverrideHours: Int = this.timezoneOverrideHours,
+    ): EpgProgrammeEntity? {
         val programme = parseProgramme(parser, timezoneOverrideHours) ?: return null
         return EpgProgrammeEntity(
             channelId = programme.channelId,
@@ -342,7 +357,7 @@ object XmltvParser {
             category = programme.category,
             startEpoch = programme.startEpoch,
             endEpoch = programme.endEpoch,
-            sourceId = sourceId
+            sourceId = sourceId,
         )
     }
 
@@ -350,16 +365,18 @@ object XmltvParser {
      * Cache for SimpleDateFormat and TimeZone objects to reduce GC pressure.
      * Large XMLTV files can have 200,000+ programmes, each with 2 timestamps.
      */
-    private val dateFormatThreadLocal = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue(): SimpleDateFormat {
-            return SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
+    private val dateFormatThreadLocal =
+        object : ThreadLocal<SimpleDateFormat>() {
+            override fun initialValue(): SimpleDateFormat = SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
         }
-    }
 
     private val timeZoneCache = java.util.concurrent.ConcurrentHashMap<String, TimeZone>()
 
-    fun parseTimestamp(ts: String, timezoneOverrideHours: Int = this.timezoneOverrideHours): Long {
-        return try {
+    fun parseTimestamp(
+        ts: String,
+        timezoneOverrideHours: Int = this.timezoneOverrideHours,
+    ): Long =
+        try {
             // XMLTV format: "20260206180000 +0000" or "20260206180000"
             val trimmed = ts.trim()
 
@@ -383,18 +400,19 @@ object XmltvParser {
             val overrideHours = timezoneOverrideHours
             val tzKey = if (overrideHours != 0) "OVERRIDE_$overrideHours" else tzPart ?: "UTC"
 
-            val timeZone = timeZoneCache.getOrPut(tzKey) {
-                if (overrideHours != 0) {
-                    val sign = if (overrideHours >= 0) "+" else "-"
-                    val absHours = kotlin.math.abs(overrideHours)
-                    TimeZone.getTimeZone("GMT${sign}${"%02d".format(absHours)}00")
-                } else if (tzPart != null) {
-                    val normalizedTz = tzPart.replace(":", "")
-                    TimeZone.getTimeZone("GMT$normalizedTz")
-                } else {
-                    TimeZone.getTimeZone("UTC")
+            val timeZone =
+                timeZoneCache.getOrPut(tzKey) {
+                    if (overrideHours != 0) {
+                        val sign = if (overrideHours >= 0) "+" else "-"
+                        val absHours = kotlin.math.abs(overrideHours)
+                        TimeZone.getTimeZone("GMT${sign}${"%02d".format(absHours)}00")
+                    } else if (tzPart != null) {
+                        val normalizedTz = tzPart.replace(":", "")
+                        TimeZone.getTimeZone("GMT$normalizedTz")
+                    } else {
+                        TimeZone.getTimeZone("UTC")
+                    }
                 }
-            }
             format.timeZone = timeZone
 
             val date = format.parse(datePart)
@@ -403,5 +421,4 @@ object XmltvParser {
             Log.w(TAG, "Failed to parse XMLTV timestamp: $ts", e)
             0L
         }
-    }
 }

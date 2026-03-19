@@ -3,7 +3,6 @@ package org.njarasoa.fijerena.core.network.xmltv
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 
 /**
  * WorkManager worker for mobile background EPG sync.
@@ -13,9 +12,8 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
  */
 class EpgSyncWorker(
     context: Context,
-    params: WorkerParameters
+    params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
-
     override suspend fun doWork(): Result {
         val fileManager = EpgFileManager.getInstance(applicationContext)
 

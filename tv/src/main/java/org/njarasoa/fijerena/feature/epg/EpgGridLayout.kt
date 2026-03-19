@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -23,13 +24,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,8 +36,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.delay
-import androidx.tv.foundation.lazy.list.TvLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -52,16 +49,18 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
-import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -92,7 +91,7 @@ fun EpgGridLayout(
     searchResults: List<EpgViewModel.EpgSearchResult> = emptyList(),
     onSearchQueryChanged: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val configuration = LocalConfiguration.current
     val scale = LocalUiScale.current
@@ -108,12 +107,13 @@ fun EpgGridLayout(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(
-                horizontal = Spacing.tvSafeMarginHorizontal,
-                vertical = Spacing.tvSafeMarginVertical
-            )
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = Spacing.tvSafeMarginHorizontal,
+                    vertical = Spacing.tvSafeMarginVertical,
+                ),
     ) {
         // Header: Title, Date selector, Navigation buttons
         EpgHeader(
@@ -129,9 +129,10 @@ fun EpgGridLayout(
                 isSearchActive = !isSearchActive
                 if (!isSearchActive) onClearSearch()
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = Spacing.md.scaled(scale))
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = Spacing.md.scaled(scale)),
         )
 
         if (isSearchActive) {
@@ -140,7 +141,7 @@ fun EpgGridLayout(
                 searchQuery = searchQuery,
                 searchResults = searchResults,
                 onSearchQueryChanged = onSearchQueryChanged,
-                onProgramSelected = onProgramSelected
+                onProgramSelected = onProgramSelected,
             )
         } else if (channelRows.isEmpty()) {
             EmptyEpgMessage()
@@ -152,7 +153,7 @@ fun EpgGridLayout(
             LaunchedEffect(currentTimeSlot) {
                 if (currentTimeSlot > 0 && currentTimeSlot < timeSlots.size) {
                     horizontalScrollState.animateScrollToItem(
-                        currentTimeSlot.coerceIn(0, timeSlots.lastIndex)
+                        currentTimeSlot.coerceIn(0, timeSlots.lastIndex),
                     )
                 }
             }
@@ -165,9 +166,10 @@ fun EpgGridLayout(
                         timeSlots = timeSlots,
                         scrollState = horizontalScrollState,
                         currentTimeSlot = currentTimeSlot,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(TvDimensions.epgTimeHeaderHeight.scaled(scale))
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(TvDimensions.epgTimeHeaderHeight.scaled(scale)),
                     )
                 }
 
@@ -177,17 +179,17 @@ fun EpgGridLayout(
                 TvLazyColumn(
                     state = verticalScrollState,
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale)),
                 ) {
                     items(
                         count = channelRows.size,
                         key = { channelRows[it].channel.id },
-                        contentType = { "channel_row" }
+                        contentType = { "channel_row" },
                     ) { index ->
                         val row = channelRows[index]
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             // Channel name on the left
                             ChannelItem(
@@ -196,10 +198,10 @@ fun EpgGridLayout(
                                     onChannelSelected(
                                         row.channel.id,
                                         row.channel.name,
-                                        row.channel.categoryId
+                                        row.channel.categoryId,
                                     )
                                 },
-                                modifier = Modifier.width(TvDimensions.epgChannelColumnWidth.scaled(scale))
+                                modifier = Modifier.width(TvDimensions.epgChannelColumnWidth.scaled(scale)),
                             )
 
                             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
@@ -213,7 +215,7 @@ fun EpgGridLayout(
                                 onProgramSelected = { program ->
                                     onProgramSelected(program, row.channel)
                                 },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             )
                         }
                     }
@@ -234,30 +236,36 @@ private fun EpgHeader(
     isRefreshing: Boolean = false,
     isSearchActive: Boolean = false,
     onSearchToggle: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
 
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // Title and date
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "TV Guide - $categoryName",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
-                ),
-                color = CinemaTextPrimary
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleLarge.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextPrimary,
             )
             Text(
                 text = selectedDate.format(EPG_DATE_FORMATTER),
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodyMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary,
             )
         }
 
@@ -274,13 +282,13 @@ private fun EpgHeader(
             }
             Button(
                 onClick = onRefresh,
-                enabled = !isRefreshing
+                enabled = !isRefreshing,
             ) {
                 if (isRefreshing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                         strokeWidth = TvDimensions.borderDefault,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
                     Icon(Icons.Default.Refresh, contentDescription = "Refresh")
@@ -289,7 +297,7 @@ private fun EpgHeader(
             Button(onClick = onSearchToggle) {
                 Icon(
                     if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
-                    contentDescription = if (isSearchActive) "Close Search" else "Search"
+                    contentDescription = if (isSearchActive) "Close Search" else "Search",
                 )
             }
         }
@@ -302,14 +310,17 @@ private fun EmptyEpgMessage() {
 
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = "No EPG data available for these channels",
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
-            ),
-            color = CinemaTextSecondary
+            style =
+                MaterialTheme.typography.bodyLarge.copy(
+                    fontSize =
+                        MaterialTheme.typography.bodyLarge.fontSize
+                            .scaled(scale),
+                ),
+            color = CinemaTextSecondary,
         )
     }
 }
@@ -318,51 +329,62 @@ private fun EmptyEpgMessage() {
 private fun ChannelItem(
     channel: MediaItem,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
     // Memoize scaled TextStyle to avoid allocating a new copy per channel per recomposition
-    val scaledBodyMedium = remember(scale, typography) {
-        typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-    }
+    val scaledBodyMedium =
+        remember(scale, typography) {
+            typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+        }
 
     Card(
         onClick = onClick,
-        modifier = modifier
-            .height(TvDimensions.epgRowHeight.scaled(scale))
-            .onFocusChanged { isFocused = it.isFocused },
-        colors = CardDefaults.colors(
-            containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
-            contentColor = CinemaTextPrimary,
-            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint),
-            focusedContentColor = CinemaTextPrimary
-        ),
-        scale = CardDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleContent,
-            pressedScale = TvFocusTokens.pressedScaleSubtle
-        ),
-        glow = CardDefaults.glow(
-            focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                elevation = TvFocusTokens.focusShadowElevation
-            )
-        )
+        modifier =
+            modifier
+                .height(TvDimensions.epgRowHeight.scaled(scale))
+                .onFocusChanged { isFocused = it.isFocused },
+        colors =
+            CardDefaults.colors(
+                containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor =
+                    org.njarasoa.fijerena.ui.theme.CinemaAccent
+                        .copy(alpha = CinemaAlpha.tint),
+                focusedContentColor = CinemaTextPrimary,
+            ),
+        scale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    androidx.tv.material3.Glow(
+                        elevationColor =
+                            org.njarasoa.fijerena.ui.theme.CinemaAccent
+                                .copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(Spacing.sm.scaled(scale)),
-            contentAlignment = Alignment.CenterStart
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(Spacing.sm.scaled(scale)),
+            contentAlignment = Alignment.CenterStart,
         ) {
             Text(
                 text = channel.name,
                 style = scaledBodyMedium,
                 color = CinemaTextPrimary,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -373,40 +395,45 @@ private fun TimeHeaderRow(
     timeSlots: List<TimeSlot>,
     scrollState: LazyListState,
     currentTimeSlot: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val scaledLabelMedium = remember(scale, typography) {
-        typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
-    }
+    val scaledLabelMedium =
+        remember(scale, typography) {
+            typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+        }
 
     GlassPanel(modifier = modifier) {
         LazyRow(
             state = scrollState,
             modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = false // Synchronized with program rows
+            userScrollEnabled = false, // Synchronized with program rows
         ) {
             items(timeSlots.size, contentType = { "time_slot" }) { index ->
                 val slot = timeSlots[index]
                 val isCurrent = index == currentTimeSlot
 
                 Box(
-                    modifier = Modifier
-                        .width(TvDimensions.epgTimeSlotWidth.scaled(scale))
-                        .fillMaxHeight()
-                        .background(
-                            if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark
-                            else androidx.compose.ui.graphics.Color.Transparent
-                        ),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .width(TvDimensions.epgTimeSlotWidth.scaled(scale))
+                            .fillMaxHeight()
+                            .background(
+                                if (isCurrent) {
+                                    org.njarasoa.fijerena.ui.theme.CinemaAccentDark
+                                } else {
+                                    androidx.compose.ui.graphics.Color.Transparent
+                                },
+                            ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                Text(
-                    text = TimeFormat.formatTime(slot.startTime),
-                    style = scaledLabelMedium,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isCurrent) CinemaTextPrimary else CinemaTextSecondary
-                )
+                    Text(
+                        text = TimeFormat.formatTime(slot.startTime),
+                        style = scaledLabelMedium,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isCurrent) CinemaTextPrimary else CinemaTextSecondary,
+                    )
                 }
             }
         }
@@ -420,26 +447,27 @@ private fun ProgramRow(
     nowEpochSeconds: Long,
     scrollState: LazyListState,
     onProgramSelected: (EpgProgram) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
 
     LazyRow(
         state = scrollState,
-        modifier = modifier
-            .height(TvDimensions.epgRowHeight.scaled(scale)),
-        userScrollEnabled = false // Synchronized with header row
+        modifier =
+            modifier
+                .height(TvDimensions.epgRowHeight.scaled(scale)),
+        userScrollEnabled = false, // Synchronized with header row
     ) {
         items(
             count = channelRow.programs.size,
             key = { channelRow.programs[it].id },
-            contentType = { "program" }
+            contentType = { "program" },
         ) { index ->
             val program = channelRow.programs[index]
             ProgramCell(
                 program = program,
                 nowEpochSeconds = nowEpochSeconds,
-                onClick = { onProgramSelected(program) }
+                onClick = { onProgramSelected(program) },
             )
         }
     }
@@ -449,7 +477,7 @@ private fun ProgramRow(
 private fun ProgramCell(
     program: EpgProgram,
     nowEpochSeconds: Long,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     // Use shared nowEpochSeconds instead of per-cell System.currentTimeMillis()
@@ -457,56 +485,68 @@ private fun ProgramCell(
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
     // Memoize scaled TextStyles to avoid allocating new copies per cell per recomposition (50×N cells)
-    val scaledLabelSmall = remember(scale, typography) {
-        typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
-    }
-    val scaledBodyMedium = remember(scale, typography) {
-        typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-    }
+    val scaledLabelSmall =
+        remember(scale, typography) {
+            typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
+        }
+    val scaledBodyMedium =
+        remember(scale, typography) {
+            typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+        }
 
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .width(calculateProgramWidth(program.duration, scale))
-            .fillMaxHeight()
-            .padding(Spacing.xxs.scaled(scale))
-            .onFocusChanged { isFocused = it.isFocused },
-        colors = CardDefaults.colors(
-            containerColor = if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark else org.njarasoa.fijerena.ui.theme.CinemaSurface,
-            contentColor = CinemaTextPrimary,
-            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint),
-            focusedContentColor = CinemaTextPrimary
-        ),
-        scale = CardDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleContent,
-            pressedScale = TvFocusTokens.pressedScaleSubtle
-        ),
-        glow = CardDefaults.glow(
-            focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                elevation = TvFocusTokens.focusShadowElevation
-            )
-        )
+        modifier =
+            Modifier
+                .width(calculateProgramWidth(program.duration, scale))
+                .fillMaxHeight()
+                .padding(Spacing.xxs.scaled(scale))
+                .onFocusChanged { isFocused = it.isFocused },
+        colors =
+            CardDefaults.colors(
+                containerColor = if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark else org.njarasoa.fijerena.ui.theme.CinemaSurface,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor =
+                    org.njarasoa.fijerena.ui.theme.CinemaAccent
+                        .copy(alpha = CinemaAlpha.tint),
+                focusedContentColor = CinemaTextPrimary,
+            ),
+        scale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    androidx.tv.material3.Glow(
+                        elevationColor =
+                            org.njarasoa.fijerena.ui.theme.CinemaAccent
+                                .copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
     ) {
         Column(
-            modifier = Modifier
-                .padding(Spacing.sm.scaled(scale))
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.Center
+            modifier =
+                Modifier
+                    .padding(Spacing.sm.scaled(scale))
+                    .fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
         ) {
             Text(
                 text = TimeFormat.formatTime(program.startTime),
                 style = scaledLabelSmall,
                 color = CinemaTextSecondary,
-                maxLines = 1
+                maxLines = 1,
             )
             Text(
                 text = program.title,
                 style = scaledBodyMedium,
                 color = CinemaTextPrimary,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -517,7 +557,7 @@ private fun EpgSearchContent(
     searchQuery: String,
     searchResults: List<EpgViewModel.EpgSearchResult>,
     onSearchQueryChanged: (String) -> Unit,
-    onProgramSelected: (EpgProgram, MediaItem) -> Unit
+    onProgramSelected: (EpgProgram, MediaItem) -> Unit,
 ) {
     val scale = LocalUiScale.current
 
@@ -527,38 +567,44 @@ private fun EpgSearchContent(
             onValueChange = onSearchQueryChanged,
             label = { Text("Search programs") },
             singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = Spacing.sm.scaled(scale))
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = Spacing.sm.scaled(scale)),
         )
 
         if (searchQuery.isNotBlank() && searchResults.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "No programs found matching \"$searchQuery\"",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
-                    ),
-                    color = CinemaTextSecondary
+                    style =
+                        MaterialTheme.typography.bodyLarge.copy(
+                            fontSize =
+                                MaterialTheme.typography.bodyLarge.fontSize
+                                    .scaled(scale),
+                        ),
+                    color = CinemaTextSecondary,
                 )
             }
         } else {
             TvLazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
             ) {
                 items(
                     count = searchResults.size,
-                    key = { "search_${searchResults[it].channel.id}_${searchResults[it].program.id}_${searchResults[it].program.startTime}" },
-                    contentType = { "epg_search_result" }
+                    key = {
+                        "search_${searchResults[it].channel.id}_${searchResults[it].program.id}_${searchResults[it].program.startTime}"
+                    },
+                    contentType = { "epg_search_result" },
                 ) { index ->
                     val result = searchResults[index]
                     SearchResultItem(
                         result = result,
-                        onClick = { onProgramSelected(result.program, result.channel) }
+                        onClick = { onProgramSelected(result.program, result.channel) },
                     )
                 }
             }
@@ -569,49 +615,60 @@ private fun EpgSearchContent(
 @Composable
 private fun SearchResultItem(
     result: EpgViewModel.EpgSearchResult,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val scaledStyles = remember(scale, typography) {
-        object {
-            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-            val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
-            val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+    val scaledStyles =
+        remember(scale, typography) {
+            object {
+                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+                val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
+                val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+            }
         }
-    }
 
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .onFocusChanged { isFocused = it.isFocused },
-        colors = CardDefaults.colors(
-            containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
-            contentColor = CinemaTextPrimary,
-            focusedContainerColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.tint),
-            focusedContentColor = CinemaTextPrimary
-        ),
-        scale = CardDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleContent,
-            pressedScale = TvFocusTokens.pressedScaleSubtle
-        ),
-        glow = CardDefaults.glow(
-            focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = org.njarasoa.fijerena.ui.theme.CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                elevation = TvFocusTokens.focusShadowElevation
-            )
-        )
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .onFocusChanged { isFocused = it.isFocused },
+        colors =
+            CardDefaults.colors(
+                containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor =
+                    org.njarasoa.fijerena.ui.theme.CinemaAccent
+                        .copy(alpha = CinemaAlpha.tint),
+                focusedContentColor = CinemaTextPrimary,
+            ),
+        scale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    androidx.tv.material3.Glow(
+                        elevationColor =
+                            org.njarasoa.fijerena.ui.theme.CinemaAccent
+                                .copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.sm.scaled(scale)),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.sm.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -620,21 +677,22 @@ private fun SearchResultItem(
                     fontWeight = FontWeight.SemiBold,
                     color = CinemaTextPrimary,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = result.channel.name,
                     style = scaledStyles.bodySmall,
                     color = CinemaTextSecondary,
-                    maxLines = 1
+                    maxLines = 1,
                 )
                 Text(
-                    text = TimeFormat.formatTimeRange(
-                        result.program.startTime,
-                        result.program.endTime
-                    ),
+                    text =
+                        TimeFormat.formatTimeRange(
+                            result.program.startTime,
+                            result.program.endTime,
+                        ),
                     style = scaledStyles.labelSmall,
-                    color = CinemaTextSecondary
+                    color = CinemaTextSecondary,
                 )
                 result.program.description?.let { desc ->
                     if (desc.isNotBlank()) {
@@ -643,7 +701,7 @@ private fun SearchResultItem(
                             style = scaledStyles.bodySmall,
                             color = CinemaTextSecondary,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -653,7 +711,7 @@ private fun SearchResultItem(
                     text = "NOW",
                     style = scaledStyles.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
+                    color = org.njarasoa.fijerena.ui.theme.CinemaOrangeLight,
                 )
             }
         }
@@ -661,7 +719,10 @@ private fun SearchResultItem(
 }
 
 // Helper functions
-private fun calculateProgramWidth(durationSeconds: Long, scale: Float = 1.0f): androidx.compose.ui.unit.Dp {
+private fun calculateProgramWidth(
+    durationSeconds: Long,
+    scale: Float = 1.0f,
+): androidx.compose.ui.unit.Dp {
     // 2dp per minute
     val minutes = durationSeconds / 60
     return ((minutes * 2).coerceAtLeast(120).toInt().dp).scaled(scale)

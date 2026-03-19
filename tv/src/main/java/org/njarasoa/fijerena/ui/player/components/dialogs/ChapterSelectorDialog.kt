@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
@@ -38,6 +37,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -45,8 +45,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
-import org.njarasoa.fijerena.ui.components.TvGlassPanel
-import org.njarasoa.fijerena.ui.player.utils.formatTime
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -56,21 +54,24 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
+import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.player.utils.formatTime
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
 fun ChapterSelectorDialog(
     viewModel: PlaybackViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val chapters = remember { viewModel.getChapters() }
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
-    val currentPosition = when (val ps = playbackState) {
-        is PlaybackState.Playing -> ps.position
-        is PlaybackState.Paused -> ps.position
-        else -> 0L
-    }
+    val currentPosition =
+        when (val ps = playbackState) {
+            is PlaybackState.Playing -> ps.position
+            is PlaybackState.Paused -> ps.position
+            else -> 0L
+        }
     val currentChapterIndex = chapters.indexOfLast { it.startTimeMs <= currentPosition }.coerceAtLeast(0)
     var selectedIndex by remember { mutableStateOf(currentChapterIndex) }
     val focusRequesters = remember { List(chapters.size) { FocusRequester() } }
@@ -85,29 +86,32 @@ fun ChapterSelectorDialog(
     BackHandler { onDismiss() }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+        contentAlignment = Alignment.Center,
     ) {
         TvGlassPanel(
-            modifier = Modifier
-                .width(TvDimensions.dialogWidth)
-                .heightIn(max = screenHeight * 0.8f)
-                .padding(Spacing.xxl)
+            modifier =
+                Modifier
+                    .width(TvDimensions.dialogWidth)
+                    .heightIn(max = screenHeight * 0.8f)
+                    .padding(Spacing.xxl),
         ) {
             Column(
-                modifier = Modifier
-                    .padding(Spacing.xxl)
-                    .verticalScroll(rememberScrollState())
-                    .focusProperties { exit = { FocusRequester.Cancel } },
-                verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                modifier =
+                    Modifier
+                        .padding(Spacing.xxl)
+                        .verticalScroll(rememberScrollState())
+                        .focusProperties { exit = { FocusRequester.Cancel } },
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 Text(
                     text = "Chapters",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
 
                 if (chapters.isEmpty()) {
@@ -115,11 +119,11 @@ fun ChapterSelectorDialog(
                         text = "No chapters available",
                         style = MaterialTheme.typography.bodyLarge,
                         color = CinemaTextSecondary,
-                        modifier = Modifier.padding(vertical = Spacing.md)
+                        modifier = Modifier.padding(vertical = Spacing.md),
                     )
                     Button(
                         onClick = onDismiss,
-                        modifier = Modifier.align(CenterHorizontally)
+                        modifier = Modifier.align(CenterHorizontally),
                     ) {
                         Text("Close")
                     }
@@ -132,64 +136,76 @@ fun ChapterSelectorDialog(
                                 viewModel.seekTo(chapter.startTimeMs)
                                 onDismiss()
                             },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequesters[index])
-                                .onFocusChanged { focusState ->
-                                    if (focusState.isFocused) {
-                                        selectedIndex = index
-                                    }
-                                },
-                            colors = ButtonDefaults.colors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
-                                else CinemaSurfaceVariant,
-                                contentColor = CinemaTextPrimary,
-                                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                                focusedContentColor = CinemaTextPrimary
-                            ),
-                            border = ButtonDefaults.border(
-                                border = Border(
-                                    border = BorderStroke(
-                                        width = if (isSelected) TvDimensions.borderFocused else 0.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                                    ),
-                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequesters[index])
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            selectedIndex = index
+                                        }
+                                    },
+                            colors =
+                                ButtonDefaults.colors(
+                                    containerColor =
+                                        if (isSelected) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint)
+                                        } else {
+                                            CinemaSurfaceVariant
+                                        },
+                                    contentColor = CinemaTextPrimary,
+                                    focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                                    focusedContentColor = CinemaTextPrimary,
                                 ),
-                                focusedBorder = Border(
-                                    border = BorderStroke(
-                                        width = TvDimensions.borderFocused,
-                                        color = MaterialTheme.colorScheme.primary
-                                    ),
-                                    shape = RoundedCornerShape(CinemaCornerRadius.small)
-                                )
-                            )
+                            border =
+                                ButtonDefaults.border(
+                                    border =
+                                        Border(
+                                            border =
+                                                BorderStroke(
+                                                    width = if (isSelected) TvDimensions.borderFocused else 0.dp,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                                ),
+                                            shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                        ),
+                                    focusedBorder =
+                                        Border(
+                                            border =
+                                                BorderStroke(
+                                                    width = TvDimensions.borderFocused,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                ),
+                                            shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                        ),
+                                ),
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(Spacing.xs),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(Spacing.xs),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(
-                                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                                 ) {
                                     Text(
                                         text = chapter.title,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
+                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                                     )
                                     Text(
                                         text = formatTime(chapter.startTimeMs),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = CinemaTextTertiary
+                                        color = CinemaTextTertiary,
                                     )
                                 }
                                 if (isCurrent) {
                                     Text(
                                         text = "Now",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }
@@ -200,9 +216,10 @@ fun ChapterSelectorDialog(
 
                     Button(
                         onClick = onDismiss,
-                        modifier = Modifier
-                            .align(CenterHorizontally)
-                            .width(TvDimensions.selectionListWidth)
+                        modifier =
+                            Modifier
+                                .align(CenterHorizontally)
+                                .width(TvDimensions.selectionListWidth),
                     ) {
                         Text("Cancel")
                     }
@@ -213,7 +230,7 @@ fun ChapterSelectorDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

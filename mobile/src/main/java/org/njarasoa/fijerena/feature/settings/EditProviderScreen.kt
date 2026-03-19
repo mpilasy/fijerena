@@ -31,7 +31,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -39,7 +38,6 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -47,7 +45,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 @Composable
 fun MobileEditProviderScreen(
     onSaved: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val accountManager = remember { AccountManager(context.applicationContext) }
@@ -67,27 +65,28 @@ fun MobileEditProviderScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(24.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = "Change Provider URL",
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineMedium,
             )
 
             Text(
                 text = "Your credentials will be preserved",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -99,27 +98,29 @@ fun MobileEditProviderScreen(
                 placeholder = { Text("http://example.com:8080") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = CinemaTextPrimary,
-                    unfocusedTextColor = CinemaTextPrimary,
-                    disabledTextColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.tint),
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                )
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = CinemaTextPrimary,
+                        unfocusedTextColor = CinemaTextPrimary,
+                        disabledTextColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.tint),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    ),
             )
 
             if (message.isNotEmpty()) {
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (message.contains("Error")) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    }
+                    color =
+                        if (message.contains("Error")) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
                 )
             }
 
@@ -127,11 +128,11 @@ fun MobileEditProviderScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 OutlinedButton(
                     onClick = onBack,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text("Cancel")
                 }
@@ -161,7 +162,7 @@ fun MobileEditProviderScreen(
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = !isLoading && providerUrl.isNotBlank() && providerUrl.trim() != currentUrl
+                    enabled = !isLoading && providerUrl.isNotBlank() && providerUrl.trim() != currentUrl,
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(MobileDimensions.iconDefault))

@@ -19,7 +19,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
@@ -37,6 +36,7 @@ import androidx.media3.ui.PlayerView
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -72,11 +72,11 @@ fun PlayerScreen(
     currentStreamId: String? = null,
     categoryStreams: ImmutableMediaList = ImmutableMediaList(),
     lastWatchedStreams: ImmutableMediaList = ImmutableMediaList(),
-    onStreamSelected: ((MediaItem) -> Unit)? = null
+    onStreamSelected: ((MediaItem) -> Unit)? = null,
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
-    
+
     // Capture delegated properties into local variables for stable smart casting
     val currentPs = playbackState
     val currentMeta = currentMetadata
@@ -89,36 +89,36 @@ fun PlayerScreen(
         state = state,
         playbackState = playbackState,
         currentMetadata = currentMetadata,
-        viewModel = viewModel
+        viewModel = viewModel,
     )
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CinemaBackground)
-            .then(
-                // Only make the player box focusable when controls are not visible
-                // Stats overlay is now non-focusable and survives channel switches
-                if (!state.showControls) {
-                    Modifier
-                        .focusRequester(state.focusRequester)
-                        .focusable()
-                } else {
-                    Modifier
-                }
-            )
-            .onKeyEvent { keyEvent ->
-                handlePlayerKeyEvent(
-                    keyEvent = keyEvent,
-                    state = state,
-                    viewModel = viewModel,
-                    playbackState = playbackState,
-                    currentMetadata = currentMetadata,
-                    onBack = onBack,
-                    onNextChannel = onNextChannel,
-                    onPreviousChannel = onPreviousChannel
-                )
-            }
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(CinemaBackground)
+                .then(
+                    // Only make the player box focusable when controls are not visible
+                    // Stats overlay is now non-focusable and survives channel switches
+                    if (!state.showControls) {
+                        Modifier
+                            .focusRequester(state.focusRequester)
+                            .focusable()
+                    } else {
+                        Modifier
+                    },
+                ).onKeyEvent { keyEvent ->
+                    handlePlayerKeyEvent(
+                        keyEvent = keyEvent,
+                        state = state,
+                        viewModel = viewModel,
+                        playbackState = playbackState,
+                        currentMetadata = currentMetadata,
+                        onBack = onBack,
+                        onNextChannel = onNextChannel,
+                        onPreviousChannel = onPreviousChannel,
+                    )
+                },
     ) {
         // Use metadata title as key to force AndroidView recreation on stream change
         val streamKey = currentMetadata.title + currentMetadata.streamUrl
@@ -146,23 +146,24 @@ fun PlayerScreen(
                 if (view.player == null) {
                     view.player = service?.getPlayer()
                 }
-            }
+            },
         )
 
         // Loading/Error overlays (always show, except Idle which is handled silently)
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Center
+            contentAlignment = Center,
         ) {
             when (val ps = currentPs) {
                 PlaybackState.Idle -> { /* Silent - no UI flash before stream loads */ }
                 PlaybackState.Buffering -> BufferingContent()
                 is PlaybackState.Ended -> EndedContent(onBack)
-                is PlaybackState.Error -> ErrorContent(
-                    error = ps,
-                    onRetry = { viewModel.playStream(currentMeta) },
-                    onBack = onBack
-                )
+                is PlaybackState.Error ->
+                    ErrorContent(
+                        error = ps,
+                        onRetry = { viewModel.playStream(currentMeta) },
+                        onBack = onBack,
+                    )
                 else -> { /* Show controls overlay below */ }
             }
         }
@@ -172,7 +173,7 @@ fun PlayerScreen(
         AnimatedVisibility(
             visible = state.showStats,
             enter = fadeIn(),
-            exit = fadeOut()
+            exit = fadeOut(),
         ) {
             StatsOverlay(
                 playbackState = currentPs,
@@ -180,7 +181,7 @@ fun PlayerScreen(
                 onHide = {
                     // Just close stats, leave controls as they are
                     state.showStats = false
-                }
+                },
             )
         }
 
@@ -188,7 +189,7 @@ fun PlayerScreen(
         AnimatedVisibility(
             visible = (state.showControls || state.showStreamInfo),
             enter = fadeIn(),
-            exit = fadeOut()
+            exit = fadeOut(),
         ) {
             PlayerControlsOverlay(
                 playbackState = currentPs,
@@ -211,7 +212,7 @@ fun PlayerScreen(
                     viewModel.setNightMode(newValue)
                 },
                 isNightModeEnabled = viewModel.nightModeEnabled.value,
-                seekSpeedLabel = state.seekSpeedLabel
+                seekSpeedLabel = state.seekSpeedLabel,
             )
         }
 
@@ -219,7 +220,7 @@ fun PlayerScreen(
         if (state.showAudioTrackSelector) {
             AudioTrackSelectorDialog(
                 viewModel = viewModel,
-                onDismiss = { state.showAudioTrackSelector = false }
+                onDismiss = { state.showAudioTrackSelector = false },
             )
         }
 
@@ -227,7 +228,7 @@ fun PlayerScreen(
         if (state.showSubtitleSelector) {
             SubtitleSelectorDialog(
                 viewModel = viewModel,
-                onDismiss = { state.showSubtitleSelector = false }
+                onDismiss = { state.showSubtitleSelector = false },
             )
         }
 
@@ -235,7 +236,7 @@ fun PlayerScreen(
         if (state.showQualitySelector) {
             QualitySelectorDialog(
                 viewModel = viewModel,
-                onDismiss = { state.showQualitySelector = false }
+                onDismiss = { state.showQualitySelector = false },
             )
         }
 
@@ -243,7 +244,7 @@ fun PlayerScreen(
         if (state.showChapterSelector) {
             ChapterSelectorDialog(
                 viewModel = viewModel,
-                onDismiss = { state.showChapterSelector = false }
+                onDismiss = { state.showChapterSelector = false },
             )
         }
 
@@ -251,7 +252,7 @@ fun PlayerScreen(
         AnimatedVisibility(
             visible = state.showTopOfHourClock && !state.showControls && !state.showStreamInfo && !state.showStats,
             enter = fadeIn(),
-            exit = fadeOut()
+            exit = fadeOut(),
         ) {
             // Self-ticking: only this composable recomposes each second
             var tick by remember { mutableLongStateOf(0L) }
@@ -265,16 +266,17 @@ fun PlayerScreen(
             val ignored = tick
             val screenHeight = LocalConfiguration.current.screenHeightDp.dp
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(Spacing.xl),
-                contentAlignment = Alignment.TopEnd
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(Spacing.xl),
+                contentAlignment = Alignment.TopEnd,
             ) {
                 Text(
                     text = TimeFormat.formatClockTime(Date(tick)),
                     style = MaterialTheme.typography.displaySmall,
                     color = Color.White.copy(alpha = CinemaAlpha.textDisabled),
-                    modifier = Modifier.height(screenHeight * 0.1f)
+                    modifier = Modifier.height(screenHeight * 0.1f),
                 )
             }
         }
@@ -287,7 +289,7 @@ fun PlayerScreen(
                 },
                 onDontShowAgain = {
                     state.markHintsDismissed()
-                }
+                },
             )
         }
 
@@ -295,7 +297,7 @@ fun PlayerScreen(
         AnimatedVisibility(
             visible = state.showCategoryOverlay,
             enter = slideInHorizontally { -it },
-            exit = slideOutHorizontally { -it }
+            exit = slideOutHorizontally { -it },
         ) {
             ChannelListOverlay(
                 title = "Category Channels",
@@ -306,7 +308,7 @@ fun PlayerScreen(
                     state.showCategoryOverlay = false
                     onStreamSelected?.invoke(item)
                 },
-                onDismiss = { state.showCategoryOverlay = false }
+                onDismiss = { state.showCategoryOverlay = false },
             )
         }
 
@@ -314,7 +316,7 @@ fun PlayerScreen(
         AnimatedVisibility(
             visible = state.showLastWatchedOverlay,
             enter = slideInHorizontally { it },
-            exit = slideOutHorizontally { it }
+            exit = slideOutHorizontally { it },
         ) {
             ChannelListOverlay(
                 title = "Last Watched",
@@ -325,7 +327,7 @@ fun PlayerScreen(
                     state.showLastWatchedOverlay = false
                     onStreamSelected?.invoke(item)
                 },
-                onDismiss = { state.showLastWatchedOverlay = false }
+                onDismiss = { state.showLastWatchedOverlay = false },
             )
         }
     }

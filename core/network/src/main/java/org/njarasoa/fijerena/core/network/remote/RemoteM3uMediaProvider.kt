@@ -2,11 +2,11 @@ package org.njarasoa.fijerena.core.network.remote
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.BaseM3uMediaProvider
 import org.njarasoa.fijerena.core.network.local.M3uParser
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
-import kotlinx.coroutines.delay
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -14,9 +14,8 @@ import java.net.URL
 class RemoteM3uMediaProvider(
     override val providerId: Long,
     private val m3uUrl: String,
-    private val context: Context
+    private val context: Context,
 ) : BaseM3uMediaProvider() {
-
     companion object {
         private const val TAG = "RemoteM3uProvider"
         private const val ID_PREFIX = "rm3u"
@@ -28,22 +27,24 @@ class RemoteM3uMediaProvider(
         private const val RETRY_BASE_DELAY_MS = 1000L
     }
 
-    override val capabilities = ProviderCapabilities(
-        supportedContentTypes = setOf(ContentType.LIVE_TV, ContentType.MOVIES),
-        supportsEpg = false,
-        supportsSearch = true,
-        supportsAuthentication = false,
-        supportsProgressSync = false
-    )
+    override val capabilities =
+        ProviderCapabilities(
+            supportedContentTypes = setOf(ContentType.LIVE_TV, ContentType.MOVIES),
+            supportsEpg = false,
+            supportsSearch = true,
+            supportsAuthentication = false,
+            supportsProgressSync = false,
+        )
 
-    private val cacheFile = File(context.cacheDir, "remote_m3u_${providerId}.m3u")
+    private val cacheFile = File(context.cacheDir, "remote_m3u_$providerId.m3u")
 
     override suspend fun connect(): Result<Unit> {
         return try {
             val file = loadM3uContent()
-            val (cats, its) = file.bufferedReader().use { reader ->
-                M3uParser.processEntries(reader, ID_PREFIX)
-            }
+            val (cats, its) =
+                file.bufferedReader().use { reader ->
+                    M3uParser.processEntries(reader, ID_PREFIX)
+                }
             if (its.isEmpty()) {
                 return Result.failure(IllegalStateException("No valid entries found in M3U playlist"))
             }
@@ -76,13 +77,13 @@ class RemoteM3uMediaProvider(
         for (attempt in 1..MAX_RETRIES) {
             var connection: HttpURLConnection? = null
             try {
-
-                connection = (URL(m3uUrl).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = CONNECT_TIMEOUT_MS
-                    readTimeout = READ_TIMEOUT_MS
-                    instanceFollowRedirects = true
-                    setRequestProperty("Accept-Encoding", "identity")
-                }
+                connection =
+                    (URL(m3uUrl).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = CONNECT_TIMEOUT_MS
+                        readTimeout = READ_TIMEOUT_MS
+                        instanceFollowRedirects = true
+                        setRequestProperty("Accept-Encoding", "identity")
+                    }
 
                 val statusCode = connection.responseCode
                 if (statusCode !in 200..299) {
@@ -106,11 +107,12 @@ class RemoteM3uMediaProvider(
                     }
 
                     // Validate #EXTM3U header
-                    val header = tmpFile.bufferedReader().use { reader ->
-                        val buf = CharArray(256)
-                        val read = reader.read(buf)
-                        if (read > 0) String(buf, 0, read) else ""
-                    }
+                    val header =
+                        tmpFile.bufferedReader().use { reader ->
+                            val buf = CharArray(256)
+                            val read = reader.read(buf)
+                            if (read > 0) String(buf, 0, read) else ""
+                        }
                     if (!header.trimStart().startsWith("#EXTM3U")) {
                         throw Exception("Invalid M3U file: missing #EXTM3U header")
                     }
