@@ -66,7 +66,7 @@ class EpgManagementViewModel(
 
     val queuedTaskIds: StateFlow<Set<String>> = RefreshQueue.queuedTaskIds
 
-    val activeTaskId: StateFlow<String?> = RefreshQueue.activeTaskId
+    val activeTaskIds: StateFlow<Set<String>> = RefreshQueue.activeTaskIds
 
     val lastPipelineStats: StateFlow<org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity?> = settingsDb().epgPipelineStatsDao().getLatestStats()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

@@ -11,13 +11,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import java.util.PriorityQueue
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Singleton queue manager that processes tasks sequentially based on priority.
- * Ensures that long-running tasks like EPG refresh don't block high-priority tasks forever,
- * but also ensures they don't interrupt each other.
+ * Singleton queue manager that processes tasks based on priority.
+ * Supports concurrent execution of multiple tasks up to a maximum limit.
  */
 object RefreshQueue {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -25,16 +27,19 @@ object RefreshQueue {
     private val queueMutex = Mutex()
     private val processChannel = Channel<Unit>(Channel.CONFLATED)
 
+    // Max concurrency: 3 tasks (e.g., Live, VOD, and Series sync can overlap)
+    private val semaphore = Semaphore(3)
+
     private val _isProcessing = MutableStateFlow(false)
     val isProcessing = _isProcessing.asStateFlow()
 
     private val _queuedTaskIds = MutableStateFlow<Set<String>>(emptySet())
     val queuedTaskIds = _queuedTaskIds.asStateFlow()
 
-    private val _activeTaskId = MutableStateFlow<String?>(null)
-    val activeTaskId = _activeTaskId.asStateFlow()
+    private val _activeTaskIds = MutableStateFlow<Set<String>>(emptySet())
+    val activeTaskIds = _activeTaskIds.asStateFlow()
 
-    private var currentJob: Job? = null
+    private val activeJobs = ConcurrentHashMap<String, Job>()
 
     private class QueuedTask(
         val task: RefreshTask,
@@ -52,7 +57,7 @@ object RefreshQueue {
     private fun startWorker() {
         scope.launch {
             for (trigger in processChannel) {
-                processNext()
+                processAvailable()
             }
         }
     }
@@ -60,7 +65,6 @@ object RefreshQueue {
     /**
      * Submit a task to the queue.
      * Returns a Deferred that completes when the task finishes.
-     * If a task with the same ID already exists, it is replaced and the new Deferred is returned.
      */
     suspend fun submit(task: RefreshTask): Deferred<Unit> {
         val deferred = CompletableDeferred<Unit>()
@@ -71,11 +75,6 @@ object RefreshQueue {
             val existing = queue.find { it.task.id == task.id }
             if (existing != null) {
                 queue.remove(existing)
-                // Cancel/complete the old deferred?
-                // Better to let it be replaced. The caller waiting on the old one
-                // might wait forever if we don't handle it, or we can chain it.
-                // For simplicity, we'll cancel the old one with a cancellation exception
-                // or just let it hang? No, canceling is safer.
                 existing.deferred.cancel()
             }
             queue.add(queuedTask)
@@ -85,36 +84,40 @@ object RefreshQueue {
         return deferred
     }
 
-    private suspend fun processNext() {
+    private suspend fun processAvailable() {
         while (true) {
             val queuedTask = queueMutex.withLock {
-                val t = queue.poll()
-                if (t != null) {
+                if (queue.isEmpty()) return@withLock null
+                queue.poll()?.also {
                     _queuedTaskIds.value = queue.map { it.task.id }.toSet()
                 }
-                t
             } ?: break
 
-            _isProcessing.value = true
-            _activeTaskId.value = queuedTask.task.id
-            try {
-                val job = scope.launch {
-                    queuedTask.task.execute()
+            // Launch each task in its own coroutine, governed by the semaphore
+            scope.launch {
+                semaphore.withPermit {
+                    _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
+                    _isProcessing.value = true
+                    
+                    val job = launch {
+                        try {
+                            queuedTask.task.execute()
+                            queuedTask.deferred.complete(Unit)
+                        } catch (e: Exception) {
+                            android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
+                            queuedTask.deferred.completeExceptionally(e)
+                        }
+                    }
+                    
+                    activeJobs[queuedTask.task.id] = job
+                    try {
+                        job.join()
+                    } finally {
+                        activeJobs.remove(queuedTask.task.id)
+                        _activeTaskIds.value = _activeTaskIds.value - queuedTask.task.id
+                        _isProcessing.value = _activeTaskIds.value.isNotEmpty()
+                    }
                 }
-                currentJob = job
-                job.join()
-                if (job.isCancelled) {
-                    queuedTask.deferred.cancel()
-                } else {
-                    queuedTask.deferred.complete(Unit)
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("RefreshQueue", "Error processing task", e)
-                queuedTask.deferred.completeExceptionally(e)
-            } finally {
-                currentJob = null
-                _activeTaskId.value = null
-                _isProcessing.value = false
             }
         }
     }
@@ -131,10 +134,11 @@ object RefreshQueue {
     }
 
     /**
-     * Cancel the currently executing task and clear all pending tasks.
+     * Cancel all executing and pending tasks.
      */
     suspend fun cancelAll() {
-        currentJob?.cancel()
+        activeJobs.values.forEach { it.cancel() }
+        activeJobs.clear()
         clear()
     }
 }

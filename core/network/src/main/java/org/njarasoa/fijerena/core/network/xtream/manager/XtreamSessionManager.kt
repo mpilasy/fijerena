@@ -1,15 +1,20 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 
 class XtreamSessionManager(
+    private val context: Context,
     private val accountManager: AccountManager,
     private val onClearCache: suspend () -> Unit,
     private val streamOutputFormat: String = "m3u8"
@@ -41,6 +46,9 @@ class XtreamSessionManager(
 
             // Store the API service for future use
             apiService = service
+
+            // Auto-discover and add XMLTV source
+            ensureXmltvSourceAdded(url, username, password)
 
             authResponse
         }
@@ -79,6 +87,9 @@ class XtreamSessionManager(
 
             // Store the API service for future use
             apiService = service
+
+            // Auto-discover and add XMLTV source
+            ensureXmltvSourceAdded(credentials.url, credentials.username, password)
 
             authResponse
         }
@@ -127,7 +138,34 @@ class XtreamSessionManager(
             // Update the API service
             apiService = service
 
+            // Auto-discover and add XMLTV source
+            ensureXmltvSourceAdded(newUrl, credentials.username, password)
+
             authResponse
+        }
+    }
+
+    private suspend fun ensureXmltvSourceAdded(baseUrl: String, user: String, pass: String) {
+        try {
+            val normalizedUrl = baseUrl.trimEnd('/')
+            val xmltvUrl = "$normalizedUrl/xmltv.php?username=$user&password=$pass"
+            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+            
+            val existing = sourceDao.getSourceByUrl(xmltvUrl)
+            if (existing == null) {
+                val label = EpgFileManager.extractLabel(baseUrl) + " (Bulk)"
+                sourceDao.insertSource(
+                    EpgSourceEntity(
+                        url = xmltvUrl,
+                        label = label,
+                        enabled = true
+                    )
+                )
+                // Trigger an immediate background refresh if the index is empty
+                EpgFileManager.getInstance(context).refreshOutdatedSources()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("XtreamSessionManager", "Failed to auto-add XMLTV source", e)
         }
     }
 
