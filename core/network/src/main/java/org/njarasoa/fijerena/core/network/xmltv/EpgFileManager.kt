@@ -16,6 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -829,31 +830,31 @@ class EpgFileManager private constructor(
             for (attempt in 1..5) {
                 try {
                     val request = Request.Builder().url(source.url).build()
-                    okHttpClient.newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) {
-                            lastError = "server returned HTTP ${response.code}"
-                            Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
-                            return@use
-                        }
+                    withContext(Dispatchers.IO) {
+                        okHttpClient.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) {
+                                lastError = "server returned HTTP ${response.code}"
+                                Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
+                                return@use
+                            }
 
-                        val body = response.body
-                        val contentLength = body.contentLength()
+                            val body = response.body
+                            val contentLength = body.contentLength()
 
-                        tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
-                            val input = body.byteStream()
-                            val buffer = ByteArray(STREAM_BUFFER_SIZE)
-                            var totalRead = 0L
-                            var lastReportedBytes = 0L
-                            var read: Int
-                            while (input.read(buffer).also { read = it } != -1) {
-                                output.write(buffer, 0, read)
-                                totalRead += read
-                                // Throttle UI updates to every 512KB
-                                if (totalRead - lastReportedBytes >= 524288) {
-                                    lastReportedBytes = totalRead
-                                    val pct = if (contentLength > 0) ((totalRead * 100) / contentLength).toInt().coerceIn(0, 100) else -1
-                                    activeProgress[source.id] =
-                                        ActiveSourceProgress(
+                            tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
+                                val input = body.byteStream()
+                                val buffer = ByteArray(STREAM_BUFFER_SIZE)
+                                var totalRead = 0L
+                                var lastReportedBytes = 0L
+                                var read: Int
+                                while (input.read(buffer).also { read = it } != -1) {
+                                    output.write(buffer, 0, read)
+                                    totalRead += read
+                                    // Throttle UI updates to every 512KB
+                                    if (totalRead - lastReportedBytes >= 524288) {
+                                        lastReportedBytes = totalRead
+                                        val pct = if (contentLength > 0) ((totalRead * 100) / contentLength).toInt().coerceIn(0, 100) else -1
+                                        activeProgress[source.id] = ActiveSourceProgress(
                                             sourceId = source.id,
                                             label = label,
                                             phase = "Downloading",
@@ -861,13 +862,14 @@ class EpgFileManager private constructor(
                                             downloadedBytes = totalRead,
                                             downloadTotalBytes = contentLength,
                                         )
-                                    onProgressUpdate()
+                                        onProgressUpdate()
+                                    }
                                 }
+                                output.flush()
                             }
-                            output.flush()
+                            downloadedBytes = tmpFile.length()
+                            lastError = null
                         }
-                        downloadedBytes = tmpFile.length()
-                        lastError = null
                     }
 
                     if (lastError == null) break
