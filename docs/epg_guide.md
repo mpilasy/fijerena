@@ -150,7 +150,8 @@ Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync
 
 ```
 epg_channel
-├── xmltv_id       TEXT  (PK)
+├── xmltv_id       TEXT  (Composite PK with source_id)
+├── source_id      INTEGER (Composite PK with xmltv_id)
 ├── display_name   TEXT
 └── icon_url       TEXT?
 
@@ -165,12 +166,15 @@ epg_programme
 ├── end_epoch        LONG
 └── source_id        LONG
 
-Indices:
-├── idx_programme_start        (start_epoch)
-├── idx_programme_end          (end_epoch)
-├── idx_programme_time_range   (start_epoch, end_epoch)
-├── idx_programme_channel      (channel_id)
-└── idx_programme_title_lower  (title_lowercase)
+Indices (8):
+├── idx_programme_start          (start_epoch)
+├── idx_programme_end            (end_epoch)
+├── idx_programme_time_range     (start_epoch, end_epoch)
+├── idx_programme_channel        (channel_id)
+├── idx_programme_title_lower    (title_lowercase)
+├── idx_programme_dedup          (channel_id, source_id, start_epoch) UNIQUE
+├── idx_programme_source         (source_id)
+└── idx_programme_channel_source (channel_id, source_id)
 
 epg_programme_fts  (FTS4 virtual table, content=epg_programme, tokenizer=unicode61)
 └── title          TEXT
@@ -494,7 +498,7 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 | File | Type | Description |
 |------|------|-------------|
 | `EpgIndexer.kt` | Singleton | Index builder (streaming + batch transactional) |
-| `EpgIndexDatabase.kt` | Room DB | Database singleton (v8, WAL, with destroy/recreate) |
+| `EpgIndexDatabase.kt` | Room DB | Database singleton (v13, WAL, with destroy/recreate) |
 | `EpgSourceEntity.kt` | Entity | EPG source config (URL, label, tz, enabled, stats, ingestMethod) |
 | `EpgSourceDao.kt` | DAO | CRUD for EPG sources, resetAllIngestionState() |
 | `EpgIndexDao.kt` | DAO | FTS MATCH, LIKE, paged queries |
