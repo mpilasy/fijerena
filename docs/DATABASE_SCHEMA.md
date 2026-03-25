@@ -62,10 +62,12 @@ Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast
 ### Table: `epg_channel`
 | Column | Type | Description |
 |--------|------|-------------|
-| `xmltv_id` | TEXT (PK) | Unique channel ID from XMLTV |
-| `source_id` | INTEGER (PK) | Originating source ID (Composite PK with `xmltv_id`) |
+| `xmltv_id` | TEXT (PK) | Unique channel ID from XMLTV (composite PK with `source_id`) |
+| `source_id` | INTEGER (PK) | Originating source ID (composite PK with `xmltv_id`) |
 | `display_name` | TEXT | Channel name |
 | `icon_url` | TEXT | URL to channel logo |
+
+**Index:** `idx_channel_source` on `(source_id)`
 
 ### Table: `epg_programme`
 | Column | Type | Description |
@@ -100,9 +102,9 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 7
+**Version:** 8
 
-Persistent cache for Xtream Codes API metadata to enable offline browsing.
+Persistent cache for Xtream Codes API metadata to enable offline browsing. (v8 removed AI vector embedding tables that existed in v7.)
 
 ### Table: `xtream_categories`
 | Column | Type | Description |

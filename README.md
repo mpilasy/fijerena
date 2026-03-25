@@ -151,8 +151,13 @@ fijerena/
 │   ├── data/                 # Room database & encrypted storage
 │   ├── ui/                   # Shared Compose components & design tokens
 │   └── navigation/           # Type-safe navigation definitions
-├── docs/                     # Additional documentation
-├── CLAUDE.md                 # Technical specification & coding standards
+├── docs/                     # In-depth technical documentation
+├── AGENTS.md                 # AI agent guide (single source of truth)
+├── CLAUDE.md                 # → AGENTS.md (Claude)
+├── GEMINI.md                 # → AGENTS.md (Gemini)
+├── CODEX.md                  # → AGENTS.md (Codex)
+├── .cursorrules              # → AGENTS.md (Cursor)
+├── .github/copilot-instructions.md  # → AGENTS.md (Copilot)
 └── README.md                 # This file
 ```
 
@@ -303,14 +308,29 @@ All UI values (colors, spacing, dimensions, animations) **must** come from desig
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the following files:
+### AI Agent Instructions
 
-- **[CLAUDE.md](CLAUDE.md)** - Complete technical specification, coding standards, and architectural guidelines
-- **[docs/FEATURES.md](docs/FEATURES.md)** - Detailed feature documentation with API references
-- **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - App navigation flow and screen hierarchy
-- **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Version history and changelog
+A single **[AGENTS.md](AGENTS.md)** file serves as the canonical guide for all AI coding assistants. Vendor-specific entry points all redirect there:
+
+| File | Tool |
+|------|------|
+| `CLAUDE.md` | Claude Code, Claude |
+| `GEMINI.md` | Gemini CLI, Jules |
+| `CODEX.md` | OpenAI Codex |
+| `.cursorrules` | Cursor |
+| `.github/copilot-instructions.md` | GitHub Copilot |
+
+### Technical Documentation
+
 - **[docs/design.md](docs/design.md)** - System design and architecture
+- **[docs/FEATURES.md](docs/FEATURES.md)** - Detailed feature documentation with API references
+- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Complete database schema
+- **[docs/epg_guide.md](docs/epg_guide.md)** - EPG pipeline implementation guide
+- **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - App navigation flow and screen hierarchy
 - **[docs/ui-theme-options.md](docs/ui-theme-options.md)** - Theme system documentation
+- **[docs/MOBILE_RUN_GUIDE.md](docs/MOBILE_RUN_GUIDE.md)** - Mobile build, install, and run guide
+- **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Version history and changelog
+- **[TODO.md](TODO.md)** - Known issues and optimization status
 
 ## 🎨 Theme System
 
@@ -333,7 +353,7 @@ All themes feature:
 
 Contributions are welcome! Please follow these guidelines:
 
-1. **Read the Documentation** - Familiarize yourself with [CLAUDE.md](CLAUDE.md) for coding standards
+1. **Read the Documentation** - Familiarize yourself with [AGENTS.md](AGENTS.md) for coding standards
 2. **Create a Feature Branch** - `git checkout -b feature/your-feature-name`
 3. **Follow Design Tokens** - Never use hardcoded UI values (colors, spacing, etc.)
 4. **Maintain D-Pad Navigation** - All UI must be remote-navigable on TV
@@ -374,7 +394,7 @@ copyright holder.
 For issues, questions, or feature requests:
 - Open an issue on GitHub
 - Check existing documentation in the `docs/` directory
-- Review [CLAUDE.md](CLAUDE.md) for technical details
+- Review [AGENTS.md](AGENTS.md) for technical details
 
 ---
 
