@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
 import org.njarasoa.fijerena.feature.provider.components.CacheManagementSection
@@ -94,6 +95,7 @@ fun TvAddProviderScreen(
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
+    val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
 
     // Quick Connect state (Jellyfin only)
@@ -304,6 +306,9 @@ fun TvAddProviderScreen(
                         if (isEditMode) {
                             CacheManagementSection(
                                 cacheStats = cacheStats,
+                                syncState = syncState,
+                                isXtream = selectedType == ProviderType.XTREAM,
+                                onSyncClick = { viewModel.syncProvider(editId) },
                                 onClearAllClick = { showClearCacheDialog = true },
                                 onClearLiveTvClick = { showClearLiveTvCacheDialog = true },
                                 onClearMoviesClick = { showClearMoviesCacheDialog = true },
