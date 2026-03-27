@@ -57,6 +57,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showDeleteSelectedConfirm by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -86,16 +87,31 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                             if (selectedIds.isNotEmpty()) {
-                                Button(
-                                    onClick = {
-                                        viewModel.refreshSelected(selectedIds)
-                                        viewModel.clearSelection()
-                                    },
+                                Row(
                                     modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                                 ) {
-                                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                    Text("Refresh Selected (${selectedIds.size})")
+                                    Button(
+                                        onClick = {
+                                            viewModel.refreshSelected(selectedIds)
+                                            viewModel.clearSelection()
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                        Text("Refresh (${selectedIds.size})")
+                                    }
+
+                                    Button(
+                                        onClick = { showDeleteSelectedConfirm = true },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                                    ) {
+                                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                        Text("Delete (${selectedIds.size})")
+                                    }
                                 }
                             }
 
@@ -279,6 +295,26 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
             },
             title = { Text("Clear EPG Data?") },
             text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") },
+        )
+    }
+
+    if (showDeleteSelectedConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteSelectedConfirm = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteSelected(selectedIds)
+                        showDeleteSelectedConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                ) { Text("Delete ${selectedIds.size} Source(s)") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteSelectedConfirm = false }) { Text("Cancel") }
+            },
+            title = { Text("Delete Selected Sources?") },
+            text = { Text("This will permanently remove ${selectedIds.size} source(s) and all their indexed data.") },
         )
     }
 

@@ -67,6 +67,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     var showClearConfirm by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var deletingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
+    var showDeleteSelectedConfirm by remember { mutableStateOf(false) }
 
     val scale = LocalUiScale.current
 
@@ -111,6 +112,11 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     viewModel.clearSelection()
                                 },
                                 text = "Refresh Selected (${selectedIds.size})",
+                            )
+
+                            CinemaDangerButton(
+                                onClick = { showDeleteSelectedConfirm = true },
+                                text = "Delete Selected (${selectedIds.size})",
                             )
                         }
 
@@ -412,6 +418,29 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
             },
             title = { Text("Delete EPG Source?") },
             text = { Text("This will remove \"${source.label.ifBlank { source.url }}\" and all its indexed data.") },
+        )
+    }
+
+    if (showDeleteSelectedConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteSelectedConfirm = false },
+            confirmButton = {
+                CinemaDangerButton(
+                    onClick = {
+                        viewModel.deleteSelected(selectedIds)
+                        showDeleteSelectedConfirm = false
+                    },
+                    text = "Delete ${selectedIds.size} Source(s)",
+                )
+            },
+            dismissButton = {
+                CinemaSecondaryButton(
+                    onClick = { showDeleteSelectedConfirm = false },
+                    text = "Cancel",
+                )
+            },
+            title = { Text("Delete Selected Sources?") },
+            text = { Text("This will permanently remove ${selectedIds.size} source(s) and all their indexed data.") },
         )
     }
 

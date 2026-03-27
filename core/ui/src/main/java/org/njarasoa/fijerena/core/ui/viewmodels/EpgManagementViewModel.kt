@@ -266,6 +266,23 @@ class EpgManagementViewModel(
         }
     }
 
+    fun deleteSelected(selectedIds: Set<Long>) {
+        if (selectedIds.isEmpty()) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val dao = settingsDb().epgSourceDao()
+                val indexDao = indexDb().epgIndexDao()
+                for (id in selectedIds) {
+                    dao.deleteSource(id)
+                    indexDao.deleteBySourceId(id)
+                }
+                refreshDbStats()
+            }
+            _selectedIds.value = emptySet()
+            _toastMessage.tryEmit("Deleted ${selectedIds.size} source(s)")
+        }
+    }
+
     fun refreshStale() {
         val taskId = "epg_refresh_stale"
         val queued = RefreshQueue.queuedTaskIds.value

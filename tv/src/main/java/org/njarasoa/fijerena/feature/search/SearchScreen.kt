@@ -5,6 +5,8 @@ package org.njarasoa.fijerena.feature.search
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -20,6 +22,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -113,6 +117,7 @@ fun SearchScreen(
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
@@ -187,7 +192,15 @@ fun SearchScreen(
                             searchProgress = successState.searchProgress ?: "",
                             devStats = devStats,
                             contentType = contentType,
+                            searchHistory = searchHistory,
                             onSearchSubmit = { viewModel.performSearch(it) },
+                            onHistoryItemClick = { term ->
+                                viewModel.performSearch(term)
+                            },
+                            onHistoryItemRemove = { term ->
+                                viewModel.removeSearchHistoryEntry(term)
+                            },
+                            onClearHistory = { viewModel.clearSearchHistory() },
                             onResultClick = { result ->
                                 onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType)
                             },
@@ -300,7 +313,11 @@ private fun SearchContent(
     searchProgress: String?,
     devStats: String?,
     contentType: String,
+    searchHistory: List<String>,
     onSearchSubmit: (String) -> Unit,
+    onHistoryItemClick: (String) -> Unit,
+    onHistoryItemRemove: (String) -> Unit,
+    onClearHistory: () -> Unit,
     onResultClick: (SearchResult) -> Unit,
     onResultLongPress: (SearchResult) -> Unit,
     onCategoryClick: (CategorySearchResult) -> Unit,
@@ -331,15 +348,27 @@ private fun SearchContent(
         // Results or empty state — show results whenever they exist, even if text field is cleared
         val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
         if (!hasResults && query.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Search categories and streams across all categories",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+            if (searchHistory.isNotEmpty()) {
+                SearchHistorySection(
+                    history = searchHistory,
+                    onItemClick = { term ->
+                        localQuery = term
+                        onHistoryItemClick(term)
+                    },
+                    onItemRemove = onHistoryItemRemove,
+                    onClearAll = onClearHistory,
                 )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Search categories and streams across all categories",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+                }
             }
         } else {
             SearchResultsList(
@@ -421,6 +450,87 @@ private fun SearchTextField(
         try {
             focusRequester.requestFocus()
         } catch (_: IllegalStateException) {
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SearchHistorySection(
+    history: List<String>,
+    onItemClick: (String) -> Unit,
+    onItemRemove: (String) -> Unit,
+    onClearAll: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Recent Searches",
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaTextSecondary,
+            )
+            CinemaIconButton(
+                onClick = onClearAll,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Clear all",
+                        tint = CinemaTextSecondary,
+                        modifier = Modifier.size(TvDimensions.iconSmall),
+                    )
+                },
+            )
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            history.forEach { term ->
+                Card(
+                    onClick = { onItemClick(term) },
+                    colors =
+                        CardDefaults.colors(
+                            containerColor = CinemaSurface,
+                            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
+                        ),
+                    scale =
+                        CardDefaults.scale(
+                            scale = TvFocusTokens.defaultScale,
+                            focusedScale = TvFocusTokens.focusedScaleContent,
+                        ),
+                    shape =
+                        CardDefaults.shape(
+                            shape = RoundedCornerShape(CornerRadius.medium),
+                        ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = CinemaTextSecondary,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                        )
+                        Text(
+                            text = term,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
         }
     }
 }
