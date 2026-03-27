@@ -66,6 +66,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var deletingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
 
     val scale = LocalUiScale.current
 
@@ -217,59 +218,56 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                         }
 
                     GlassPanel(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { viewModel.toggleSelection(source.id) },
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    androidx.compose.material3.Checkbox(
-                                        checked = isSelected,
-                                        onCheckedChange = { viewModel.toggleSelection(source.id) },
-                                        colors =
-                                            androidx.compose.material3.CheckboxDefaults.colors(
-                                                checkedColor = MaterialTheme.colorScheme.primary,
-                                                uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                            ),
+                                androidx.compose.material3.Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { viewModel.toggleSelection(source.id) },
+                                    colors =
+                                        androidx.compose.material3.CheckboxDefaults.colors(
+                                            checkedColor = MaterialTheme.colorScheme.primary,
+                                            uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        ),
+                                )
+
+                                StatusIndicator(source, nowMs, scale)
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = source.label.ifBlank { "Unnamed Source" },
+                                        style = MaterialTheme.typography.titleMedium,
                                     )
-
-                                    StatusIndicator(source, nowMs, scale)
-
-                                    Column {
-                                        Text(
-                                            text = source.label.ifBlank { "Unnamed Source" },
-                                            style = MaterialTheme.typography.titleMedium,
-                                        )
-                                        Text(
-                                            text = source.url,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                            maxLines = 1,
-                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                        )
-                                    }
-                                }
-
-                                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                                    CinemaSecondaryButton(
-                                        onClick = { viewModel.refreshSource(source.id) },
-                                        text = "Refresh",
-                                    )
-                                    CinemaSecondaryButton(
-                                        onClick = { editingSource = source },
-                                        text = "Edit",
+                                    Text(
+                                        text = source.url,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                     )
                                 }
+                            }
+
+                            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                                CinemaSecondaryButton(
+                                    onClick = { viewModel.refreshSource(source.id) },
+                                    text = "Refresh",
+                                )
+                                CinemaSecondaryButton(
+                                    onClick = { editingSource = source },
+                                    text = "Edit",
+                                )
+                                CinemaDangerButton(
+                                    onClick = { deletingSource = source },
+                                    text = "Delete",
+                                )
                             }
 
                             if (activeProgress != null) {
@@ -391,6 +389,29 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
             },
             title = { Text("Clear EPG Data?") },
             text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") },
+        )
+    }
+
+    deletingSource?.let { source ->
+        AlertDialog(
+            onDismissRequest = { deletingSource = null },
+            confirmButton = {
+                CinemaDangerButton(
+                    onClick = {
+                        viewModel.deleteSource(source.id)
+                        deletingSource = null
+                    },
+                    text = "Delete",
+                )
+            },
+            dismissButton = {
+                CinemaSecondaryButton(
+                    onClick = { deletingSource = null },
+                    text = "Cancel",
+                )
+            },
+            title = { Text("Delete EPG Source?") },
+            text = { Text("This will remove \"${source.label.ifBlank { source.url }}\" and all its indexed data.") },
         )
     }
 

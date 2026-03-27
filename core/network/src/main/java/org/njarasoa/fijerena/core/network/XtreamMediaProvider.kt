@@ -30,11 +30,11 @@ class XtreamMediaProvider(
         )
 
     override suspend fun connect(): kotlin.Result<Unit> =
-        when (repository.restoreSession()) {
+        when (val result = repository.restoreSession()) {
             is Result.Success -> kotlin.Result.success(Unit)
             is Result.Error ->
                 kotlin.Result.failure(
-                    Exception("Failed to connect to Xtream provider"),
+                    Exception("Failed to connect to Xtream provider: ${result.exception.message}", result.exception),
                 )
         }
 
