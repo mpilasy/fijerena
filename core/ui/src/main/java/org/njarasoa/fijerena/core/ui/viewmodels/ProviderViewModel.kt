@@ -126,11 +126,16 @@ class ProviderViewModel(
     private val _activeProvider = MutableStateFlow<ProviderEntity?>(null)
     val activeProvider: StateFlow<ProviderEntity?> = _activeProvider.asStateFlow()
 
+    private val _providers = MutableStateFlow<List<ProviderEntity>>(emptyList())
+    val providers: StateFlow<List<ProviderEntity>> = _providers.asStateFlow()
+
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
     val saveState: StateFlow<SaveState> = _saveState.asStateFlow()
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+
+    private var syncingProviderId: Long? = null
 
     fun resetSaveState() {
         _saveState.value = SaveState.Idle
@@ -145,18 +150,35 @@ class ProviderViewModel(
 
     fun loadProviders() {
         viewModelScope.launch {
-            try {
-                val providers = providerRepository.getAllProvidersList()
-                _activeProvider.value = providerRepository.getActiveProvider()
+            providerRepository.getAllProviders().collect { providersList ->
+                _providers.value = providersList
+                _activeProvider.value = providersList.find { it.isActive }
+                
+                // If we are currently in "Syncing" state, check if OUR provider just finished syncing
+                if (_syncState.value == SyncState.Syncing && syncingProviderId != null) {
+                    val syncedProvider = providersList.find { it.id == syncingProviderId }
+                    if (syncedProvider != null) {
+                        // Check if sync completed very recently (within last 30 seconds)
+                        val now = System.currentTimeMillis()
+                        val completionTime = syncedProvider.lastSyncedAtMs
+                        if (completionTime > 0 && (now - completionTime) < 30_000) {
+                            if (syncedProvider.lastSyncError != null) {
+                                _syncState.value = SyncState.Error(syncedProvider.lastSyncError!!)
+                            } else {
+                                _syncState.value = SyncState.Success
+                            }
+                            // Reset tracking once we've signaled success
+                            syncingProviderId = null
+                        }
+                    }
+                }
 
                 _uiState.value =
                     when {
-                        providers.isEmpty() -> ProviderUiState.NoProviders
-                        providers.size == 1 -> ProviderUiState.SingleProvider(providers.first())
-                        else -> ProviderUiState.MultipleProviders(providers)
+                        providersList.isEmpty() -> ProviderUiState.NoProviders
+                        providersList.size == 1 -> ProviderUiState.SingleProvider(providersList.first())
+                        else -> ProviderUiState.MultipleProviders(providersList)
                     }
-            } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: "Failed to load providers")
             }
         }
     }
@@ -323,32 +345,13 @@ class ProviderViewModel(
     }
 
     fun syncProvider(providerId: Long) {
-        viewModelScope.launch {
-            _syncState.value = SyncState.Syncing
-            withContext(Dispatchers.IO) {
-                try {
-                    val providerEntity = providerRepository.getProviderById(providerId)
-                    val password = providerRepository.getPassword(providerId)
-
-                    if (providerEntity != null && password != null) {
-                        val mediaProvider = MediaProviderFactory.create(providerEntity, context, password)
-                        if (mediaProvider is XtreamMediaProvider) {
-                            if (!mediaProvider.isConnected()) {
-                                mediaProvider.connect()
-                            }
-                            mediaProvider.syncAll()
-                            _syncState.value = SyncState.Success
-                        } else {
-                            _syncState.value = SyncState.Error("Sync only supported for Xtream providers")
-                        }
-                    } else {
-                        _syncState.value = SyncState.Error("Provider not found or credentials missing")
-                    }
-                } catch (e: Exception) {
-                    _syncState.value = SyncState.Error(e.message ?: "Sync failed")
-                }
-            }
-        }
+        // Track which provider we are waiting for
+        syncingProviderId = providerId
+        // Delegate to ProviderSyncManager so it persists outside the ViewModel scope
+        org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.getInstance(context).startManualSync(providerId)
+        
+        // UI feedback - it will transition back to Success/Error when the stats update in DB
+        _syncState.value = SyncState.Syncing
     }
 
     private suspend fun performSave(

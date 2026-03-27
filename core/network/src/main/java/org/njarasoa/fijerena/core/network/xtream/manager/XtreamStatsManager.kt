@@ -32,20 +32,21 @@ class XtreamStatsManager(
 
     suspend fun getCacheStats(): CacheStats =
         withContext(Dispatchers.IO) {
-            val liveCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_LIVE)
-            val vodCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_VOD)
-            val seriesCategories = categoryDao.getCategories(providerId, XtreamCategoryEntity.TYPE_SERIES)
+            val liveCategoriesCount = categoryDao.countCategories(providerId, XtreamCategoryEntity.TYPE_LIVE)
+            val vodCategoriesCount = categoryDao.countCategories(providerId, XtreamCategoryEntity.TYPE_VOD)
+            val seriesCategoriesCount = categoryDao.countCategories(providerId, XtreamCategoryEntity.TYPE_SERIES)
 
             // Use COUNT(*) queries instead of loading full ID lists into memory
             val liveStreamsCount = streamDao.countStreams(providerId, XtreamStreamEntity.TYPE_LIVE)
             val vodStreamsCount = streamDao.countStreams(providerId, XtreamStreamEntity.TYPE_VOD)
             val seriesCount = seriesDao.countSeries(providerId)
+            val episodesCount = database.episodeDao().countEpisodes(providerId)
 
             CacheStats(
                 totalSize = 0L,
-                liveTv = ContentTypeCacheStats(0L, liveCategories.isNotEmpty(), liveStreamsCount),
-                movies = ContentTypeCacheStats(0L, vodCategories.isNotEmpty(), vodStreamsCount),
-                tvShows = ContentTypeCacheStats(0L, seriesCategories.isNotEmpty(), seriesCount),
+                liveTv = ContentTypeCacheStats(0L, liveCategoriesCount, liveStreamsCount),
+                movies = ContentTypeCacheStats(0L, vodCategoriesCount, vodStreamsCount),
+                tvShows = ContentTypeCacheStats(0L, seriesCategoriesCount, seriesCount, episodesCount),
                 epgCount = 0, // EPG handled by EpgIndexDatabase
                 otherSize = 0L,
             )

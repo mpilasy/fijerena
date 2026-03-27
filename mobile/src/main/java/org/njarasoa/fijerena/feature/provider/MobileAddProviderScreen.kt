@@ -68,6 +68,7 @@ import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
@@ -102,6 +103,7 @@ fun MobileAddProviderScreen(
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val providers by viewModel.providers.collectAsStateWithLifecycle()
     val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving || syncState is SyncState.Syncing
 
     // Quick Connect state (Jellyfin only)
@@ -115,6 +117,15 @@ fun MobileAddProviderScreen(
     val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val coroutineScope = rememberCoroutineScope()
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
+    var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
+    
+    // Update currentProvider when providers list changes
+    LaunchedEffect(providers, editId) {
+        if (isEditMode) {
+            currentProvider = providers.find { it.id == editId }
+        }
+    }
+
     var cacheRefreshTrigger by remember { mutableIntStateOf(0) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showClearLiveTvCacheDialog by remember { mutableStateOf(false) }
@@ -154,6 +165,13 @@ fun MobileAddProviderScreen(
             categoryFilters = ps.categoryFilters
             streamOutputFormat = ps.streamOutputFormat
             playlistType = ps.playlistType
+        }
+    }
+
+    // Refresh UI data when sync completes
+    LaunchedEffect(syncState) {
+        if (syncState is SyncState.Success || syncState is SyncState.Error) {
+            cacheRefreshTrigger++
         }
     }
 
@@ -878,12 +896,27 @@ fun MobileAddProviderScreen(
                                     Text(if (syncState is SyncState.Syncing) "Syncing..." else "Sync Data Now")
                                 }
 
-                                if (syncState is SyncState.Error) {
+                                // Last Sync Stats
+                                if ((currentProvider?.lastSyncedAtMs ?: 0L) > 0L) {
+                                    Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
+                                    val time = NumberUtils.formatTimestamp(LocalContext.current, currentProvider?.lastSyncedAtMs ?: 0L)
+                                    val duration = NumberUtils.formatDuration(currentProvider?.lastSyncDurationMs ?: 0L)
                                     Text(
-                                        text = (syncState as SyncState.Error).message,
+                                        text = "Last Sync: Finished at $time • Took $duration",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = CinemaError,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                                     )
+                                }
+
+                                if (syncState is SyncState.Error || (syncState is SyncState.Idle && currentProvider?.lastSyncError != null)) {
+                                    val errorMsg = (syncState as? SyncState.Error)?.message ?: currentProvider?.lastSyncError
+                                    if (errorMsg != null) {
+                                        Text(
+                                            text = errorMsg,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CinemaError,
+                                        )
+                                    }
                                 }
                                 if (syncState is SyncState.Success) {
                                     Text(
@@ -895,25 +928,25 @@ fun MobileAddProviderScreen(
                                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
                             }
 
-                            // Total Items
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Total Database Items",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                    )
-                                    val totalItems =
-                                        stats.liveTv.streamListsCount + stats.movies.streamListsCount + stats.tvShows.streamListsCount
-                                    Text(
-                                        text = "$totalItems Items",
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
+                                // Total Items
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Total Database Items",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                        )
+                                        val totalItems =
+                                            stats.liveTv.itemsCount + stats.movies.itemsCount + stats.tvShows.itemsCount
+                                        Text(
+                                            text = "${NumberUtils.formatCount(totalItems)} Items",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
                                 Button(
                                     onClick = { showClearCacheDialog = true },
                                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
@@ -937,19 +970,14 @@ fun MobileAddProviderScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(text = "Live TV", style = MaterialTheme.typography.titleSmall)
                                     Text(
-                                        text = "${stats.liveTv.streamListsCount} channels",
+                                        text = "${NumberUtils.formatCount(stats.liveTv.categoryCount)} Categories · ${NumberUtils.formatCount(stats.liveTv.itemsCount)} Channels",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    Text(
-                                        text = if (stats.liveTv.categoryCached) "Categories cached" else "No categories",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                     )
                                 }
                                 OutlinedButton(
                                     onClick = { showClearLiveTvCacheDialog = true },
-                                    enabled = stats.liveTv.streamListsCount > 0,
+                                    enabled = stats.liveTv.itemsCount > 0,
                                 ) { Text("Clear") }
                             }
 
@@ -964,19 +992,14 @@ fun MobileAddProviderScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(text = "Movies", style = MaterialTheme.typography.titleSmall)
                                     Text(
-                                        text = "${stats.movies.streamListsCount} movies",
+                                        text = "${NumberUtils.formatCount(stats.movies.categoryCount)} Categories · ${NumberUtils.formatCount(stats.movies.itemsCount)} Movies",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    Text(
-                                        text = if (stats.movies.categoryCached) "Categories cached" else "No categories",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                     )
                                 }
                                 OutlinedButton(
                                     onClick = { showClearMoviesCacheDialog = true },
-                                    enabled = stats.movies.streamListsCount > 0,
+                                    enabled = stats.movies.itemsCount > 0,
                                 ) { Text("Clear") }
                             }
 
@@ -991,19 +1014,14 @@ fun MobileAddProviderScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(text = "TV Shows", style = MaterialTheme.typography.titleSmall)
                                     Text(
-                                        text = "${stats.tvShows.streamListsCount} series",
+                                        text = "${NumberUtils.formatCount(stats.tvShows.categoryCount)} Cat. · ${NumberUtils.formatCount(stats.tvShows.itemsCount)} Series · ${NumberUtils.formatCount(stats.tvShows.episodesCount)} Ep.",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    Text(
-                                        text = if (stats.tvShows.categoryCached) "Categories cached" else "No categories",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                     )
                                 }
                                 OutlinedButton(
                                     onClick = { showClearTvShowsCacheDialog = true },
-                                    enabled = stats.tvShows.streamListsCount > 0,
+                                    enabled = stats.tvShows.itemsCount > 0,
                                 ) { Text("Clear") }
                             }
                         }

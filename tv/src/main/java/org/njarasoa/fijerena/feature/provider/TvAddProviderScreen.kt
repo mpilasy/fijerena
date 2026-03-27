@@ -96,7 +96,8 @@ fun TvAddProviderScreen(
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
-    val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
+    val providers by viewModel.providers.collectAsStateWithLifecycle()
+    val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving || syncState is SyncState.Syncing
 
     // Quick Connect state (Jellyfin only)
     var showQuickConnectDialog by remember { mutableStateOf(false) }
@@ -106,6 +107,15 @@ fun TvAddProviderScreen(
     val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val coroutineScope = rememberCoroutineScope()
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
+    var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
+    
+    // Update currentProvider when providers list changes
+    LaunchedEffect(providers, editId) {
+        if (isEditMode) {
+            currentProvider = providers.find { it.id == editId }
+        }
+    }
+
     var cacheRefreshTrigger by remember { mutableIntStateOf(0) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showClearLiveTvCacheDialog by remember { mutableStateOf(false) }
@@ -133,6 +143,13 @@ fun TvAddProviderScreen(
             providerSettings = ps
             streamOutputFormat = ps.streamOutputFormat
             playlistType = ps.playlistType
+        }
+    }
+
+    // Refresh UI data when sync completes
+    LaunchedEffect(syncState) {
+        if (syncState is SyncState.Success || syncState is SyncState.Error) {
+            cacheRefreshTrigger++
         }
     }
 
@@ -308,6 +325,9 @@ fun TvAddProviderScreen(
                                 cacheStats = cacheStats,
                                 syncState = syncState,
                                 isXtream = selectedType == ProviderType.XTREAM,
+                                lastSyncedAtMs = currentProvider?.lastSyncedAtMs ?: 0L,
+                                lastSyncDurationMs = currentProvider?.lastSyncDurationMs ?: 0L,
+                                lastSyncError = currentProvider?.lastSyncError,
                                 onSyncClick = { viewModel.syncProvider(editId) },
                                 onClearAllClick = { showClearCacheDialog = true },
                                 onClearLiveTvClick = { showClearLiveTvCacheDialog = true },

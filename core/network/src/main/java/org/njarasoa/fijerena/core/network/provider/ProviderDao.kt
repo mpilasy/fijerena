@@ -41,4 +41,14 @@ interface ProviderDao {
         id: Long,
         timestamp: Long = System.currentTimeMillis(),
     )
+
+    @Query(
+        "UPDATE providers SET lastSyncedAtMs = :timestamp, lastSyncDurationMs = :durationMs, lastSyncError = :error WHERE id = :id",
+    )
+    suspend fun updateSyncStats(
+        id: Long,
+        timestamp: Long,
+        durationMs: Long,
+        error: String?,
+    )
 }
