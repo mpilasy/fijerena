@@ -18,7 +18,9 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -27,6 +29,9 @@ import org.njarasoa.fijerena.ui.theme.scaled
 @Composable
 fun CacheManagementSection(
     cacheStats: XtreamRepository.CacheStats?,
+    syncState: SyncState = SyncState.Idle,
+    isXtream: Boolean = false,
+    onSyncClick: () -> Unit = {},
     onClearAllClick: () -> Unit,
     onClearLiveTvClick: () -> Unit,
     onClearMoviesClick: () -> Unit,
@@ -63,6 +68,32 @@ fun CacheManagementSection(
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
     cacheStats?.let { stats ->
+        // Sync Data Button (Xtream only)
+        if (isXtream) {
+            CinemaPrimaryButton(
+                onClick = onSyncClick,
+                text = if (syncState is SyncState.Syncing) "Syncing..." else "Sync Data Now",
+                enabled = syncState !is SyncState.Syncing,
+            )
+            if (syncState is SyncState.Error) {
+                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                Text(
+                    text = syncState.message,
+                    style = styles.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            if (syncState is SyncState.Success) {
+                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                Text(
+                    text = "Sync completed successfully",
+                    style = styles.bodySmall,
+                    color = CinemaAccent,
+                )
+            }
+            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+        }
+
         val totalItems = stats.liveTv.streamListsCount + stats.movies.streamListsCount + stats.tvShows.streamListsCount
 
         // Total cache
