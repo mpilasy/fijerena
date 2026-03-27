@@ -10,6 +10,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import android.util.Log
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 
@@ -19,6 +20,10 @@ class XtreamSessionManager(
     private val onClearCache: suspend () -> Unit,
     private val streamOutputFormat: String = "m3u8",
 ) {
+    private companion object {
+        const val TAG = "XtreamSession"
+    }
+
     var apiService: XtreamApiService? = null
         private set
 
@@ -67,7 +72,14 @@ class XtreamSessionManager(
                         ?: throw Exception("Password not stored. Please login again.")
 
                 val service = XtreamApiService(credentials.url, credentials.username, password, streamOutputFormat)
-                val authResponse = service.authenticate()
+                Log.d(TAG, "Attempting to authenticate with ${credentials.url}")
+                val authResponse =
+                    try {
+                        service.authenticate()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Authentication failed for ${credentials.url}", e)
+                        throw e
+                    }
 
                 // Validate authentication response
                 if (authResponse.userInfo.auth != 1) {
