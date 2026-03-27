@@ -50,7 +50,25 @@ class EpgChannelMatcher(
         normalizedStreams = streamsList.toTypedArray()
     }
 
+    private class MatchResult(val stream: EpgBrowserMatchedStream?)
+    private val matchCache = java.util.concurrent.ConcurrentHashMap<String, MatchResult>()
+
     fun match(
+        channelId: String,
+        channelName: String,
+    ): EpgBrowserMatchedStream? {
+        val cacheKey = "$channelId\u0000$channelName"
+        val cached = matchCache[cacheKey]
+        if (cached != null) {
+            return cached.stream
+        }
+
+        val result = doMatch(channelId, channelName)
+        matchCache[cacheKey] = MatchResult(result)
+        return result
+    }
+
+    private fun doMatch(
         channelId: String,
         channelName: String,
     ): EpgBrowserMatchedStream? {
