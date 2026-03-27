@@ -128,6 +128,18 @@ class ProviderRepository(
     }
 
     /**
+     * Update sync statistics for a provider.
+     */
+    suspend fun updateSyncStats(
+        id: Long,
+        timestamp: Long,
+        durationMs: Long,
+        error: String?,
+    ) {
+        dao.updateSyncStats(id, timestamp, durationMs, error)
+    }
+
+    /**
      * Get the stored password for a provider.
      */
     fun getPassword(providerId: Long): String? = getProviderPrefs(providerId).getString("password", null)

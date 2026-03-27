@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -31,6 +32,9 @@ fun CacheManagementSection(
     cacheStats: XtreamRepository.CacheStats?,
     syncState: SyncState = SyncState.Idle,
     isXtream: Boolean = false,
+    lastSyncedAtMs: Long = 0L,
+    lastSyncDurationMs: Long = 0L,
+    lastSyncError: String? = null,
     onSyncClick: () -> Unit = {},
     onClearAllClick: () -> Unit,
     onClearLiveTvClick: () -> Unit,
@@ -75,13 +79,30 @@ fun CacheManagementSection(
                 text = if (syncState is SyncState.Syncing) "Syncing..." else "Sync Data Now",
                 enabled = syncState !is SyncState.Syncing,
             )
-            if (syncState is SyncState.Error) {
+
+            // Last Sync Stats
+            if (lastSyncedAtMs > 0L) {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val time = NumberUtils.formatTimestamp(context, lastSyncedAtMs)
+                val duration = NumberUtils.formatDuration(lastSyncDurationMs)
                 Text(
-                    text = syncState.message,
-                    style = styles.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    text = "Last Sync: Finished at $time • Took $duration",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 )
+            }
+
+            if (syncState is SyncState.Error || (syncState is SyncState.Idle && lastSyncError != null)) {
+                val errorMsg = (syncState as? SyncState.Error)?.message ?: lastSyncError
+                if (errorMsg != null) {
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Text(
+                        text = errorMsg,
+                        style = styles.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
             if (syncState is SyncState.Success) {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
@@ -94,7 +115,7 @@ fun CacheManagementSection(
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
         }
 
-        val totalItems = stats.liveTv.streamListsCount + stats.movies.streamListsCount + stats.tvShows.streamListsCount
+        val totalItems = stats.liveTv.itemsCount + stats.movies.itemsCount + stats.tvShows.itemsCount
 
         // Total cache
         Row(
@@ -109,7 +130,7 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = "$totalItems Items",
+                    text = "${NumberUtils.formatCount(totalItems)} Items",
                     style = styles.headlineSmall,
                     color = CinemaAccent,
                 )
@@ -137,20 +158,15 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = "${stats.liveTv.streamListsCount} channels",
+                    text = "${NumberUtils.formatCount(stats.liveTv.categoryCount)} Categories · ${NumberUtils.formatCount(stats.liveTv.itemsCount)} Channels",
                     style = styles.bodyMedium,
                     color = CinemaAccent,
-                )
-                Text(
-                    text = if (stats.liveTv.categoryCached) "Categories cached" else "No categories",
-                    style = styles.bodySmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
             }
             CinemaSecondaryButton(
                 onClick = onClearLiveTvClick,
                 text = "Clear",
-                enabled = stats.liveTv.streamListsCount > 0,
+                enabled = stats.liveTv.itemsCount > 0,
             )
         }
 
@@ -169,20 +185,15 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = "${stats.movies.streamListsCount} movies",
+                    text = "${NumberUtils.formatCount(stats.movies.categoryCount)} Categories · ${NumberUtils.formatCount(stats.movies.itemsCount)} Movies",
                     style = styles.bodyMedium,
                     color = CinemaAccent,
-                )
-                Text(
-                    text = if (stats.movies.categoryCached) "Categories cached" else "No categories",
-                    style = styles.bodySmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
             }
             CinemaSecondaryButton(
                 onClick = onClearMoviesClick,
                 text = "Clear",
-                enabled = stats.movies.streamListsCount > 0,
+                enabled = stats.movies.itemsCount > 0,
             )
         }
 
@@ -201,20 +212,15 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = "${stats.tvShows.streamListsCount} shows",
+                    text = "${NumberUtils.formatCount(stats.tvShows.categoryCount)} Categories · ${NumberUtils.formatCount(stats.tvShows.itemsCount)} Series · ${NumberUtils.formatCount(stats.tvShows.episodesCount)} Episodes",
                     style = styles.bodyMedium,
                     color = CinemaAccent,
-                )
-                Text(
-                    text = if (stats.tvShows.categoryCached) "Categories cached" else "No categories",
-                    style = styles.bodySmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
             }
             CinemaSecondaryButton(
                 onClick = onClearTvShowsClick,
                 text = "Clear",
-                enabled = stats.tvShows.streamListsCount > 0,
+                enabled = stats.tvShows.itemsCount > 0,
             )
         }
 
@@ -222,7 +228,7 @@ fun CacheManagementSection(
 
         // EPG & Other
         Text(
-            text = "EPG Data: ${stats.epgCount} channels",
+            text = "EPG Data: ${NumberUtils.formatCount(stats.epgCount)} channels",
             style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )

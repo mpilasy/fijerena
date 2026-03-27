@@ -46,4 +46,10 @@ interface XtreamCategoryDao {
         type: String,
         ids: List<String>,
     )
+
+    @Query("SELECT COUNT(*) FROM xtream_categories WHERE providerId = :providerId AND type = :type")
+    fun countCategories(
+        providerId: Long,
+        type: String,
+    ): Int
 }

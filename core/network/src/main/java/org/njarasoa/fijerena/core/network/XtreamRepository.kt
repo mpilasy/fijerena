@@ -266,8 +266,9 @@ class XtreamRepository(
      */
     data class ContentTypeCacheStats(
         val size: Long, // kept for compatibility, always 0
-        val categoryCached: Boolean,
-        val streamListsCount: Int,
+        val categoryCount: Int,
+        val itemsCount: Int, // Streams for Live/VOD, Series for TV Shows
+        val episodesCount: Int = 0, // Only for TV Shows
     )
 
     data class CacheStats(

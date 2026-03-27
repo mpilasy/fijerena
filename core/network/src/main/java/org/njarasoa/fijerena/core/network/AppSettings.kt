@@ -28,6 +28,8 @@ class AppSettings(
         private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
         private const val KEY_EPG_AUTO_REFRESH = "epg_auto_refresh"
         private const val KEY_EPG_REFRESH_TIME = "epg_refresh_time"
+        private const val KEY_CONTENT_AUTO_REFRESH = "content_auto_refresh"
+        private const val KEY_CONTENT_REFRESH_TIME = "content_refresh_time"
         private const val KEY_CELLULAR_LIVE_MULTIPLIER = "cellular_live_multiplier"
         private const val KEY_CELLULAR_VOD_MULTIPLIER = "cellular_vod_multiplier"
         private const val KEY_HAS_PROVIDER_CACHE = "has_provider_cache"
@@ -44,6 +46,7 @@ class AppSettings(
         const val DEFAULT_UI_SCALE = 1.0f
         const val DEFAULT_EPG_URL = ""
         const val DEFAULT_EPG_REFRESH_TIME = "02:00"
+        const val DEFAULT_CONTENT_REFRESH_TIME = "04:00"
         const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
@@ -148,6 +151,21 @@ class AppSettings(
     var epgRefreshTime: String
         get() = prefs.getString(KEY_EPG_REFRESH_TIME, DEFAULT_EPG_REFRESH_TIME) ?: DEFAULT_EPG_REFRESH_TIME
         set(value) = prefs.edit { putString(KEY_EPG_REFRESH_TIME, value) }
+
+    /**
+     * Enable or disable automatic background refresh of provider content (categories/streams).
+     */
+    var contentAutoRefreshEnabled: Boolean
+        get() = prefs.getBoolean(KEY_CONTENT_AUTO_REFRESH, true)
+        set(value) = prefs.edit { putBoolean(KEY_CONTENT_AUTO_REFRESH, value) }
+
+    /**
+     * Content refresh start time (HH:mm format).
+     * Default: 04:00
+     */
+    var contentRefreshTime: String
+        get() = prefs.getString(KEY_CONTENT_REFRESH_TIME, DEFAULT_CONTENT_REFRESH_TIME) ?: DEFAULT_CONTENT_REFRESH_TIME
+        set(value) = prefs.edit { putString(KEY_CONTENT_REFRESH_TIME, value) }
 
     var epgTimezoneOffsetHours: Int
         get() = prefs.getInt(KEY_EPG_TIMEZONE_OFFSET, 0)

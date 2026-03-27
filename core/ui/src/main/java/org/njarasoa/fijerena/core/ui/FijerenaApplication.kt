@@ -6,6 +6,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
 import org.njarasoa.fijerena.core.player.network.NetworkModule
 
 class FijerenaApplication :
@@ -15,6 +16,8 @@ class FijerenaApplication :
         super.onCreate()
         // Initialize EPG management
         EpgFileManager.getInstance(this).initialize()
+        // Initialize Provider Content sync
+        ProviderSyncManager.getInstance(this).initialize()
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =
