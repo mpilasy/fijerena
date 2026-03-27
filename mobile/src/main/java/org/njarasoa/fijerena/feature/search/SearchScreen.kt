@@ -10,6 +10,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -55,6 +57,7 @@ fun MobileSearchScreen(
         ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -191,6 +194,14 @@ fun MobileSearchScreen(
                             isSearching = state.isSearching,
                             searchProgress = state.searchProgress ?: "",
                             devStats = devStats,
+                            searchHistory = searchHistory,
+                            onHistoryItemClick = { term ->
+                                searchQuery = term
+                                viewModel.performSearch(term)
+                                keyboardController?.hide()
+                            },
+                            onHistoryItemRemove = { viewModel.removeSearchHistoryEntry(it) },
+                            onClearHistory = { viewModel.clearSearchHistory() },
                             onResultClick = { result ->
                                 onStreamSelected(
                                     result.itemId,
@@ -281,6 +292,10 @@ private fun SearchResults(
     isSearching: Boolean,
     searchProgress: String?,
     devStats: String?,
+    searchHistory: List<String>,
+    onHistoryItemClick: (String) -> Unit,
+    onHistoryItemRemove: (String) -> Unit,
+    onClearHistory: () -> Unit,
     onResultClick: (SearchViewModel.SearchResult) -> Unit,
     onResultLongPress: (SearchViewModel.SearchResult) -> Unit,
     onCategoryClick: (SearchViewModel.CategorySearchResult) -> Unit,
@@ -299,15 +314,24 @@ private fun SearchResults(
 
     val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
     if (!hasResults && query.isBlank()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "Search categories and streams across all categories",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+        if (searchHistory.isNotEmpty()) {
+            MobileSearchHistorySection(
+                history = searchHistory,
+                onItemClick = onHistoryItemClick,
+                onItemRemove = onHistoryItemRemove,
+                onClearAll = onClearHistory,
             )
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Search categories and streams across all categories",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                )
+            }
         }
     } else if (!isSearching && categoryResults.isEmpty() && results.isEmpty()) {
         Box(
@@ -470,6 +494,70 @@ private fun SearchResults(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MobileSearchHistorySection(
+    history: List<String>,
+    onItemClick: (String) -> Unit,
+    onItemRemove: (String) -> Unit,
+    onClearAll: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Recent Searches",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+            )
+            IconButton(onClick = onClearAll) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Clear all",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    modifier = Modifier.size(MobileDimensions.iconSmall),
+                )
+            }
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            history.forEach { term ->
+                AssistChip(
+                    onClick = { onItemClick(term) },
+                    label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(AssistChipDefaults.IconSize),
+                        )
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { onItemRemove(term) },
+                            modifier = Modifier.size(AssistChipDefaults.IconSize),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Remove",
+                                modifier = Modifier.size(AssistChipDefaults.IconSize),
+                            )
+                        }
+                    },
+                )
             }
         }
     }

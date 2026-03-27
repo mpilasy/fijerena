@@ -78,6 +78,11 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    private val appSettings = org.njarasoa.fijerena.core.network.AppSettings(context)
+
+    private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
+    val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
+
     private var searchJob: Job? = null
 
     companion object {
@@ -96,6 +101,7 @@ class SearchViewModel(
                 filteredResults = emptyList(),
                 query = "",
             )
+        _searchHistory.value = appSettings.getSearchHistory()
         // Pre-fetch category list + all missing/stale category items in background.
         viewModelScope.launch(Dispatchers.IO) {
             val repo =
@@ -150,12 +156,25 @@ class SearchViewModel(
     /** Called when the user presses the Search button or keyboard search action. */
     fun performSearch(query: String) {
         if (query.isBlank() || query.length < 2) return
+        // Save to history
+        appSettings.addSearchHistory(query)
+        _searchHistory.value = appSettings.getSearchHistory()
         // Cancel previous search, start new one
         searchJob?.cancel()
         searchJob =
             viewModelScope.launch(Dispatchers.IO) {
                 doSearch(this, query)
             }
+    }
+
+    fun removeSearchHistoryEntry(query: String) {
+        appSettings.removeSearchHistory(query)
+        _searchHistory.value = appSettings.getSearchHistory()
+    }
+
+    fun clearSearchHistory() {
+        appSettings.clearSearchHistory()
+        _searchHistory.value = emptyList()
     }
 
     private fun formatBytes(bytes: Long): String =
