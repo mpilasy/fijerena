@@ -473,7 +473,9 @@ class EpgIndexer private constructor(
 
                 writeMutex.withLock {
                     // Checkpoint WAL to reduce contention during rebuild
-                    db.openHelper.writableDatabase.execSQL("PRAGMA wal_checkpoint(TRUNCATE)")
+                    db.openHelper.writableDatabase
+                        .query("PRAGMA wal_checkpoint(TRUNCATE)")
+                        .close()
 
                     db.openHelper.writableDatabase.execSQL(
                         "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')",
