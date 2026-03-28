@@ -36,6 +36,7 @@ class AppSettings(
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_NIGHT_MODE_ENABLED = "night_mode_enabled"
         private const val KEY_SEARCH_HISTORY = "search_history"
+        private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val MAX_SEARCH_HISTORY = 20
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_WATCH_DELAY_SECONDS = 10
@@ -259,6 +260,43 @@ class AppSettings(
      */
     fun clearSearchHistory() {
         prefs.edit { remove(KEY_SEARCH_HISTORY) }
+    }
+
+    /**
+     * Get the EPG search history as an ordered list (most recent first).
+     */
+    fun getEpgSearchHistory(): List<String> {
+        val joined = prefs.getString(KEY_EPG_SEARCH_HISTORY, null) ?: return emptyList()
+        return joined.split("\u001F").filter { it.isNotBlank() }
+    }
+
+    /**
+     * Add a search term to EPG history. Deduplicates (case-insensitive) and caps at [MAX_SEARCH_HISTORY].
+     */
+    fun addEpgSearchHistory(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return
+        val current = getEpgSearchHistory().toMutableList()
+        current.removeAll { it.equals(trimmed, ignoreCase = true) }
+        current.add(0, trimmed)
+        val capped = current.take(MAX_SEARCH_HISTORY)
+        prefs.edit { putString(KEY_EPG_SEARCH_HISTORY, capped.joinToString("\u001F")) }
+    }
+
+    /**
+     * Remove a single entry from EPG search history.
+     */
+    fun removeEpgSearchHistory(query: String) {
+        val current = getEpgSearchHistory().toMutableList()
+        current.removeAll { it.equals(query, ignoreCase = true) }
+        prefs.edit { putString(KEY_EPG_SEARCH_HISTORY, current.joinToString("\u001F")) }
+    }
+
+    /**
+     * Clear all EPG search history.
+     */
+    fun clearEpgSearchHistory() {
+        prefs.edit { remove(KEY_EPG_SEARCH_HISTORY) }
     }
 
     /**

@@ -102,6 +102,9 @@ class EpgBrowserViewModel(
     private val appSettings = AppSettings(context)
     val isDevMode: Boolean get() = appSettings.isDevMode
 
+    private val _epgSearchHistory = MutableStateFlow<List<String>>(emptyList())
+    val epgSearchHistory: StateFlow<List<String>> = _epgSearchHistory.asStateFlow()
+
     private val _sourceLabels = MutableStateFlow<Map<Long, String>>(emptyMap())
     val sourceLabels: StateFlow<Map<Long, String>> = _sourceLabels.asStateFlow()
 
@@ -121,6 +124,7 @@ class EpgBrowserViewModel(
         } else {
             _uiState.value = UiState.NoEpgFile
         }
+        _epgSearchHistory.value = appSettings.getEpgSearchHistory()
         loadSourceLabels()
         viewModelScope.launch { ensureChannelMatcherCurrent() }
         loadActiveProviderName()
@@ -211,6 +215,8 @@ class EpgBrowserViewModel(
         searchJob =
             viewModelScope.launch {
                 _uiState.value = UiState.Searching
+                appSettings.addEpgSearchHistory(query)
+                _epgSearchHistory.value = appSettings.getEpgSearchHistory()
                 try {
                     ensureChannelMatcherCurrent()
                     val startTime = System.currentTimeMillis()
@@ -282,6 +288,16 @@ class EpgBrowserViewModel(
                     _uiState.value = UiState.Error(e.message ?: "Search failed")
                 }
             }
+    }
+
+    fun removeEpgSearchHistoryEntry(query: String) {
+        appSettings.removeEpgSearchHistory(query)
+        _epgSearchHistory.value = appSettings.getEpgSearchHistory()
+    }
+
+    fun clearEpgSearchHistory() {
+        appSettings.clearEpgSearchHistory()
+        _epgSearchHistory.value = emptyList()
     }
 
     private fun initPagedSearch(query: String) {
