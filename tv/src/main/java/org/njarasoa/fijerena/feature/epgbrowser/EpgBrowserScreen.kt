@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
+import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Card
@@ -76,6 +78,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -97,6 +100,7 @@ fun EpgBrowserScreen(
     val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
     val isDevMode = viewModel.isDevMode
     val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
+    val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
     val epgDbStats =
         when (val idx = indexState) {
             is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
@@ -201,8 +205,11 @@ fun EpgBrowserScreen(
                             epgDbStats = epgDbStats,
                             sourceLabels = sourceLabels,
                             searchMode = searchMode,
+                            epgSearchHistory = epgSearchHistory,
                             onSearchModeChange = { viewModel.setSearchMode(it) },
                             onSearch = { viewModel.performSearch(it) },
+                            onRemoveHistoryEntry = { viewModel.removeEpgSearchHistoryEntry(it) },
+                            onClearHistory = { viewModel.clearEpgSearchHistory() },
                             onNavigateToPlayer = onNavigateToPlayer,
                         )
                     }
@@ -221,8 +228,11 @@ private fun EpgBrowserContent(
     epgDbStats: String?,
     sourceLabels: Map<Long, String>,
     searchMode: EpgBrowserViewModel.SearchMode,
+    epgSearchHistory: List<String> = emptyList(),
     onSearchModeChange: (EpgBrowserViewModel.SearchMode) -> Unit,
     onSearch: (String) -> Unit,
+    onRemoveHistoryEntry: (String) -> Unit = {},
+    onClearHistory: () -> Unit = {},
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
 ) {
     val searchFocusRequester = remember { FocusRequester() }
@@ -434,25 +444,41 @@ private fun EpgBrowserContent(
 
         when (uiState) {
             is EpgBrowserViewModel.UiState.Idle -> {
-                Box(
+                Column(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
                 ) {
-                    val hintText =
-                        when (searchMode) {
-                            EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles in your local EPG data"
-                            EpgBrowserViewModel.SearchMode.CHANNEL -> "Search by channel name to see what's on in the next 6 hours"
-                        }
-                    Text(
-                        text = hintText,
-                        style =
-                            MaterialTheme.typography.bodyLarge.copy(
-                                fontSize =
-                                    MaterialTheme.typography.bodyLarge.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    )
+                    if (epgSearchHistory.isNotEmpty()) {
+                        EpgSearchHistorySection(
+                            history = epgSearchHistory,
+                            onItemClick = { term ->
+                                localQuery = term
+                                onSearch(term)
+                            },
+                            onItemRemove = onRemoveHistoryEntry,
+                            onClearAll = onClearHistory,
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+                    }
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val hintText =
+                            when (searchMode) {
+                                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles in your local EPG data"
+                                EpgBrowserViewModel.SearchMode.CHANNEL -> "Search by channel name to see what's on in the next 6 hours"
+                            }
+                        Text(
+                            text = hintText,
+                            style =
+                                MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize =
+                                        MaterialTheme.typography.bodyLarge.fontSize
+                                            .scaled(scale),
+                                ),
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                    }
                 }
             }
             is EpgBrowserViewModel.UiState.Searching -> {
@@ -493,6 +519,100 @@ private fun EpgBrowserContent(
                 )
             }
             else -> {} // NoEpgFile and Error handled in parent
+        }
+    }
+}
+
+@Composable
+private fun EpgSearchHistorySection(
+    history: List<String>,
+    onItemClick: (String) -> Unit,
+    onItemRemove: (String) -> Unit,
+    onClearAll: () -> Unit,
+) {
+    val scale = LocalUiScale.current
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Recent Searches",
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary,
+            )
+            CinemaIconButton(
+                onClick = onClearAll,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Clear all",
+                        tint = CinemaTextSecondary,
+                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                    )
+                },
+            )
+        }
+        TvLazyRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+        ) {
+            items(history) { term ->
+                Card(
+                    onClick = { onItemClick(term) },
+                    colors =
+                        CardDefaults.colors(
+                            containerColor = CinemaSurface,
+                            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
+                        ),
+                    scale =
+                        CardDefaults.scale(
+                            scale = TvFocusTokens.defaultScale,
+                            focusedScale = TvFocusTokens.focusedScaleContent,
+                        ),
+                    shape =
+                        CardDefaults.shape(
+                            shape = RoundedCornerShape(CornerRadius.medium),
+                        ),
+                ) {
+                    Row(
+                        modifier =
+                            Modifier.padding(
+                                horizontal = Spacing.md.scaled(scale),
+                                vertical = Spacing.sm.scaled(scale),
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = CinemaTextSecondary,
+                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                        )
+                        Text(
+                            text = term,
+                            style =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize =
+                                        MaterialTheme.typography.bodyMedium.fontSize
+                                            .scaled(scale),
+                                ),
+                            color = CinemaTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
         }
     }
 }
