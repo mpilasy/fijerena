@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,10 +23,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -86,6 +91,7 @@ fun MobileEpgBrowserScreen(
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
     val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
+    val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(searchMode) {
@@ -287,20 +293,36 @@ fun MobileEpgBrowserScreen(
                 is EpgBrowserViewModel.UiState.Idle,
                 is EpgBrowserViewModel.UiState.Indexing,
                 -> {
-                    Box(
+                    Column(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
                     ) {
-                        val hintText =
-                            when (searchMode) {
-                                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles"
-                                EpgBrowserViewModel.SearchMode.CHANNEL -> "Search by channel name"
-                            }
-                        Text(
-                            text = hintText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        if (epgSearchHistory.isNotEmpty()) {
+                            MobileEpgSearchHistorySection(
+                                history = epgSearchHistory,
+                                onItemClick = { term ->
+                                    searchQuery = term
+                                    viewModel.performSearch(term)
+                                    keyboardController?.hide()
+                                },
+                                onItemRemove = { viewModel.removeEpgSearchHistoryEntry(it) },
+                                onClearAll = { viewModel.clearEpgSearchHistory() },
+                            )
+                        }
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val hintText =
+                                when (searchMode) {
+                                    EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles"
+                                    EpgBrowserViewModel.SearchMode.CHANNEL -> "Search by channel name"
+                                }
+                            Text(
+                                text = hintText,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
                 is EpgBrowserViewModel.UiState.NoEpgFile -> {
@@ -727,6 +749,70 @@ private fun formatFileSize(bytes: Long): String =
         bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
         else -> "$bytes B"
     }
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MobileEpgSearchHistorySection(
+    history: List<String>,
+    onItemClick: (String) -> Unit,
+    onItemRemove: (String) -> Unit,
+    onClearAll: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Recent Searches",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+            )
+            IconButton(onClick = onClearAll) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Clear all",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            history.forEach { term ->
+                AssistChip(
+                    onClick = { onItemClick(term) },
+                    label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(AssistChipDefaults.IconSize),
+                        )
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { onItemRemove(term) },
+                            modifier = Modifier.size(AssistChipDefaults.IconSize),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Remove",
+                                modifier = Modifier.size(AssistChipDefaults.IconSize),
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
 
 private fun formatCount(count: Int): String =
     when {
