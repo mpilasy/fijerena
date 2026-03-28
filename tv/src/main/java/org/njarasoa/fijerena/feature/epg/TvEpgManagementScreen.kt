@@ -67,7 +67,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     var showClearConfirm by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var deletingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
-    var showDeleteSelectedConfirm by remember { mutableStateOf(false) }
+    var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
 
     val scale = LocalUiScale.current
 
@@ -115,7 +115,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                             )
 
                             CinemaDangerButton(
-                                onClick = { showDeleteSelectedConfirm = true },
+                                onClick = { deleteSelectedIds = selectedIds },
                                 text = "Delete Selected (${selectedIds.size})",
                             )
                         }
@@ -421,26 +421,26 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
         )
     }
 
-    if (showDeleteSelectedConfirm) {
+    deleteSelectedIds?.let { idsToDelete ->
         AlertDialog(
-            onDismissRequest = { showDeleteSelectedConfirm = false },
+            onDismissRequest = { deleteSelectedIds = null },
             confirmButton = {
                 CinemaDangerButton(
                     onClick = {
-                        viewModel.deleteSelected(selectedIds)
-                        showDeleteSelectedConfirm = false
+                        viewModel.deleteSelected(idsToDelete)
+                        deleteSelectedIds = null
                     },
-                    text = "Delete ${selectedIds.size} Source(s)",
+                    text = "Delete ${idsToDelete.size} Source(s)",
                 )
             },
             dismissButton = {
                 CinemaSecondaryButton(
-                    onClick = { showDeleteSelectedConfirm = false },
+                    onClick = { deleteSelectedIds = null },
                     text = "Cancel",
                 )
             },
             title = { Text("Delete Selected Sources?") },
-            text = { Text("This will permanently remove ${selectedIds.size} source(s) and all their indexed data.") },
+            text = { Text("This will permanently remove ${idsToDelete.size} source(s) and all their indexed data.") },
         )
     }
 
