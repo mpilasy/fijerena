@@ -181,6 +181,7 @@ class EpgIndexer private constructor(
                         _state.value = EpgIndexState.NotIndexed
                     }
                 }
+
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to restore index state", e)
                 _state.value = EpgIndexState.NotIndexed
@@ -471,6 +472,9 @@ class EpgIndexer private constructor(
                 val dao = db.epgIndexDao()
 
                 writeMutex.withLock {
+                    // Checkpoint WAL to reduce contention during rebuild
+                    db.openHelper.writableDatabase.execSQL("PRAGMA wal_checkpoint(TRUNCATE)")
+
                     db.openHelper.writableDatabase.execSQL(
                         "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')",
                     )
