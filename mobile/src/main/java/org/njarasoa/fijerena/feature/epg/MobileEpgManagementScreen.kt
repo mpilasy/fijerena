@@ -57,7 +57,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var showDeleteSelectedConfirm by remember { mutableStateOf(false) }
+    var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
 
     Scaffold(
         topBar = {
@@ -104,7 +104,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     }
 
                                     Button(
-                                        onClick = { showDeleteSelectedConfirm = true },
+                                        onClick = { deleteSelectedIds = selectedIds },
                                         modifier = Modifier.weight(1f),
                                         colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                                     ) {
@@ -298,23 +298,23 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
         )
     }
 
-    if (showDeleteSelectedConfirm) {
+    deleteSelectedIds?.let { idsToDelete ->
         AlertDialog(
-            onDismissRequest = { showDeleteSelectedConfirm = false },
+            onDismissRequest = { deleteSelectedIds = null },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteSelected(selectedIds)
-                        showDeleteSelectedConfirm = false
+                        viewModel.deleteSelected(idsToDelete)
+                        deleteSelectedIds = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                ) { Text("Delete ${selectedIds.size} Source(s)") }
+                ) { Text("Delete ${idsToDelete.size} Source(s)") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteSelectedConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { deleteSelectedIds = null }) { Text("Cancel") }
             },
             title = { Text("Delete Selected Sources?") },
-            text = { Text("This will permanently remove ${selectedIds.size} source(s) and all their indexed data.") },
+            text = { Text("This will permanently remove ${idsToDelete.size} source(s) and all their indexed data.") },
         )
     }
 
