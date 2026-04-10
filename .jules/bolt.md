@@ -1,13 +1,3 @@
-## 2025-03-06 - Initial setup
-**Learning:** Checking for basic files
-**Action:** Ready to optimize!
-
-## 2025-03-06 - Hash function allocations
-**Learning:** Room entity mapping from JSON objects to DB entities currently has `val entity = base.copy(contentHash = base.computeContentHash())`.
-In Kotlin, `data class.copy()` allocates a new object. This means every single Xtream entity being processed during syncing (which batches by 2000 items and typically runs over tens of thousands of streams) allocates two objects instead of one.
-
-**Action:** Refactor `XtreamContentManager` so that `computeContentHash` is calculated without allocating a `base` object first, or just create the entity with the hash inline instead of allocating and copying.
-
-## 2025-03-13 - Avoid Object Copying in Room Batches
-**Learning:** During large-scale local synchronization tasks (like parsing Xtream M3U streams, which can contain tens of thousands of items), accumulating entities in a `MutableList` and then passing `batch.toList()` to Room `insertAll` functions creates massive arrays to perform shallow copies. Because Android Room implementations execute the DB transaction synchronously within a suspend function, we can just pass the mutable `batch` list directly. The insertion completes before `batch.clear()` is called.
-**Action:** Removed `.toList()` allocations from Room batch inserts. Going forward, avoid `.toList()` or other defensive copies unless strictly necessary (e.g., passing mutable state to true async jobs without suspend blocking).
+## YYYY-MM-DD - [EpgChannelMatcher O(N) Fallback Memoization]
+**Learning:** `EpgChannelMatcher` performs an O(N) string-contains search across potentially 100,000+ channels when exact or normalized names fail. Because XMLTV sources often contain repeating "unknown" or mismatched channel IDs within a single file (for instance, during a full EPG parse where thousands of programs map to a handful of unmatched channels), caching the result of these expensive fallback evaluations is highly effective. Furthermore, because `ConcurrentHashMap` forbids `null` values and the matcher legitimately returns `null` for non-existent channels, caching requires wrapping the output in a generic `MatchResult` data class to prevent `NullPointerException`s when storing negative matches.
+**Action:** When adding memoization or caching to standard collections (especially in Kotlin targeting Java concurrency primitives like `ConcurrentHashMap`), always verify if `null` is a valid outcome of the expensive operation and implement a wrapper class to safely cache negative results.

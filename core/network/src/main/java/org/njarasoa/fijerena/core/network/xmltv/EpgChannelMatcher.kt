@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
+import java.util.concurrent.ConcurrentHashMap
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 
 /**
@@ -24,6 +25,12 @@ class EpgChannelMatcher(
     // Level 5: Arrays instead of lists to avoid overhead
     private val normalizedNames: Array<String>
     private val normalizedStreams: Array<XtreamStreamEntity>
+
+    private data class MatchKey(val channelId: String, val channelName: String)
+    private data class MatchResult(val stream: EpgBrowserMatchedStream?)
+
+    // Memoize matches to avoid redundant fallback evaluations
+    private val matchCache = ConcurrentHashMap<MatchKey, MatchResult>()
 
     init {
         val namesList = ArrayList<String>(streams.size)
@@ -51,6 +58,21 @@ class EpgChannelMatcher(
     }
 
     fun match(
+        channelId: String,
+        channelName: String,
+    ): EpgBrowserMatchedStream? {
+        val key = MatchKey(channelId, channelName)
+        val cached = matchCache[key]
+        if (cached != null) {
+            return cached.stream
+        }
+
+        val result = performMatch(channelId, channelName)
+        matchCache[key] = MatchResult(result)
+        return result
+    }
+
+    private fun performMatch(
         channelId: String,
         channelName: String,
     ): EpgBrowserMatchedStream? {
