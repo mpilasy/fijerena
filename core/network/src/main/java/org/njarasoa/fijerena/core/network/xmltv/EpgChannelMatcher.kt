@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Reverse-direction matcher: given all Xtream LIVE streams, builds lookup maps once,
@@ -10,6 +11,11 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 class EpgChannelMatcher(
     streams: List<XtreamStreamEntity>,
 ) {
+    // Cache for memoizing match results
+    private data class MatchKey(val channelId: String, val channelName: String)
+    private class MatchResult(val stream: EpgBrowserMatchedStream?)
+    private val matchCache = ConcurrentHashMap<MatchKey, MatchResult>()
+
     // Level 1: exact epgChannelId -> stream
     private val byEpgId = mutableMapOf<String, XtreamStreamEntity>()
 
@@ -51,6 +57,20 @@ class EpgChannelMatcher(
     }
 
     fun match(
+        channelId: String,
+        channelName: String,
+    ): EpgBrowserMatchedStream? {
+        val key = MatchKey(channelId, channelName)
+        val cached = matchCache[key]
+        if (cached != null) return cached.stream
+
+        val result = performMatch(channelId, channelName)
+        // ⚡ Bolt: Memoize expensive O(N) string matches for EPG airings to prevent redundant evaluations
+        matchCache[key] = MatchResult(result)
+        return result
+    }
+
+    private fun performMatch(
         channelId: String,
         channelName: String,
     ): EpgBrowserMatchedStream? {
