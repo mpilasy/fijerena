@@ -19,6 +19,7 @@ import kotlin.math.pow
 @UnstableApi
 class NightModeProcessor : AudioProcessor {
     private var inputAudioFormat = AudioFormat.NOT_SET
+    private var reusableBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var outputBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var inputEnded = false
 
@@ -33,6 +34,10 @@ class NightModeProcessor : AudioProcessor {
     private val ratio = 4f // 4:1 compression
     private val makeupGain = 1.8f // ~+5dB boost for audible quiet-lift
 
+    // Pre-calculated constants to optimize inner loop
+    private val thresholdDb = 20f * kotlin.math.log10(threshold)
+    private val invRatioMinusOne = (1f / ratio - 1f)
+
     // Observable state for diagnostics
     var queueInputCallCount = 0L
         private set
@@ -40,7 +45,7 @@ class NightModeProcessor : AudioProcessor {
 
     override fun configure(inputAudioFormat: AudioFormat): AudioFormat {
         this.inputAudioFormat = inputAudioFormat
-        Log.e(
+        Log.i(
             "NightModeProcessor",
             "Configured: ${inputAudioFormat.sampleRate}Hz, ${inputAudioFormat.channelCount}ch, encoding: ${inputAudioFormat.encoding}",
         )
@@ -54,35 +59,32 @@ class NightModeProcessor : AudioProcessor {
         queueInputCallCount++
 
         val remaining = inputBuffer.remaining()
-        val isFloat = inputAudioFormat.encoding == androidx.media3.common.C.ENCODING_PCM_FLOAT
-        val is16Bit = inputAudioFormat.encoding == androidx.media3.common.C.ENCODING_PCM_16BIT
-        val bytesPerSample =
-            if (isFloat) {
-                4
-            } else if (is16Bit) {
-                2
-            } else {
-                4
-            }
+        val encoding = inputAudioFormat.encoding
+        val isFloat = encoding == androidx.media3.common.C.ENCODING_PCM_FLOAT
+        val is16Bit = encoding == androidx.media3.common.C.ENCODING_PCM_16BIT
+        
+        val bytesPerSample = if (isFloat) 4 else if (is16Bit) 2 else 4
         val sampleCount = remaining / bytesPerSample
 
-        if (outputBuffer == AudioProcessor.EMPTY_BUFFER || outputBuffer.capacity() < remaining) {
-            outputBuffer = ByteBuffer.allocateDirect(remaining).order(ByteOrder.nativeOrder())
+        // Reuse buffer to avoid allocations on every call (essential for Sony Bravia performance)
+        if (reusableBuffer.capacity() < remaining) {
+            reusableBuffer = ByteBuffer.allocateDirect(remaining).order(ByteOrder.nativeOrder())
         } else {
-            outputBuffer.clear()
+            reusableBuffer.clear()
         }
 
         if (!enabled) {
-            outputBuffer.put(inputBuffer)
-            outputBuffer.flip()
+            reusableBuffer.put(inputBuffer)
+            reusableBuffer.flip()
+            outputBuffer = reusableBuffer
             return
         }
 
-        if (isFloat) {
-            val sampleRate = inputAudioFormat.sampleRate.toFloat()
-            val attackCoef = Math.exp(-1.0 / (sampleRate * attackTime)).toFloat()
-            val releaseCoef = Math.exp(-1.0 / (sampleRate * releaseTime)).toFloat()
+        val sampleRate = inputAudioFormat.sampleRate.toFloat()
+        val attackCoef = Math.exp(-1.0 / (sampleRate * attackTime)).toFloat()
+        val releaseCoef = Math.exp(-1.0 / (sampleRate * releaseTime)).toFloat()
 
+        if (isFloat) {
             for (i in 0 until sampleCount) {
                 val sample = inputBuffer.getFloat()
                 val absSample = abs(sample)
@@ -93,20 +95,16 @@ class NightModeProcessor : AudioProcessor {
                 var gain = 1.0f
                 if (envelope > threshold) {
                     val envDb = 20f * kotlin.math.log10(max(envelope, 0.0001f))
-                    val thresholdDb = 20f * kotlin.math.log10(threshold)
-                    val reductionDb = (1f / ratio - 1f) * (envDb - thresholdDb)
+                    val reductionDb = invRatioMinusOne * (envDb - thresholdDb)
                     gain = 10f.pow(reductionDb / 20f)
                 }
 
-                outputBuffer.putFloat(sample * gain * makeupGain)
+                reusableBuffer.putFloat(sample * gain * makeupGain)
             }
         } else if (is16Bit) {
-            val sampleRate = inputAudioFormat.sampleRate.toFloat()
-            val attackCoef = Math.exp(-1.0 / (sampleRate * attackTime)).toFloat()
-            val releaseCoef = Math.exp(-1.0 / (sampleRate * releaseTime)).toFloat()
-
             for (i in 0 until sampleCount) {
-                val sample = inputBuffer.getShort() / 32768f
+                val rawSample = inputBuffer.getShort()
+                val sample = rawSample / 32768f
                 val absSample = abs(sample)
 
                 val coef = if (absSample > envelope) attackCoef else releaseCoef
@@ -115,20 +113,19 @@ class NightModeProcessor : AudioProcessor {
                 var gain = 1.0f
                 if (envelope > threshold) {
                     val envDb = 20f * kotlin.math.log10(max(envelope, 0.0001f))
-                    val thresholdDb = 20f * kotlin.math.log10(threshold)
-                    val reductionDb = (1f / ratio - 1f) * (envDb - thresholdDb)
+                    val reductionDb = invRatioMinusOne * (envDb - thresholdDb)
                     gain = 10f.pow(reductionDb / 20f)
                 }
 
                 val compressed = (sample * gain * makeupGain * 32768f).toInt().coerceIn(-32768, 32767).toShort()
-                outputBuffer.putShort(compressed)
+                reusableBuffer.putShort(compressed)
             }
         } else {
-            // Unknown encoding: passthrough
-            outputBuffer.put(inputBuffer)
+            reusableBuffer.put(inputBuffer)
         }
 
-        outputBuffer.flip()
+        reusableBuffer.flip()
+        outputBuffer = reusableBuffer
     }
 
     override fun queueEndOfStream() {
@@ -152,5 +149,6 @@ class NightModeProcessor : AudioProcessor {
     override fun reset() {
         flush()
         inputAudioFormat = AudioFormat.NOT_SET
+        reusableBuffer = AudioProcessor.EMPTY_BUFFER
     }
 }

@@ -35,6 +35,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var playerListener: PlayerListener? = null
     private var analyticsListener: PerformanceAnalyticsListener? = null
+    private var mediaSourceFactory: StreamingMediaSourceFactory? = null
 
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -156,8 +157,17 @@ class StreamingPlaybackService : MediaSessionService() {
         Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
 
         val renderersFactory =
-            DefaultRenderersFactory(this)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            object : DefaultRenderersFactory(this) {
+                override fun buildAudioSink(
+                    context: android.content.Context,
+                    enableFloatOutput: Boolean,
+                    enableAudioTrackPlaybackParams: Boolean,
+                ): androidx.media3.exoplayer.audio.AudioSink? {
+                    return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                        .setAudioProcessors(arrayOf(nightModeProcessor))
+                        .build()
+                }
+            }.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 
         val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
@@ -298,14 +308,13 @@ class StreamingPlaybackService : MediaSessionService() {
         _currentMetadata.value = metadata
 
         val mediaSource =
-            StreamingMediaSourceFactory.createMediaSource(
-                context = this,
+            mediaSourceFactory?.createMediaSource(
                 streamUrl = metadata.streamUrl,
                 headers = metadata.headers,
                 isLive = metadata.isLive,
                 onRetry = { _streamRetryCount.value++ },
                 transferListener = bandwidthMeter,
-            )
+            ) ?: return
 
         player.setMediaSource(mediaSource)
         if (startPositionMs > 0) {
@@ -342,13 +351,12 @@ class StreamingPlaybackService : MediaSessionService() {
                 playerListener?.resetErrorState()
 
                 val mediaSource =
-                    StreamingMediaSourceFactory.createMediaSource(
-                        context = this,
+                    mediaSourceFactory?.createMediaSource(
                         streamUrl = metadata.streamUrl,
                         headers = metadata.headers,
                         isLive = metadata.isLive,
                         onRetry = { _streamRetryCount.value++ },
-                    )
+                    ) ?: return@Runnable
 
                 player.setMediaSource(mediaSource)
                 player.playWhenReady = true

@@ -38,6 +38,7 @@ class NightModeManager {
      * If Night Mode is enabled, creates and configures a DynamicsProcessing instance.
      */
     fun attach(audioSessionId: Int) {
+        if (currentSessionId == audioSessionId && dynamicsProcessing != null) return
         releaseProcessing()
         currentSessionId = audioSessionId
         if (!enabled || audioSessionId == C.AUDIO_SESSION_ID_UNSET) return
