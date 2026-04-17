@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.player.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,6 +54,11 @@ fun MobileStatsOverlay(
     metadata: PlayerMetadata,
     onClose: () -> Unit,
 ) {
+    // Handle Back button to close overlay
+    BackHandler(enabled = true) {
+        onClose()
+    }
+
     var videoCodec by remember { mutableStateOf("N/A") }
     var videoResolution by remember { mutableStateOf("N/A") }
     var videoFrameRate by remember { mutableStateOf("N/A") }
@@ -238,8 +244,8 @@ fun MobileStatsOverlay(
     Box(
         modifier =
             Modifier
-                .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = CinemaAlpha.scrim)),
+                .fillMaxSize(),
+        // Not focusable, no background scrim - allows gestures to pass to the stream underneath
     ) {
         GlassPanel(
             modifier =
@@ -386,6 +392,63 @@ fun MobileStatsOverlay(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 6.dp),
+    )
+}
+
+@Composable
+private fun StatRow(
+    label: String,
+    value: String,
+) {
+    val typography = MaterialTheme.typography
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = typography.bodySmall,
+            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+        )
+        Text(
+            text = value,
+            style = typography.bodySmall,
+            color = CinemaTextPrimary,
+        )
+    }
+}
+
+@Composable
+private fun StatRowColored(
+    label: String,
+    value: String,
+    valueColor: Color,
+) {
+    val typography = MaterialTheme.typography
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = label,
+            style = typography.bodySmall,
+            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+        )
+        Text(
+            text = value,
+            style = typography.bodySmall,
+            color = valueColor,
+        )
     }
 }
 
