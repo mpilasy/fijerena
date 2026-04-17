@@ -19,9 +19,10 @@ fun PlayerEffects(
 ) {
     val isDeveloperMode = state.isDeveloperMode
 
-    // Auto-show stats on repeated buffer exhaustion (dev mode only)
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Auto-show toast on repeated buffer exhaustion
     LaunchedEffect(isDeveloperMode) {
-        if (!isDeveloperMode) return@LaunchedEffect
         val exhaustionTimestamps = mutableListOf<Long>()
         var lastSeenCount = 0
         while (true) {
@@ -34,9 +35,15 @@ fun PlayerEffects(
                 lastSeenCount = currentCount
                 // Remove timestamps older than 30 seconds
                 exhaustionTimestamps.removeAll { now - it > 30_000L }
-                // Show stats if 3+ buffer exhaustions in 30s window
-                if (exhaustionTimestamps.size >= 3 && !state.showStats) {
-                    state.showStats = true
+                // Show toast if 3+ buffer exhaustions in 30s window
+                if (exhaustionTimestamps.size >= 3) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Excessive buffering is happening",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    // Clear timestamps to prevent repeated toasts for the same event window
+                    exhaustionTimestamps.clear()
                 }
             }
             delay(1000L)
