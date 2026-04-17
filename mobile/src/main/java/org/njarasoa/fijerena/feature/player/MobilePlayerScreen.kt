@@ -137,9 +137,10 @@ fun MobilePlayerScreen(
     var showStats by remember { mutableStateOf(false) }
     var hasStartedPlaying by remember { mutableStateOf(false) }
 
-    // Auto-show stats on repeated buffer exhaustion (dev mode only)
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Auto-show toast on repeated buffer exhaustion
     LaunchedEffect(appSettings.isDevMode) {
-        if (!appSettings.isDevMode) return@LaunchedEffect
         val exhaustionTimestamps = mutableListOf<Long>()
         var lastSeenCount = 0
         while (true) {
@@ -151,8 +152,13 @@ fun MobilePlayerScreen(
                 }
                 lastSeenCount = currentCount
                 exhaustionTimestamps.removeAll { now - it > 30_000L }
-                if (exhaustionTimestamps.size >= 3 && !showStats) {
-                    showStats = true
+                if (exhaustionTimestamps.size >= 3) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Excessive buffering is happening",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    exhaustionTimestamps.clear()
                 }
             }
             delay(1000L)
