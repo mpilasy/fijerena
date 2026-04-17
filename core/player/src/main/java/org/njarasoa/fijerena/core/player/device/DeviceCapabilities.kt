@@ -21,7 +21,16 @@ data class DeviceCapabilities(
 )
 
 object DeviceDetector {
+    @Volatile
+    private var cachedCapabilities: DeviceCapabilities? = null
+
     fun detect(): DeviceCapabilities {
+        return cachedCapabilities ?: synchronized(this) {
+            cachedCapabilities ?: performDetection().also { cachedCapabilities = it }
+        }
+    }
+
+    private fun performDetection(): DeviceCapabilities {
         val deviceType = detectDeviceType()
         val supportsHevc = supportsCodec("video/hevc")
         val supportsAv1 = supportsCodec("video/av01")
