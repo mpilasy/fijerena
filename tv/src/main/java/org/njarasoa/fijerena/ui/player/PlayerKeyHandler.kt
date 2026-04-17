@@ -58,6 +58,15 @@ fun handlePlayerKeyEvent(
                 // Double-click ONLY dismisses stats if they are already showing
                 state.showStats = false
                 true
+            } else if (state.showStats) {
+                // Single-click while stats are showing: pass to player/controls
+                if (state.showControls) {
+                    false
+                } else {
+                    state.showControls = true
+                    state.showStreamInfo = true
+                    true
+                }
             } else {
                 // Single-click (or double-click when stats are NOT showing):
                 // Let it pass if controls are visible, or show controls if not

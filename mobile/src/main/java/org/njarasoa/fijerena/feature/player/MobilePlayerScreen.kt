@@ -294,7 +294,7 @@ fun MobilePlayerScreen(
                                     if (!showStats) showControls = !showControls
                                 },
                                 onDoubleTap = {
-                                    if (!isLiveContent) {
+                                    if (!showStats && !isLiveContent) {
                                         when (playbackState) {
                                             is PlaybackState.Playing -> viewModel.pause()
                                             is PlaybackState.Paused -> viewModel.resume()
@@ -305,7 +305,7 @@ fun MobilePlayerScreen(
                             )
                         }.then(
                             if (isLiveContent) {
-                                Modifier.pointerInput(state.categoryStreams, showCategoryOverlay, showLastWatchedOverlay) {
+                                Modifier.pointerInput(state.categoryStreams, showCategoryOverlay, showLastWatchedOverlay, showStats) {
                                     var verticalAccumulator = 0f
                                     var horizontalAccumulator = 0f
                                     detectDragGestures(
@@ -314,6 +314,7 @@ fun MobilePlayerScreen(
                                             horizontalAccumulator = 0f
                                         },
                                         onDrag = { change, dragAmount ->
+                                            if (showStats) return@detectDragGestures
                                             change.consume()
                                             verticalAccumulator += dragAmount.y
                                             horizontalAccumulator += dragAmount.x
