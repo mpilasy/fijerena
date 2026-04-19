@@ -101,6 +101,7 @@ class StreamingPlaybackService : MediaSessionService() {
         instance = this
         instanceReady.complete(this)
         NetworkMonitor.init(this)
+        mediaSourceFactory = StreamingMediaSourceFactory(this)
 
         initializePlayer()
         acquireWakeLock()

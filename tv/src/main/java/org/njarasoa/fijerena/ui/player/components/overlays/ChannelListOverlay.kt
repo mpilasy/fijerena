@@ -29,6 +29,7 @@ import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -58,7 +59,13 @@ fun ChannelListOverlay(
                     0
                 }
             if (targetIndex > 0) listState.scrollToItem(targetIndex)
-            targetFocusRequester.requestFocus()
+            // Small delay to ensure the target item is composed and FocusRequester is attached
+            delay(100)
+            try {
+                targetFocusRequester.requestFocus()
+            } catch (_: IllegalStateException) {
+                // FocusRequester not initialized, ignore
+            }
         }
     }
 
