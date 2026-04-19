@@ -60,9 +60,9 @@ class StreamLoaderViewModel(
     private var mediaRepository: MediaRepository? = null
     private val appSettings = AppSettings(context)
 
-    // Internal state tracking
     private var currentStreamIndex = -1
     private var streamList: List<MediaItem> = emptyList()
+    private var currentCategoryId: String = categoryId
 
     // Avoid re-fetching EPG too often
     private var lastEpgFetchTime = 0L
@@ -71,6 +71,7 @@ class StreamLoaderViewModel(
     private var historyJob: Job? = null
 
     init {
+        currentCategoryId = categoryId
         initializeAndLoad()
     }
 
@@ -89,7 +90,7 @@ class StreamLoaderViewModel(
                 var lastWatched: List<MediaItem> = emptyList()
 
                 if (contentType == ContentType.LIVE_TV) {
-                    val result = repo.getItems(categoryId, contentType)
+                    val result = repo.getItems(currentCategoryId, contentType)
                     result.fold(
                         onSuccess = { items ->
                             currentStreams = items
@@ -174,7 +175,7 @@ class StreamLoaderViewModel(
                                     streamId,
                                     streamName,
                                     org.njarasoa.fijerena.core.player.domain.MediaType.LIVE_CHANNEL,
-                                    categoryId,
+                                    currentCategoryId,
                                 )
 
                         val epgData = repo.getEpgBulkForItems(listOf(currentItem)).getOrNull()
@@ -219,7 +220,7 @@ class StreamLoaderViewModel(
                             viewModelScope.launch(Dispatchers.IO) {
                                 delay(AppSettings(context).watchDelaySeconds * 1000L)
                                 repo.saveLastPlayedItem(
-                                    categoryId = categoryId,
+                                    categoryId = currentCategoryId,
                                     itemId = streamId,
                                     itemName = streamName,
                                     contentType = contentType,
@@ -249,17 +250,31 @@ class StreamLoaderViewModel(
 
     fun loadStream(item: MediaItem) {
         viewModelScope.launch(Dispatchers.IO) {
+            val repo = mediaRepository ?: return@launch
+
             // Capture current state before setting Loading, so we preserve categoryStreams
             val previousState = _state.value
             _state.value = StreamState.Loading
 
-            // Update index
+            // 1. Update Category if it changed (e.g. from Last Watched)
+            var currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else streamList
+            if (item.categoryId != currentCategoryId && contentType == ContentType.LIVE_TV) {
+                currentCategoryId = item.categoryId
+                val result = repo.getItems(currentCategoryId, contentType)
+                result.fold(
+                    onSuccess = { items ->
+                        currentStreams = items
+                        streamList = items
+                    },
+                    onFailure = { Log.e("StreamLoader", "Failed to refresh category streams", it) },
+                )
+            }
+
+            // 2. Update index
             currentStreamIndex = streamList.indexOfFirst { it.id == item.id }
 
-            val currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else streamList
-
-            // Re-fetch history to ensure we have the latest watched items from previous stream
-            val lastWatched = mediaRepository?.getWatchHistoryForContentTypeSuspend(contentType) ?: emptyList()
+            // 3. Re-fetch history to ensure we have the latest watched items from previous stream
+            val lastWatched = repo.getWatchHistoryForContentTypeSuspend(contentType)
 
             loadStreamInternal(item.id, item.name, currentStreams, lastWatched)
         }
@@ -289,7 +304,7 @@ class StreamLoaderViewModel(
                     _state.value = currentState.copy(isFavorite = false)
                 }
             } else {
-                if (repo.addFavoriteSuspend(currentState.streamId, currentState.streamName, categoryId, contentType)) {
+                if (repo.addFavoriteSuspend(currentState.streamId, currentState.streamName, currentCategoryId, contentType)) {
                     _state.value = currentState.copy(isFavorite = true)
                 }
             }
@@ -320,7 +335,7 @@ class StreamLoaderViewModel(
                 // VOD Rules: Only add to history once > 2% threshold is reached to avoid cluttering
                 if (progressPercent >= 2.0f) {
                     repo.saveLastPlayedItem(
-                        categoryId = categoryId,
+                        categoryId = currentCategoryId,
                         itemId = currentState.streamId,
                         itemName = currentState.streamName,
                         contentType = contentType,
@@ -334,7 +349,7 @@ class StreamLoaderViewModel(
                 repo.savePlaybackPosition(
                     currentState.streamId,
                     currentState.streamName,
-                    categoryId,
+                    currentCategoryId,
                     contentType,
                     position,
                     duration,
@@ -368,7 +383,7 @@ class StreamLoaderViewModel(
                 // Final check to see if we reached threshold before exiting
                 if (progressPercent >= 2.0f) {
                     repo.saveLastPlayedItem(
-                        categoryId = categoryId,
+                        categoryId = currentCategoryId,
                         itemId = currentState.streamId,
                         itemName = currentState.streamName,
                         contentType = contentType,
@@ -382,7 +397,7 @@ class StreamLoaderViewModel(
                 repo.savePlaybackPosition(
                     currentState.streamId,
                     currentState.streamName,
-                    categoryId,
+                    currentCategoryId,
                     contentType,
                     position,
                     duration,
