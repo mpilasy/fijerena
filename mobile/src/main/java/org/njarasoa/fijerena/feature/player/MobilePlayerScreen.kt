@@ -137,15 +137,20 @@ fun MobilePlayerScreen(
     var showStats by remember { mutableStateOf(false) }
     var hasStartedPlaying by remember { mutableStateOf(false) }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
+    val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
 
     // Auto-show toast on repeated buffer exhaustion
-    LaunchedEffect(appSettings.isDevMode) {
+    LaunchedEffect(appSettings.isDevMode, currentMetadata.streamUrl) {
         val exhaustionTimestamps = mutableListOf<Long>()
         var lastSeenCount = 0
         while (true) {
             val currentCount = StreamingPlaybackService.getInstance()?.exhaustionRebufferCount?.value ?: 0
-            if (currentCount > lastSeenCount) {
+            if (currentCount < lastSeenCount) {
+                // Count was reset (likely channel switch)
+                lastSeenCount = currentCount
+                exhaustionTimestamps.clear()
+            } else if (currentCount > lastSeenCount) {
                 val now = System.currentTimeMillis()
                 repeat(currentCount - lastSeenCount) {
                     exhaustionTimestamps.add(now)
@@ -168,9 +173,6 @@ fun MobilePlayerScreen(
     // Live position polling for smooth VOD timer updates
     var livePosition by remember { mutableLongStateOf(0L) }
     var liveDuration by remember { mutableLongStateOf(0L) }
-
-    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
-    val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
 
     // Capture delegated properties into local variables for stable smart casting
     val currentPs = playbackState

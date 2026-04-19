@@ -393,8 +393,9 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                     text = "Cancel",
                 )
             },
-            title = { Text("Clear EPG Data?") },
-            text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") },
+            title = { Text("Clear EPG Data?", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+            text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
+            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
 
@@ -416,8 +417,9 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                     text = "Cancel",
                 )
             },
-            title = { Text("Delete EPG Source?") },
-            text = { Text("This will remove \"${source.label.ifBlank { source.url }}\" and all its indexed data.") },
+            title = { Text("Delete EPG Source?", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+            text = { Text("This will remove \"${source.label.ifBlank { source.url }}\" and all its indexed data.", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
+            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
 
@@ -439,8 +441,9 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                     text = "Cancel",
                 )
             },
-            title = { Text("Delete Selected Sources?") },
-            text = { Text("This will permanently remove ${idsToDelete.size} source(s) and all their indexed data.") },
+            title = { Text("Delete Selected Sources?", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+            text = { Text("This will permanently remove ${idsToDelete.size} source(s) and all their indexed data.", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
+            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
 
@@ -448,7 +451,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
         var timeInput by remember { mutableStateOf(viewModel.epgRefreshTime) }
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            title = { Text("Set Refresh Time") },
+            title = { Text("Set Refresh Time", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
             text = {
                 androidx.compose.material3.OutlinedTextField(
                     value = timeInput,
@@ -456,6 +459,15 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                     label = { Text("Time (HH:mm)") },
                     placeholder = { Text("e.g. 04:00") },
                     modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                        unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                        cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                        focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+                    )
                 )
             },
             confirmButton = {
@@ -470,6 +482,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
             dismissButton = {
                 CinemaSecondaryButton(onClick = { showTimePicker = false }, text = "Cancel")
             },
+            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
 }
@@ -584,7 +597,7 @@ private fun EpgSourceEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialSource == null) "Add EPG Source" else "Edit EPG Source") },
+        title = { Text(if (initialSource == null) "Add EPG Source" else "Edit EPG Source", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
         confirmButton = {
             CinemaPrimaryButton(
                 onClick = {
@@ -603,6 +616,7 @@ private fun EpgSourceEditDialog(
         dismissButton = {
             CinemaSecondaryButton(onClick = onDismiss, text = "Cancel")
         },
+        containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                 androidx.compose.material3.OutlinedTextField(
@@ -611,6 +625,15 @@ private fun EpgSourceEditDialog(
                     label = { Text("XMLTV URL") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                        unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                        cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                        focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+                    )
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = label,
@@ -618,6 +641,15 @@ private fun EpgSourceEditDialog(
                     label = { Text("Label (Optional)") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                        unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                        cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                        focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+                    )
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = tzOffset,
@@ -625,6 +657,15 @@ private fun EpgSourceEditDialog(
                     label = { Text("Timezone Offset (Hours)") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                        unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                        cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                        focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                        unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+                    )
                 )
             }
         },

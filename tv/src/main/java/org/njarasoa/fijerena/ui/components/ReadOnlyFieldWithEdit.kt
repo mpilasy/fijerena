@@ -129,7 +129,10 @@ fun ReadOnlyFieldWithEdit(
         )
 
         LaunchedEffect(Unit) {
-            editFocusRequester.requestFocus()
+            try {
+                editFocusRequester.requestFocus()
+            } catch (_: IllegalStateException) {
+            }
         }
     } else {
         Row(

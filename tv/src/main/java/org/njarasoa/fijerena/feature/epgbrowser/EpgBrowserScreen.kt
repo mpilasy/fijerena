@@ -881,7 +881,7 @@ private fun ProgramCard(
                 val airingContext = LocalContext.current
                 AlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
-                    title = { Text("Watch now?") },
+                    title = { Text("Watch now?", color = CinemaTextPrimary) },
                     text = {
                         Text(
                             "This show airs at ${formatAiringTime(
@@ -889,17 +889,19 @@ private fun ProgramCard(
                                 pending.startEpoch,
                                 pending.endEpoch,
                             )}.\nWatch ${pending.channelName} now?",
+                            color = CinemaTextSecondary
                         )
                     },
                     confirmButton = {
-                        TextButton(onClick = {
+                        androidx.tv.material3.Button(onClick = {
                             pendingConfirmAiring = null
                             onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
                         }) { Text("Watch now") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
+                        androidx.tv.material3.Button(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
                     },
+                    containerColor = CinemaSurface,
                 )
             }
         }

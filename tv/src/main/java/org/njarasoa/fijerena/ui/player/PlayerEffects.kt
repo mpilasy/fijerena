@@ -22,12 +22,16 @@ fun PlayerEffects(
     val context = androidx.compose.ui.platform.LocalContext.current
 
     // Auto-show toast on repeated buffer exhaustion
-    LaunchedEffect(isDeveloperMode) {
+    LaunchedEffect(isDeveloperMode, currentMetadata.streamUrl) {
         val exhaustionTimestamps = mutableListOf<Long>()
         var lastSeenCount = 0
         while (true) {
             val currentCount = StreamingPlaybackService.getInstance()?.exhaustionRebufferCount?.value ?: 0
-            if (currentCount > lastSeenCount) {
+            if (currentCount < lastSeenCount) {
+                // Count was reset (likely channel switch)
+                lastSeenCount = currentCount
+                exhaustionTimestamps.clear()
+            } else if (currentCount > lastSeenCount) {
                 val now = System.currentTimeMillis()
                 repeat(currentCount - lastSeenCount) {
                     exhaustionTimestamps.add(now)
