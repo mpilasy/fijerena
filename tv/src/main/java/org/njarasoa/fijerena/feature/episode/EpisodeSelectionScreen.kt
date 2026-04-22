@@ -6,8 +6,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +49,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -78,7 +84,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
+import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -363,21 +369,57 @@ private fun EpisodeListContent(
                             color = CinemaTextPrimary,
                         )
                         // Favorite button
+                        var favoriteFocused by remember { mutableStateOf(false) }
+                        val favoriteFocusScale by animateFloatAsState(
+                            targetValue = if (favoriteFocused) TvFocusTokens.focusedScale else TvFocusTokens.defaultScale,
+                            animationSpec = tween(durationMillis = CinemaAnimation.focusDurationMs),
+                            label = "favorite_focus_scale",
+                        )
                         IconButton(
                             onClick = onToggleFavorite,
                             modifier =
                                 Modifier
                                     .size(TvDimensions.iconMedium.scaled(scale))
-                                    .tvFocusableNoScale(),
+                                    .graphicsLayer {
+                                        scaleX = favoriteFocusScale
+                                        scaleY = favoriteFocusScale
+                                    }
+                                    .background(
+                                        color = if (favoriteFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
+                                        shape = RoundedCornerShape(CornerRadius.small),
+                                    )
+                                    .then(
+                                        if (favoriteFocused) {
+                                            Modifier.border(
+                                                width = TvFocusTokens.focusBorderWidth,
+                                                color = CinemaAccentLight,
+                                                shape = RoundedCornerShape(CornerRadius.small),
+                                            )
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .onFocusChanged { favoriteFocused = it.isFocused },
                         ) {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
                                 contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
-                                tint = if (isFavorite) CinemaAccent else CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                tint =
+                                    when {
+                                        isFavorite -> CinemaAccent
+                                        favoriteFocused -> CinemaAccentLight
+                                        else -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                                    },
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
                         }
                         // Refresh button
+                        var refreshFocused by remember { mutableStateOf(false) }
+                        val refreshFocusScale by animateFloatAsState(
+                            targetValue = if (refreshFocused) TvFocusTokens.focusedScale else TvFocusTokens.defaultScale,
+                            animationSpec = tween(durationMillis = CinemaAnimation.focusDurationMs),
+                            label = "refresh_focus_scale",
+                        )
                         IconButton(
                             onClick = {
                                 isRefreshing = true
@@ -385,12 +427,39 @@ private fun EpisodeListContent(
                                 isRefreshing = false
                             },
                             enabled = !isRefreshing,
-                            modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                            modifier =
+                                Modifier
+                                    .size(TvDimensions.iconMedium.scaled(scale))
+                                    .graphicsLayer {
+                                        scaleX = refreshFocusScale
+                                        scaleY = refreshFocusScale
+                                    }
+                                    .background(
+                                        color = if (refreshFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
+                                        shape = RoundedCornerShape(CornerRadius.small),
+                                    )
+                                    .then(
+                                        if (refreshFocused) {
+                                            Modifier.border(
+                                                width = TvFocusTokens.focusBorderWidth,
+                                                color = CinemaAccentLight,
+                                                shape = RoundedCornerShape(CornerRadius.small),
+                                            )
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .onFocusChanged { refreshFocused = it.isFocused },
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Refresh series info",
-                                tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                tint =
+                                    if (refreshFocused) {
+                                        CinemaAccentLight
+                                    } else {
+                                        CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                                    },
                                 modifier =
                                     Modifier
                                         .size(TvDimensions.iconSmall.scaled(scale))
@@ -791,13 +860,38 @@ private fun SeasonHeader(
     onToggle: () -> Unit,
 ) {
     val scale = LocalUiScale.current
+    var isFocused by remember { mutableStateOf(false) }
+    val focusScale by animateFloatAsState(
+        targetValue = if (isFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
+        animationSpec = tween(durationMillis = CinemaAnimation.focusDurationMs),
+        label = "season_header_focus_scale",
+    )
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .tvFocusableNoScale()
+                .graphicsLayer {
+                    scaleX = focusScale
+                    scaleY = focusScale
+                }
+                .background(
+                    color = if (isFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
+                    shape = RoundedCornerShape(CornerRadius.medium),
+                )
+                .then(
+                    if (isFocused) {
+                        Modifier.border(
+                            width = TvFocusTokens.focusBorderWidth,
+                            color = CinemaAccentLight,
+                            shape = RoundedCornerShape(CornerRadius.medium),
+                        )
+                    } else {
+                        Modifier
+                    },
+                )
+                .onFocusChanged { isFocused = it.isFocused }
                 .clickable { onToggle() }
-                .padding(vertical = Spacing.sm.scaled(scale)),
+                .padding(horizontal = Spacing.sm.scaled(scale), vertical = Spacing.sm.scaled(scale)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
     ) {
