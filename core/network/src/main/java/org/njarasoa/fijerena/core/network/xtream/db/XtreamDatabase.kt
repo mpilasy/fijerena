@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         XtreamSeriesEntity::class,
         XtreamEpisodeEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -41,6 +41,18 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /** Migration 8→9: add richer episode metadata columns. */
+        private val MIGRATION_8_9 =
+            object : Migration(8, 9) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `xtream_episodes` ADD COLUMN `plot` TEXT")
+                    db.execSQL("ALTER TABLE `xtream_episodes` ADD COLUMN `airDate` TEXT")
+                    db.execSQL("ALTER TABLE `xtream_episodes` ADD COLUMN `durationSecs` INTEGER")
+                    db.execSQL("ALTER TABLE `xtream_episodes` ADD COLUMN `bitrate` INTEGER")
+                    db.execSQL("ALTER TABLE `xtream_episodes` ADD COLUMN `tmdbId` TEXT")
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -48,7 +60,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         context.applicationContext,
                         XtreamDatabase::class.java,
                         "xtream_v2.db",
-                    ).addMigrations(MIGRATION_7_8)
+                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { INSTANCE = it }

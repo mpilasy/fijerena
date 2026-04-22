@@ -29,6 +29,7 @@ sealed class PlaybackState {
 data class PlayerMetadata(
     val title: String = "",
     val channelName: String = "",
+    val description: String? = null,
     val streamUrl: String = "",
     val isLive: Boolean = false,
     val headers: Map<String, String> = emptyMap(),

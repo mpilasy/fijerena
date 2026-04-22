@@ -207,6 +207,32 @@ fun MobileControlsOverlay(
             ClockDisplay()
         }
 
+        // Metadata Description (Middle area, above play buttons)
+        metadata.description?.let { description ->
+            if (description.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(bottom = 120.dp) // Push above play buttons
+                        .padding(horizontal = CinemaSpacing.xl)
+                        .background(
+                            color = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(CinemaSpacing.md)
+                ) {
+                    Text(
+                        text = description,
+                        style = typography.bodyMedium,
+                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(0.8f) // Limit width for better readability
+                    )
+                }
+            }
+        }
+
         // Center row: Rewind | Play/Pause | FastForward (VOD only shows seek buttons)
         Row(
             modifier = Modifier.align(Alignment.Center),

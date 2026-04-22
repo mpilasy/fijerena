@@ -40,6 +40,7 @@ class StreamLoaderViewModel(
             val streamId: String,
             val resumePosition: Long,
             val isLive: Boolean,
+            val description: String? = null,
             val categoryStreams: List<MediaItem> = emptyList(),
             val lastWatchedStreams: List<MediaItem> = emptyList(),
             val currentEpgProgram: EpgProgram? = null,
@@ -195,6 +196,36 @@ class StreamLoaderViewModel(
                         repo.onPlaybackStarted(streamId)
                     }
 
+                    // Get Description (VOD/Series)
+                    var description: String? = null
+                    if (contentType != ContentType.LIVE_TV) {
+                        // For episodes, the repository.resolvePlayableStream doesn't return metadata
+                        // We might need to fetch the item's metadata if we don't have it
+                        val currentItem = currentStreams.find { it.id == streamId }
+                        description = currentItem?.metadata?.plot
+
+                        // Special case for episodes: if we have episodeId, we should try to get the episode-specific plot
+                        if (episodeId != null && contentType == ContentType.TV_SHOWS && seriesId != null) {
+                            Log.d("StreamLoader", "Fetching series detail for $seriesId to get episode $episodeId plot")
+                            val seriesDetailResult = repo.getSeriesDetail(seriesId)
+                            seriesDetailResult.getOrNull()?.let { detail ->
+                                val episode = detail.episodes.values.flatten().find { it.id == episodeId }
+                                Log.d("StreamLoader", "Found episode: ${episode?.title}, plot present: ${episode?.metadata?.plot != null}")
+                                description = episode?.metadata?.plot ?: detail.metadata.plot
+                            }
+                        } else if (contentType == ContentType.MOVIES) {
+                            val movieDetailResult = repo.getMovieDetail(streamId)
+                            movieDetailResult.getOrNull()?.let { detail ->
+                                description = detail.metadata.plot
+                            }
+                        }
+                    } else if (currentProgram != null) {
+                        description = currentProgram.description
+                    }
+
+                    Log.d("StreamLoader", "Final description for $streamId: ${description?.take(20)}...")
+
+
                     _state.value =
                         StreamState.Success(
                             streamUrl = playable.uri,
@@ -203,6 +234,7 @@ class StreamLoaderViewModel(
                             streamId = streamId,
                             resumePosition = resumePos,
                             isLive = contentType == ContentType.LIVE_TV,
+                            description = description,
                             categoryStreams = currentStreams,
                             lastWatchedStreams = lastWatched,
                             currentEpgProgram = currentProgram,

@@ -90,6 +90,18 @@ fun MetadataOverlay(
                     style = MaterialTheme.typography.headlineSmall,
                     color = CinemaTextPrimary,
                 )
+                metadata.description?.let { description ->
+                    if (description.isNotBlank()) {
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                            maxLines = 3,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
             }
 
             // Progress bar (for non-live streams)

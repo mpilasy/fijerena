@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.core.network
 
+import org.njarasoa.fijerena.core.network.asString
+
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -40,6 +42,16 @@ object XtreamMapper {
                     if (tvArchive != 0) put("tvArchive", tvArchive.toString())
                     directSource?.let { put("directSource", it) }
                 },
+            metadata =
+                MediaMetadata(
+                    plot = description.asString(),
+                    cast = cast,
+                    director = director,
+                    genre = genre,
+                    releaseDate = releaseDate,
+                    rating = rating.asString(),
+                    duration = duration.asString(),
+                ),
         )
 
     fun XtreamSeries.toDomain(): MediaItem =
@@ -51,12 +63,12 @@ object XtreamMapper {
             thumbnailUrl = cover,
             metadata =
                 MediaMetadata(
-                    plot = plot,
+                    plot = plot.asString(),
                     cast = cast,
                     director = director,
                     genre = genre,
                     releaseDate = releaseDate,
-                    rating = rating,
+                    rating = rating.asString(),
                 ),
         )
 
@@ -66,12 +78,12 @@ object XtreamMapper {
             name = info?.name ?: "",
             metadata =
                 MediaMetadata(
-                    plot = info?.plot,
+                    plot = info?.plot.asString(),
                     cast = info?.cast,
                     director = info?.director,
                     genre = info?.genre,
                     releaseDate = info?.releaseDate,
-                    rating = info?.rating,
+                    rating = info?.rating.asString(),
                 ),
             coverUrl = info?.cover,
             seasons = seasons.map { it.toDomain() },
@@ -98,26 +110,31 @@ object XtreamMapper {
             extension = containerExtension,
             metadata =
                 MediaMetadata(
-                    plot = info?.overview,
-                    duration = info?.duration,
-                    rating = info?.rating,
+                    plot = info?.plot.asString() ?: info?.overview.asString(),
+                    duration = info?.duration.asString(),
+                    durationSecs = info?.durationSecs,
+                    bitrate = info?.bitrate,
+                    rating = info?.rating.asString(),
+                    airDate = info?.airDate,
+                    releaseDate = info?.airDate,
+                    tmdbId = info?.tmdbId,
                 ),
-            thumbnailUrl = info?.movieImage,
+            thumbnailUrl = info?.movieImage ?: info?.coverBig,
         )
 
     fun VodInfo.toDomain(movieId: String): MovieDetail =
         MovieDetail(
             id = movieId,
-            name = info?.name ?: movieData?.name ?: "",
+            name = info?.name ?: "",
             metadata =
                 MediaMetadata(
-                    plot = info?.plot,
+                    plot = info?.plot.asString(),
                     cast = info?.cast,
                     director = info?.director,
                     genre = info?.genre,
                     releaseDate = info?.releaseDate,
-                    rating = info?.rating,
-                    duration = info?.duration,
+                    rating = info?.rating.asString(),
+                    duration = info?.duration.asString(),
                 ),
             coverUrl = info?.coverBig ?: info?.movieImage,
             extension = movieData?.containerExtension,

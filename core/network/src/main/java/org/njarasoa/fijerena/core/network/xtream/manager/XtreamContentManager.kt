@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.Result
+import org.njarasoa.fijerena.core.network.asString
+import org.njarasoa.fijerena.core.network.toJsonPrimitive
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
@@ -288,16 +290,16 @@ class XtreamContentManager(
                             num = it.num,
                             name = it.name,
                             cover = it.cover,
-                            plot = it.plot,
+                            plot = it.plot.asString(),
                             cast = it.cast,
                             director = it.director,
                             genre = it.genre,
                             releaseDate = it.releaseDate,
                             lastModified = it.lastModified,
-                            rating = it.rating,
+                            rating = it.rating.asString(),
                             rating5based = it.rating5based,
                             youtubeTrailer = it.youtubeTrailer,
-                            episodeRunTime = it.episodeRunTime,
+                            episodeRunTime = it.episodeRunTime.asString(),
                             categoryId = it.categoryId,
                         )
                     },
@@ -507,16 +509,16 @@ class XtreamContentManager(
                                         num = it.num,
                                         name = it.name,
                                         cover = it.cover,
-                                        plot = it.plot,
+                                        plot = it.plot.asString(),
                                         cast = it.cast,
                                         director = it.director,
                                         genre = it.genre,
                                         releaseDate = it.releaseDate,
                                         lastModified = it.lastModified,
-                                        rating = it.rating,
+                                        rating = it.rating.asString(),
                                         rating5based = it.rating5based,
                                         youtubeTrailer = it.youtubeTrailer,
-                                        episodeRunTime = it.episodeRunTime,
+                                        episodeRunTime = it.episodeRunTime.asString(),
                                         categoryId = it.categoryId,
                                         backdropPath = it.backdropPath?.joinToString(","),
                                     )
@@ -530,16 +532,16 @@ class XtreamContentManager(
                                             num = it.num,
                                             name = it.name,
                                             cover = it.cover,
-                                            plot = it.plot,
+                                            plot = it.plot.asString(),
                                             cast = it.cast,
                                             director = it.director,
                                             genre = it.genre,
                                             releaseDate = it.releaseDate,
                                             lastModified = it.lastModified,
-                                            rating = it.rating,
+                                            rating = it.rating.asString(),
                                             rating5based = it.rating5based,
                                             youtubeTrailer = it.youtubeTrailer,
-                                            episodeRunTime = it.episodeRunTime,
+                                            episodeRunTime = it.episodeRunTime.asString(),
                                             categoryId = it.categoryId,
                                             backdropPath = it.backdropPath?.joinToString(","),
                                             contentHash = contentHash,
@@ -592,15 +594,15 @@ class XtreamContentManager(
                         seriesDao.insertAll(
                             listOf(
                                 existing.copy(
-                                    plot = info.plot,
+                                    plot = info.plot.asString(),
                                     cast = info.cast,
                                     director = info.director,
                                     genre = info.genre,
                                     releaseDate = info.releaseDate,
-                                    rating = info.rating,
+                                    rating = info.rating.asString(),
                                     rating5based = info.rating5based,
                                     youtubeTrailer = info.youtubeTrailer,
-                                    episodeRunTime = info.episodeRunTime,
+                                    episodeRunTime = info.episodeRunTime.asString(),
                                     backdropPath = info.backdropPath?.joinToString(","),
                                 ),
                             ),
@@ -622,10 +624,15 @@ class XtreamContentManager(
                                 episodeNum = ep.episodeNum,
                                 title = ep.title,
                                 containerExtension = ep.containerExtension,
-                                overview = ep.info?.overview,
-                                duration = ep.info?.duration,
-                                rating = ep.info?.rating,
-                                movieImage = ep.info?.movieImage,
+                                overview = ep.info?.overview.asString(),
+                                plot = ep.info?.plot.asString(),
+                                airDate = ep.info?.airDate,
+                                duration = ep.info?.duration.asString(),
+                                durationSecs = ep.info?.durationSecs,
+                                bitrate = ep.info?.bitrate,
+                                rating = ep.info?.rating.asString(),
+                                movieImage = ep.info?.movieImage ?: ep.info?.coverBig,
+                                tmdbId = ep.info?.tmdbId,
                             ),
                         )
                     }
@@ -656,13 +663,13 @@ class XtreamContentManager(
                         providerId = providerId,
                         streamId = vodId,
                         type = XtreamStreamEntity.TYPE_VOD,
-                        description = info.plot,
+                        description = info.plot.asString(),
                         cast = info.cast,
                         director = info.director,
                         genre = info.genre,
                         releaseDate = info.releaseDate,
-                        rating = info.rating,
-                        duration = info.duration,
+                        rating = info.rating.asString(),
+                        duration = info.duration.asString(),
                         youtubeTrailer = null, // MovieInfo doesn't seem to have trailer, but SeriesInfo does
                     )
                 }
@@ -744,15 +751,14 @@ class XtreamContentManager(
             tvArchive = it.tvArchive,
             directSource = it.directSource,
             tvArchiveDuration = it.tvArchiveDuration,
-            description = it.description,
+            description = it.description.toJsonPrimitive(),
             cast = it.cast,
             director = it.director,
             genre = it.genre,
             releaseDate = it.releaseDate,
-            rating = it.rating,
-            duration = it.duration,
-            youtubeTrailer = it.youtubeTrailer,
-        )
+            rating = it.rating.toJsonPrimitive(),
+            duration = it.duration.toJsonPrimitive(),
+            youtubeTrailer = it.youtubeTrailer,        )
 
     private fun mapSeriesEntityToStream(it: XtreamSeriesEntity) =
         XtreamStream(
@@ -768,13 +774,13 @@ class XtreamContentManager(
             tvArchive = 0,
             directSource = null,
             tvArchiveDuration = 0,
-            description = it.plot,
+            description = it.plot.toJsonPrimitive(),
             cast = it.cast,
             director = it.director,
             genre = it.genre,
             releaseDate = it.releaseDate,
-            rating = it.rating,
-            duration = it.episodeRunTime,
+            rating = it.rating.toJsonPrimitive(),
+            duration = it.episodeRunTime.toJsonPrimitive(),
             youtubeTrailer = it.youtubeTrailer,
         )
 }

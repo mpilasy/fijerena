@@ -16,6 +16,10 @@ data class MediaMetadata(
     val releaseDate: String? = null,
     val rating: String? = null,
     val duration: String? = null,
+    val durationSecs: Int? = null,
+    val bitrate: Int? = null,
+    val airDate: String? = null,
+    val tmdbId: String? = null,
     val year: Int? = null,
 )
 

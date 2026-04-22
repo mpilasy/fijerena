@@ -11,6 +11,7 @@ import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonNames
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -55,8 +56,9 @@ data class XtreamStream(
     val directSource: String? = null,
     @SerialName("tv_archive_duration")
     val tvArchiveDuration: Int = 0,
+    @JsonNames("description", "plot", "overview")
     @SerialName("description")
-    val description: String? = null,
+    val description: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("cast")
     val cast: String? = null,
     @SerialName("director")
@@ -66,9 +68,9 @@ data class XtreamStream(
     @SerialName("release_date")
     val releaseDate: String? = null,
     @SerialName("rating")
-    val rating: String? = null,
+    val rating: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("duration")
-    val duration: String? = null,
+    val duration: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("youtube_trailer")
     val youtubeTrailer: String? = null,
 )
@@ -85,10 +87,12 @@ data class XtreamSeries(
     val name: String,
     @SerialName("series_id")
     val seriesId: Int,
+    @JsonNames("cover", "movie_image")
     @SerialName("cover")
     val cover: String? = null,
+    @JsonNames("plot", "description", "overview")
     @SerialName("plot")
-    val plot: String? = null,
+    val plot: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("cast")
     val cast: String? = null,
     @SerialName("director")
@@ -100,7 +104,7 @@ data class XtreamSeries(
     @SerialName("last_modified")
     val lastModified: String? = null,
     @SerialName("rating")
-    val rating: String? = null,
+    val rating: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("rating_5based")
     val rating5based: Double? = null,
     @SerialName("backdrop_path")
@@ -108,7 +112,7 @@ data class XtreamSeries(
     @SerialName("youtube_trailer")
     val youtubeTrailer: String? = null,
     @SerialName("episode_run_time")
-    val episodeRunTime: String? = null,
+    val episodeRunTime: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("category_id")
     val categoryId: String,
 )
@@ -197,10 +201,12 @@ data class SeriesInfo(
 data class SeriesDetails(
     @SerialName("name")
     val name: String,
+    @JsonNames("cover", "movie_image")
     @SerialName("cover")
     val cover: String? = null,
+    @JsonNames("plot", "description", "overview")
     @SerialName("plot")
-    val plot: String? = null,
+    val plot: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("cast")
     val cast: String? = null,
     @SerialName("director")
@@ -210,17 +216,19 @@ data class SeriesDetails(
     @SerialName("release_date")
     val releaseDate: String? = null,
     @SerialName("rating")
-    val rating: String? = null,
+    val rating: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("rating_5based")
     val rating5based: Double? = null,
     @SerialName("youtube_trailer")
     val youtubeTrailer: String? = null,
     @SerialName("episode_run_time")
-    val episodeRunTime: String? = null,
+    val episodeRunTime: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("backdrop_path")
     val backdropPath: List<String>? = null,
     @SerialName("category_id")
     val categoryId: String? = null,
+    @SerialName("tmdb")
+    val tmdb: kotlinx.serialization.json.JsonElement? = null,
 )
 
 /**
@@ -260,18 +268,35 @@ data class Episode(
 /**
  * Additional information about an episode
  */
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable
 data class EpisodeInfo(
     @SerialName("name")
     val name: String? = null,
+    @JsonNames("overview", "summary")
     @SerialName("overview")
-    val overview: String? = null,
+    val overview: kotlinx.serialization.json.JsonElement? = null,
+    @JsonNames("plot", "synopsis", "description")
+    @SerialName("plot")
+    val plot: kotlinx.serialization.json.JsonElement? = null,
+    @JsonNames("air_date", "release_date", "releasedate")
+    @SerialName("air_date")
+    val airDate: String? = null,
+    @JsonNames("movie_image", "cover", "thumbnail")
     @SerialName("movie_image")
     val movieImage: String? = null,
+    @SerialName("cover_big")
+    val coverBig: String? = null,
     @SerialName("duration")
-    val duration: String? = null,
+    val duration: kotlinx.serialization.json.JsonElement? = null,
+    @SerialName("duration_secs")
+    val durationSecs: Int? = null,
+    @SerialName("bitrate")
+    val bitrate: Int? = null,
     @SerialName("rating")
-    val rating: String? = null,
+    val rating: kotlinx.serialization.json.JsonElement? = null,
+    @SerialName("tmdb_id")
+    val tmdbId: String? = null,
 )
 
 /**
@@ -296,8 +321,9 @@ data class MovieInfo(
     val coverBig: String? = null,
     @SerialName("movie_image")
     val movieImage: String? = null,
+    @JsonNames("plot", "description", "overview")
     @SerialName("plot")
-    val plot: String? = null,
+    val plot: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("cast")
     val cast: String? = null,
     @SerialName("director")
@@ -307,9 +333,9 @@ data class MovieInfo(
     @SerialName("release_date")
     val releaseDate: String? = null,
     @SerialName("rating")
-    val rating: String? = null,
+    val rating: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("duration")
-    val duration: String? = null,
+    val duration: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("video")
     @Serializable(with = VideoInfoSerializer::class)
     val video: VideoInfo? = null,

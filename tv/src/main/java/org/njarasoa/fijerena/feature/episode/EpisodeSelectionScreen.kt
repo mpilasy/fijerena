@@ -570,7 +570,7 @@ private fun EpisodeDetailPanel(
         ) {
             // Episode thumbnail
             CinemaThumbnail(
-                url = episode.thumbnailUrl,
+                url = episode.thumbnailUrl ?: seriesDetail.coverUrl,
                 fallbackLetter = episode.title.firstOrNull(),
                 contentType = ThumbnailContentType.TV_SHOW,
                 modifier =
@@ -672,10 +672,10 @@ private fun EpisodeDetailPanel(
                     }
 
                     // Plot/Description
-                    episode.metadata.plot?.let { plot ->
+                    episode.metadata.plot?.let { plotText ->
                         Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
                         Text(
-                            text = plot,
+                            text = plotText,
                             style = detailScaledStyles.bodyLarge,
                             color = CinemaTextPrimary,
                             maxLines = 6,
@@ -703,6 +703,26 @@ private fun EpisodeDetailPanel(
                     director?.let {
                         Text(
                             text = "Director: $it",
+                            style = detailScaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                    }
+
+                    // Air date
+                    episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        Text(
+                            text = "Aired: $it",
+                            style = detailScaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                    }
+
+                    // Bitrate
+                    episode.metadata.bitrate?.takeIf { it > 0 }?.let {
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        Text(
+                            text = "Bitrate: $it kbps",
                             style = detailScaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         )
@@ -855,9 +875,9 @@ private fun EpisodeCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                episode.metadata.plot?.let { plot ->
+                episode.metadata.plot?.let { plotText ->
                     Text(
-                        text = plot,
+                        text = plotText,
                         style = cardScaledStyles.bodySmall,
                         color = CinemaTextSecondary,
                         maxLines = 2,
