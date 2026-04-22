@@ -46,6 +46,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Card
@@ -301,15 +306,33 @@ private fun EpisodeListContent(
         }
     }
 
+    // Flat ordered list of all episodes across seasons (for prev/next navigation)
+    val flatEpisodes =
+        remember(sortedSeasons, sortedEpisodesBySeason) {
+            sortedSeasons.flatMap { season ->
+                sortedEpisodesBySeason[season.seasonNumber.toString()] ?: emptyList()
+            }
+        }
+
     if (selectedEpisode != null) {
+        val current = selectedEpisode!!
+        val currentIdx =
+            remember(flatEpisodes, current.id) {
+                flatEpisodes.indexOfFirst { it.id == current.id }
+            }
+        val previousEpisode = flatEpisodes.getOrNull(currentIdx - 1)
+        val nextEpisode = flatEpisodes.getOrNull(currentIdx + 1)
         // Show episode detail panel
         EpisodeDetailPanel(
-            episode = selectedEpisode!!,
+            episode = current,
             seriesDetail = seriesDetail,
             seriesName = seriesName,
             categoryId = categoryId,
             providerName = providerName,
             mediaRepository = mediaRepository,
+            previousEpisode = previousEpisode,
+            nextEpisode = nextEpisode,
+            onNavigate = { next -> selectedEpisode = next },
             onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
                 onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
             },
@@ -476,6 +499,9 @@ private fun EpisodeDetailPanel(
     categoryId: String,
     providerName: String,
     mediaRepository: MediaRepository,
+    previousEpisode: DomainEpisodeItem?,
+    nextEpisode: DomainEpisodeItem?,
+    onNavigate: (DomainEpisodeItem) -> Unit,
     onPlay: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -511,8 +537,8 @@ private fun EpisodeDetailPanel(
         }
     }
 
-    // Request focus on Play/Resume button when screen loads or resume data arrives
-    LaunchedEffect(resumePositionMs) {
+    // Request focus on Play/Resume button when screen loads, resume data arrives, or episode changes
+    LaunchedEffect(episode.id, resumePositionMs) {
         try {
             playButtonFocusRequester.requestFocus()
         } catch (_: IllegalStateException) {
@@ -523,6 +549,14 @@ private fun EpisodeDetailPanel(
         modifier =
             Modifier
                 .fillMaxSize()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when (event.key) {
+                        Key.MediaNext -> nextEpisode?.let { onNavigate(it); true } ?: false
+                        Key.MediaPrevious -> previousEpisode?.let { onNavigate(it); true } ?: false
+                        else -> false
+                    }
+                }
                 .verticalScroll(rememberScrollState())
                 .focusable()
                 .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
@@ -669,6 +703,22 @@ private fun EpisodeDetailPanel(
                                 modifier = Modifier.focusRequester(playButtonFocusRequester),
                             )
                         }
+                    }
+
+                    // Prev/Next episode hint (remote media keys)
+                    if (previousEpisode != null || nextEpisode != null) {
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        val hint =
+                            buildString {
+                                if (previousEpisode != null) append("⏮ Previous")
+                                if (previousEpisode != null && nextEpisode != null) append("   ")
+                                if (nextEpisode != null) append("Next ⏭")
+                            }
+                        Text(
+                            text = hint,
+                            style = detailScaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
+                        )
                     }
 
                     // Plot/Description
