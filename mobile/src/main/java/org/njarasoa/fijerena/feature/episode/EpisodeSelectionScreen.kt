@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.episode
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -155,11 +157,25 @@ fun MobileEpisodeSelectionScreen(
                     )
                 }
                 seriesDetail != null && selectedEpisode != null -> {
+                    val detail = seriesDetail!!
+                    val flatEpisodes =
+                        remember(detail) {
+                            flattenEpisodes(detail)
+                        }
+                    val currentIdx =
+                        remember(flatEpisodes, selectedEpisode!!.id) {
+                            flatEpisodes.indexOfFirst { it.id == selectedEpisode!!.id }
+                        }
+                    val previousEpisode = flatEpisodes.getOrNull(currentIdx - 1)
+                    val nextEpisode = flatEpisodes.getOrNull(currentIdx + 1)
                     EpisodeDetailContent(
                         episode = selectedEpisode!!,
-                        seriesDetail = seriesDetail!!,
+                        seriesDetail = detail,
                         categoryId = categoryId,
                         mediaRepository = mediaRepository!!,
+                        previousEpisode = previousEpisode,
+                        nextEpisode = nextEpisode,
+                        onNavigate = { next -> selectedEpisode = next },
                         onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
                             onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
                         },
@@ -349,6 +365,9 @@ private fun EpisodeDetailContent(
     seriesDetail: SeriesDetail,
     categoryId: String,
     mediaRepository: MediaRepository,
+    previousEpisode: DomainEpisodeItem?,
+    nextEpisode: DomainEpisodeItem?,
+    onNavigate: (DomainEpisodeItem) -> Unit,
     onPlay: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
 ) {
     val extension = episode.extension ?: "mp4"
@@ -370,6 +389,23 @@ private fun EpisodeDetailContent(
         modifier =
             Modifier
                 .fillMaxSize()
+                .pointerInput(episode.id, previousEpisode, nextEpisode) {
+                    var dragAmount = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { dragAmount = 0f },
+                        onDragEnd = {
+                            if (dragAmount > EPISODE_SWIPE_THRESHOLD_PX && previousEpisode != null) {
+                                onNavigate(previousEpisode)
+                            } else if (dragAmount < -EPISODE_SWIPE_THRESHOLD_PX && nextEpisode != null) {
+                                onNavigate(nextEpisode)
+                            }
+                        },
+                        onHorizontalDrag = { change, delta ->
+                            dragAmount += delta
+                            change.consume()
+                        },
+                    )
+                }
                 .verticalScroll(rememberScrollState())
                 .padding(CinemaSpacing.md),
     ) {
@@ -699,6 +735,20 @@ private fun ErrorScreen(
                 Text("Back")
             }
         }
+    }
+}
+
+private const val EPISODE_SWIPE_THRESHOLD_PX = 80f
+
+private fun flattenEpisodes(detail: SeriesDetail): List<DomainEpisodeItem> {
+    val seasonNumbers =
+        if (detail.seasons.isNotEmpty()) {
+            detail.seasons.map { it.seasonNumber }.sorted()
+        } else {
+            detail.episodes.keys.mapNotNull { it.toIntOrNull() }.sorted()
+        }
+    return seasonNumbers.flatMap { num ->
+        detail.episodes[num.toString()]?.sortedBy { it.episodeNumber } ?: emptyList()
     }
 }
 
