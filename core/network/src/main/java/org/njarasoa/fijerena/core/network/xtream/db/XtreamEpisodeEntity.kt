@@ -21,8 +21,13 @@ data class XtreamEpisodeEntity(
     val containerExtension: String,
     // Info from EpisodeInfo
     val overview: String? = null,
+    val plot: String? = null,
+    val airDate: String? = null,
     val duration: String? = null,
+    val durationSecs: Int? = null,
+    val bitrate: Int? = null,
     val rating: String? = null,
     val movieImage: String? = null,
+    val tmdbId: String? = null,
     val contentHash: Int = 0,
 )

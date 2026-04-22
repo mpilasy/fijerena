@@ -251,6 +251,7 @@ fun MobilePlayerScreen(
                 PlayerMetadata(
                     title = state.streamName,
                     channelName = appSettings.providerName,
+                    description = state.description,
                     streamUrl = state.streamUrl,
                     isLive = state.isLive,
                     headers = state.streamHeaders,

@@ -375,7 +375,7 @@ private fun EpisodeDetailContent(
     ) {
         // Episode thumbnail
         CinemaThumbnail(
-            url = episode.thumbnailUrl,
+            url = episode.thumbnailUrl ?: seriesDetail.coverUrl,
             fallbackLetter = episode.title.firstOrNull(),
             contentType = ThumbnailContentType.TV_SHOW,
             modifier =
@@ -492,10 +492,10 @@ private fun EpisodeDetailContent(
         }
 
         // Plot/Description
-        episode.metadata.plot?.let { plot ->
+        episode.metadata.plot?.let { plotText ->
             Spacer(modifier = Modifier.height(CinemaSpacing.lg))
             Text(
-                text = plot,
+                text = plotText,
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
@@ -520,6 +520,26 @@ private fun EpisodeDetailContent(
         director?.let {
             Text(
                 text = "Director: $it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+            )
+        }
+
+        // Air date
+        episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+            Text(
+                text = "Aired: $it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+            )
+        }
+
+        // Bitrate
+        episode.metadata.bitrate?.takeIf { it > 0 }?.let {
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+            Text(
+                text = "Bitrate: $it kbps",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
             )
@@ -611,10 +631,10 @@ private fun EpisodeCard(
                 )
 
                 // Episode plot/summary
-                episode.metadata.plot?.let { plot ->
+                episode.metadata.plot?.let { plotText ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                     Text(
-                        text = plot,
+                        text = plotText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                         maxLines = 3,

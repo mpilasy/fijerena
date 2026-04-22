@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
@@ -9,6 +11,17 @@ android {
     compileSdk = 36
     defaultConfig {
         minSdk = 30
+
+        val tmdbApiKey =
+            runCatching {
+                val props = Properties()
+                rootProject.file("local.properties").inputStream().use { props.load(it) }
+                props.getProperty("TMDB_API_KEY") ?: ""
+            }.getOrDefault("")
+        buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
+    }
+    buildFeatures {
+        buildConfig = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21

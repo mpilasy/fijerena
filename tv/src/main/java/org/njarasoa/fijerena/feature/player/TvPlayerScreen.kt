@@ -158,6 +158,7 @@ fun TvPlayerScreen(
                 PlayerMetadata(
                     title = state.streamName,
                     channelName = state.streamName,
+                    description = state.description,
                     streamUrl = state.streamUrl,
                     isLive = state.isLive,
                     headers = state.streamHeaders,

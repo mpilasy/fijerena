@@ -1,6 +1,10 @@
 package org.njarasoa.fijerena.core.network
 
+import android.util.Log
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
+import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -17,8 +21,13 @@ import org.njarasoa.fijerena.core.player.model.EpgResponse
 class XtreamMediaProvider(
     override val providerId: Long,
     private val repository: XtreamRepository,
+    private val tmdb: TmdbApiService = TmdbApiService(BuildConfig.TMDB_API_KEY),
 ) : MediaProvider {
     private val searchDataSizes = mutableMapOf<String, Long>()
+
+    // Cache: tmdbSeriesId -> (season, episodeNumber) -> overview.
+    // Keeps reopens cheap without hitting TMDB again this session.
+    private val tmdbOverviewCache = mutableMapOf<Int, Map<Pair<Int, Int>, String>>()
 
     override val capabilities =
         ProviderCapabilities(
@@ -106,12 +115,75 @@ class XtreamMediaProvider(
                 Exception("Invalid series ID: $seriesId"),
             )
         return when (val result = repository.getSeriesInfo(id)) {
-            is Result.Success ->
-                kotlin.Result.success(result.data.toDomain(seriesId))
+            is Result.Success -> {
+                val detail = result.data.toDomain(seriesId)
+                val tmdbSeriesId = result.data.info?.tmdb.asString()?.toIntOrNull()
+                val enriched =
+                    if (tmdb.hasApiKey() && tmdbSeriesId != null) {
+                        enrichWithTmdbOverviews(detail, tmdbSeriesId)
+                    } else {
+                        detail
+                    }
+                kotlin.Result.success(enriched)
+            }
             is Result.Error ->
                 kotlin.Result.failure(result.exception)
         }
     }
+
+    /**
+     * Fetches per-episode overviews from TMDB (one call per season) and injects them
+     * into each episode's metadata.plot. Xtream providers typically don't return
+     * episode synopses, so this fills that gap.
+     */
+    private suspend fun enrichWithTmdbOverviews(
+        detail: SeriesDetail,
+        tmdbSeriesId: Int,
+    ): SeriesDetail {
+        val overviews =
+            tmdbOverviewCache[tmdbSeriesId] ?: fetchTmdbOverviews(
+                tmdbSeriesId,
+                detail.episodes.values.flatten().mapNotNull { it.seasonNumber }.toSet(),
+            ).also { tmdbOverviewCache[tmdbSeriesId] = it }
+
+        if (overviews.isEmpty()) return detail
+
+        val enrichedEpisodes =
+            detail.episodes.mapValues { (_, list) ->
+                list.map { ep ->
+                    val season = ep.seasonNumber ?: return@map ep
+                    val overview = overviews[season to ep.episodeNumber] ?: return@map ep
+                    if (ep.metadata.plot.isNullOrBlank()) {
+                        ep.copy(metadata = ep.metadata.copy(plot = overview))
+                    } else {
+                        ep
+                    }
+                }
+            }
+        return detail.copy(episodes = enrichedEpisodes)
+    }
+
+    private suspend fun fetchTmdbOverviews(
+        tmdbSeriesId: Int,
+        seasons: Set<Int>,
+    ): Map<Pair<Int, Int>, String> =
+        coroutineScope {
+            seasons
+                .map { season ->
+                    async {
+                        runCatching { tmdb.getSeason(tmdbSeriesId, season) }
+                            .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
+                            .getOrNull()
+                            ?.episodes
+                            ?.mapNotNull { ep ->
+                                val overview = ep.overview?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                                val s = ep.seasonNumber ?: season
+                                (s to ep.episodeNumber) to overview
+                            }.orEmpty()
+                    }
+                }.flatMap { it.await() }
+                .toMap()
+        }
 
     override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
         val id =
