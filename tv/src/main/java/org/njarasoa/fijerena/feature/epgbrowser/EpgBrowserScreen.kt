@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
@@ -61,6 +63,7 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
@@ -101,11 +104,18 @@ fun EpgBrowserScreen(
     val isDevMode = viewModel.isDevMode
     val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
     val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
+    val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
+    val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
     val epgDbStats =
         when (val idx = indexState) {
             is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
             else -> null
         }
+    val isRefreshing =
+        processingState is EpgFileManager.MultiSourceState.Pending ||
+            processingState is EpgFileManager.MultiSourceState.Processing ||
+            processingState is EpgFileManager.MultiSourceState.Finalizing
 
     // Shared time tick to keep "On Air" status fresh without individual row LaunchedEffects
     var nowEpoch by remember { mutableStateOf(System.currentTimeMillis() / 1000L) }
@@ -133,7 +143,10 @@ fun EpgBrowserScreen(
                         ),
             ) {
                 // Header
-                Row(verticalAlignment = Alignment.Bottom) {
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Text(
                         text = "EPG Browser",
                         style =
@@ -155,6 +168,52 @@ fun EpgBrowserScreen(
                                 ),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale), start = Spacing.xs.scaled(scale)),
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Freshness + refresh button
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                        modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale)),
+                    ) {
+                        val freshnessText = freshnessLabel(oldestIngestedAtMs, nowEpoch, staleSourceCount)
+                        val freshnessColor =
+                            if (staleSourceCount > 0 || oldestIngestedAtMs == 0L) {
+                                CinemaWarning
+                            } else {
+                                CinemaTextSecondary
+                            }
+                        Text(
+                            text = freshnessText,
+                            style =
+                                MaterialTheme.typography.labelLarge.copy(
+                                    fontSize =
+                                        MaterialTheme.typography.labelLarge.fontSize
+                                            .scaled(scale),
+                                ),
+                            color = freshnessColor,
+                        )
+                        CinemaIconButton(
+                            onClick = { if (!isRefreshing) viewModel.refreshStale() },
+                            icon = {
+                                if (isRefreshing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                                        color = CinemaAccent,
+                                        strokeWidth = 2.dp,
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Refresh stale EPG sources",
+                                        tint = if (staleSourceCount > 0) CinemaWarning else CinemaTextPrimary,
+                                        modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                                    )
+                                }
+                            },
                         )
                     }
                 }
@@ -1053,3 +1112,22 @@ private fun formatCount(count: Int): String =
         count >= 1_000 -> "%.1fK".format(count / 1_000.0)
         else -> count.toString()
     }
+
+private fun freshnessLabel(
+    oldestIngestedAtMs: Long?,
+    nowEpoch: Long,
+    staleSourceCount: Int,
+): String {
+    if (oldestIngestedAtMs == null) return "No EPG sources"
+    if (oldestIngestedAtMs == 0L) return "Never refreshed"
+    val ageSec = nowEpoch - oldestIngestedAtMs / 1000L
+    val ageLabel =
+        when {
+            ageSec < 60 -> "just now"
+            ageSec < 3600 -> "${ageSec / 60}m ago"
+            ageSec < 86_400 -> "${ageSec / 3600}h ago"
+            else -> "${ageSec / 86_400}d ago"
+        }
+    val suffix = if (staleSourceCount > 0) " • $staleSourceCount stale" else ""
+    return "Updated $ageLabel$suffix"
+}

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -59,11 +60,14 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -101,6 +105,9 @@ fun MobileEpgBrowserScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val isDevMode = viewModel.isDevMode
     val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
+    val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
+    val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
     val epgDbStats =
         when (val idx = indexState) {
             is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
@@ -109,7 +116,7 @@ fun MobileEpgBrowserScreen(
 
     var matchedOnly by remember { mutableStateOf(true) }
 
-    // Shared time tick to keep "On Air" status fresh
+    // Shared time tick drives "On Air" + freshness label recomputes
     var nowEpoch by remember { mutableStateOf(System.currentTimeMillis() / 1000L) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -117,6 +124,16 @@ fun MobileEpgBrowserScreen(
             nowEpoch = System.currentTimeMillis() / 1000L
         }
     }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.toastMessage.collect { snackbarHostState.showSnackbar(it) }
+    }
+
+    val isRefreshing =
+        processingState is EpgFileManager.MultiSourceState.Pending ||
+            processingState is EpgFileManager.MultiSourceState.Processing ||
+            processingState is EpgFileManager.MultiSourceState.Finalizing
 
     Scaffold(
         topBar = {
@@ -130,6 +147,19 @@ fun MobileEpgBrowserScreen(
                                 "EPG Browser"
                             },
                             style = MaterialTheme.typography.titleMedium,
+                        )
+                        val freshnessText =
+                            freshnessLabel(oldestIngestedAtMs, nowEpoch, staleSourceCount)
+                        val freshnessColor =
+                            if (staleSourceCount > 0 || oldestIngestedAtMs == 0L) {
+                                CinemaWarning
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        Text(
+                            text = freshnessText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = freshnessColor,
                         )
                         if (isDevMode && epgDbStats != null) {
                             Text(
@@ -145,8 +175,33 @@ fun MobileEpgBrowserScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.refreshStale() },
+                        enabled = !isRefreshing,
+                    ) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh stale EPG sources",
+                                tint =
+                                    if (staleSourceCount > 0) {
+                                        CinemaWarning
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                            )
+                        }
+                    }
+                },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         Column(
             modifier =
@@ -820,3 +875,22 @@ private fun formatCount(count: Int): String =
         count >= 1_000 -> "%.1fK".format(count / 1_000.0)
         else -> count.toString()
     }
+
+private fun freshnessLabel(
+    oldestIngestedAtMs: Long?,
+    nowEpoch: Long,
+    staleSourceCount: Int,
+): String {
+    if (oldestIngestedAtMs == null) return "No EPG sources"
+    if (oldestIngestedAtMs == 0L) return "Never refreshed"
+    val ageSec = nowEpoch - oldestIngestedAtMs / 1000L
+    val ageLabel =
+        when {
+            ageSec < 60 -> "just now"
+            ageSec < 3600 -> "${ageSec / 60}m ago"
+            ageSec < 86_400 -> "${ageSec / 3600}h ago"
+            else -> "${ageSec / 86_400}d ago"
+        }
+    val suffix = if (staleSourceCount > 0) " • $staleSourceCount stale" else ""
+    return "Updated $ageLabel$suffix"
+}
