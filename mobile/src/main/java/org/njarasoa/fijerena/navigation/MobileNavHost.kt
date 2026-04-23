@@ -73,7 +73,6 @@ fun MobileNavHost(
 
     // Async initialization: migrate legacy creds, determine start destination
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
-    var lastContentType by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         val providerRepo = ProviderRepository(context.applicationContext)
@@ -89,20 +88,7 @@ fun MobileNavHost(
                 providerRepo.addProvider(name, url, username, password)
             }
         }
-        val hasProviderResult = providerRepo.getProviderCount() > 0
-        hasProvider = hasProviderResult
-
-        if (hasProviderResult) {
-            val activeProvider = providerRepo.getActiveProvider()
-            if (activeProvider != null) {
-                val prefs =
-                    context.applicationContext.getSharedPreferences(
-                        "media_cache_${activeProvider.id}",
-                        android.content.Context.MODE_PRIVATE,
-                    )
-                lastContentType = prefs.getString("last_content_type", null)
-            }
-        }
+        hasProvider = providerRepo.getProviderCount() > 0
     }
 
     val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()
@@ -117,34 +103,6 @@ fun MobileNavHost(
         } else {
             Screen.Settings
         }
-
-    // Auto-navigate to last content type (and category) on startup
-    LaunchedEffect(lastContentType) {
-        val ct = lastContentType ?: return@LaunchedEffect
-        val providerRepo = ProviderRepository(context.applicationContext)
-        val activeProvider = providerRepo.getActiveProvider()
-        val lastCategoryId =
-            if (activeProvider != null) {
-                val prefs =
-                    context.applicationContext.getSharedPreferences(
-                        "media_cache_${activeProvider.id}",
-                        android.content.Context.MODE_PRIVATE,
-                    )
-                val key =
-                    when (ct) {
-                        org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV -> "last_live_category"
-                        org.njarasoa.fijerena.core.player.domain.ContentType.MOVIES -> "last_movies_category"
-                        org.njarasoa.fijerena.core.player.domain.ContentType.TV_SHOWS -> "last_tvshows_category"
-                        else -> null
-                    }
-                key?.let { prefs.getString(it, null) }
-            } else {
-                null
-            }
-        navController.navigate(Screen.CategoryList(ct, lastCategoryId)) {
-            popUpTo(Screen.ContentTypeSelection) { inclusive = false }
-        }
-    }
 
     // Auto-restore Xtream session if the active provider is Xtream
     LaunchedEffect(hasProvider, isAuthenticated) {

@@ -21,7 +21,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
@@ -78,7 +77,6 @@ fun TvNavHost(
 
     // Use mutable states for asynchronous data loading
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
-    var lastContentType by remember { mutableStateOf<String?>(null) }
     var initializationComplete by remember { mutableStateOf(false) }
 
     // Async initialization — use cached provider flag for instant start destination,
@@ -87,31 +85,9 @@ fun TvNavHost(
         val providerRepo = ProviderRepository(context.applicationContext)
         val cachedHasProvider = appSettings.hasProviderCache
 
-        // Fast path: use cached value to show UI immediately
         if (cachedHasProvider) {
-            // Read last content type in parallel with provider verification
-            val contentTypeDeferred =
-                async {
-                    val activeProvider = providerRepo.getActiveProvider()
-                    if (activeProvider != null) {
-                        val prefs =
-                            context.applicationContext.getSharedPreferences(
-                                "media_cache_${activeProvider.id}",
-                                android.content.Context.MODE_PRIVATE,
-                            )
-                        prefs.getString("last_content_type", null)
-                    } else {
-                        null
-                    }
-                }
-
-            val providerCountDeferred =
-                async {
-                    providerRepo.getProviderCount()
-                }
-
-            lastContentType = contentTypeDeferred.await()
-            val providerCount = providerCountDeferred.await()
+            // Fast path: trust cache for immediate UI, verify with DB
+            val providerCount = providerRepo.getProviderCount()
             hasProvider = providerCount > 0
             appSettings.hasProviderCache = providerCount > 0
         } else {
@@ -129,18 +105,6 @@ fun TvNavHost(
             val providerCount = providerRepo.getProviderCount()
             hasProvider = providerCount > 0
             appSettings.hasProviderCache = providerCount > 0
-
-            if (providerCount > 0) {
-                val activeProvider = providerRepo.getActiveProvider()
-                if (activeProvider != null) {
-                    val prefs =
-                        context.applicationContext.getSharedPreferences(
-                            "media_cache_${activeProvider.id}",
-                            android.content.Context.MODE_PRIVATE,
-                        )
-                    lastContentType = prefs.getString("last_content_type", null)
-                }
-            }
         }
         initializationComplete = true
     }
@@ -158,36 +122,6 @@ fun TvNavHost(
                 Screen.Settings
             }
         }
-
-    // Auto-navigate to last content type (and category) on startup
-    LaunchedEffect(lastContentType, initializationComplete) {
-        val ct = lastContentType
-        if (initializationComplete && ct != null) {
-            val providerRepo = ProviderRepository(context.applicationContext)
-            val activeProvider = providerRepo.getActiveProvider()
-            val lastCategoryId =
-                if (activeProvider != null) {
-                    val prefs =
-                        context.applicationContext.getSharedPreferences(
-                            "media_cache_${activeProvider.id}",
-                            android.content.Context.MODE_PRIVATE,
-                        )
-                    val key =
-                        when (ct) {
-                            org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV -> "last_live_category"
-                            org.njarasoa.fijerena.core.player.domain.ContentType.MOVIES -> "last_movies_category"
-                            org.njarasoa.fijerena.core.player.domain.ContentType.TV_SHOWS -> "last_tvshows_category"
-                            else -> null
-                        }
-                    key?.let { prefs.getString(it, null) }
-                } else {
-                    null
-                }
-            navController.navigate(Screen.CategoryList(ct, lastCategoryId)) {
-                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
-            }
-        }
-    }
 
     // Auto-restore Xtream session if the active provider is Xtream
     LaunchedEffect(initializationComplete, hasProvider, isAuthenticated) {
