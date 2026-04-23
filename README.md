@@ -37,7 +37,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ### 📺 Content Types
 - **Live TV** - Live television channels with fast channel switching
 - **Movies (VOD)** - On-demand movie content with resume support
-- **TV Shows** - Series browsing with season/episode selection
+- **TV Shows** - Series browsing with season/episode selection; enriched with **TMDB synopses** per episode
 - **EPG Guide** - 24-hour Electronic Program Guide with grid layout
 
 ### 🎮 Playback Features
@@ -46,6 +46,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Multi-Audio Tracks** - Language and format selection (Stereo, 5.1, 7.1)
 - **Subtitles/Captions** - Support for SRT, VTT, TTML, CEA-608/708
 - **Adaptive Quality** - Manual and automatic bitrate selection
+- **Episode Navigation** - Swipe or D-pad Left/Right to skip between episodes in-player
 - **Content-Type Aware Buffering**:
   - Live TV: Fast zapping profile (2-5s buffer)
   - VOD: Smooth playback profile (15-50s buffer)
@@ -66,8 +67,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ### 🔧 Advanced Features
 - **Virtual Categories**:
   - Favorites - User-curated collection (configurable size: 10-500 items)
-  - Last Watched - Recent viewing history (added after 5s of viewing, configurable size: 1-100 items)
-- **Playback Resume** - Automatic position restore for VOD content (2-95% range)
+  - Last Watched - Recent viewing history (added after 10s of viewing, configurable size: 1-100 items)- **Playback Resume** - Automatic position restore for VOD content (2-95% range)
 - **Stats for Nerds** - Comprehensive playback metrics overlay including:
   - **Video/Audio**: Codecs, bitrates, resolution, frame rate
   - **Network**: Speed, bandwidth, buffer health, rebuffer stats

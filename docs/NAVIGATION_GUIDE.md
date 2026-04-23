@@ -103,13 +103,13 @@ The `SearchViewModel` manages categories and individual stream results across al
 
 ### Navigation Rules
 
-1. **Startup → ContentTypeSelection**: Auto-restore session if provider configured
-2. **Startup → Settings**: If no provider credentials stored
-3. **ContentTypeSelection → CategoryList**: Standard push
-4. **CategoryList → Player**: Standard push (content-type aware routing)
-5. **Settings → ProviderSelection → AddProvider**: Standard push chain
-6. **Provider switch**: Navigate to ContentTypeSelection, clearing back stack
-7. **Logout**: Clear auth session, navigate to Settings, clear back stack to ContentTypeSelection
+1. **Startup → ContentTypeSelection**: Always lands on Content Type Selection if a provider is configured.
+2. **Startup → Settings**: If no provider configured.
+3. **ContentTypeSelection → CategoryList**: Standard push.
+4. **CategoryList → Player**: Standard push (content-type aware routing).
+5. **Settings → ProviderSelection → AddProvider**: Standard push chain.
+6. **Provider switch**: Navigate to ContentTypeSelection, clearing back stack.
+7. **Logout**: Clear auth session, navigate to Settings, clear back stack to ContentTypeSelection.
 
 ## AuthViewModel
 
@@ -140,9 +140,7 @@ Located in `:mobile/navigation/MobileNavHost.kt`
 
 ### Startup Logic
 
-On startup, the app checks for a configured provider via `ProviderRepository`. If a provider exists, it auto-navigates to the last used content type (CategoryList) or ContentTypeSelection. If not, it navigates to Settings.
-
-**Category restore:** When auto-navigating to `CategoryList`, the app also reads the last browsed category ID from per-provider SharedPreferences (`last_{contentType}_category`) and passes it as `initialCategoryId`. This restores the user to the same category they were viewing before the app was closed.
+On startup, the app checks for a configured provider via `ProviderRepository`. If a provider exists, it navigates to the Content Type Selection screen. If not, it navigates to Settings.
 
 ### Transitions
 - **Enter**: Slide left + fade in

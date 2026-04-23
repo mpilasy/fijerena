@@ -31,6 +31,8 @@ Movie details screen with plot, cast, director, genre, rating, year, duration, v
 
 ### TV Shows
 Season accordion with episode list. Auto-expands the next unwatched season. Episode thumbnails, per-episode metadata, resume support. Series-level metadata with season fallback.
+- **TMDB Enrichment:** Fetches per-episode synopses from TMDB when available, ensuring high-quality metadata even when IPTV providers offer minimal descriptions.
+- **Episode Navigation:** Swipe (mobile) or D-pad Left/Right (TV) to jump between episodes directly from the player.
 
 ### EPG Guide (TV Guide)
 Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. 30-minute cache TTL.
@@ -64,6 +66,8 @@ Filename matching against scanned file list.
 Standalone programme title search across all indexed XMLTV data.
 
 - Access: Content Type Selection → book icon (visible when EPG index is ready)
+- **Freshness Tracking:** Displays last index update time in the header.
+- **Smart Refresh:** Shows a "Refresh Data" button when indexed programmes are older than 24 hours.
 - Results grouped by start date (Today, Tomorrow, weekday name, or "EEEE, MMM d" for later dates), then by programme within each date
 - Time window: −1 to +6 days from now, max 500 results per query
 - SQLite FTS4 MATCH for fast search (<100ms); falls back to LIKE if FTS returns empty
@@ -158,7 +162,10 @@ Cellular multipliers are tunable 0.5×–3.0× in dev mode via Settings → Cell
 Current programme title, time range, progress bar, and **video resolution/codec** shown in stream info overlay. "Up Next" programme shown below. Fetched on stream start and channel switch. Degrades gracefully if no EPG data.
 
 ### Stats for Nerds
-Double-tap OK (TV) or tap stats button (mobile) to **dismiss** the overlay. Fixed to the top-right corner on TV and non-focusable to allow concurrent stream control.
+Double-tap OK (TV) or tap stats button (mobile) to **dismiss** the overlay. Fixed to the top-right corner on TV and non-focusable to allow concurrent stream control (inputs pass through to the player).
+
+### Buffering Awareness
+Instead of showing the stats overlay automatically on buffering, the app now shows a discrete "High Buffering" toast when excessive buffering is detected, ensuring minimal distraction from the content while keeping the user informed of network conditions.
 
 **VIDEO:** Codec, Resolution, Frame Rate, Bitrate
 **AUDIO:** Codec, Sample Rate, Channels, Bitrate
