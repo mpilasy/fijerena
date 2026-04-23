@@ -50,3 +50,4 @@ Prefer real hardware for validation:
 11. ~~**Fix virtual categories FilterChipColors not using hoisted chipColors**~~ DONE
 12. ~~**Extract scale options list in UiScaleSettingsCard**~~ DONE
 13. ~~**Hoist AppSettings outside while(true) loop in EpgFileManager**~~ DONE
+14. ~~**Optimize audio processing and media source allocation**~~ DONE

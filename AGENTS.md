@@ -119,7 +119,9 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **OK / Center Key:** **Shows controls only** — it never pauses or resumes playback.
 - **Double-OK:** Dismisses the stats overlay if visible.
 - **Pause:** Explicit via pause button, `KEYCODE_MEDIA_PLAY_PAUSE`, or mobile double-tap (VOD only).
-- **Seeking:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
+- **Seeking / Navigation:** 
+  - **VOD:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
+  - **TV Shows:** D-pad Left/Right (TV) or Swipe (Mobile) to skip between episodes in-player.
 - **Channel Overlays (Live TV):** D-pad Left/Right (TV) or Swipe (Mobile) open channel overlays. Use `ChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` and `GlassPanel(backgroundAlpha=0.5f)`.
 - **Mobile Gestures:** `detectTapGestures` (tap=controls, double-tap=pause/resume VOD). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
 
@@ -153,7 +155,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ### Flow
 
-1. **Startup:** Auto-navigates based on provider/saved state.
+1. **Startup:** Always lands on the Content Type Selection screen if a provider is configured; otherwise, navigates to Settings.
 2. **Selection:** Content Type -> Category Grid -> Details (VOD) -> Player.
 3. **Navigation IDs:** Always use `String` for IDs.
 

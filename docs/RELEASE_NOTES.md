@@ -1,5 +1,32 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Navigation Streamlining & Content Depth
+**Release Date:** 2026-04-22
+
+### Core Navigation Refactor
+- **Direct Entry:** The app now always lands on the Content Type Selection screen upon startup (once a provider is configured). Removed the "restore last browsed category" startup logic to provide a more predictable and cleaner entry point.
+- **Simplified Flow:** Streamlined the transition between content selection and category browsing for a faster "cold start" experience.
+
+### EPG Browser Enhancements
+- **Data Freshness Indicator:** Added a "Data Freshness" status to the EPG Browser header, showing how long ago the index was last updated.
+- **Refresh-Stale Button:** Introduced a contextual "Refresh" button in the EPG Browser that appears when data is older than 24 hours, allowing users to trigger a targeted update without leaving the search interface.
+
+### TV Show & Episode Experience
+- **Single-Press Activation (TV):** Refined the episode selection on TV; a single OK press now initiates playback immediately, reducing friction.
+- **In-Player Episode Navigation:** Added swipe (mobile) and D-pad Left/Right (TV) navigation between episodes directly within the player for TV Shows.
+- **Enhanced Episode Metadata:** Episode titles, synopses, and thumbnails are now more prominent.
+- **TMDB Integration:** Series now fetch per-episode synopses from TMDB when available, providing much richer context than standard IPTV metadata.
+
+### Player & Stability Polish
+- **Buffering Awareness:** Replaced the intrusive stats overlay with a discrete toast notification during excessive buffering events, keeping the focus on the content.
+- **Stats Overlay Pass-through:** Player controls now pass through the stats overlay, allowing for simultaneous diagnostic monitoring and playback control (seeking/switching).
+- **Auto-Refresh Stream List:** Fixed an issue where the category stream list didn't update when switching channels via D-pad Up/Down.
+- **Audio Processing Optimization:** Fine-tuned the audio processing pipeline and media source allocation for lower latency and better stability on mid-range TV hardware.
+
+### UI & Focus Management
+- **Focus Requester Safety:** Added robust error handling for `FocusRequester` on TV to prevent crashes during rapid navigation or screen transitions.
+- **Dialog Readability:** Improved the layout and contrast of player dialogs (Audio/Subtitle/Quality) for better visibility on large screens.
+
 ## Version: Static Stats & Stream Specs
 **Release Date:** 2026-03-18
 
