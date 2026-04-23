@@ -10,18 +10,26 @@ import androidx.paging.cachedIn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -70,6 +78,7 @@ class EpgBrowserViewModel(
     companion object {
         private const val PAGE_SIZE = 50
         private const val PREFETCH_DISTANCE = 25
+        private const val STALE_THRESHOLD_MS = 6L * 3600 * 1000
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -107,6 +116,53 @@ class EpgBrowserViewModel(
 
     private val _sourceLabels = MutableStateFlow<Map<Long, String>>(emptyMap())
     val sourceLabels: StateFlow<Map<Long, String>> = _sourceLabels.asStateFlow()
+
+    private val epgFileManager = EpgFileManager.getInstance(context)
+
+    val epgProcessingState: StateFlow<EpgFileManager.MultiSourceState> = epgFileManager.state
+
+    private val sourcesFlow: Flow<List<org.njarasoa.fijerena.core.network.provider.EpgSourceEntity>> =
+        SettingsDatabase.getInstance(context).epgSourceDao().getAllSources()
+
+    /** Oldest `lastIngestedAtMs` across enabled sources — the data is only as fresh as its stalest source.
+     *  `null` when there are no enabled sources. `0L` when at least one enabled source has never been ingested. */
+    val oldestEnabledIngestedAtMs: StateFlow<Long?> =
+        sourcesFlow
+            .map { list ->
+                val enabled = list.filter { it.enabled }
+                if (enabled.isEmpty()) null else enabled.minOf { it.lastIngestedAtMs }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val staleSourceCount: StateFlow<Int> =
+        sourcesFlow
+            .map { list ->
+                val threshold = System.currentTimeMillis() - STALE_THRESHOLD_MS
+                list.count { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
+
+    fun refreshStale() {
+        val taskId = "epg_refresh_stale"
+        if (RefreshQueue.queuedTaskIds.value.contains(taskId)) {
+            _toastMessage.tryEmit("Refresh already in queue...")
+            return
+        }
+        viewModelScope.launch {
+            val thresholdMs = System.currentTimeMillis() - STALE_THRESHOLD_MS
+            val stale =
+                withContext(Dispatchers.IO) {
+                    SettingsDatabase.getInstance(context).epgSourceDao().getStaleSources(thresholdMs)
+                }
+            if (stale.isEmpty()) {
+                _toastMessage.tryEmit("EPG is up to date.")
+                return@launch
+            }
+            _toastMessage.tryEmit("Refreshing ${stale.size} stale source(s)...")
+            epgFileManager.launchRefreshStale()
+        }
+    }
 
     // --------------- Paging flows ---------------
 
