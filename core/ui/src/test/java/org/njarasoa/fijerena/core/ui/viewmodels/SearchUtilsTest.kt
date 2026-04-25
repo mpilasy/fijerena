@@ -33,4 +33,25 @@ class SearchUtilsTest {
         val queryWords = emptyList<String>()
         assertTrue(SearchUtils.matchesQuery(text, queryWords))
     }
+
+    @Test
+    fun matchesQuery_negativeSearch_excludesMatch() {
+        val text = "This is a Hello World example"
+        val queryWords = listOf("hello", "-world")
+        assertFalse(SearchUtils.matchesQuery(text, queryWords))
+    }
+
+    @Test
+    fun matchesQuery_negativeSearch_includesNoMatch() {
+        val text = "This is a Hello example"
+        val queryWords = listOf("hello", "-world")
+        assertTrue(SearchUtils.matchesQuery(text, queryWords))
+    }
+
+    @Test
+    fun matchesQuery_negativeSearch_ignoresSingleDash() {
+        val text = "This is a Hello - example"
+        val queryWords = listOf("hello", "-")
+        assertTrue(SearchUtils.matchesQuery(text, queryWords))
+    }
 }

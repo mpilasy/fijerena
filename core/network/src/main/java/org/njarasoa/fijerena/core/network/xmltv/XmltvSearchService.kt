@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -69,8 +71,16 @@ class XmltvSearchService(
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
 
+            val providerRepo = ProviderRepository(context)
+            val activeProviderId = providerRepo.getActiveProvider()?.id ?: -1L
+            val settingsDb = SettingsDatabase.getInstance(context)
+            val sourceDao = settingsDb.epgSourceDao()
+            val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
+            val sourceIds = validSources.map { it.id }
+            if (sourceIds.isEmpty()) return rowsToSearchResult(emptyList(), searchedFromIndex = true)
+
             val queryLower = query.lowercase(Locale.ROOT)
-            val matchedChannels = dao.searchChannelsByName(queryLower)
+            val matchedChannels = dao.searchChannelsByName(queryLower, sourceIds)
             if (matchedChannels.isEmpty()) {
                 return rowsToSearchResult(emptyList(), searchedFromIndex = true)
             }
@@ -116,6 +126,14 @@ class XmltvSearchService(
         val dao = db.epgIndexDao()
         val indexer = EpgIndexer.getInstance(context)
 
+        val providerRepo = ProviderRepository(context)
+        val activeProviderId = providerRepo.getActiveProvider()?.id ?: -1L
+        val settingsDb = SettingsDatabase.getInstance(context)
+        val sourceDao = settingsDb.epgSourceDao()
+        val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
+        val sourceIds = validSources.map { it.id }
+        if (sourceIds.isEmpty()) return rowsToSearchResult(emptyList(), searchedFromIndex = true)
+
         var ftsReturnedEmpty = false
 
         // Skip FTS entirely when the index is being rebuilt in the background.
@@ -125,7 +143,7 @@ class XmltvSearchService(
             val rows =
                 try {
                     withTimeoutOrNull(FTS_TIMEOUT_MS) {
-                        dao.searchByTitleFts(ftsQuery, windowStart, windowEnd)
+                        dao.searchByTitleFts(ftsQuery, sourceIds, windowStart, windowEnd)
                     }
                 } catch (e: Exception) {
                     null
@@ -145,7 +163,7 @@ class XmltvSearchService(
                     val andRows =
                         try {
                             withTimeoutOrNull(FTS_TIMEOUT_MS) {
-                                dao.searchByTitleFts(andFtsQuery, windowStart, windowEnd)
+                                dao.searchByTitleFts(andFtsQuery, sourceIds, windowStart, windowEnd)
                             }
                         } catch (e: Exception) {
                             null
@@ -165,7 +183,7 @@ class XmltvSearchService(
 
         // 3. Fall back to LIKE with full query
         val queryLower = query.lowercase(Locale.ROOT)
-        val likeRows = dao.searchByTitleLike(queryLower, windowStart, windowEnd)
+        val likeRows = dao.searchByTitleLike(queryLower, sourceIds, windowStart, windowEnd)
         if (likeRows.isNotEmpty()) {
             // If FTS returned 0 but LIKE found results, the FTS index is out of sync
             if (ftsReturnedEmpty && !indexer.isFtsStale()) {
@@ -180,7 +198,7 @@ class XmltvSearchService(
         val words = queryLower.split(WHITESPACE_REGEX).filter { it.length >= 2 }
         if (words.size >= 2) {
             val shortestWord = words.minBy { it.length }
-            val broadRows = dao.searchByTitleLike(shortestWord, windowStart, windowEnd)
+            val broadRows = dao.searchByTitleLike(shortestWord, sourceIds, windowStart, windowEnd)
             val filtered =
                 broadRows.filter { row ->
                     val titleLower = row.title.lowercase(Locale.ROOT)

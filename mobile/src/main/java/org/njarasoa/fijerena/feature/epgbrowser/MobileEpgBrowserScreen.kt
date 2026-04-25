@@ -284,12 +284,16 @@ fun MobileEpgBrowserScreen(
                     )
                 },
                 trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
+                    if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = {
                             searchQuery = ""
-                            viewModel.performSearch("") // Or clear results
+                            viewModel.clearSearch()
                         }) {
-                            Icon(Icons.Default.Close, "Clear", modifier = Modifier.size(20.dp))
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear",
+                                modifier = Modifier.size(20.dp),
+                            )
                         }
                     }
                 },

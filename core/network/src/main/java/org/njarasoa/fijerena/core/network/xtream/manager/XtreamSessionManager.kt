@@ -19,6 +19,7 @@ class XtreamSessionManager(
     private val accountManager: AccountManager,
     private val onClearCache: suspend () -> Unit,
     private val streamOutputFormat: String = "m3u8",
+    private val providerId: Long = 0L,
 ) {
     private companion object {
         const val TAG = "XtreamSession"
@@ -182,6 +183,7 @@ class XtreamSessionManager(
                         url = xmltvUrl,
                         label = label,
                         enabled = true,
+                        providerId = if (providerId > 0) providerId else null,
                     ),
                 )
                 // Trigger an immediate background refresh if the index is empty

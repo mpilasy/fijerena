@@ -18,6 +18,10 @@ import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.tv.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -201,10 +205,34 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     )
                                 }
 
-                                androidx.compose.material3.Switch(
+                                androidx.tv.material3.Surface(
                                     checked = viewModel.autoRefreshEnabled,
                                     onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
-                                )
+                                    colors =
+                                        androidx.tv.material3.ToggleableSurfaceDefaults.colors(
+                                            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass),
+                                            contentColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                                            focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                                            focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+                                        ),
+                                    scale =
+                                        androidx.tv.material3.ToggleableSurfaceDefaults.scale(
+                                            focusedScale = 1.15f,
+                                        ),
+                                    shape = androidx.tv.material3.ToggleableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+                                ) {
+                                    androidx.compose.material3.Switch(
+                                        checked = viewModel.autoRefreshEnabled,
+                                        onCheckedChange = null, // Handled by Surface
+                                        modifier = Modifier.padding(Spacing.xxs.scaled(scale)),
+                                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                                            checkedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+                                            checkedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                                            uncheckedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                                            uncheckedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
@@ -232,15 +260,35 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                             ) {
-                                androidx.compose.material3.Checkbox(
+                                androidx.tv.material3.Surface(
                                     checked = isSelected,
                                     onCheckedChange = { viewModel.toggleSelection(source.id) },
                                     colors =
-                                        androidx.compose.material3.CheckboxDefaults.colors(
-                                            checkedColor = MaterialTheme.colorScheme.primary,
-                                            uncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        androidx.tv.material3.ToggleableSurfaceDefaults.colors(
+                                            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass),
+                                            contentColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                                            focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                                            focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+                                            selectedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent.copy(alpha = 0.2f),
+                                            selectedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
                                         ),
-                                )
+                                    scale =
+                                        androidx.tv.material3.ToggleableSurfaceDefaults.scale(
+                                            focusedScale = 1.15f,
+                                        ),
+                                    shape = androidx.tv.material3.ToggleableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(40.dp.scaled(scale)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                            contentDescription = if (isSelected) "Selected" else "Not selected",
+                                            modifier = Modifier.size(24.dp.scaled(scale)),
+                                        )
+                                    }
+                                }
 
                                 StatusIndicator(source, nowMs, scale)
 

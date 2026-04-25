@@ -74,6 +74,7 @@ class XtreamRepository(
             accountManager,
             { statsManager.clearCache() },
             providerSettings.streamOutputFormat,
+            providerId,
         )
 
     private val contentManager =

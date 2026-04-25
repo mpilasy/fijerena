@@ -167,6 +167,26 @@ class SearchViewModel(
             }
     }
 
+    fun clearSearch() {
+        searchJob?.cancel()
+        _uiState.value =
+            UiState.Success(
+                query = "",
+                categoryResults = emptyList(),
+                allResults = emptyList(),
+                filteredResults = emptyList(),
+                isSearching = false,
+                searchProgress = null,
+                searchDataSize = null,
+                networkCalls = 0,
+                failedCalls = 0,
+                totalDuration = "0ms",
+                networkWallDuration = "0ms",
+                networkAccumDuration = "0ms",
+                firstError = null,
+            )
+    }
+
     fun removeSearchHistoryEntry(query: String) {
         appSettings.removeSearchHistory(query)
         _searchHistory.value = appSettings.getSearchHistory()

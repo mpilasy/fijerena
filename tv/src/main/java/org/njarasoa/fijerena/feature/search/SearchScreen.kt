@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.search
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,9 +21,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -41,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -53,12 +55,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.foundation.lazy.list.items
+import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.material3.Border
+import androidx.tv.material3.Card
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -200,6 +205,7 @@ fun SearchScreen(
                                 viewModel.removeSearchHistoryEntry(term)
                             },
                             onClearHistory = { viewModel.clearSearchHistory() },
+                            onClearSearch = { viewModel.clearSearch() },
                             onResultClick = { result ->
                                 onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType)
                             },
@@ -317,6 +323,7 @@ private fun SearchContent(
     onHistoryItemClick: (String) -> Unit,
     onHistoryItemRemove: (String) -> Unit,
     onClearHistory: () -> Unit,
+    onClearSearch: () -> Unit,
     onResultClick: (SearchResult) -> Unit,
     onResultLongPress: (SearchResult) -> Unit,
     onCategoryClick: (CategorySearchResult) -> Unit,
@@ -339,6 +346,10 @@ private fun SearchContent(
             query = localQuery,
             onQueryChange = { localQuery = it },
             onSearchSubmit = { onSearchSubmit(localQuery) },
+            onClear = {
+                localQuery = ""
+                onClearSearch()
+            },
             focusRequester = searchFocusRequester,
         )
 
@@ -348,6 +359,7 @@ private fun SearchContent(
         val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
         if (!hasResults && query.isEmpty()) {
             if (searchHistory.isNotEmpty()) {
+                val historyFocusRequester = remember { FocusRequester() }
                 SearchHistorySection(
                     history = searchHistory,
                     onItemClick = { term ->
@@ -356,6 +368,8 @@ private fun SearchContent(
                     },
                     onItemRemove = onHistoryItemRemove,
                     onClearAll = onClearHistory,
+                    modifier = Modifier.focusProperties { enter = { historyFocusRequester } },
+                    firstItemFocusRequester = historyFocusRequester,
                 )
             } else {
                 Box(
@@ -392,57 +406,63 @@ private fun SearchTextField(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
+    onClear: () -> Unit = {},
     focusRequester: FocusRequester,
 ) {
-    GlassPanel {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                label = { Text("Search") },
-                placeholder = { Text("Enter stream name...") },
-                singleLine = true,
-                modifier =
-                    Modifier
-                        .width(TvDimensions.formFieldWidth)
-                        .focusRequester(focusRequester),
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        cursorColor = CinemaAccent,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaTextSecondary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        focusedPlaceholderColor = CinemaTextSecondary,
-                        unfocusedPlaceholderColor = CinemaTextSecondary,
-                    ),
-                keyboardOptions =
-                    KeyboardOptions(
-                        keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Search,
-                    ),
-                keyboardActions =
-                    KeyboardActions(
-                        onSearch = { onSearchSubmit() },
-                    ),
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = { Text("Enter stream name...", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary.copy(alpha = 0.6f)) },
+        singleLine = true,
+        modifier =
+            Modifier
+                .width(org.njarasoa.fijerena.ui.theme.TvDimensions.formFieldWidth)
+                .focusRequester(focusRequester),
+        shape = androidx.compose.foundation.shape.CircleShape,
+        colors =
+            OutlinedTextFieldDefaults.colors(
+                focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                unfocusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight,
+                focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary.copy(alpha = 0.4f),
+            ),
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Rounded.Search,
+                contentDescription = null,
+                modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconMedium),
+                tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
             )
-            CinemaIconButton(
-                onClick = onSearchSubmit,
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = androidx.compose.ui.graphics.Color.Unspecified,
-                    )
-                },
-            )
-        }
-    }
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                CinemaIconButton(
+                    onClick = onClear,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Clear",
+                            modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconSmall),
+                            tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                        )
+                    },
+                    size = 40.dp
+                )
+            }
+        },
+        keyboardOptions =
+            KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Search,
+            ),
+        keyboardActions =
+            KeyboardActions(
+                onSearch = { onSearchSubmit() },
+            ),
+    )
 
     // Auto-focus on screen open
     LaunchedEffect(Unit) {
@@ -459,9 +479,11 @@ private fun SearchHistorySection(
     onItemClick: (String) -> Unit,
     onItemRemove: (String) -> Unit,
     onClearAll: () -> Unit,
+    modifier: Modifier = Modifier,
+    firstItemFocusRequester: FocusRequester? = null,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         Row(
@@ -478,10 +500,10 @@ private fun SearchHistorySection(
                 onClick = onClearAll,
                 icon = {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = Icons.Rounded.Delete,
                         contentDescription = "Clear all",
-                        tint = CinemaTextSecondary,
                         modifier = Modifier.size(TvDimensions.iconSmall),
+                        tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                     )
                 },
             )
@@ -489,9 +511,15 @@ private fun SearchHistorySection(
         TvLazyRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            items(history) { term ->
+            itemsIndexed(history) { index, term ->
                 Card(
                     onClick = { onItemClick(term) },
+                    modifier =
+                        if (index == 0 && firstItemFocusRequester != null) {
+                            Modifier.focusRequester(firstItemFocusRequester)
+                        } else {
+                            Modifier
+                        },
                     colors =
                         CardDefaults.colors(
                             containerColor = CinemaSurface,
@@ -513,7 +541,7 @@ private fun SearchHistorySection(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Search,
+                            imageVector = Icons.Rounded.Search,
                             contentDescription = null,
                             tint = CinemaTextSecondary,
                             modifier = Modifier.size(TvDimensions.iconSmall),
