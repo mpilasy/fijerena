@@ -38,6 +38,7 @@ interface EpgIndexDao {
         INNER JOIN epg_programme_fts fts ON fts.rowid = p.id
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE epg_programme_fts MATCH :query
+          AND p.source_id IN (:sourceIds)
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         LIMIT :maxResults
@@ -45,6 +46,7 @@ interface EpgIndexDao {
     )
     suspend fun searchByTitleFts(
         query: String,
+        sourceIds: List<Long>,
         windowStart: Long,
         windowEnd: Long,
         maxResults: Int = 500,
@@ -56,6 +58,7 @@ interface EpgIndexDao {
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE p.title_lowercase LIKE '%' || :queryLower || '%'
+          AND p.source_id IN (:sourceIds)
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         LIMIT :maxResults
@@ -63,6 +66,7 @@ interface EpgIndexDao {
     )
     suspend fun searchByTitleLike(
         queryLower: String,
+        sourceIds: List<Long>,
         windowStart: Long,
         windowEnd: Long,
         maxResults: Int = 500,
@@ -75,11 +79,12 @@ interface EpgIndexDao {
         SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
-        WHERE p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
+        WHERE p.source_id IN (:sourceIds)
+          AND p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
         ORDER BY c.display_name ASC
         """,
     )
-    suspend fun getNowPlaying(nowEpoch: Long): List<EpgSearchResultRow>
+    suspend fun getNowPlaying(nowEpoch: Long, sourceIds: List<Long>): List<EpgSearchResultRow>
 
     // --------------- Paged queries for large datasets (2M+ rows) ---------------
 
@@ -88,13 +93,15 @@ interface EpgIndexDao {
         SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
-        WHERE p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
+        WHERE p.source_id IN (:sourceIds)
+          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         """,
     )
     fun getPagedProgrammes(
         windowStart: Long,
         windowEnd: Long,
+        sourceIds: List<Long>,
     ): PagingSource<Int, EpgSearchResultRow>
 
     @Query(
@@ -102,11 +109,12 @@ interface EpgIndexDao {
         SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
-        WHERE p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
+        WHERE p.source_id IN (:sourceIds)
+          AND p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
         ORDER BY c.display_name ASC
         """,
     )
-    fun getPagedNowPlaying(nowEpoch: Long): PagingSource<Int, EpgSearchResultRow>
+    fun getPagedNowPlaying(nowEpoch: Long, sourceIds: List<Long>): PagingSource<Int, EpgSearchResultRow>
 
     @Query(
         """
@@ -114,12 +122,14 @@ interface EpgIndexDao {
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE p.channel_id = :channelId
+          AND p.source_id IN (:sourceIds)
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         """,
     )
     fun getPagedProgrammesForChannel(
         channelId: String,
+        sourceIds: List<Long>,
         windowStart: Long,
         windowEnd: Long,
     ): PagingSource<Int, EpgSearchResultRow>
@@ -131,12 +141,14 @@ interface EpgIndexDao {
         INNER JOIN epg_programme_fts fts ON fts.rowid = p.id
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE epg_programme_fts MATCH :query
+          AND p.source_id IN (:sourceIds)
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         """,
     )
     fun searchByTitleFtsPaged(
         query: String,
+        sourceIds: List<Long>,
         windowStart: Long,
         windowEnd: Long,
     ): PagingSource<Int, EpgSearchResultRow>
@@ -147,10 +159,11 @@ interface EpgIndexDao {
         """
         SELECT * FROM epg_channel
         WHERE LOWER(display_name) LIKE '%' || :queryLower || '%'
+          AND source_id IN (:sourceIds)
         ORDER BY display_name ASC
         """,
     )
-    suspend fun searchChannelsByName(queryLower: String): List<EpgChannelEntity>
+    suspend fun searchChannelsByName(queryLower: String, sourceIds: List<Long>): List<EpgChannelEntity>
 
     @Query("SELECT * FROM epg_channel")
     suspend fun getAllChannels(): List<EpgChannelEntity>

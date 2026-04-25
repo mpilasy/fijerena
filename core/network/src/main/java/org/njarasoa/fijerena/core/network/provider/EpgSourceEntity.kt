@@ -32,4 +32,6 @@ data class EpgSourceEntity(
     val lastIngestionDurationMs: Long = 0,
     @ColumnInfo(name = "last_download_duration_ms", defaultValue = "0")
     val lastDownloadDurationMs: Long = 0,
+    @ColumnInfo(name = "provider_id")
+    val providerId: Long? = null,
 )

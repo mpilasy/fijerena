@@ -72,13 +72,14 @@ class EpgIndexer private constructor(
                 "room_fts_content_sync_epg_programme_fts_AFTER_INSERT",
             )
 
-        // FTS5 uses `rowid` instead of `docid` in content-table triggers.
+        // FTS4 (and FTS5) uses `docid` (or `rowid`) in content-table triggers.
+        // Room FTS4 defaults to `docid`. Using `rowid` as target column can fail.
         private val FTS_TRIGGER_DDL =
             listOf(
-                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE` BEFORE UPDATE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END",
-                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `rowid`=OLD.`rowid`; END",
-                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END",
-                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`rowid`,`title`) VALUES (NEW.`rowid`,NEW.`title`); END",
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE` BEFORE UPDATE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `docid`=OLD.`id`; END",
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `docid`=OLD.`id`; END",
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`id`,NEW.`title`); END",
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`id`,NEW.`title`); END",
             )
 
         // Query-only indexes on epg_programme that are dropped during bulk
@@ -374,6 +375,7 @@ class EpgIndexer private constructor(
                                 url = sourceUrl,
                                 label = "Xtream Provider $providerId",
                                 ingestMethod = "XTREAM_API",
+                                providerId = providerId,
                             ),
                         ) to null
                     }

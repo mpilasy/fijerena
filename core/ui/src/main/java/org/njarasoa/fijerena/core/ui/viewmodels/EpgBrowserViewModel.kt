@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
@@ -42,6 +43,7 @@ import java.util.Locale
 
 class EpgBrowserViewModel(
     private val context: Context,
+    private val providerRepository: ProviderRepository,
 ) : ViewModel() {
     enum class SearchMode {
         PROGRAMME,
@@ -246,10 +248,27 @@ class EpgBrowserViewModel(
 
     private fun initPagedNowPlaying() {
         val indexer = EpgIndexer.getInstance(context)
-        if (indexer.state.value is EpgIndexState.Indexed) {
-            val nowEpoch = System.currentTimeMillis() / 1000L
+        viewModelScope.launch {
+            indexer.state.collect { state ->
+                if (state is EpgIndexState.Indexed) {
+                    loadNowPlaying()
+                }
+            }
+        }
+    }
+
+    private fun loadNowPlaying() {
+        viewModelScope.launch {
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
+
+            val activeProviderId = providerRepository.getActiveProvider()?.id ?: -1L
+            val settingsDb = SettingsDatabase.getInstance(context)
+            val sourceDao = settingsDb.epgSourceDao()
+            val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
+            val sourceIds = validSources.map { it.id }
+
+            val nowEpoch = System.currentTimeMillis() / 1000L
             _pagedNowPlaying.value =
                 Pager(
                     config =
@@ -259,11 +278,10 @@ class EpgBrowserViewModel(
                             enablePlaceholders = false,
                         ),
                 ) {
-                    dao.getPagedNowPlaying(nowEpoch)
+                    dao.getPagedNowPlaying(nowEpoch, sourceIds)
                 }.flow.cachedIn(viewModelScope)
         }
     }
-
     fun performSearch(query: String) {
         if (query.length < 2) return
 
@@ -346,6 +364,12 @@ class EpgBrowserViewModel(
             }
     }
 
+    fun clearSearch() {
+        searchJob?.cancel()
+        _uiState.value = UiState.Idle
+        _pagedSearchResults.value = emptyFlow()
+    }
+
     fun removeEpgSearchHistoryEntry(query: String) {
         appSettings.removeEpgSearchHistory(query)
         _epgSearchHistory.value = appSettings.getEpgSearchHistory()
@@ -373,21 +397,29 @@ class EpgBrowserViewModel(
                     .trim()
             if (sanitized.isBlank()) return
 
-            val ftsQuery = "\"$sanitized\"*"
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
+            viewModelScope.launch {
+                val ftsQuery = "\"$sanitized\"*"
+                val db = EpgIndexDatabase.getInstance(context)
+                val dao = db.epgIndexDao()
 
-            _pagedSearchResults.value =
-                Pager(
-                    config =
-                        PagingConfig(
-                            pageSize = PAGE_SIZE,
-                            prefetchDistance = PREFETCH_DISTANCE,
-                            enablePlaceholders = false,
-                        ),
-                ) {
-                    dao.searchByTitleFtsPaged(ftsQuery, windowStart, windowEnd)
-                }.flow.cachedIn(viewModelScope)
+                val activeProviderId = providerRepository.getActiveProvider()?.id ?: -1L
+                val settingsDb = SettingsDatabase.getInstance(context)
+                val sourceDao = settingsDb.epgSourceDao()
+                val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
+                val sourceIds = validSources.map { it.id }
+
+                _pagedSearchResults.value =
+                    Pager(
+                        config =
+                            PagingConfig(
+                                pageSize = PAGE_SIZE,
+                                prefetchDistance = PREFETCH_DISTANCE,
+                                enablePlaceholders = false,
+                            ),
+                    ) {
+                        dao.searchByTitleFtsPaged(ftsQuery, sourceIds, windowStart, windowEnd)
+                    }.flow.cachedIn(viewModelScope)
+            }
         }
     }
 

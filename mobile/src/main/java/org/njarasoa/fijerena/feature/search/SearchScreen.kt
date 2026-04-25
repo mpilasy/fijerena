@@ -139,6 +139,16 @@ fun MobileSearchScreen(
                         Icon(Icons.Default.Search, "Search")
                     }
                 },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = {
+                            searchQuery = ""
+                            viewModel.clearSearch()
+                        }) {
+                            Icon(Icons.Default.Close, "Clear")
+                        }
+                    }
+                },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions =

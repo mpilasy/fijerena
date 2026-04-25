@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.epgbrowser
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -41,10 +43,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -52,7 +56,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.foundation.lazy.list.items
+import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
+import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ClickableSurfaceDefaults
@@ -74,6 +80,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
@@ -269,6 +277,7 @@ fun EpgBrowserScreen(
                             onSearch = { viewModel.performSearch(it) },
                             onRemoveHistoryEntry = { viewModel.removeEpgSearchHistoryEntry(it) },
                             onClearHistory = { viewModel.clearEpgSearchHistory() },
+                            onClearSearch = { viewModel.clearSearch() },
                             onNavigateToPlayer = onNavigateToPlayer,
                         )
                     }
@@ -292,6 +301,7 @@ private fun EpgBrowserContent(
     onSearch: (String) -> Unit,
     onRemoveHistoryEntry: (String) -> Unit = {},
     onClearHistory: () -> Unit = {},
+    onClearSearch: () -> Unit = {},
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
 ) {
     val searchFocusRequester = remember { FocusRequester() }
@@ -374,63 +384,70 @@ private fun EpgBrowserContent(
 
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                ) {
-                    val labelText =
-                        when (searchMode) {
-                            EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programmes"
-                            EpgBrowserViewModel.SearchMode.CHANNEL -> "Search channels"
-                        }
-                    val placeholderText =
-                        when (searchMode) {
-                            EpgBrowserViewModel.SearchMode.PROGRAMME -> "Enter programme title..."
-                            EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
-                        }
-                    OutlinedTextField(
-                        value = localQuery,
-                        onValueChange = { localQuery = it },
-                        label = { Text(labelText) },
-                        placeholder = { Text(placeholderText) },
-                        singleLine = true,
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .focusRequester(searchFocusRequester),
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextSecondary,
-                                focusedLabelColor = CinemaAccent,
-                                unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                focusedPlaceholderColor = CinemaTextSecondary,
-                                unfocusedPlaceholderColor = CinemaTextSecondary,
-                            ),
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Search,
-                            ),
-                        keyboardActions =
-                            KeyboardActions(
-                                onSearch = { onSearch(localQuery) },
-                            ),
-                    )
-                    CinemaIconButton(
-                        onClick = { onSearch(localQuery) },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                OutlinedTextField(
+                    value = localQuery,
+                    onValueChange = { localQuery = it },
+                    placeholder = {
+                        val placeholderText =
+                            when (searchMode) {
+                                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Enter programme title..."
+                                EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
+                            }
+                        Text(placeholderText, color = CinemaTextPrimary.copy(alpha = 0.6f))
+                    },
+                    singleLine = true,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .focusRequester(searchFocusRequester),
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            cursorColor = CinemaAccent,
+                            focusedContainerColor = CinemaSurfaceVariant,
+                            unfocusedContainerColor = CinemaSurfaceLight,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaTextPrimary.copy(alpha = 0.4f),
+                        ),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                            tint = CinemaTextPrimary
+                        )
+                    },
+                    trailingIcon = {
+                        if (localQuery.isNotEmpty()) {
+                            CinemaIconButton(
+                                onClick = {
+                                    localQuery = ""
+                                    onClearSearch()
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Close,
+                                        contentDescription = "Clear",
+                                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                        tint = CinemaTextPrimary
+                                    )
+                                },
+                                size = 40.dp
                             )
-                        },
-                    )
-                }
+                        }
+                    },
+                    keyboardOptions =
+                        KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Search,
+                        ),
+                    keyboardActions =
+                        KeyboardActions(
+                            onSearch = { onSearch(localQuery) },
+                        ),
+                )
             }
         }
 
@@ -507,6 +524,7 @@ private fun EpgBrowserContent(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     if (epgSearchHistory.isNotEmpty()) {
+                        val historyFocusRequester = remember { FocusRequester() }
                         EpgSearchHistorySection(
                             history = epgSearchHistory,
                             onItemClick = { term ->
@@ -515,6 +533,8 @@ private fun EpgBrowserContent(
                             },
                             onItemRemove = onRemoveHistoryEntry,
                             onClearAll = onClearHistory,
+                            modifier = Modifier.focusProperties { enter = { historyFocusRequester } },
+                            firstItemFocusRequester = historyFocusRequester,
                         )
                         Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
                     }
@@ -588,10 +608,12 @@ private fun EpgSearchHistorySection(
     onItemClick: (String) -> Unit,
     onItemRemove: (String) -> Unit,
     onClearAll: () -> Unit,
+    modifier: Modifier = Modifier,
+    firstItemFocusRequester: FocusRequester? = null,
 ) {
     val scale = LocalUiScale.current
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
         Row(
@@ -613,10 +635,10 @@ private fun EpgSearchHistorySection(
                 onClick = onClearAll,
                 icon = {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = Icons.Rounded.Delete,
                         contentDescription = "Clear all",
-                        tint = CinemaTextSecondary,
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                        tint = CinemaTextPrimary
                     )
                 },
             )
@@ -624,9 +646,15 @@ private fun EpgSearchHistorySection(
         TvLazyRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         ) {
-            items(history) { term ->
+            itemsIndexed(history) { index, term ->
                 Card(
                     onClick = { onItemClick(term) },
+                    modifier =
+                        if (index == 0 && firstItemFocusRequester != null) {
+                            Modifier.focusRequester(firstItemFocusRequester)
+                        } else {
+                            Modifier
+                        },
                     colors =
                         CardDefaults.colors(
                             containerColor = CinemaSurface,
@@ -652,7 +680,7 @@ private fun EpgSearchHistorySection(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Search,
+                            imageVector = Icons.Rounded.Search,
                             contentDescription = null,
                             tint = CinemaTextSecondary,
                             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),

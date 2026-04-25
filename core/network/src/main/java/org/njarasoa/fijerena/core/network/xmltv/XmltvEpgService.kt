@@ -1,4 +1,5 @@
 package org.njarasoa.fijerena.core.network.xmltv
+
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
@@ -6,6 +7,7 @@ import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -55,8 +57,14 @@ class XmltvEpgService(
         // Return cached maps if available — avoids full DB scan on every call
         cachedChannelMaps?.let { return it }
 
+        val settingsDb = SettingsDatabase.getInstance(context)
+        val sourceDao = settingsDb.epgSourceDao()
+        val validSources = sourceDao.getEnabledSourcesForSearch(if (providerId != -1L) providerId else null)
+        val sourceIds = validSources.map { it.id }.toSet()
+        if (sourceIds.isEmpty()) return null
+
         val db = EpgIndexDatabase.getInstance(context)
-        val allXmltvChannels = db.epgIndexDao().getAllChannels()
+        val allXmltvChannels = db.epgIndexDao().getAllChannels().filter { it.sourceId in sourceIds }
         if (allXmltvChannels.isEmpty()) return null
 
         val byId = mutableMapOf<String, String>()

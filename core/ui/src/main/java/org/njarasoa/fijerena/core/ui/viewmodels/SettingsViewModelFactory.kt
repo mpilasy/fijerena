@@ -18,7 +18,8 @@ class SettingsViewModelFactory(
                 EpgManagementViewModel(context.applicationContext) as T
             }
             modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {
-                EpgBrowserViewModel(context.applicationContext) as T
+                val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context.applicationContext)
+                EpgBrowserViewModel(context.applicationContext, container.providerRepository) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
                 val appCtx = context.applicationContext

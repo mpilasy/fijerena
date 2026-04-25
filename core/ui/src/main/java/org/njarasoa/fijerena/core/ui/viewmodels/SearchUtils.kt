@@ -13,7 +13,13 @@ object SearchUtils {
     ): Boolean {
         if (queryWords.isEmpty()) return true
         val textLower = text.lowercase()
-        return queryWords.all { textLower.contains(it) }
+        return queryWords.all { word ->
+            if (word.startsWith("-") && word.length > 1) {
+                !textLower.contains(word.substring(1))
+            } else {
+                textLower.contains(word)
+            }
+        }
     }
 
     /** Fast path for callers that already have lowercased text (query words are already lowercase) */
@@ -22,6 +28,12 @@ object SearchUtils {
         queryWords: List<String>,
     ): Boolean {
         if (queryWords.isEmpty()) return true
-        return queryWords.all { textLower.contains(it) }
+        return queryWords.all { word ->
+            if (word.startsWith("-") && word.length > 1) {
+                !textLower.contains(word.substring(1))
+            } else {
+                textLower.contains(word)
+            }
+        }
     }
 }
