@@ -67,6 +67,7 @@ import org.njarasoa.fijerena.feature.player.utils.formatTime
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.util.Date
 
@@ -451,47 +452,59 @@ fun MobileControlsOverlay(
                 ) {
                     // Audio track selector (only if multiple tracks)
                     if (audioTrackCount > 1) {
-                        IconButton(onClick = onAudioTrack) {
-                            Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Audio", tint = CinemaTextPrimary)
-                        }
+                        CinemaIconButton(onClick = onAudioTrack,
+                            icon = {
+                                Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Audio", tint = CinemaTextPrimary)
+                            }
+                        )
                     }
 
                     // Subtitle selector (only if subtitles available)
                     if (subtitleTrackCount > 0) {
-                        IconButton(onClick = onSubtitle) {
-                            Icon(Icons.Rounded.Subtitles, "Subtitles", tint = CinemaTextPrimary)
-                        }
+                        CinemaIconButton(onClick = onSubtitle,
+                            icon = {
+                                Icon(Icons.Rounded.Subtitles, "Subtitles", tint = CinemaTextPrimary)
+                            }
+                        )
                     }
 
                     // Quality selector (only if multiple qualities)
                     if (qualityCount > 1) {
-                        IconButton(onClick = onQuality) {
-                            Icon(Icons.Rounded.Tune, "Quality", tint = CinemaTextPrimary)
-                        }
+                        CinemaIconButton(onClick = onQuality,
+                            icon = {
+                                Icon(Icons.Rounded.Tune, "Quality", tint = CinemaTextPrimary)
+                            }
+                        )
                     }
 
                     // Favorite toggle
-                    IconButton(onClick = onToggleFavorite) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                            contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
-                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-                        )
-                    }
+                    CinemaIconButton(onClick = onToggleFavorite,
+                        icon = {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
+                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                            )
+                        }
+                    )
 
                     // Night Mode toggle
-                    IconButton(onClick = onToggleNightMode) {
-                        Icon(
-                            Icons.Rounded.NightsStay,
-                            contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
-                            tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-                        )
-                    }
+                    CinemaIconButton(onClick = onToggleNightMode,
+                        icon = {
+                            Icon(
+                                Icons.Rounded.NightsStay,
+                                contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
+                                tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                            )
+                        }
+                    )
 
                     // Stats for nerds (always visible)
-                    IconButton(onClick = onStats) {
-                        Icon(Icons.Rounded.BarChart, "Stats", tint = CinemaTextPrimary)
-                    }
+                    CinemaIconButton(onClick = onStats,
+                        icon = {
+                            Icon(Icons.Rounded.BarChart, "Stats", tint = CinemaTextPrimary)
+                        }
+                    )
                 }
             }
         }

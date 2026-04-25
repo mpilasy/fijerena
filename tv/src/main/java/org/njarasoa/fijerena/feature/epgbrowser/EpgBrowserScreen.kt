@@ -45,10 +45,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -384,70 +388,138 @@ private fun EpgBrowserContent(
 
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
 
-                OutlinedTextField(
-                    value = localQuery,
-                    onValueChange = { localQuery = it },
-                    placeholder = {
-                        val placeholderText =
-                            when (searchMode) {
-                                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Enter programme title..."
-                                EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
+                val clearFocusRequester = remember { FocusRequester() }
+                val submitFocusRequester = remember { FocusRequester() }
+
+                Row(
+                    modifier = Modifier.padding(Spacing.sm.scaled(scale)),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                ) {
+                    OutlinedTextField(
+                        value = localQuery,
+                        onValueChange = { localQuery = it },
+                        placeholder = {
+                            val placeholderText =
+                                when (searchMode) {
+                                    EpgBrowserViewModel.SearchMode.PROGRAMME -> "Enter programme title..."
+                                    EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
+                                }
+                            Text(placeholderText, color = CinemaTextPrimary.copy(alpha = 0.6f))
+                        },
+                        singleLine = true,
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .focusRequester(searchFocusRequester)
+                                .onPreviewKeyEvent { event ->
+                                    if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                                        when (event.nativeKeyEvent.keyCode) {
+                                            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                                if (localQuery.isNotEmpty()) {
+                                                    clearFocusRequester.requestFocus()
+                                                } else {
+                                                    submitFocusRequester.requestFocus()
+                                                }
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    } else false
+                                },
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CinemaTextPrimary,
+                                unfocusedTextColor = CinemaTextPrimary,
+                                cursorColor = CinemaAccent,
+                                focusedContainerColor = CinemaSurfaceVariant,
+                                unfocusedContainerColor = CinemaSurfaceLight,
+                                focusedBorderColor = CinemaAccent,
+                                unfocusedBorderColor = CinemaTextPrimary.copy(alpha = 0.4f),
+                            ),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                                tint = CinemaTextPrimary
+                            )
+                        },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Search,
+                            ),
+                        keyboardActions =
+                            KeyboardActions(
+                                onSearch = { onSearch(localQuery) },
+                            ),
+                    )
+
+                    if (localQuery.isNotEmpty()) {
+                        CinemaIconButton(
+                            onClick = {
+                                localQuery = ""
+                                onClearSearch()
+                            },
+                            modifier = Modifier
+                                .focusRequester(clearFocusRequester)
+                                .onPreviewKeyEvent { event ->
+                                    if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                                        when (event.nativeKeyEvent.keyCode) {
+                                            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                                searchFocusRequester.requestFocus()
+                                                true
+                                            }
+                                            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                                submitFocusRequester.requestFocus()
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    } else false
+                                },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = "Clear",
+                                    modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                    tint = CinemaTextPrimary
+                                )
                             }
-                        Text(placeholderText, color = CinemaTextPrimary.copy(alpha = 0.6f))
-                    },
-                    singleLine = true,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .focusRequester(searchFocusRequester),
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = CinemaTextPrimary,
-                            unfocusedTextColor = CinemaTextPrimary,
-                            cursorColor = CinemaAccent,
-                            focusedContainerColor = CinemaSurfaceVariant,
-                            unfocusedContainerColor = CinemaSurfaceLight,
-                            focusedBorderColor = CinemaAccent,
-                            unfocusedBorderColor = CinemaTextPrimary.copy(alpha = 0.4f),
-                        ),
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Rounded.Search,
-                            contentDescription = null,
-                            modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                            tint = CinemaTextPrimary
                         )
-                    },
-                    trailingIcon = {
-                        if (localQuery.isNotEmpty()) {
-                            CinemaIconButton(
-                                onClick = {
-                                    localQuery = ""
-                                    onClearSearch()
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Close,
-                                        contentDescription = "Clear",
-                                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                        tint = CinemaTextPrimary
-                                    )
-                                },
-                                size = 40.dp
+                    }
+
+                    CinemaIconButton(
+                        onClick = { onSearch(localQuery) },
+                        modifier = Modifier
+                            .focusRequester(submitFocusRequester)
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                                    when (event.nativeKeyEvent.keyCode) {
+                                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                            if (localQuery.isNotEmpty()) {
+                                                clearFocusRequester.requestFocus()
+                                            } else {
+                                                searchFocusRequester.requestFocus()
+                                            }
+                                            true
+                                        }
+                                        else -> false
+                                    }
+                                } else false
+                            },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Search,
+                                contentDescription = "Search",
+                                modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                                tint = CinemaTextPrimary
                             )
                         }
-                    },
-                    keyboardOptions =
-                        KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Search,
-                        ),
-                    keyboardActions =
-                        KeyboardActions(
-                            onSearch = { onSearch(localQuery) },
-                        ),
-                )
+                    )
+                }
             }
         }
 
