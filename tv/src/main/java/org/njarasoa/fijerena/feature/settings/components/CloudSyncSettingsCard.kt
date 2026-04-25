@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.Sync
+import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,7 +107,7 @@ fun CloudSyncSettingsCard(
                     Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                     CinemaIconButton(
                         onClick = onSyncNow,
-                        icon = { Icon(Icons.Default.Sync, contentDescription = "Sync Now") },
+                        icon = { Icon(Icons.Rounded.Sync, contentDescription = "Sync Now") },
                     )
                     Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                     CinemaDangerButton(
@@ -140,3 +140,4 @@ fun CloudSyncSettingsCard(
         }
     }
 }
+

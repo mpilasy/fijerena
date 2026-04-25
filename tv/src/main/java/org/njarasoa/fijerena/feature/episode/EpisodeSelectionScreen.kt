@@ -29,14 +29,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.tv.material3.Icon
+import androidx.tv.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -82,6 +82,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -369,103 +370,35 @@ private fun EpisodeListContent(
                             color = CinemaTextPrimary,
                         )
                         // Favorite button
-                        var favoriteFocused by remember { mutableStateOf(false) }
-                        val favoriteFocusScale by animateFloatAsState(
-                            targetValue = if (favoriteFocused) TvFocusTokens.focusedScale else TvFocusTokens.defaultScale,
-                            animationSpec = tween(durationMillis = CinemaAnimation.focusDurationMs),
-                            label = "favorite_focus_scale",
-                        )
-                        IconButton(
+                        CinemaIconButton(
                             onClick = onToggleFavorite,
-                            modifier =
-                                Modifier
-                                    .size(TvDimensions.iconMedium.scaled(scale))
-                                    .graphicsLayer {
-                                        scaleX = favoriteFocusScale
-                                        scaleY = favoriteFocusScale
-                                    }
-                                    .background(
-                                        color = if (favoriteFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
-                                        shape = RoundedCornerShape(CornerRadius.small),
-                                    )
-                                    .then(
-                                        if (favoriteFocused) {
-                                            Modifier.border(
-                                                width = TvFocusTokens.focusBorderWidth,
-                                                color = CinemaAccentLight,
-                                                shape = RoundedCornerShape(CornerRadius.small),
-                                            )
-                                        } else {
-                                            Modifier
-                                        },
-                                    )
-                                    .onFocusChanged { favoriteFocused = it.isFocused },
-                        ) {
-                            Icon(
-                                imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
-                                contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
-                                tint =
-                                    when {
-                                        isFavorite -> CinemaAccent
-                                        favoriteFocused -> CinemaAccentLight
-                                        else -> CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                                    },
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        }
-                        // Refresh button
-                        var refreshFocused by remember { mutableStateOf(false) }
-                        val refreshFocusScale by animateFloatAsState(
-                            targetValue = if (refreshFocused) TvFocusTokens.focusedScale else TvFocusTokens.defaultScale,
-                            animationSpec = tween(durationMillis = CinemaAnimation.focusDurationMs),
-                            label = "refresh_focus_scale",
+                            icon = {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                    tint = if (isFavorite) CinemaAccent else CinemaTextPrimary
+                                )
+                            }
                         )
-                        IconButton(
+                        // Refresh button
+                        CinemaIconButton(
                             onClick = {
                                 isRefreshing = true
                                 onRefresh()
                                 isRefreshing = false
                             },
                             enabled = !isRefreshing,
-                            modifier =
-                                Modifier
-                                    .size(TvDimensions.iconMedium.scaled(scale))
-                                    .graphicsLayer {
-                                        scaleX = refreshFocusScale
-                                        scaleY = refreshFocusScale
-                                    }
-                                    .background(
-                                        color = if (refreshFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
-                                        shape = RoundedCornerShape(CornerRadius.small),
-                                    )
-                                    .then(
-                                        if (refreshFocused) {
-                                            Modifier.border(
-                                                width = TvFocusTokens.focusBorderWidth,
-                                                color = CinemaAccentLight,
-                                                shape = RoundedCornerShape(CornerRadius.small),
-                                            )
-                                        } else {
-                                            Modifier
-                                        },
-                                    )
-                                    .onFocusChanged { refreshFocused = it.isFocused },
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh series info",
-                                tint =
-                                    if (refreshFocused) {
-                                        CinemaAccentLight
-                                    } else {
-                                        CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-                                    },
-                                modifier =
-                                    Modifier
-                                        .size(TvDimensions.iconSmall.scaled(scale))
-                                        .rotate(rotation),
-                            )
-                        }
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.Refresh,
+                                    contentDescription = "Refresh series info",
+                                    modifier =
+                                        Modifier
+                                            .size(TvDimensions.iconSmall.scaled(scale))
+                                            .rotate(rotation),
+                                )
+                            },
+                        )
                     }
                     // Show episode count
                     Text(
@@ -896,7 +829,7 @@ private fun SeasonHeader(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
     ) {
         Icon(
-            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+            imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
             contentDescription = if (isExpanded) "Collapse" else "Expand",
             tint = CinemaAccentLight,
             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),

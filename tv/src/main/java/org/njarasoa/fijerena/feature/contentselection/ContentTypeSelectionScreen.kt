@@ -23,14 +23,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Tv
+import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -278,7 +278,7 @@ fun ContentTypeSelectionScreen(
                                         color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
                                     )
                                     Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
+                                        imageVector = Icons.Rounded.ArrowDropDown,
                                         contentDescription = null,
                                         tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
                                         modifier = Modifier.padding(start = Spacing.xs),
@@ -291,9 +291,9 @@ fun ContentTypeSelectionScreen(
                                 onClick = onEpgBrowser,
                                 icon = {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                        imageVector = Icons.AutoMirrored.Rounded.MenuBook,
                                         contentDescription = "EPG Browser",
-                                        tint = CinemaAccentLight,
+                                        tint = CinemaTextPrimary,
                                     )
                                 },
                             )
@@ -302,9 +302,9 @@ fun ContentTypeSelectionScreen(
                             onClick = onSearch,
                             icon = {
                                 Icon(
-                                    imageVector = Icons.Default.Search,
+                                    imageVector = Icons.Rounded.Search,
                                     contentDescription = "Search All",
-                                    tint = CinemaAccentLight,
+                                    tint = CinemaTextPrimary,
                                 )
                             },
                         )
@@ -312,9 +312,9 @@ fun ContentTypeSelectionScreen(
                             onClick = onSettings,
                             icon = {
                                 Icon(
-                                    imageVector = Icons.Default.Settings,
+                                    imageVector = Icons.Rounded.Settings,
                                     contentDescription = "Settings",
-                                    tint = CinemaAccentLight,
+                                    tint = CinemaTextPrimary,
                                 )
                             },
                         )
@@ -337,7 +337,7 @@ fun ContentTypeSelectionScreen(
                             ContentTypeHeroCard(
                                 title = "Live TV",
                                 subtitle = "Watch live channels",
-                                icon = Icons.Default.LiveTv,
+                                icon = Icons.Rounded.LiveTv,
                                 categoryCounts = liveTvCounts,
                                 showTotal = isDevMode,
                                 gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
@@ -350,7 +350,7 @@ fun ContentTypeSelectionScreen(
                             ContentTypeHeroCard(
                                 title = "Movies",
                                 subtitle = "Browse on-demand",
-                                icon = Icons.Default.Movie,
+                                icon = Icons.Rounded.Movie,
                                 categoryCounts = moviesCounts,
                                 showTotal = isDevMode,
                                 gradientColors = listOf(CinemaAccent, CinemaAccentDark),
@@ -363,7 +363,7 @@ fun ContentTypeSelectionScreen(
                             ContentTypeHeroCard(
                                 title = "TV Shows",
                                 subtitle = "Series & episodes",
-                                icon = Icons.Default.Tv,
+                                icon = Icons.Rounded.Tv,
                                 categoryCounts = tvShowsCounts,
                                 showTotal = isDevMode,
                                 gradientColors = listOf(CinemaAccentLight, CinemaAccent),

@@ -13,12 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
+import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -100,7 +100,7 @@ fun TvProviderSelectionScreen(
             CinemaIconButton(
                 onClick = onAddProvider,
                 icon = {
-                    Icon(Icons.Default.Add, contentDescription = "Add Provider", tint = CinemaAccent)
+                    Icon(Icons.Rounded.Add, contentDescription = "Add Provider", tint = CinemaAccent)
                 },
             )
         }
@@ -247,20 +247,20 @@ private fun ProviderList(
                         CinemaIconButton(
                             onClick = { onSelect(provider) },
                             icon = {
-                                Icon(Icons.Default.CheckCircle, contentDescription = "Select", tint = CinemaAccent)
+                                Icon(Icons.Rounded.CheckCircle, contentDescription = "Select", tint = CinemaAccent)
                             },
                         )
                     }
                     CinemaIconButton(
                         onClick = { onEdit(provider.id) },
                         icon = {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = CinemaAccent)
+                            Icon(Icons.Rounded.Edit, contentDescription = "Edit", tint = CinemaAccent)
                         },
                     )
                     CinemaDangerIconButton(
                         onClick = { onDelete(provider) },
                         icon = {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                            Icon(Icons.Rounded.Delete, contentDescription = "Delete")
                         },
                     )
                 }

@@ -20,17 +20,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.NightsStay
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Subtitles
+import androidx.compose.material.icons.rounded.Tune
+import androidx.tv.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -260,7 +260,7 @@ fun PlayerControlsOverlay(
                         .focusRequester(controlsFocusRequester),
             ) {
                 Icon(
-                    imageVector = if (isPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                    imageVector = if (isPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
                     contentDescription = if (isPaused) "Play" else "Pause",
                     modifier = Modifier.size(TvDimensions.iconXLarge),
                 )
@@ -460,7 +460,7 @@ fun PlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.List, "Chapters")
+                                Icon(Icons.AutoMirrored.Rounded.List, "Chapters")
                             }
                         }
 
@@ -476,7 +476,7 @@ fun PlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.VolumeUp, "Audio")
+                                Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Audio")
                             }
                         }
 
@@ -492,7 +492,7 @@ fun PlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.Filled.Subtitles, "Subtitles")
+                                Icon(Icons.Rounded.Subtitles, "Subtitles")
                             }
                         }
 
@@ -508,7 +508,7 @@ fun PlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.Filled.Tune, "Quality")
+                                Icon(Icons.Rounded.Tune, "Quality")
                             }
                         }
 
@@ -530,7 +530,7 @@ fun PlayerControlsOverlay(
                                     ),
                             ) {
                                 Icon(
-                                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                     contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
                                     tint =
                                         if (isFavorite &&
@@ -561,7 +561,7 @@ fun PlayerControlsOverlay(
                                 ),
                         ) {
                             Icon(
-                                Icons.Filled.NightsStay,
+                                Icons.Rounded.NightsStay,
                                 contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
                                 tint =
                                     if (isNightModeEnabled &&
@@ -585,7 +585,7 @@ fun PlayerControlsOverlay(
                                     focusedContentColor = CinemaBackground,
                                 ),
                         ) {
-                            Icon(Icons.Filled.BarChart, "Stats")
+                            Icon(Icons.Rounded.BarChart, "Stats")
                         }
                     }
                 }

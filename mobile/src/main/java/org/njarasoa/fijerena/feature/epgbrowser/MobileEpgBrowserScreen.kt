@@ -21,14 +21,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.AlertDialog
@@ -172,7 +172,7 @@ fun MobileEpgBrowserScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
                     }
                 },
                 actions = {
@@ -187,7 +187,7 @@ fun MobileEpgBrowserScreen(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
+                                imageVector = Icons.Rounded.Refresh,
                                 contentDescription = "Refresh stale EPG sources",
                                 tint =
                                     if (staleSourceCount > 0) {
@@ -278,7 +278,7 @@ fun MobileEpgBrowserScreen(
                 placeholder = { Text(placeholderText) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Search,
+                        imageVector = Icons.Rounded.Search,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
                     )
@@ -290,7 +290,7 @@ fun MobileEpgBrowserScreen(
                             viewModel.clearSearch()
                         }) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Rounded.Close,
                                 contentDescription = "Clear",
                                 modifier = Modifier.size(20.dp),
                             )
@@ -676,7 +676,7 @@ private fun MobileProgramCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
                         contentDescription = if (expanded) "Show less" else "Show more",
                         modifier = Modifier.size(CinemaSpacing.lg),
                         tint = MaterialTheme.colorScheme.primary,
@@ -734,7 +734,7 @@ private fun MobileAiringRow(
     ) {
         if (isMatched) {
             Icon(
-                imageVector = Icons.Default.PlayArrow,
+                imageVector = Icons.Rounded.PlayArrow,
                 contentDescription = "Watch",
                 modifier = Modifier.size(CinemaSpacing.lg),
                 tint = if (isOnAir) CinemaSuccess else MaterialTheme.colorScheme.primary,
@@ -833,7 +833,7 @@ private fun MobileEpgSearchHistorySection(
             )
             IconButton(onClick = onClearAll) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = Icons.Rounded.Delete,
                     contentDescription = "Clear all",
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     modifier = Modifier.size(20.dp),
@@ -850,7 +850,7 @@ private fun MobileEpgSearchHistorySection(
                     label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Search,
+                            imageVector = Icons.Rounded.Search,
                             contentDescription = null,
                             modifier = Modifier.size(AssistChipDefaults.IconSize),
                         )
@@ -861,7 +861,7 @@ private fun MobileEpgSearchHistorySection(
                             modifier = Modifier.size(AssistChipDefaults.IconSize),
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Rounded.Close,
                                 contentDescription = "Remove",
                                 modifier = Modifier.size(AssistChipDefaults.IconSize),
                             )

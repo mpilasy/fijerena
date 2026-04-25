@@ -7,10 +7,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -162,7 +162,7 @@ fun MobileContentTypeSelectionScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
+                            imageVector = Icons.Rounded.ArrowDropDown,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -171,14 +171,14 @@ fun MobileContentTypeSelectionScreen(
                 actions = {
                     if (hasEpgData) {
                         IconButton(onClick = onEpgBrowser) {
-                            Icon(Icons.AutoMirrored.Filled.MenuBook, "EPG Browser")
+                            Icon(Icons.AutoMirrored.Rounded.MenuBook, "EPG Browser")
                         }
                     }
                     IconButton(onClick = onSearch) {
-                        Icon(Icons.Default.Search, "Search")
+                        Icon(Icons.Rounded.Search, "Search")
                     }
                     IconButton(onClick = onSettings) {
-                        Icon(Icons.Default.Settings, "Settings")
+                        Icon(Icons.Rounded.Settings, "Settings")
                     }
                 },
             )

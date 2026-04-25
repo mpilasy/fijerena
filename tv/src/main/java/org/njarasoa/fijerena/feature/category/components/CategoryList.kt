@@ -18,9 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +40,7 @@ import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -158,21 +159,22 @@ internal fun CategoryList(
                 style = scaledTitleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            IconButton(
+            CinemaIconButton(
                 onClick = onRefreshCategories,
                 enabled = !categoriesRefreshing,
-                modifier = Modifier.size(Spacing.lg.scaled(scale)),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh categories",
-                    tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    modifier =
-                        Modifier
-                            .size(TvDimensions.iconSmall.scaled(scale))
-                            .rotate(rotation),
-                )
-            }
+                size = 40.dp,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = "Refresh categories",
+                        tint = CinemaTextPrimary,
+                        modifier =
+                            Modifier
+                                .size(TvDimensions.iconMedium.scaled(scale))
+                                .rotate(rotation),
+                    )
+                }
+            )
         }
 
         Box(

@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -65,12 +65,12 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                 title = { Text("EPG Management") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Source")
+                        Icon(Icons.Rounded.Add, contentDescription = "Add Source")
                     }
                 },
             )
@@ -98,7 +98,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         },
                                         modifier = Modifier.weight(1f),
                                     ) {
-                                        Icon(Icons.Default.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                        Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                                         Text("Refresh (${selectedIds.size})")
                                     }
@@ -108,7 +108,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         modifier = Modifier.weight(1f),
                                         colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                                     ) {
-                                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                        Icon(Icons.Rounded.Delete, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                                         Text("Delete (${selectedIds.size})")
                                     }
@@ -186,7 +186,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Default.DeleteForever,
+                                        Icons.Rounded.DeleteForever,
                                         contentDescription = null,
                                         modifier = Modifier.size(ButtonDefaults.IconSize),
                                     )
@@ -397,7 +397,7 @@ private fun EpgSourceCard(
                 }
 
                 IconButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, "Refresh")
+                    Icon(Icons.Rounded.Refresh, "Refresh")
                 }
             }
 

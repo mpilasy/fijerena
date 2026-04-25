@@ -19,14 +19,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.tv.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -44,8 +44,10 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.nativeKeyCode
 import androidx.compose.ui.input.key.nativeKeyCode
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -833,7 +835,7 @@ private fun CollapsibleHeader(
                 fontWeight = FontWeight.Bold,
             )
             Icon(
-                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
                 contentDescription = if (isExpanded) "Collapse" else "Expand",
                 tint = CinemaAccent,
                 modifier = Modifier.size(TvDimensions.iconSmall),
@@ -1068,14 +1070,20 @@ private fun SearchFavoriteDialog(
     )
 }
 
+/**
+ * TV-specific long press modifier for D-pad Center key.
+ * Triggers onKeyUp ONLY if a long-press was detected via onKeyDown repeat counts.
+ */
 private fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier =
     composed {
         var longPressDetected by remember { mutableStateOf(false) }
-        this.onPreviewKeyEvent { event ->
-            val keyCode = event.key.nativeKeyCode
+
+        onPreviewKeyEvent { event ->
             val isDpadCenter =
-                keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
-                    keyCode == android.view.KeyEvent.KEYCODE_ENTER
+                event.key == Key.DirectionCenter ||
+                    event.key == Key.Enter ||
+                    event.key == Key.NumPadEnter
+
             if (isDpadCenter &&
                 event.type == KeyEventType.KeyDown &&
                 event.nativeKeyEvent.repeatCount > 0 &&

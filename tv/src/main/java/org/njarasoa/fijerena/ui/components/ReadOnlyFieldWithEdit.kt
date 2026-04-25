@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.Edit
+import androidx.tv.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -163,8 +163,9 @@ fun ReadOnlyFieldWithEdit(
                     editValue = value
                     isEditing = true
                 },
-                icon = { Icon(Icons.Default.Edit, contentDescription = "Edit $label") },
+                icon = { Icon(Icons.Rounded.Edit, contentDescription = "Edit $label") },
             )
         }
     }
 }
+
