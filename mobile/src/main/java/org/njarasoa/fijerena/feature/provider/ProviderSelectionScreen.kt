@@ -4,11 +4,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,12 +53,12 @@ fun MobileProviderSelectionScreen(
                 title = { Text("Providers") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = onAddProvider) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Provider")
+                        Icon(Icons.Rounded.Add, contentDescription = "Add Provider")
                     }
                 },
             )
@@ -199,7 +199,7 @@ private fun MobileProviderList(
                         if (!provider.isActive) {
                             IconButton(onClick = { onSelect(provider) }) {
                                 Icon(
-                                    Icons.Default.CheckCircle,
+                                    Icons.Rounded.CheckCircle,
                                     contentDescription = "Select",
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
@@ -207,14 +207,14 @@ private fun MobileProviderList(
                         }
                         IconButton(onClick = { onEdit(provider.id) }) {
                             Icon(
-                                Icons.Default.Edit,
+                                Icons.Rounded.Edit,
                                 contentDescription = "Edit",
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         IconButton(onClick = { onDelete(provider) }) {
                             Icon(
-                                Icons.Default.Delete,
+                                Icons.Rounded.Delete,
                                 contentDescription = "Delete",
                                 tint = CinemaError,
                             )

@@ -13,15 +13,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Subtitles
+import androidx.compose.material.icons.rounded.Tune
+import androidx.tv.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -168,7 +168,7 @@ fun MetadataOverlay(
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                                    Icon(Icons.Rounded.PlayArrow, contentDescription = null)
                                     Text("Resume")
                                 }
                             }
@@ -178,7 +178,7 @@ fun MetadataOverlay(
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Icon(Icons.Filled.Pause, contentDescription = null)
+                                    Icon(Icons.Rounded.Pause, contentDescription = null)
                                     Text("Pause")
                                 }
                             }
@@ -192,7 +192,7 @@ fun MetadataOverlay(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null)
+                            Icon(Icons.AutoMirrored.Rounded.VolumeUp, contentDescription = null)
                             Text("Audio")
                         }
                     }
@@ -204,7 +204,7 @@ fun MetadataOverlay(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Filled.Subtitles, contentDescription = null)
+                            Icon(Icons.Rounded.Subtitles, contentDescription = null)
                             Text("Subtitle")
                         }
                     }
@@ -216,7 +216,7 @@ fun MetadataOverlay(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Filled.Tune, contentDescription = null)
+                            Icon(Icons.Rounded.Tune, contentDescription = null)
                             Text("Quality")
                         }
                     }
@@ -229,7 +229,7 @@ fun MetadataOverlay(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(Icons.Filled.BarChart, contentDescription = null)
+                                Icon(Icons.Rounded.BarChart, contentDescription = null)
                                 Text("Stats")
                             }
                         }
@@ -256,7 +256,7 @@ fun MetadataOverlay(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
-                                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                     contentDescription = null,
                                 )
                                 Text(if (isFavorite) "Favorited" else "Favorite")

@@ -17,7 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -92,7 +92,7 @@ fun MobileChannelListSheet(
                         color = CinemaTextPrimary,
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = CinemaTextPrimary)
+                        Icon(Icons.Rounded.Close, contentDescription = "Close", tint = CinemaTextPrimary)
                     }
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))

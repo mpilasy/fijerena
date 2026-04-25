@@ -14,12 +14,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -97,7 +97,7 @@ fun MobileEpgGuideScreen(
                 title = { Text("TV Guide - $categoryName$epgDevStats") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
                     }
                 },
                 actions = {
@@ -108,7 +108,7 @@ fun MobileEpgGuideScreen(
                         },
                     ) {
                         Icon(
-                            if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
+                            if (isSearchActive) Icons.Rounded.Close else Icons.Rounded.Search,
                             if (isSearchActive) "Close Search" else "Search",
                         )
                     }
@@ -122,7 +122,7 @@ fun MobileEpgGuideScreen(
                                 strokeWidth = MobileDimensions.strokeWidth,
                             )
                         } else {
-                            Icon(Icons.Default.Refresh, "Refresh")
+                            Icon(Icons.Rounded.Refresh, "Refresh")
                         }
                     }
                 },
@@ -244,7 +244,7 @@ private fun DateNavigationRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onPreviousDay) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous Day")
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous Day")
         }
         Text(
             text = selectedDate,
@@ -257,7 +257,7 @@ private fun DateNavigationRow(
             label = { Text("Now") },
         )
         IconButton(onClick = onNextDay) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next Day")
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next Day")
         }
     }
 }

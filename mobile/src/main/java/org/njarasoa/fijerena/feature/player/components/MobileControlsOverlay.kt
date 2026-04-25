@@ -19,17 +19,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.FastForward
+import androidx.compose.material.icons.rounded.FastRewind
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.NightsStay
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Subtitles
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -246,7 +246,7 @@ fun MobileControlsOverlay(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Default.FastRewind,
+                            imageVector = Icons.Rounded.FastRewind,
                             contentDescription = "Rewind 1min",
                             tint = CinemaTextPrimary,
                             modifier = Modifier.size(MobileDimensions.iconLarge),
@@ -262,9 +262,9 @@ fun MobileControlsOverlay(
                 Icon(
                     imageVector =
                         if (playbackState is PlaybackState.Paused) {
-                            Icons.Default.PlayArrow
+                            Icons.Rounded.PlayArrow
                         } else {
-                            Icons.Default.Pause
+                            Icons.Rounded.Pause
                         },
                     contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
                     tint = CinemaTextPrimary,
@@ -278,7 +278,7 @@ fun MobileControlsOverlay(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Default.FastForward,
+                            imageVector = Icons.Rounded.FastForward,
                             contentDescription = "Fast Forward 5min",
                             tint = CinemaTextPrimary,
                             modifier = Modifier.size(MobileDimensions.iconLarge),
@@ -452,28 +452,28 @@ fun MobileControlsOverlay(
                     // Audio track selector (only if multiple tracks)
                     if (audioTrackCount > 1) {
                         IconButton(onClick = onAudioTrack) {
-                            Icon(Icons.AutoMirrored.Filled.VolumeUp, "Audio", tint = CinemaTextPrimary)
+                            Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Audio", tint = CinemaTextPrimary)
                         }
                     }
 
                     // Subtitle selector (only if subtitles available)
                     if (subtitleTrackCount > 0) {
                         IconButton(onClick = onSubtitle) {
-                            Icon(Icons.Filled.Subtitles, "Subtitles", tint = CinemaTextPrimary)
+                            Icon(Icons.Rounded.Subtitles, "Subtitles", tint = CinemaTextPrimary)
                         }
                     }
 
                     // Quality selector (only if multiple qualities)
                     if (qualityCount > 1) {
                         IconButton(onClick = onQuality) {
-                            Icon(Icons.Filled.Tune, "Quality", tint = CinemaTextPrimary)
+                            Icon(Icons.Rounded.Tune, "Quality", tint = CinemaTextPrimary)
                         }
                     }
 
                     // Favorite toggle
                     IconButton(onClick = onToggleFavorite) {
                         Icon(
-                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                             contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
                             tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                         )
@@ -482,7 +482,7 @@ fun MobileControlsOverlay(
                     // Night Mode toggle
                     IconButton(onClick = onToggleNightMode) {
                         Icon(
-                            Icons.Filled.NightsStay,
+                            Icons.Rounded.NightsStay,
                             contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
                             tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                         )
@@ -490,7 +490,7 @@ fun MobileControlsOverlay(
 
                     // Stats for nerds (always visible)
                     IconButton(onClick = onStats) {
-                        Icon(Icons.Filled.BarChart, "Stats", tint = CinemaTextPrimary)
+                        Icon(Icons.Rounded.BarChart, "Stats", tint = CinemaTextPrimary)
                     }
                 }
             }

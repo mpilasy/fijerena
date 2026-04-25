@@ -19,13 +19,13 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.tv.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -272,13 +272,21 @@ private fun EpgHeader(
         // Date navigation + refresh
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
             Button(onClick = onPreviousDay) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous Day")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
+                    contentDescription = "Previous Day",
+                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                )
             }
             Button(onClick = onJumpToNow) {
                 Text("Now")
             }
             Button(onClick = onNextDay) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next Day")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                    contentDescription = "Next Day",
+                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                )
             }
             Button(
                 onClick = onRefresh,
@@ -291,13 +299,18 @@ private fun EpgHeader(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = "Refresh",
+                        tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                    )
                 }
             }
             Button(onClick = onSearchToggle) {
                 Icon(
-                    if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
+                    imageVector = if (isSearchActive) Icons.Rounded.Close else Icons.Rounded.Search,
                     contentDescription = if (isSearchActive) "Close Search" else "Search",
+                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )
             }
         }

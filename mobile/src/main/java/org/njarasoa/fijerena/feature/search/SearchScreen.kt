@@ -9,13 +9,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -107,7 +107,7 @@ fun MobileSearchScreen(
                 title = { Text("Search") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
                     }
                 },
             )
@@ -136,7 +136,7 @@ fun MobileSearchScreen(
                             keyboardController?.hide()
                         }
                     }) {
-                        Icon(Icons.Default.Search, "Search")
+                        Icon(Icons.Rounded.Search, "Search")
                     }
                 },
                 trailingIcon = {
@@ -145,7 +145,7 @@ fun MobileSearchScreen(
                             searchQuery = ""
                             viewModel.clearSearch()
                         }) {
-                            Icon(Icons.Default.Close, "Clear")
+                            Icon(Icons.Rounded.Close, "Clear")
                         }
                     }
                 },
@@ -533,7 +533,7 @@ private fun MobileSearchHistorySection(
             )
             IconButton(onClick = onClearAll) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = Icons.Rounded.Delete,
                     contentDescription = "Clear all",
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     modifier = Modifier.size(MobileDimensions.iconSmall),
@@ -550,7 +550,7 @@ private fun MobileSearchHistorySection(
                     label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Search,
+                            imageVector = Icons.Rounded.Search,
                             contentDescription = null,
                             modifier = Modifier.size(AssistChipDefaults.IconSize),
                         )
@@ -561,7 +561,7 @@ private fun MobileSearchHistorySection(
                             modifier = Modifier.size(AssistChipDefaults.IconSize),
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Rounded.Close,
                                 contentDescription = "Remove",
                                 modifier = Modifier.size(AssistChipDefaults.IconSize),
                             )
@@ -603,7 +603,7 @@ private fun MobileCollapsibleHeader(
                 fontWeight = FontWeight.Bold,
             )
             Icon(
-                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
                 contentDescription = if (isExpanded) "Collapse" else "Expand",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
@@ -649,7 +649,7 @@ private fun CategoryResultCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                Icons.Default.Folder,
+                Icons.Rounded.Folder,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )

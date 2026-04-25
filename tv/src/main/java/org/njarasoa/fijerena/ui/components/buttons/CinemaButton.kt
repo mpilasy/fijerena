@@ -254,7 +254,7 @@ fun CinemaIconButton(
         modifier = modifier.size(size.scaled(scale)),
         colors =
             androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                containerColor = CinemaSurface.copy(alpha = CinemaAlpha.glass),
+                containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
                 contentColor = CinemaTextPrimary,
                 focusedContainerColor = CinemaAccent,
                 focusedContentColor = CinemaBackground,
@@ -268,7 +268,7 @@ fun CinemaIconButton(
         shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
         border =
             androidx.tv.material3.ClickableSurfaceDefaults.border(
-                border = Border(BorderStroke(1.dp.scaled(scale), CinemaTextSecondary.copy(alpha = 0.3f))),
+                border = Border(BorderStroke(1.dp.scaled(scale), CinemaTextPrimary.copy(alpha = 0.3f))),
                 focusedBorder = Border(BorderStroke(2.dp.scaled(scale), CinemaTextPrimary)),
             ),
     ) {

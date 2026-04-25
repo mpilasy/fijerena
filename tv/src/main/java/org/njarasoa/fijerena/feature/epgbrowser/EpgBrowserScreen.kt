@@ -18,14 +18,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.tv.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -215,7 +215,7 @@ fun EpgBrowserScreen(
                                     )
                                 } else {
                                     Icon(
-                                        imageVector = Icons.Default.Refresh,
+                                        imageVector = Icons.Rounded.Refresh,
                                         contentDescription = "Refresh stale EPG sources",
                                         tint = if (staleSourceCount > 0) CinemaWarning else CinemaTextPrimary,
                                         modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
@@ -1021,7 +1021,7 @@ private fun AiringRow(
         ) {
             if (isMatched) {
                 Icon(
-                    imageVector = Icons.Default.PlayArrow,
+                    imageVector = Icons.Rounded.PlayArrow,
                     contentDescription = "Watch",
                     modifier = Modifier.size(Spacing.lg.scaled(scale)),
                     tint = if (isOnAir) CinemaSuccess else CinemaAccentLight,

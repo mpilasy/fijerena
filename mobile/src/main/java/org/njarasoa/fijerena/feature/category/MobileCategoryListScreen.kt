@@ -19,9 +19,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.DateRange
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -147,7 +147,7 @@ fun MobileCategoryListScreen(
                 title = { Text(contentType.replace("_", " ")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
                     }
                 },
                 actions = {
@@ -162,13 +162,13 @@ fun MobileCategoryListScreen(
                                     epgIndexState is EpgIndexState.Indexed
                             if (selectedCatId != null && selectedCatName != null && hasEpgData) {
                                 IconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) }) {
-                                    Icon(Icons.Default.DateRange, "TV Guide")
+                                    Icon(Icons.Rounded.DateRange, "TV Guide")
                                 }
                             }
                         }
                     }
                     IconButton(onClick = onSearchClick) {
-                        Icon(Icons.Default.Search, "Search")
+                        Icon(Icons.Rounded.Search, "Search")
                     }
                 },
             )

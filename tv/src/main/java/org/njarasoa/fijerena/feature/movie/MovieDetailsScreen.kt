@@ -20,12 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.tv.material3.Icon
+import androidx.tv.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +58,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
@@ -259,7 +260,7 @@ private fun MovieDetailsContent(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     // Favorite button
-                    IconButton(
+                    CinemaIconButton(
                         onClick = {
                             if (isFavorite) {
                                 mediaRepository.removeFavorite(movieId, ContentType.MOVIES)
@@ -268,38 +269,34 @@ private fun MovieDetailsContent(
                             }
                             isFavorite = !isFavorite
                         },
-                        modifier =
-                            Modifier
-                                .size(TvDimensions.iconMedium.scaled(scale))
-                                .tvFocusableNoScale(),
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
-                            contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
-                            tint = if (isFavorite) CinemaAccent else CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        )
-                    }
+                        icon = {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                                tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        }
+                    )
                     // Refresh button
-                    IconButton(
+                    CinemaIconButton(
                         onClick = {
                             isRefreshing = true
                             onRefresh()
                             isRefreshing = false
                         },
                         enabled = !isRefreshing,
-                        modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh movie info",
-                            tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                            modifier =
-                                Modifier
-                                    .size(TvDimensions.iconSmall.scaled(scale))
-                                    .rotate(rotation),
-                        )
-                    }
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Refresh,
+                                contentDescription = "Refresh movie info",
+                                modifier =
+                                    Modifier
+                                        .size(TvDimensions.iconSmall.scaled(scale))
+                                        .rotate(rotation),
+                            )
+                        }
+                    )
                 }
             }
             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
@@ -739,3 +736,4 @@ private fun formatDuration(duration: String): String {
         else -> "${seconds}s"
     }
 }
+
