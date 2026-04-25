@@ -34,6 +34,8 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 
@@ -109,18 +111,20 @@ fun MobileEpisodeSelectionScreen(
             TopAppBar(
                 title = { Text(seriesName) },
                 navigationIcon = {
-                    IconButton(onClick = {
+                    CinemaIconButton(onClick = {
                         if (selectedEpisode != null) {
                             selectedEpisode = null
                         } else {
                             onBack()
                         }
-                    }) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
-                    }
+                    },
+                        icon = {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = CinemaTextPrimary)
+                        }
+                    )
                 },
                 actions = {
-                    IconButton(onClick = {
+                    CinemaIconButton(onClick = {
                         mediaRepository?.let { repo ->
                             if (isFavorite) {
                                 repo.removeFavorite(seriesId, ContentType.TV_SHOWS)
@@ -129,13 +133,15 @@ fun MobileEpisodeSelectionScreen(
                             }
                             isFavorite = !isFavorite
                         }
-                    }) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                            contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
-                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    },
+                        icon = {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                            )
+                        }
+                    )
                 },
             )
         },

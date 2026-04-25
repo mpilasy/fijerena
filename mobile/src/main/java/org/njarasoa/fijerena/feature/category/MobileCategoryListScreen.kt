@@ -66,9 +66,12 @@ import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,9 +149,11 @@ fun MobileCategoryListScreen(
             TopAppBar(
                 title = { Text(contentType.replace("_", " ")) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
-                    }
+                    CinemaIconButton(onClick = onBack,
+                        icon = {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = CinemaTextPrimary)
+                        }
+                    )
                 },
                 actions = {
                     // EPG button - show for Live TV when native EPG or XMLTV file is available
@@ -161,15 +166,19 @@ fun MobileCategoryListScreen(
                                 supportsNativeEpg ||
                                     epgIndexState is EpgIndexState.Indexed
                             if (selectedCatId != null && selectedCatName != null && hasEpgData) {
-                                IconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) }) {
-                                    Icon(Icons.Rounded.DateRange, "TV Guide")
-                                }
+                                CinemaIconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) },
+                                    icon = {
+                                        Icon(Icons.Rounded.DateRange, "TV Guide", tint = CinemaTextPrimary)
+                                    }
+                                )
                             }
                         }
                     }
-                    IconButton(onClick = onSearchClick) {
-                        Icon(Icons.Rounded.Search, "Search")
-                    }
+                    CinemaIconButton(onClick = onSearchClick,
+                        icon = {
+                            Icon(Icons.Rounded.Search, "Search", tint = CinemaTextPrimary)
+                        }
+                    )
                 },
             )
         },

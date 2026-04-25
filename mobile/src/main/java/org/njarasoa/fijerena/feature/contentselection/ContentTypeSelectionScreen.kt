@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeDark
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -170,16 +171,22 @@ fun MobileContentTypeSelectionScreen(
                 },
                 actions = {
                     if (hasEpgData) {
-                        IconButton(onClick = onEpgBrowser) {
-                            Icon(Icons.AutoMirrored.Rounded.MenuBook, "EPG Browser")
+                        CinemaIconButton(onClick = onEpgBrowser,
+                            icon = {
+                                Icon(Icons.AutoMirrored.Rounded.MenuBook, "EPG Browser", tint = CinemaTextPrimary)
+                            }
+                        )
+                    }
+                    CinemaIconButton(onClick = onSearch,
+                        icon = {
+                            Icon(Icons.Rounded.Search, "Search", tint = CinemaTextPrimary)
                         }
-                    }
-                    IconButton(onClick = onSearch) {
-                        Icon(Icons.Rounded.Search, "Search")
-                    }
-                    IconButton(onClick = onSettings) {
-                        Icon(Icons.Rounded.Settings, "Settings")
-                    }
+                    )
+                    CinemaIconButton(onClick = onSettings,
+                        icon = {
+                            Icon(Icons.Rounded.Settings, "Settings", tint = CinemaTextPrimary)
+                        }
+                    )
                 },
             )
         },

@@ -411,60 +411,128 @@ private fun SearchTextField(
     onClear: () -> Unit = {},
     focusRequester: FocusRequester,
 ) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = { Text("Enter stream name...", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary.copy(alpha = 0.6f)) },
-        singleLine = true,
-        modifier =
-            Modifier
-                .width(org.njarasoa.fijerena.ui.theme.TvDimensions.formFieldWidth)
-                .focusRequester(focusRequester),
-        shape = androidx.compose.foundation.shape.CircleShape,
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                unfocusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight,
-                focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary.copy(alpha = 0.4f),
-            ),
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconMedium),
-                tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-            )
-        },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                CinemaIconButton(
-                    onClick = onClear,
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Rounded.Close,
-                            contentDescription = "Clear",
-                            modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconSmall),
-                            tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-                        )
+    val clearFocusRequester = remember { FocusRequester() }
+    val submitFocusRequester = remember { FocusRequester() }
+
+    Row(
+        modifier = Modifier.padding(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = { Text("Enter stream name...", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary.copy(alpha = 0.6f)) },
+            singleLine = true,
+            modifier =
+                Modifier
+                    .width(org.njarasoa.fijerena.ui.theme.TvDimensions.formFieldWidth)
+                    .focusRequester(focusRequester)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                            when (event.nativeKeyEvent.keyCode) {
+                                android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    if (query.isNotEmpty()) {
+                                        clearFocusRequester.requestFocus()
+                                    } else {
+                                        submitFocusRequester.requestFocus()
+                                    }
+                                    true
+                                }
+                                else -> false
+                            }
+                        } else false
                     },
-                    size = 40.dp
+            shape = androidx.compose.foundation.shape.CircleShape,
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                    unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                    cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                    focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                    unfocusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight,
+                    focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                    unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary.copy(alpha = 0.4f),
+                ),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = null,
+                    modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconMedium),
+                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                )
+            },
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Search,
+                ),
+            keyboardActions =
+                KeyboardActions(
+                    onSearch = { onSearchSubmit() },
+                ),
+        )
+
+        if (query.isNotEmpty()) {
+            CinemaIconButton(
+                onClick = onClear,
+                modifier = Modifier
+                    .focusRequester(clearFocusRequester)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                            when (event.nativeKeyEvent.keyCode) {
+                                android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                    focusRequester.requestFocus()
+                                    true
+                                }
+                                android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    submitFocusRequester.requestFocus()
+                                    true
+                                }
+                                else -> false
+                            }
+                        } else false
+                    },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "Clear",
+                        modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconSmall),
+                        tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                    )
+                }
+            )
+        }
+
+        CinemaIconButton(
+            onClick = onSearchSubmit,
+            modifier = Modifier
+                .focusRequester(submitFocusRequester)
+                .onPreviewKeyEvent { event ->
+                    if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                        when (event.nativeKeyEvent.keyCode) {
+                            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                if (query.isNotEmpty()) {
+                                    clearFocusRequester.requestFocus()
+                                } else {
+                                    focusRequester.requestFocus()
+                                }
+                                true
+                            }
+                            else -> false
+                        }
+                    } else false
+                },
+            icon = {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = "Search",
+                    modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconMedium),
+                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )
             }
-        },
-        keyboardOptions =
-            KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Search,
-            ),
-        keyboardActions =
-            KeyboardActions(
-                onSearch = { onSearchSubmit() },
-            ),
-    )
+        )
+    }
 
     // Auto-focus on screen open
     LaunchedEffect(Unit) {

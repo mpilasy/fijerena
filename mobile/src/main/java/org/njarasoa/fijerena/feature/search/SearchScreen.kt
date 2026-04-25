@@ -34,8 +34,12 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import java.util.Locale
@@ -128,25 +132,40 @@ fun MobileSearchScreen(
                     Modifier
                         .fillMaxWidth()
                         .padding(Spacing.md),
-                placeholder = { Text("Search streams...") },
+                placeholder = { Text("Search streams...", color = CinemaTextPrimary.copy(alpha = 0.6f)) },
+                shape = androidx.compose.foundation.shape.CircleShape,
                 leadingIcon = {
-                    IconButton(onClick = {
-                        if (searchQuery.isNotBlank()) {
-                            viewModel.performSearch(searchQuery)
-                            keyboardController?.hide()
+                    CinemaIconButton(
+                        onClick = {
+                            if (searchQuery.isNotBlank()) {
+                                viewModel.performSearch(searchQuery)
+                                keyboardController?.hide()
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Search,
+                                contentDescription = "Search",
+                                tint = CinemaTextPrimary
+                            )
                         }
-                    }) {
-                        Icon(Icons.Rounded.Search, "Search")
-                    }
+                    )
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = {
-                            searchQuery = ""
-                            viewModel.clearSearch()
-                        }) {
-                            Icon(Icons.Rounded.Close, "Clear")
-                        }
+                        CinemaIconButton(
+                            onClick = {
+                                searchQuery = ""
+                                viewModel.clearSearch()
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = "Clear",
+                                    tint = CinemaTextPrimary
+                                )
+                            }
+                        )
                     }
                 },
                 singleLine = true,
@@ -162,14 +181,14 @@ fun MobileSearchScreen(
                     ),
                 colors =
                     OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textDisabled),
+                        focusedTextColor = CinemaTextPrimary,
+                        unfocusedTextColor = CinemaTextPrimary,
+                        disabledTextColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                         cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedContainerColor = CinemaSurfaceVariant,
+                        unfocusedContainerColor = CinemaSurfaceLight,
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.tint),
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        unfocusedBorderColor = CinemaTextPrimary.copy(alpha = 0.2f),
                     ),
             )
 
