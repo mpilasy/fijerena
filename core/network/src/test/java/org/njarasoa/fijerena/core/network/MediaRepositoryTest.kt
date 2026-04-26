@@ -8,9 +8,15 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import io.mockk.mockkStatic
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import io.mockk.mockkConstructor
+import io.mockk.clearAllMocks
+import io.mockk.mockkStatic
+import android.os.Looper
+import android.os.Handler
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 
@@ -30,9 +36,37 @@ class MediaRepositoryTest {
 
     @Before
     fun setup() {
+        mockkStatic(android.os.Looper::class)
+        val mainLooper = mockk<android.os.Looper>(relaxed = true)
+        every { android.os.Looper.getMainLooper() } returns mainLooper
+
+        io.mockk.mockkConstructor(android.os.Handler::class)
+        every { anyConstructed<android.os.Handler>().postDelayed(any(), any()) } returns true
+        every { anyConstructed<android.os.Handler>().removeCallbacks(any()) } returns Unit
+
         context = mockk(relaxed = true)
         sharedPreferences = mockk(relaxed = true)
         editor = mockk(relaxed = true)
+        clearAllMocks()
+
+        mockkStatic(Looper::class)
+        every { Looper.getMainLooper() } returns mockk(relaxed = true)
+
+        mockkStatic(Handler::class)
+        val mockHandler = mockk<Handler>(relaxed = true)
+        every { mockHandler.removeCallbacks(any()) } returns Unit
+        every { mockHandler.postDelayed(any(), any()) } returns true
+
+        mockkConstructor(Handler::class)
+        every { anyConstructed<Handler>().postDelayed(any(), any()) } returns true
+        every { anyConstructed<Handler>().removeCallbacks(any()) } returns Unit
+        every { anyConstructed<Handler>().post(any()) } returns true
+
+        io.mockk.mockkStatic(android.os.Looper::class)
+        every { android.os.Looper.getMainLooper() } returns mockk(relaxed = true)
+        io.mockk.mockkConstructor(android.os.Handler::class)
+        every { anyConstructed<android.os.Handler>().removeCallbacks(any()) } returns Unit
+        every { anyConstructed<android.os.Handler>().postDelayed(any(), any()) } returns true
 
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
         every { sharedPreferences.edit() } returns editor

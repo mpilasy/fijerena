@@ -448,7 +448,9 @@ class SettingsExportManager(private val context: Context) {
                                     try {
                                         val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
                                         providerRepo.updateProviderSettings(existing.id, settings)
-                                    } catch (_: Exception) { }
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("SettingsExportManager", "Failed to update provider settings", e)
+                                    }
                                 }
                                 providersUpdated++
                             }
@@ -684,7 +686,9 @@ class SettingsExportManager(private val context: Context) {
             try {
                 val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
                 providerRepo.updateProviderSettings(newId, settings)
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                android.util.Log.e("SettingsExportManager", "Failed to update provider settings", e)
+            }
         }
     }
 

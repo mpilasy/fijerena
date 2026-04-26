@@ -4,7 +4,7 @@
 **Release Date:** 2026-03-01
 
 ### Parallel EPG Ingestion Pipeline
-- **Channel-based producer-consumer architecture:** Downloads run concurrently (3 on mobile, 1 on TV), ingestion sequential. Per-source progress tracking with download % and ingestion % using `CountingInputStream`.
+- **Channel-based producer-consumer architecture:** Downloads run concurrently (3 on mobile, 2 on TV), ingestion parallel (2 parallel workers). Per-source progress tracking with download % and ingestion % using `CountingInputStream`.
 
 ### EPG Clear All Data Fix
 - **Instant DB destroy+recreate:** Replaced `DELETE FROM` (took 10+ min on 4M rows on Shield TV) with instant DB destroy and recreate. Sources saved and restored automatically. Blocking overlay shown during clear.

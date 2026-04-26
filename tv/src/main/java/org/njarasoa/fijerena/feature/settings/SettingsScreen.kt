@@ -99,9 +99,11 @@ fun SettingsScreen(
 
     // Global settings
     var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
-    var uiScale by remember { mutableStateOf(appSettings.uiScale) }
     var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
     var watchDelaySeconds by remember { mutableStateOf(appSettings.watchDelaySeconds) }
+
+    // Use scale from CompositionLocal for display
+    val currentUiScale = LocalUiScale.current
 
     // Export/Import state
     var exportImportMessage by remember { mutableStateOf<String?>(null) }
@@ -169,7 +171,7 @@ fun SettingsScreen(
                 if (options.importGlobalSettings) {
                     selectedThemeId = appSettings.themeId
                     onThemeChanged(appSettings.themeId)
-                    uiScale = appSettings.uiScale
+                    onUiScaleChanged(appSettings.uiScale)
                     isDevMode = appSettings.isDevMode
                 }
                 val activeProvider = providerRepo.getActiveProvider()
@@ -260,15 +262,6 @@ fun SettingsScreen(
     }
 
     val scale = LocalUiScale.current
-    val initialFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        try {
-            initialFocusRequester.requestFocus()
-        } catch (_: IllegalStateException) {
-            // FocusRequester not yet attached — ignore
-        }
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -298,9 +291,7 @@ fun SettingsScreen(
             TvLazyColumn(
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .focusRestorer { initialFocusRequester }
+                modifier = Modifier.fillMaxSize()
             ) {
                 // Provider Details
                 item {
@@ -312,7 +303,6 @@ fun SettingsScreen(
                         subscriptionIsTrial = subscriptionIsTrial,
                         subscriptionStatus = subscriptionStatus,
                         onManageProviders = onManageProviders,
-                        initialFocusRequester = initialFocusRequester,
                         scale = scale
                     )
                 }
@@ -355,10 +345,8 @@ fun SettingsScreen(
                 // UI Scale
                 item {
                     UiScaleSettingsCard(
-                        uiScale = uiScale,
+                        uiScale = currentUiScale,
                         onScaleSelected = { newScale ->
-                            uiScale = newScale
-                            appSettings.uiScale = newScale
                             onUiScaleChanged(newScale)
                         },
                         scale = scale

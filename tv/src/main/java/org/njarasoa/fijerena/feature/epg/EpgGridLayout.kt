@@ -552,7 +552,7 @@ private fun EpgSearchContent(
             ) {
                 items(
                     count = searchResults.size,
-                    key = { searchResults[it].program.startTime },
+                    key = { "${searchResults[it].channel.id}_${searchResults[it].program.startTime}" },
                     contentType = { "epg_search_result" }
                 ) { index ->
                     val result = searchResults[index]

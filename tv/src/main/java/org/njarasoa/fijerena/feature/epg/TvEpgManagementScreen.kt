@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -50,11 +51,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckBox
-import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
@@ -67,6 +64,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -98,6 +96,8 @@ fun TvEpgManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var autoRefreshEnabled by remember { mutableStateOf(viewModel.autoRefreshEnabled) }
+    var epgRefreshTime by remember { mutableStateOf(viewModel.epgRefreshTime) }
+    var showTimeDialog by remember { mutableStateOf(false) }
     var showCleanupConfirm by remember { mutableStateOf(false) }
     var showPurgeConfirm by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
@@ -109,6 +109,7 @@ fun TvEpgManagementScreen(
     val initialFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
+        delay(100) // Give it a moment to attach
         try {
             initialFocusRequester.requestFocus()
         } catch (_: IllegalStateException) {
@@ -147,7 +148,6 @@ fun TvEpgManagementScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
             modifier = Modifier
                 .fillMaxSize()
-                .focusRestorer { initialFocusRequester }
         ) {
             // Status section
             item(contentType = "status_section") {
@@ -163,7 +163,7 @@ fun TvEpgManagementScreen(
                         val statusText = when (val state = indexState) {
                             is EpgIndexState.NotIndexed -> "No EPG data"
                             is EpgIndexState.Indexing -> "Indexing: ${state.progressPercent}%"
-                            is EpgIndexState.Indexed -> "${formatCount(state.channelCount)} channels, ${formatCount(state.programmeCount)} programmes"
+                            is EpgIndexState.Indexed -> "${NumberUtils.formatCount(state.channelCount)} channels, ${NumberUtils.formatCount(state.programmeCount)} programmes"
                             is EpgIndexState.Failed -> "Failed: ${state.reason}"
                         }
                         Text(
@@ -193,47 +193,12 @@ fun TvEpgManagementScreen(
                                     Text("Cancel", style = scaledLabelSmall, color = CinemaError)
                                 }
                             }
-                            // Per-source active progress
-                            procState.activeProgress.forEach { progress ->
-                                val progressText = buildString {
-                                    append(progress.label)
-                                    append(": ")
-                                    append(progress.phase)
-                                    if (progress.progressPercent in 0..100) {
-                                        append(" ${progress.progressPercent}%")
-                                    }
-                                    if (progress.phase == "Downloading" || progress.phase == "Awaiting Ingestion") {
-                                        append(" (${formatBytes(progress.downloadedBytes)}")
-                                        if (progress.downloadTotalBytes > 0) {
-                                            append("/${formatBytes(progress.downloadTotalBytes)}")
-                                        }
-                                        append(")")
-                                    } else if (progress.programmes > 0) {
-                                        append(" (${formatCount(progress.channels)}ch, ${formatCount(progress.programmes)}prg)")
-                                    }
-                                }
-                                Text(
-                                    text = progressText,
-                                    style = scaledLabelSmall,
-                                    color = CinemaTextSecondary
-                                )
-                            }
                             if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
                                 Text(
-                                    text = "Total: ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
+                                    text = "Total: ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
                                     style = scaledLabelSmall,
                                     color = CinemaTextSecondary
                                 )
-                            }
-                            if (viewModel.isDevMode && procState.completedSourceStats.isNotEmpty()) {
-                                procState.completedSourceStats.forEach { stat ->
-                                    Text(
-                                        text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
-                                            (stat.error?.let { " [$it]" } ?: ""),
-                                        style = scaledLabelSmall,
-                                        color = if (stat.error != null) CinemaError else CinemaTextSecondary
-                                    )
-                                }
                             }
                         }
                         if (procState is EpgFileManager.MultiSourceState.Completed) {
@@ -246,18 +211,15 @@ fun TvEpgManagementScreen(
                             )
                             if (viewModel.isDevMode) {
                                 Text(
-                                    text = "Total: ${formatBytes(procState.totalDownloadBytes)}, ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
+                                    text = "Last update: ${NumberUtils.formatTimestamp(context, procState.updatedAtMs)} (took ${NumberUtils.formatDuration(procState.durationMs)})",
                                     style = scaledLabelSmall,
                                     color = CinemaTextSecondary
                                 )
-                                procState.sourceStats.forEach { stat ->
-                                    Text(
-                                        text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
-                                            (stat.error?.let { " [$it]" } ?: ""),
-                                        style = scaledLabelSmall,
-                                        color = if (stat.error != null) CinemaError else CinemaTextSecondary
-                                    )
-                                }
+                                Text(
+                                    text = "Total: ${NumberUtils.formatBytes(procState.totalDownloadBytes)}, ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
+                                    style = scaledLabelSmall,
+                                    color = CinemaTextSecondary
+                                )
                             }
                         }
                         if (procState is EpgFileManager.MultiSourceState.Error) {
@@ -356,7 +318,13 @@ fun TvEpgManagementScreen(
                                 val infoLine = buildString {
                                     append("TZ: $tzLabel")
                                     if (source.lastIngestedAtMs > 0) {
-                                        append(" | Last: ${formatTimestamp(context, source.lastIngestedAtMs)}")
+                                        append(" | Last: ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}")
+                                    }
+                                    if (source.lastDownloadDurationMs > 0) {
+                                        append(" | DL: ${NumberUtils.formatDuration(source.lastDownloadDurationMs)}")
+                                    }
+                                    if (source.lastIngestionDurationMs > 0) {
+                                        append(" | Ingest: ${NumberUtils.formatDuration(source.lastIngestionDurationMs)}")
                                     }
                                     if (!source.enabled) append(" | DISABLED")
                                 }
@@ -373,14 +341,78 @@ fun TvEpgManagementScreen(
                                         maxLines = 1
                                     )
                                 }
+
+                                // In-progress or completed stats from current processing
+                                val procState = processingState
+                                if (procState is EpgFileManager.MultiSourceState.Processing) {
+                                    val progress = procState.activeProgress[source.id]
+                                    val completedStat = procState.completedSourceStats[source.id]
+
+                                    if (progress != null) {
+                                        val progressText = buildString {
+                                            append(progress.phase)
+                                            if (progress.progressPercent in 0..100) {
+                                                append(" ${progress.progressPercent}%")
+                                            }
+                                            if (progress.phase == "Downloading") {
+                                                append(" (${NumberUtils.formatBytes(progress.downloadedBytes)}")
+                                                if (progress.downloadTotalBytes > 0) {
+                                                    append("/${NumberUtils.formatBytes(progress.downloadTotalBytes)}")
+                                                }
+                                                append(")")
+                                            } else if (progress.phase == "Awaiting Ingestion") {
+                                                append(" (${NumberUtils.formatBytes(progress.downloadedBytes)})")
+                                            } else if (progress.programmes > 0) {
+                                                append(" (${NumberUtils.formatCount(progress.channels)}ch, ${NumberUtils.formatCount(progress.programmes)}prg)")
+                                            }
+                                        }
+                                        Text(
+                                            text = progressText,
+                                            style = scaledLabelSmall,
+                                            color = CinemaAccent
+                                        )
+                                    } else if (completedStat != null) {
+                                        val statText = buildString {
+                                            append("Completed")
+                                            append(" (${NumberUtils.formatBytes(completedStat.downloadBytes)}, ${NumberUtils.formatCount(completedStat.channelsIngested)}ch, ${NumberUtils.formatCount(completedStat.programmesIngested)}prg)")
+                                            if (completedStat.durationMs > 0) {
+                                                append(" in ${NumberUtils.formatDuration(completedStat.durationMs)}")
+                                            }
+                                            if (completedStat.error != null) append(" [${completedStat.error}]")
+                                        }
+                                        Text(
+                                            text = statText,
+                                            style = scaledLabelSmall,
+                                            color = if (completedStat.error != null) CinemaError else CinemaAccent
+                                        )
+                                    }
+                                } else if (procState is EpgFileManager.MultiSourceState.Completed) {
+                                    val stat = procState.sourceStats[source.id]
+                                    if (stat != null) {
+                                        val statText = buildString {
+                                            append("Finished")
+                                            append(" (${NumberUtils.formatBytes(stat.downloadBytes)}, ${NumberUtils.formatCount(stat.channelsIngested)}ch, ${NumberUtils.formatCount(stat.programmesIngested)}prg)")
+                                            if (stat.durationMs > 0) {
+                                                append(" in ${NumberUtils.formatDuration(stat.durationMs)}")
+                                            }
+                                            if (stat.error != null) append(" [${stat.error}]")
+                                        }
+                                        Text(
+                                            text = statText,
+                                            style = scaledLabelSmall,
+                                            color = if (stat.error != null) CinemaError else CinemaAccent
+                                        )
+                                    }
+                                }
+
                                 if (viewModel.isDevMode && source.lastIngestedAtMs > 0) {
                                     val sizeStr = if (source.ingestMethod != "STREAMED") {
-                                        ", ${formatBytes(source.lastDownloadBytes)}"
+                                        ", ${NumberUtils.formatBytes(source.lastDownloadBytes)}"
                                     } else {
                                         ""
                                     }
                                     Text(
-                                        text = "${formatCount(source.lastChannels)}ch, ${formatCount(source.lastProgrammes)}prg$sizeStr",
+                                        text = "${NumberUtils.formatCount(source.lastChannels)}ch, ${NumberUtils.formatCount(source.lastProgrammes)}prg$sizeStr",
                                         style = scaledLabelSmall,
                                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                     )
@@ -390,7 +422,7 @@ fun TvEpgManagementScreen(
                                     }
                                     latestTime?.let { epoch ->
                                         Text(
-                                            text = "Latest: ${formatEpochDate(context, epoch)}",
+                                            text = "Latest: ${NumberUtils.formatEpochDate(context, epoch)}",
                                             style = scaledLabelSmall,
                                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow)
                                         )
@@ -444,6 +476,22 @@ fun TvEpgManagementScreen(
                                     viewModel.setAutoRefreshEnabled(autoRefreshEnabled)
                                 },
                                 text = if (autoRefreshEnabled) "ON" else "OFF"
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Refresh Time",
+                                style = scaledBodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            CinemaSecondaryButton(
+                                onClick = { showTimeDialog = true },
+                                text = epgRefreshTime
                             )
                         }
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -528,6 +576,18 @@ fun TvEpgManagementScreen(
                 }
                 showAddDialog = false
                 editingSource = null
+            }
+        )
+    }
+
+    if (showTimeDialog) {
+        TimeDialog(
+            currentTime = epgRefreshTime,
+            onDismiss = { showTimeDialog = false },
+            onSave = { newTime ->
+                epgRefreshTime = newTime
+                viewModel.setEpgRefreshTime(newTime)
+                showTimeDialog = false
             }
         )
     }
@@ -716,6 +776,88 @@ fun TvEpgManagementScreen(
 }
 
 @Composable
+private fun TimeDialog(
+    currentTime: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    val initialHour = currentTime.substringBefore(":").toIntOrNull() ?: 2
+    val initialMinute = currentTime.substringAfter(":").toIntOrNull() ?: 0
+    var hour by remember { mutableIntStateOf(initialHour) }
+    var minute by remember { mutableIntStateOf(initialMinute) }
+    val scale = LocalUiScale.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CinemaSurface,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
+        title = {
+            Text(
+                text = "EPG Refresh Time",
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale))
+            )
+        },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CinemaIconButton(
+                        onClick = { hour = (hour + 1) % 24 },
+                        icon = { Icon(Icons.Default.KeyboardArrowUp, "Hour Up") }
+                    )
+                    Text(
+                        text = "%02d".format(hour),
+                        style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)),
+                        color = CinemaTextPrimary
+                    )
+                    CinemaIconButton(
+                        onClick = { hour = if (hour == 0) 23 else hour - 1 },
+                        icon = { Icon(Icons.Default.KeyboardArrowDown, "Hour Down") }
+                    )
+                }
+                Text(
+                    text = ":",
+                    style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)),
+                    color = CinemaTextPrimary,
+                    modifier = Modifier.padding(horizontal = Spacing.md.scaled(scale))
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CinemaIconButton(
+                        onClick = { minute = (minute + 1) % 60 },
+                        icon = { Icon(Icons.Default.KeyboardArrowUp, "Minute Up") }
+                    )
+                    Text(
+                        text = "%02d".format(minute),
+                        style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)),
+                        color = CinemaTextPrimary
+                    )
+                    CinemaIconButton(
+                        onClick = { minute = if (minute == 0) 59 else minute - 1 },
+                        icon = { Icon(Icons.Default.KeyboardArrowDown, "Minute Down") }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            CinemaPrimaryButton(
+                onClick = { onSave("%02d:%02d".format(hour, minute)) },
+                text = "Save"
+            )
+        },
+        dismissButton = {
+            CinemaSecondaryButton(
+                onClick = onDismiss,
+                text = "Cancel"
+            )
+        }
+    )
+}
+
+@Composable
 private fun SourceDialog(
     source: EpgSourceEntity?,
     onDismiss: () -> Unit,
@@ -814,32 +956,4 @@ private fun SourceDialog(
             )
         }
     )
-}
-
-private fun formatCount(count: Int): String {
-    return when {
-        count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
-        count >= 1_000 -> "%.1fK".format(count / 1_000.0)
-        else -> count.toString()
-    }
-}
-
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
-        bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
-        bytes >= 1_024 -> "%.1f KB".format(bytes / 1_024.0)
-        else -> "$bytes B"
-    }
-}
-
-private fun formatTimestamp(context: android.content.Context, millis: Long): String {
-    val dateFormat = android.text.format.DateFormat.getMediumDateFormat(context)
-    val timeFormat = android.text.format.DateFormat.getTimeFormat(context)
-    val date = java.util.Date(millis)
-    return "${dateFormat.format(date)}, ${timeFormat.format(date)}"
-}
-
-private fun formatEpochDate(context: android.content.Context, epochSeconds: Long): String {
-    return formatTimestamp(context, epochSeconds * 1000L)
 }

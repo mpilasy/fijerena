@@ -1,3 +1,9 @@
-## 2024-05-23 - [Coil ImageLoader Anti-Pattern]
-**Learning:** Found a major performance bottleneck where `ImageLoader` was being instantiated inside a list item Composable (`CinemaThumbnail`). This creates a new `ImageLoader` (with its own memory/disk cache and thread pool) for every single item in a list/grid, bypassing the shared cache and consuming massive resources.
-**Action:** Always use `ImageRequest` with the singleton `ImageLoader` (via `LocalImageLoader.current` or implicit default) for list items. Only create custom `ImageLoader`s at the application level or for very specific, isolated scopes. Use `remember { ImageRequest.Builder(context)... }` to configure per-request options like transitions.
+## 2025-03-06 - Initial setup
+**Learning:** Checking for basic files
+**Action:** Ready to optimize!
+
+## 2025-03-06 - Hash function allocations
+**Learning:** Room entity mapping from JSON objects to DB entities currently has `val entity = base.copy(contentHash = base.computeContentHash())`.
+In Kotlin, `data class.copy()` allocates a new object. This means every single Xtream entity being processed during syncing (which batches by 2000 items and typically runs over tens of thousands of streams) allocates two objects instead of one.
+
+**Action:** Refactor `XtreamContentManager` so that `computeContentHash` is calculated without allocating a `base` object first, or just create the entity with the hash inline instead of allocating and copying.
