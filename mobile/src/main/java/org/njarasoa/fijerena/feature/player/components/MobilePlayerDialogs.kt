@@ -25,7 +25,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 @Composable
 fun AudioTrackSelectorDialog(
     viewModel: PlaybackViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val audioTracks = remember { viewModel.getAudioTracks() }
 
@@ -38,7 +38,7 @@ fun AudioTrackSelectorDialog(
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     audioTracks.forEachIndexed { _, track ->
                         Surface(
@@ -47,35 +47,37 @@ fun AudioTrackSelectorDialog(
                                 onDismiss()
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            color = if (track.isSelected)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(CinemaCornerRadius.small)
+                            color =
+                                if (track.isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                            shape = RoundedCornerShape(CinemaCornerRadius.small),
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
                                         text = track.label,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal
+                                        fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal,
                                     )
                                     if (track.isSelected) {
                                         Text(
                                             text = "Active",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
+                                            color = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                 }
                                 Text(
                                     text = "${track.channelCount}ch - ${track.sampleRate / 1000}kHz",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -85,14 +87,14 @@ fun AudioTrackSelectorDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
-        }
+        },
     )
 }
 
 @Composable
 fun SubtitleSelectorDialog(
     viewModel: PlaybackViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val subtitleTracks = remember { viewModel.getSubtitleTracks() }
     val hasActiveSubtitle = subtitleTracks.any { it.isSelected }
@@ -103,7 +105,7 @@ fun SubtitleSelectorDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 // "Off" option
                 Surface(
@@ -112,29 +114,32 @@ fun SubtitleSelectorDialog(
                         onDismiss()
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    color = if (!hasActiveSubtitle)
-                        MaterialTheme.colorScheme.primaryContainer
-                    else
-                        MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                    color =
+                        if (!hasActiveSubtitle) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                    shape = RoundedCornerShape(CinemaCornerRadius.small),
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = "Off",
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = if (!hasActiveSubtitle) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (!hasActiveSubtitle) FontWeight.Bold else FontWeight.Normal,
                         )
                         if (!hasActiveSubtitle) {
                             Text(
                                 text = "Active",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -147,35 +152,37 @@ fun SubtitleSelectorDialog(
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        color = if (track.isSelected)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(CinemaCornerRadius.small)
+                        color =
+                            if (track.isSelected) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        shape = RoundedCornerShape(CinemaCornerRadius.small),
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
                                     text = track.label,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal
+                                    fontWeight = if (track.isSelected) FontWeight.Bold else FontWeight.Normal,
                                 )
                                 if (track.isSelected) {
                                     Text(
                                         text = "Active",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }
                             Text(
                                 text = track.mimeType.substringAfterLast("/").uppercase(),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -184,14 +191,14 @@ fun SubtitleSelectorDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
-        }
+        },
     )
 }
 
 @Composable
 fun QualitySelectorDialog(
     viewModel: PlaybackViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val videoQualities = remember { viewModel.getVideoQualities() }
     val hasManualSelection = videoQualities.any { it.isSelected }
@@ -202,7 +209,7 @@ fun QualitySelectorDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 // "Auto" option
                 Surface(
@@ -211,35 +218,37 @@ fun QualitySelectorDialog(
                         onDismiss()
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    color = if (!hasManualSelection)
-                        MaterialTheme.colorScheme.primaryContainer
-                    else
-                        MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(CinemaCornerRadius.small)
+                    color =
+                        if (!hasManualSelection) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                    shape = RoundedCornerShape(CinemaCornerRadius.small),
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = "Auto (Adaptive)",
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (!hasManualSelection) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (!hasManualSelection) FontWeight.Bold else FontWeight.Normal,
                             )
                             if (!hasManualSelection) {
                                 Text(
                                     text = "Active",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         }
                         Text(
                             text = "Adjust quality based on network",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -251,35 +260,37 @@ fun QualitySelectorDialog(
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        color = if (quality.isSelected)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(CinemaCornerRadius.small)
+                        color =
+                            if (quality.isSelected) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        shape = RoundedCornerShape(CinemaCornerRadius.small),
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
                                     text = quality.label,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (quality.isSelected) FontWeight.Bold else FontWeight.Normal
+                                    fontWeight = if (quality.isSelected) FontWeight.Bold else FontWeight.Normal,
                                 )
                                 if (quality.isSelected) {
                                     Text(
                                         text = "Active",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }
                             Text(
                                 text = "${quality.width}x${quality.height} - ${quality.frameRate.toInt()}fps",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -288,6 +299,6 @@ fun QualitySelectorDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
-        }
+        },
     )
 }

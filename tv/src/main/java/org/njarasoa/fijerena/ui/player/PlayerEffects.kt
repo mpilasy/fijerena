@@ -6,6 +6,7 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import java.util.Calendar
 
@@ -13,28 +14,40 @@ import java.util.Calendar
 fun PlayerEffects(
     state: PlayerScreenState,
     playbackState: PlaybackState,
-    currentMetadata: PlayerMetadata
+    currentMetadata: PlayerMetadata,
+    viewModel: PlaybackViewModel? = null,
 ) {
     val isDeveloperMode = state.isDeveloperMode
 
-    // Auto-show stats on repeated buffer exhaustion (dev mode only)
-    LaunchedEffect(isDeveloperMode) {
-        if (!isDeveloperMode) return@LaunchedEffect
-        val rebufferTimestamps = mutableListOf<Long>()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Auto-show toast on repeated buffer exhaustion
+    LaunchedEffect(isDeveloperMode, currentMetadata.streamUrl) {
+        val exhaustionTimestamps = mutableListOf<Long>()
         var lastSeenCount = 0
         while (true) {
-            val currentCount = StreamingPlaybackService.getInstance()?.rebufferCount?.value ?: 0
-            if (currentCount > lastSeenCount) {
+            val currentCount = StreamingPlaybackService.getInstance()?.exhaustionRebufferCount?.value ?: 0
+            if (currentCount < lastSeenCount) {
+                // Count was reset (likely channel switch)
+                lastSeenCount = currentCount
+                exhaustionTimestamps.clear()
+            } else if (currentCount > lastSeenCount) {
                 val now = System.currentTimeMillis()
                 repeat(currentCount - lastSeenCount) {
-                    rebufferTimestamps.add(now)
+                    exhaustionTimestamps.add(now)
                 }
                 lastSeenCount = currentCount
                 // Remove timestamps older than 30 seconds
-                rebufferTimestamps.removeAll { now - it > 30_000L }
-                // Show stats if 3+ rebuffers in 30s window
-                if (rebufferTimestamps.size >= 3 && !state.showStats) {
-                    state.showStats = true
+                exhaustionTimestamps.removeAll { now - it > 30_000L }
+                // Show toast if 3+ buffer exhaustions in 30s window
+                if (exhaustionTimestamps.size >= 3) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Excessive buffering is happening",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    // Clear timestamps to prevent repeated toasts for the same event window
+                    exhaustionTimestamps.clear()
                 }
             }
             delay(1000L)
@@ -100,8 +113,22 @@ fun PlayerEffects(
     LaunchedEffect(currentMetadata.title, playbackState) {
         // Only update displayed metadata when stream is actually playing/buffering
         if (currentMetadata.title.isNotEmpty() &&
-            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
+            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)
+        ) {
             state.displayedMetadata = currentMetadata
+        }
+    }
+
+    // Reset playback speed when paused, ended, or errored
+    LaunchedEffect(playbackState) {
+        if (playbackState is PlaybackState.Paused ||
+            playbackState is PlaybackState.Ended ||
+            playbackState is PlaybackState.Error
+        ) {
+            if (state.seekSpeedLabel != null) {
+                viewModel?.setPlaybackSpeed(1f)
+                state.seekSpeedLabel = null
+            }
         }
     }
 
@@ -110,8 +137,8 @@ fun PlayerEffects(
         // Show only stream info when title changes on initial load from menu
         if (currentMetadata.title.isNotEmpty() &&
             currentMetadata.title != state.previousMetadataTitle &&
-            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
-
+            (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)
+        ) {
             if (state.isInitialLoad) {
                 // From menu selection - show only stream info
                 state.showStreamInfo = true

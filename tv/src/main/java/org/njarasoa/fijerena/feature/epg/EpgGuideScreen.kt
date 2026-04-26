@@ -13,24 +13,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -43,12 +43,14 @@ fun EpgGuideScreen(
     onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
     onChannelSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
     onBack: () -> Unit,
-    viewModel: EpgViewModel = viewModel(
-        factory = EpgViewModelFactory(
-            context = LocalContext.current.applicationContext,
-            categoryId = categoryId
-        )
-    )
+    viewModel: EpgViewModel =
+        viewModel(
+            factory =
+                EpgViewModelFactory(
+                    context = LocalContext.current.applicationContext,
+                    categoryId = categoryId,
+                ),
+        ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
@@ -63,9 +65,12 @@ fun EpgGuideScreen(
             when (val state = uiState) {
                 is EpgViewModel.UiState.Loading -> LoadingScreen()
                 is EpgViewModel.UiState.Success -> {
-                    val epgCategoryName = if (appSettings.isDevMode && state.epgLoadTime != null) {
-                        "$categoryName | ${state.epgMatchInfo} | ${state.epgLoadTime}"
-                    } else categoryName
+                    val epgCategoryName =
+                        if (appSettings.isDevMode && state.epgLoadTime != null) {
+                            "$categoryName | ${state.epgMatchInfo} | ${state.epgLoadTime}"
+                        } else {
+                            categoryName
+                        }
                     EpgGridLayout(
                         categoryName = epgCategoryName,
                         channelRows = state.channelRows,
@@ -83,7 +88,7 @@ fun EpgGuideScreen(
                         searchResults = searchResults,
                         onSearchQueryChanged = { viewModel.searchPrograms(it) },
                         onClearSearch = { viewModel.clearSearch() },
-                        onBack = onBack
+                        onBack = onBack,
                     )
                 }
                 is EpgViewModel.UiState.Error -> {
@@ -100,59 +105,72 @@ private fun LoadingScreen() {
 
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(
                 modifier = Modifier.size(TvDimensions.progressIndicator.scaled(scale)),
-                color = CinemaAccent
+                color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = "Loading TV Guide...",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleLarge.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary,
             )
         }
     }
 }
 
 @Composable
-private fun ErrorScreen(message: String, onRetry: () -> Unit, onBack: () -> Unit) {
+private fun ErrorScreen(
+    message: String,
+    onRetry: () -> Unit,
+    onBack: () -> Unit,
+) {
     val scale = LocalUiScale.current
 
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "Error Loading Guide",
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaError
+                style =
+                    MaterialTheme.typography.displayMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.displayMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaError,
             )
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary
+                style =
+                    MaterialTheme.typography.bodyLarge.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodyLarge.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary,
             )
             Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             Row {
                 CinemaSecondaryButton(
                     onClick = onBack,
-                    text = "Back"
+                    text = "Back",
                 )
                 Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 CinemaPrimaryButton(
                     onClick = onRetry,
-                    text = "Retry"
+                    text = "Retry",
                 )
             }
         }

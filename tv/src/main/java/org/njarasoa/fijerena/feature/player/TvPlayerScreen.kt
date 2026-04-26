@@ -14,26 +14,33 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.PlaybackState
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.theme.*
-import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.player.PlayerScreen
+import org.njarasoa.fijerena.ui.theme.*
 
 /**
  * TV player screen that integrates stream playback via StreamLoaderViewModel.
@@ -57,21 +64,41 @@ fun TvPlayerScreen(
     seriesName: String? = null,
     startFromBeginning: Boolean = false,
     playbackViewModel: PlaybackViewModel = viewModel(),
-    loaderViewModel: StreamLoaderViewModel = viewModel(
-        factory = StreamLoaderViewModelFactory(
-            context = LocalContext.current,
-            initialStreamId = streamId,
-            initialStreamName = streamName,
-            categoryId = categoryId,
-            contentType = contentType,
-            episodeId = episodeId,
-            episodeExtension = episodeExtension,
-            seriesId = seriesId,
-            seriesName = seriesName,
-            startFromBeginning = startFromBeginning
-        )
-    )
+    loaderViewModel: StreamLoaderViewModel =
+        viewModel(
+            factory =
+                StreamLoaderViewModelFactory(
+                    context = LocalContext.current,
+                    initialStreamId = streamId,
+                    initialStreamName = streamName,
+                    categoryId = categoryId,
+                    contentType = contentType,
+                    episodeId = episodeId,
+                    episodeExtension = episodeExtension,
+                    seriesId = seriesId,
+                    seriesName = seriesName,
+                    startFromBeginning = startFromBeginning,
+                ),
+        ),
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Observe app focus/lifecycle to pause on background and stop after timeout
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_PAUSE -> playbackViewModel.onFocusLost()
+                    Lifecycle.Event.ON_RESUME -> playbackViewModel.onFocusRegained()
+                    else -> {}
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
     val currentStreamState by androidx.compose.runtime.rememberUpdatedState(streamState)
 
@@ -82,18 +109,20 @@ fun TvPlayerScreen(
             val currentState = currentStreamState
             if (currentState is StreamLoaderViewModel.StreamState.Success && !currentState.isLive) {
                 val ps = playbackViewModel.playbackState.value
-                val pos = when (ps) {
-                    is PlaybackState.Playing -> ps.position
-                    is PlaybackState.Paused -> ps.position
-                    else -> null
-                }
-                val dur = when (ps) {
-                    is PlaybackState.Playing -> ps.duration
-                    is PlaybackState.Paused -> ps.duration
-                    else -> null
-                }
+                val pos =
+                    when (ps) {
+                        is PlaybackState.Playing -> ps.position
+                        is PlaybackState.Paused -> ps.position
+                        else -> null
+                    }
+                val dur =
+                    when (ps) {
+                        is PlaybackState.Playing -> ps.duration
+                        is PlaybackState.Paused -> ps.duration
+                        else -> null
+                    }
                 if (pos != null && dur != null && dur > 0) {
-                    loaderViewModel.recordHistory(pos, dur)
+                    loaderViewModel.stopPlayback(pos, dur)
                 }
             }
             playbackViewModel.stop()
@@ -102,18 +131,19 @@ fun TvPlayerScreen(
 
     // Configure player buffer profile based on content type
     LaunchedEffect(contentType) {
-        val playerContentType = when (contentType) {
-            ContentType.LIVE_TV -> PlayerConfigFactory.ContentType.LIVE_TV
-            ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
-            else -> PlayerConfigFactory.ContentType.VOD
-        }
+        val playerContentType =
+            when (contentType) {
+                ContentType.LIVE_TV -> PlayerConfigFactory.ContentType.LIVE_TV
+                ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
+                else -> PlayerConfigFactory.ContentType.VOD
+            }
         StreamingPlaybackService.getInstance()?.setContentType(playerContentType)
     }
 
     // Set up auto-save listener for playback position
     LaunchedEffect(Unit) {
-        StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration ->
-             loaderViewModel.recordHistory(position, duration)
+        StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
+            loaderViewModel.recordHistory(position, duration, isPaused, audioIndex, subtitleIndex)
         }
     }
 
@@ -124,14 +154,33 @@ fun TvPlayerScreen(
     LaunchedEffect(currentStreamId) {
         val state = streamState
         if (state is StreamLoaderViewModel.StreamState.Success) {
-            val metadata = PlayerMetadata(
-                title = state.streamName,
-                channelName = state.streamName,
-                streamUrl = state.streamUrl,
-                isLive = state.isLive,
-                headers = state.streamHeaders
-            )
+            val metadata =
+                PlayerMetadata(
+                    title = state.streamName,
+                    channelName = state.streamName,
+                    description = state.description,
+                    streamUrl = state.streamUrl,
+                    isLive = state.isLive,
+                    headers = state.streamHeaders,
+                )
             playbackViewModel.playStream(metadata, state.resumePosition)
+
+            // Restore saved track settings when player is ready
+            if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
+                snapshotFlow { playbackViewModel.playbackState.value }
+                    .filter { it is PlaybackState.Playing || it is PlaybackState.Paused }
+                    .first() // Wait for first ready state
+
+                val service = StreamingPlaybackService.getInstance()
+                if (service != null) {
+                    state.savedAudioTrackIndex?.let { audioIdx ->
+                        service.selectAudioTrack(audioIdx)
+                    }
+                    state.savedSubtitleTrackIndex?.let { subIdx ->
+                        service.selectSubtitleTrack(subIdx)
+                    }
+                }
+            }
         }
     }
 
@@ -142,30 +191,33 @@ fun TvPlayerScreen(
         is StreamLoaderViewModel.StreamState.Error -> {
             ErrorScreen(
                 message = state.message,
-                onBack = onBack
+                onBack = onBack,
             )
         }
         is StreamLoaderViewModel.StreamState.Success -> {
             PlayerScreen(
                 viewModel = playbackViewModel,
+                currentStreamId = state.streamId,
                 onBack = {
-                    // Save position before stopping (stop sets state to Idle)
-                    if (!state.isLive) {
-                        val ps = playbackViewModel.playbackState.value
-                        val pos = when (ps) {
+                    // Finalize session before stopping
+                    val ps = playbackViewModel.playbackState.value
+                    val pos =
+                        when (ps) {
                             is PlaybackState.Playing -> ps.position
                             is PlaybackState.Paused -> ps.position
-                            else -> null
+                            else -> 0L
                         }
-                        val dur = when (ps) {
+                    val dur =
+                        when (ps) {
                             is PlaybackState.Playing -> ps.duration
                             is PlaybackState.Paused -> ps.duration
-                            else -> null
+                            else -> 0L
                         }
-                        if (pos != null && dur != null && dur > 0) {
-                            loaderViewModel.recordHistory(pos, dur)
-                        }
-                    }
+                    val service = StreamingPlaybackService.getInstance()
+                    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+
                     playbackViewModel.stop()
                     onBack()
                 },
@@ -175,15 +227,35 @@ fun TvPlayerScreen(
                 currentEpgProgram = state.currentEpgProgram,
                 nextEpgProgram = state.nextEpgProgram,
                 categoryStreams = ImmutableMediaList(state.categoryStreams),
-                lastWatchedStreams = remember(state.lastWatchedStreams, state.streamId) {
-                    ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })
-                },
+                lastWatchedStreams =
+                    remember(state.lastWatchedStreams, state.streamId) {
+                        ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })
+                    },
                 onStreamSelected = { item ->
+                    // Finalize current session properly before starting new one
+                    val ps = playbackViewModel.playbackState.value
+                    val pos =
+                        when (ps) {
+                            is PlaybackState.Playing -> ps.position
+                            is PlaybackState.Paused -> ps.position
+                            else -> 0L
+                        }
+                    val dur =
+                        when (ps) {
+                            is PlaybackState.Playing -> ps.duration
+                            is PlaybackState.Paused -> ps.duration
+                            else -> 0L
+                        }
+                    val service = StreamingPlaybackService.getInstance()
+                    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+                    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+                    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+
                     loaderViewModel.loadStream(item)
                 },
                 onToggleFavorite = {
                     loaderViewModel.toggleFavorite()
-                }
+                },
             )
         }
     }
@@ -193,20 +265,20 @@ fun TvPlayerScreen(
 private fun LoadingScreen() {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             CircularProgressIndicator(
                 modifier = Modifier.size(TvDimensions.progressIndicator),
-                color = CinemaAccent
+                color = CinemaAccent,
             )
             Spacer(modifier = Modifier.padding(Spacing.md))
             Text(
                 text = "Loading stream...",
                 style = MaterialTheme.typography.titleLarge,
-                color = CinemaTextSecondary
+                color = CinemaTextSecondary,
             )
         }
     }
@@ -215,31 +287,31 @@ private fun LoadingScreen() {
 @Composable
 private fun ErrorScreen(
     message: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(Spacing.xl)
+            modifier = Modifier.padding(Spacing.xl),
         ) {
             Text(
                 text = "Playback Error",
                 style = MaterialTheme.typography.displayMedium,
-                color = CinemaError
+                color = CinemaError,
             )
             Spacer(modifier = Modifier.padding(Spacing.md))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextSecondary
+                color = CinemaTextSecondary,
             )
             Spacer(modifier = Modifier.padding(Spacing.lg))
             CinemaSecondaryButton(
                 onClick = onBack,
-                text = "Back to Categories"
+                text = "Back to Categories",
             )
         }
     }

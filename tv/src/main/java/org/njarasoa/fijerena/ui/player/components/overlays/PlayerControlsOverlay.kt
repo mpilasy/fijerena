@@ -1,9 +1,13 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.media3.common.util.UnstableApi::class,
+)
 
 package org.njarasoa.fijerena.ui.player.components.overlays
 
 import androidx.compose.foundation.background
-import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,35 +20,44 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.NightsStay
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Subtitles
+import androidx.compose.material.icons.rounded.Tune
+import androidx.tv.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.BottomCenter
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
-import androidx.compose.ui.Alignment.Companion.BottomCenter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.media3.common.C
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
@@ -53,15 +66,18 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.player.utils.formatEpochTime
 import org.njarasoa.fijerena.ui.player.utils.formatTime
-import androidx.compose.ui.platform.LocalContext
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import java.util.Date
@@ -83,6 +99,9 @@ fun PlayerControlsOverlay(
     onShowQualitySelector: () -> Unit,
     onShowChapterSelector: () -> Unit,
     onShowStats: () -> Unit,
+    onToggleNightMode: () -> Unit = {},
+    isNightModeEnabled: Boolean = false,
+    seekSpeedLabel: String? = null,
 ) {
     val isPaused = playbackState is PlaybackState.Paused
     val isLive = metadata.isLive
@@ -91,8 +110,45 @@ fun PlayerControlsOverlay(
     val subtitleTrackCount = remember(metadata) { viewModel.getSubtitleTracks().size }
     val qualityCount = remember(metadata) { viewModel.getVideoQualities().size }
 
+    // State for resolution and codec
+    var videoCodec by remember { mutableStateOf<String?>(null) }
+    var videoResolution by remember { mutableStateOf<String?>(null) }
+
+    // Extract resolution and codec periodically
+    LaunchedEffect(playbackState, metadata.streamUrl) {
+        if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering) {
+            // Keep checking every second as tracks might take time to load
+            while (true) {
+                StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
+                    val tracks = p.currentTracks
+                    for (i in 0 until tracks.groups.size) {
+                        val group = tracks.groups[i]
+                        if (group.isSelected && group.type == C.TRACK_TYPE_VIDEO) {
+                            for (j in 0 until group.length) {
+                                if (group.isTrackSelected(j)) {
+                                    val format = group.getTrackFormat(j)
+                                    videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase()
+                                    videoResolution =
+                                        if (format.width > 0 && format.height > 0) "${format.width}x${format.height}" else null
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+                // If we found both, we can stop polling for this stream state
+                if (videoCodec != null && videoResolution != null) break
+                delay(1000)
+            }
+        } else {
+            videoCodec = null
+            videoResolution = null
+        }
+    }
+
     // Focus requester for the first focusable control
     val controlsFocusRequester = remember { FocusRequester() }
+    var isProgressBarFocused by remember { mutableStateOf(false) }
 
     LaunchedEffect(showFullControls) {
         if (showFullControls) {
@@ -107,121 +163,123 @@ fun PlayerControlsOverlay(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.focusedTint))
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(CinemaBackground.copy(alpha = CinemaAlpha.focusedTint)),
     ) {
         // Clock in top-right corner — self-ticking so only this leaf recomposes each second
         ClockDisplay(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
         )
 
         // Top bar with channel name and title
         Column(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.xxl, vertical = Spacing.xl)
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
         ) {
             Text(
                 text = metadata.channelName,
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
-                modifier = Modifier.bounceMarquee()
+                modifier = Modifier.bounceMarquee(),
             )
             Text(
                 text = metadata.title,
                 style = MaterialTheme.typography.headlineSmall,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
+                color = CinemaTextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.bounceMarquee()
+                modifier = Modifier.bounceMarquee(),
             )
-        }
 
-        // Center row: Rewind | Play/Pause | FastForward (VOD only, hidden for live)
-        if (showFullControls && !isLive) {
-            Row(
-                modifier = Modifier.align(Center),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xxl),
-                verticalAlignment = CenterVertically
-            ) {
-                // Rewind -30s
-                Button(
-                    onClick = { viewModel.seekRelative(-30_000L) },
-                    colors = ButtonDefaults.colors(
-                        containerColor = Color.Transparent
-                    ),
-                    modifier = Modifier.size(TvDimensions.iconButtonSize)
+            // Resolution and Codec Info
+            if (videoResolution != null || videoCodec != null) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = Spacing.xs),
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Filled.FastRewind,
-                            contentDescription = "Rewind 30s",
-                            tint = Color.White,
-                            modifier = Modifier.size(TvDimensions.iconLarge)
+                    if (videoResolution != null) {
+                        Text(
+                            text = videoResolution!!,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = CinemaAccent,
+                            fontWeight = FontWeight.Bold,
                         )
-                        Text("-30s", style = MaterialTheme.typography.labelSmall, color = Color.White)
                     }
-                }
-
-                // Play/Pause
-                Button(
-                    onClick = {
-                        if (isPaused) viewModel.resume() else viewModel.pause()
-                    },
-                    colors = ButtonDefaults.colors(
-                        containerColor = Color.Transparent
-                    ),
-                    modifier = Modifier
-                        .size(TvDimensions.iconButtonSizeLarge)
-                        .focusRequester(controlsFocusRequester)
-                ) {
-                    Icon(
-                        imageVector = if (isPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                        contentDescription = if (isPaused) "Play" else "Pause",
-                        tint = Color.White,
-                        modifier = Modifier.size(TvDimensions.iconXLarge)
-                    )
-                }
-
-                // Fast Forward +1min
-                Button(
-                    onClick = { viewModel.seekRelative(60_000L) },
-                    colors = ButtonDefaults.colors(
-                        containerColor = Color.Transparent
-                    ),
-                    modifier = Modifier.size(TvDimensions.iconButtonSize)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Filled.FastForward,
-                            contentDescription = "Fast Forward 1min",
-                            tint = Color.White,
-                            modifier = Modifier.size(TvDimensions.iconLarge)
+                    if (videoCodec != null) {
+                        Text(
+                            text = videoCodec!!,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                            modifier =
+                                Modifier
+                                    .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
                         )
-                        Text("+1m", style = MaterialTheme.typography.labelSmall, color = Color.White)
                     }
                 }
             }
         }
 
+        // Seek speed indicator (shown when fast-forwarding/rewinding with D-pad hold)
+        if (seekSpeedLabel != null && !showFullControls) {
+            Text(
+                text = seekSpeedLabel,
+                style = MaterialTheme.typography.headlineMedium,
+                color = CinemaTextPrimary,
+                modifier = Modifier.align(Center),
+            )
+        }
+
+        // Center: Play/Pause (VOD only, hidden for live)
+        if (showFullControls && !isLive) {
+            Button(
+                onClick = {
+                    if (isPaused) viewModel.resume() else viewModel.pause()
+                },
+                colors =
+                    ButtonDefaults.colors(
+                        containerColor = Color.Transparent,
+                        contentColor = CinemaTextPrimary,
+                        focusedContainerColor = CinemaTextPrimary,
+                        focusedContentColor = CinemaBackground,
+                    ),
+                modifier =
+                    Modifier
+                        .align(Center)
+                        .size(TvDimensions.iconButtonSizeLarge)
+                        .focusRequester(controlsFocusRequester),
+            ) {
+                Icon(
+                    imageVector = if (isPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                    contentDescription = if (isPaused) "Play" else "Pause",
+                    modifier = Modifier.size(TvDimensions.iconXLarge),
+                )
+            }
+        }
+
         // Bottom section: progress/EPG info + icon controls
         TvGlassPanel(
-            modifier = Modifier
-                .align(BottomCenter)
-                .fillMaxWidth(),
-            backgroundAlpha = 0.6f
+            modifier =
+                Modifier
+                    .align(BottomCenter)
+                    .fillMaxWidth(),
+            backgroundAlpha = 0.6f,
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.xl, vertical = Spacing.md)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.xl, vertical = Spacing.md),
             ) {
                 // VOD progress bar and time info
                 if (!isLive) {
@@ -229,30 +287,67 @@ fun PlayerControlsOverlay(
                     val duration = liveDuration
 
                     if (duration > 0) {
-                        LinearProgressIndicator(
-                            progress = { position.toFloat() / duration.toFloat() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(TvDimensions.progressBar),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
-                        )
+                        val seekStep = 10_000L
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .focusable(enabled = showFullControls)
+                                    .onFocusChanged { isProgressBarFocused = it.isFocused }
+                                    .onKeyEvent { event ->
+                                        if (event.type == KeyEventType.KeyDown) {
+                                            when (event.key) {
+                                                Key.DirectionLeft -> {
+                                                    viewModel.seekTo((position - seekStep).coerceAtLeast(0L))
+                                                    true
+                                                }
+                                                Key.DirectionRight -> {
+                                                    viewModel.seekTo((position + seekStep).coerceAtMost(duration))
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        } else {
+                                            false
+                                        }
+                                    }.then(
+                                        if (isProgressBarFocused) {
+                                            Modifier.border(
+                                                width = 2.dp,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                shape = RoundedCornerShape(4.dp),
+                                            )
+                                        } else {
+                                            Modifier
+                                        },
+                                    ).padding(vertical = if (isProgressBarFocused) Spacing.xs else 0.dp),
+                        ) {
+                            LinearProgressIndicator(
+                                progress = { position.toFloat() / duration.toFloat() },
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(if (isProgressBarFocused) 8.dp else TvDimensions.progressBar),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(Spacing.xs))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
                                 text = formatTime(position),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White
+                                color = CinemaTextPrimary,
                             )
                             Text(
                                 text = formatTime(duration),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White
+                                color = CinemaTextPrimary,
                             )
                         }
 
@@ -261,17 +356,17 @@ fun PlayerControlsOverlay(
                         val estimatedEndTimeMillis = remember(remainingTime) { System.currentTimeMillis() + remainingTime }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
                                 text = "Remaining: ${formatTime(remainingTime)}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaAccent
+                                color = CinemaAccent,
                             )
                             Text(
                                 text = "Ends at ${TimeFormat.formatClockTime(Date(estimatedEndTimeMillis))}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaAccent
+                                color = CinemaAccent,
                             )
                         }
 
@@ -282,18 +377,24 @@ fun PlayerControlsOverlay(
                     Column(modifier = Modifier.padding(bottom = Spacing.sm)) {
                         Row(
                             verticalAlignment = CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
                             Box(
-                                modifier = Modifier
-                                    .size(TvDimensions.statsDotSize)
-                                    .background(Color.Red, shape = RoundedCornerShape(TvDimensions.statsDotSize / 2))
+                                modifier =
+                                    Modifier
+                                        .size(TvDimensions.statsDotSize)
+                                        .background(
+                                            org.njarasoa.fijerena.ui.theme.CinemaLive,
+                                            shape =
+                                                RoundedCornerShape(
+                                                    TvDimensions.statsDotSize / 2,
+                                                ),
+                                        ),
                             )
                             Text(
                                 text = "LIVE",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
+                                color = CinemaTextPrimary,
                             )
                         }
                         if (currentEpgProgram != null) {
@@ -303,29 +404,36 @@ fun PlayerControlsOverlay(
                             Text(
                                 text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = CinemaAlpha.textMedium),
-                                modifier = Modifier.padding(top = Spacing.xxs)
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                                modifier = Modifier.padding(top = Spacing.xxs),
                             )
                             // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
                             val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
-                            val epgProgress = if (currentEpgProgram.duration > 0) {
-                                ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(0f, 1f)
-                            } else 0f
+                            val epgProgress =
+                                if (currentEpgProgram.duration > 0) {
+                                    ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(
+                                        0f,
+                                        1f,
+                                    )
+                                } else {
+                                    0f
+                                }
                             LinearProgressIndicator(
                                 progress = { epgProgress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = Spacing.xxs)
-                                    .height(TvDimensions.progressBar),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = Spacing.xxs)
+                                        .height(TvDimensions.progressBar),
                                 color = MaterialTheme.colorScheme.primary,
-                                trackColor = Color.White.copy(alpha = CinemaAlpha.tint)
+                                trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                             )
                             if (nextEpgProgram != null) {
                                 Text(
                                     text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(epgContext, nextEpgProgram.startTime)})",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = CinemaAlpha.tint),
-                                    modifier = Modifier.padding(top = Spacing.xxs)
+                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
+                                    modifier = Modifier.padding(top = Spacing.xxs),
                                 )
                             }
                         }
@@ -337,18 +445,22 @@ fun PlayerControlsOverlay(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                        verticalAlignment = CenterVertically
+                        verticalAlignment = CenterVertically,
                     ) {
                         // Chapter selector
                         val chapters = remember(metadata) { viewModel.getChapters() }
                         if (chapters.isNotEmpty()) {
                             Button(
                                 onClick = onShowChapterSelector,
-                                colors = ButtonDefaults.colors(
-                                    containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                )
+                                colors =
+                                    ButtonDefaults.colors(
+                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                        contentColor = CinemaTextPrimary,
+                                        focusedContainerColor = CinemaTextPrimary,
+                                        focusedContentColor = CinemaBackground,
+                                    ),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.List, "Chapters", tint = Color.White)
+                                Icon(Icons.AutoMirrored.Rounded.List, "Chapters")
                             }
                         }
 
@@ -356,11 +468,15 @@ fun PlayerControlsOverlay(
                         if (audioTrackCount > 1) {
                             Button(
                                 onClick = onShowAudioTrackSelector,
-                                colors = ButtonDefaults.colors(
-                                    containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                )
+                                colors =
+                                    ButtonDefaults.colors(
+                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                        contentColor = CinemaTextPrimary,
+                                        focusedContainerColor = CinemaTextPrimary,
+                                        focusedContentColor = CinemaBackground,
+                                    ),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.VolumeUp, "Audio", tint = Color.White)
+                                Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Audio")
                             }
                         }
 
@@ -368,11 +484,15 @@ fun PlayerControlsOverlay(
                         if (subtitleTrackCount > 0) {
                             Button(
                                 onClick = onShowSubtitleSelector,
-                                colors = ButtonDefaults.colors(
-                                    containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                )
+                                colors =
+                                    ButtonDefaults.colors(
+                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                        contentColor = CinemaTextPrimary,
+                                        focusedContainerColor = CinemaTextPrimary,
+                                        focusedContentColor = CinemaBackground,
+                                    ),
                             ) {
-                                Icon(Icons.Filled.Subtitles, "Subtitles", tint = Color.White)
+                                Icon(Icons.Rounded.Subtitles, "Subtitles")
                             }
                         }
 
@@ -380,11 +500,15 @@ fun PlayerControlsOverlay(
                         if (qualityCount > 1) {
                             Button(
                                 onClick = onShowQualitySelector,
-                                colors = ButtonDefaults.colors(
-                                    containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                )
+                                colors =
+                                    ButtonDefaults.colors(
+                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                        contentColor = CinemaTextPrimary,
+                                        focusedContainerColor = CinemaTextPrimary,
+                                        focusedContentColor = CinemaBackground,
+                                    ),
                             ) {
-                                Icon(Icons.Filled.Tune, "Quality", tint = Color.White)
+                                Icon(Icons.Rounded.Tune, "Quality")
                             }
                         }
 
@@ -392,29 +516,76 @@ fun PlayerControlsOverlay(
                         if (onToggleFavorite != null) {
                             Button(
                                 onClick = { onToggleFavorite() },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = if (isFavorite)
-                                        CinemaAccent.copy(alpha = CinemaAlpha.scrim)
-                                    else
-                                        CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                )
+                                colors =
+                                    ButtonDefaults.colors(
+                                        containerColor =
+                                            if (isFavorite) {
+                                                CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+                                            } else {
+                                                CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                            },
+                                        contentColor = CinemaTextPrimary,
+                                        focusedContainerColor = CinemaTextPrimary,
+                                        focusedContentColor = CinemaBackground,
+                                    ),
                             ) {
                                 Icon(
-                                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                     contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
-                                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.White
+                                    tint =
+                                        if (isFavorite &&
+                                            !isProgressBarFocused
+                                        ) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            Color.Unspecified
+                                        },
                                 )
                             }
+                        }
+
+                        // Night Mode toggle
+                        Button(
+                            onClick = onToggleNightMode,
+                            colors =
+                                ButtonDefaults.colors(
+                                    containerColor =
+                                        if (isNightModeEnabled) {
+                                            CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+                                        } else {
+                                            CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                                        },
+                                    contentColor = CinemaTextPrimary,
+                                    focusedContainerColor = CinemaTextPrimary,
+                                    focusedContentColor = CinemaBackground,
+                                ),
+                        ) {
+                            Icon(
+                                Icons.Rounded.NightsStay,
+                                contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
+                                tint =
+                                    if (isNightModeEnabled &&
+                                        !isProgressBarFocused
+                                    ) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        Color.Unspecified
+                                    },
+                            )
                         }
 
                         // Stats for nerds (always visible)
                         Button(
                             onClick = onShowStats,
-                            colors = ButtonDefaults.colors(
-                                containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                            )
+                            colors =
+                                ButtonDefaults.colors(
+                                    containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                    contentColor = CinemaTextPrimary,
+                                    focusedContainerColor = CinemaTextPrimary,
+                                    focusedContentColor = CinemaBackground,
+                                ),
                         ) {
-                            Icon(Icons.Filled.BarChart, "Stats", tint = Color.White)
+                            Icon(Icons.Rounded.BarChart, "Stats")
                         }
                     }
                 }
@@ -437,7 +608,7 @@ private fun ClockDisplay(modifier: Modifier = Modifier) {
     Text(
         text = TimeFormat.formatClockTime(Date(tick)),
         style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
-        modifier = modifier
+        color = CinemaTextPrimary,
+        modifier = modifier,
     )
 }

@@ -1,16 +1,19 @@
 package org.njarasoa.fijerena.core.network
-
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Manages application settings and preferences.
  */
-class AppSettings(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences(
-        "app_settings",
-        Context.MODE_PRIVATE
-    )
+class AppSettings(
+    context: Context,
+) {
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences(
+            "app_settings",
+            Context.MODE_PRIVATE,
+        )
 
     companion object {
         private const val KEY_DEV_MODE = "dev_mode"
@@ -25,12 +28,18 @@ class AppSettings(context: Context) {
         private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
         private const val KEY_EPG_AUTO_REFRESH = "epg_auto_refresh"
         private const val KEY_EPG_REFRESH_TIME = "epg_refresh_time"
+        private const val KEY_CONTENT_AUTO_REFRESH = "content_auto_refresh"
+        private const val KEY_CONTENT_REFRESH_TIME = "content_refresh_time"
         private const val KEY_CELLULAR_LIVE_MULTIPLIER = "cellular_live_multiplier"
         private const val KEY_CELLULAR_VOD_MULTIPLIER = "cellular_vod_multiplier"
         private const val KEY_HAS_PROVIDER_CACHE = "has_provider_cache"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
+        private const val KEY_NIGHT_MODE_ENABLED = "night_mode_enabled"
+        private const val KEY_SEARCH_HISTORY = "search_history"
+        private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
+        private const val MAX_SEARCH_HISTORY = 20
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
-        const val DEFAULT_WATCH_DELAY_SECONDS = 30
+        const val DEFAULT_WATCH_DELAY_SECONDS = 10
         const val MIN_WATCH_DELAY_SECONDS = 5
         const val MAX_WATCH_DELAY_SECONDS = 120
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
@@ -38,6 +47,7 @@ class AppSettings(context: Context) {
         const val DEFAULT_UI_SCALE = 1.0f
         const val DEFAULT_EPG_URL = ""
         const val DEFAULT_EPG_REFRESH_TIME = "02:00"
+        const val DEFAULT_CONTENT_REFRESH_TIME = "04:00"
         const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
@@ -48,7 +58,7 @@ class AppSettings(context: Context) {
      */
     var isDevMode: Boolean
         get() = prefs.getBoolean(KEY_DEV_MODE, false)
-        set(value) = prefs.edit().putBoolean(KEY_DEV_MODE, value).apply()
+        set(value) = prefs.edit { putBoolean(KEY_DEV_MODE, value) }
 
     /**
      * Get or set the maximum size of the watch history queue.
@@ -57,7 +67,7 @@ class AppSettings(context: Context) {
         get() = prefs.getInt(KEY_WATCH_HISTORY_SIZE, DEFAULT_WATCH_HISTORY_SIZE)
         set(value) {
             val clampedValue = value.coerceIn(1, 100)
-            prefs.edit().putInt(KEY_WATCH_HISTORY_SIZE, clampedValue).apply()
+            prefs.edit { putInt(KEY_WATCH_HISTORY_SIZE, clampedValue) }
         }
 
     /**
@@ -65,7 +75,7 @@ class AppSettings(context: Context) {
      */
     var providerName: String
         get() = prefs.getString(KEY_PROVIDER_NAME, "My Provider") ?: "My Provider"
-        set(value) = prefs.edit().putString(KEY_PROVIDER_NAME, value).apply()
+        set(value) = prefs.edit { putString(KEY_PROVIDER_NAME, value) }
 
     /**
      * Get or set the maximum size of the favorites queue.
@@ -74,7 +84,7 @@ class AppSettings(context: Context) {
         get() = prefs.getInt(KEY_FAVORITES_MAX_SIZE, DEFAULT_FAVORITES_MAX_SIZE)
         set(value) {
             val clampedValue = value.coerceIn(10, 500)
-            prefs.edit().putInt(KEY_FAVORITES_MAX_SIZE, clampedValue).apply()
+            prefs.edit { putInt(KEY_FAVORITES_MAX_SIZE, clampedValue) }
         }
 
     /**
@@ -82,7 +92,7 @@ class AppSettings(context: Context) {
      */
     var autoResumeEnabled: Boolean
         get() = prefs.getBoolean(KEY_AUTO_RESUME, true)
-        set(value) = prefs.edit().putBoolean(KEY_AUTO_RESUME, value).apply()
+        set(value) = prefs.edit { putBoolean(KEY_AUTO_RESUME, value) }
 
     /**
      * Get or set cache expiry duration in hours.
@@ -93,7 +103,7 @@ class AppSettings(context: Context) {
         get() = prefs.getInt(KEY_CACHE_EXPIRY_HOURS, DEFAULT_CACHE_EXPIRY_HOURS)
         set(value) {
             val clampedValue = value.coerceIn(1, 168) // 1 hour to 7 days
-            prefs.edit().putInt(KEY_CACHE_EXPIRY_HOURS, clampedValue).apply()
+            prefs.edit { putInt(KEY_CACHE_EXPIRY_HOURS, clampedValue) }
         }
 
     /**
@@ -110,12 +120,12 @@ class AppSettings(context: Context) {
         get() = prefs.getFloat(KEY_UI_SCALE, DEFAULT_UI_SCALE)
         set(value) {
             val clampedValue = value.coerceIn(0.4f, 1.0f)
-            prefs.edit().putFloat(KEY_UI_SCALE, clampedValue).apply()
+            prefs.edit { putFloat(KEY_UI_SCALE, clampedValue) }
         }
 
     var themeId: String
         get() = prefs.getString(KEY_THEME_ID, "deep_night") ?: "deep_night"
-        set(value) = prefs.edit().putString(KEY_THEME_ID, value).apply()
+        set(value) = prefs.edit { putString(KEY_THEME_ID, value) }
 
     /**
      * Get or set the external XMLTV EPG URL (global setting, applies to all providers).
@@ -123,7 +133,7 @@ class AppSettings(context: Context) {
      */
     var epgUrl: String
         get() = prefs.getString(KEY_EPG_URL, DEFAULT_EPG_URL) ?: DEFAULT_EPG_URL
-        set(value) = prefs.edit().putString(KEY_EPG_URL, value.trim()).apply()
+        set(value) = prefs.edit { putString(KEY_EPG_URL, value.trim()) }
 
     /**
      * Timezone offset override for XMLTV data, in hours (e.g., 8 for UTC+8, -5 for UTC-5).
@@ -133,7 +143,7 @@ class AppSettings(context: Context) {
      */
     var epgAutoRefreshEnabled: Boolean
         get() = prefs.getBoolean(KEY_EPG_AUTO_REFRESH, true)
-        set(value) = prefs.edit().putBoolean(KEY_EPG_AUTO_REFRESH, value).apply()
+        set(value) = prefs.edit { putBoolean(KEY_EPG_AUTO_REFRESH, value) }
 
     /**
      * EPG refresh start time (HH:mm format).
@@ -141,13 +151,28 @@ class AppSettings(context: Context) {
      */
     var epgRefreshTime: String
         get() = prefs.getString(KEY_EPG_REFRESH_TIME, DEFAULT_EPG_REFRESH_TIME) ?: DEFAULT_EPG_REFRESH_TIME
-        set(value) = prefs.edit().putString(KEY_EPG_REFRESH_TIME, value).apply()
+        set(value) = prefs.edit { putString(KEY_EPG_REFRESH_TIME, value) }
+
+    /**
+     * Enable or disable automatic background refresh of provider content (categories/streams).
+     */
+    var contentAutoRefreshEnabled: Boolean
+        get() = prefs.getBoolean(KEY_CONTENT_AUTO_REFRESH, true)
+        set(value) = prefs.edit { putBoolean(KEY_CONTENT_AUTO_REFRESH, value) }
+
+    /**
+     * Content refresh start time (HH:mm format).
+     * Default: 04:00
+     */
+    var contentRefreshTime: String
+        get() = prefs.getString(KEY_CONTENT_REFRESH_TIME, DEFAULT_CONTENT_REFRESH_TIME) ?: DEFAULT_CONTENT_REFRESH_TIME
+        set(value) = prefs.edit { putString(KEY_CONTENT_REFRESH_TIME, value) }
 
     var epgTimezoneOffsetHours: Int
         get() = prefs.getInt(KEY_EPG_TIMEZONE_OFFSET, 0)
         set(value) {
             val clamped = value.coerceIn(-12, 14)
-            prefs.edit().putInt(KEY_EPG_TIMEZONE_OFFSET, clamped).apply()
+            prefs.edit { putInt(KEY_EPG_TIMEZONE_OFFSET, clamped) }
         }
 
     /**
@@ -158,7 +183,7 @@ class AppSettings(context: Context) {
         get() = prefs.getFloat(KEY_CELLULAR_LIVE_MULTIPLIER, DEFAULT_CELLULAR_MULTIPLIER)
         set(value) {
             val clamped = value.coerceIn(MIN_CELLULAR_MULTIPLIER, MAX_CELLULAR_MULTIPLIER)
-            prefs.edit().putFloat(KEY_CELLULAR_LIVE_MULTIPLIER, clamped).apply()
+            prefs.edit { putFloat(KEY_CELLULAR_LIVE_MULTIPLIER, clamped) }
         }
 
     /**
@@ -169,7 +194,7 @@ class AppSettings(context: Context) {
         get() = prefs.getFloat(KEY_CELLULAR_VOD_MULTIPLIER, DEFAULT_CELLULAR_MULTIPLIER)
         set(value) {
             val clamped = value.coerceIn(MIN_CELLULAR_MULTIPLIER, MAX_CELLULAR_MULTIPLIER)
-            prefs.edit().putFloat(KEY_CELLULAR_VOD_MULTIPLIER, clamped).apply()
+            prefs.edit { putFloat(KEY_CELLULAR_VOD_MULTIPLIER, clamped) }
         }
 
     /**
@@ -185,12 +210,94 @@ class AppSettings(context: Context) {
         get() = prefs.getInt(KEY_WATCH_DELAY_SECONDS, DEFAULT_WATCH_DELAY_SECONDS)
         set(value) {
             val clamped = value.coerceIn(MIN_WATCH_DELAY_SECONDS, MAX_WATCH_DELAY_SECONDS)
-            prefs.edit().putInt(KEY_WATCH_DELAY_SECONDS, clamped).apply()
+            prefs.edit { putInt(KEY_WATCH_DELAY_SECONDS, clamped) }
         }
 
     var hasProviderCache: Boolean
         get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
-        set(value) = prefs.edit().putBoolean(KEY_HAS_PROVIDER_CACHE, value).apply()
+        set(value) = prefs.edit { putBoolean(KEY_HAS_PROVIDER_CACHE, value) }
+
+    /**
+     * Night Mode: DynamicsProcessing-based compression to tame loud passages.
+     * Works on all devices (API 28+). Zero CPU overhead (runs at HAL level).
+     */
+    var nightModeEnabled: Boolean
+        get() = prefs.getBoolean(KEY_NIGHT_MODE_ENABLED, false)
+        set(value) = prefs.edit { putBoolean(KEY_NIGHT_MODE_ENABLED, value) }
+
+    /**
+     * Get the search history as an ordered list (most recent first).
+     */
+    fun getSearchHistory(): List<String> {
+        val joined = prefs.getString(KEY_SEARCH_HISTORY, null) ?: return emptyList()
+        return joined.split("\u001F").filter { it.isNotBlank() }
+    }
+
+    /**
+     * Add a search term to history. Deduplicates (case-insensitive) and caps at [MAX_SEARCH_HISTORY].
+     */
+    fun addSearchHistory(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return
+        val current = getSearchHistory().toMutableList()
+        current.removeAll { it.equals(trimmed, ignoreCase = true) }
+        current.add(0, trimmed)
+        val capped = current.take(MAX_SEARCH_HISTORY)
+        prefs.edit { putString(KEY_SEARCH_HISTORY, capped.joinToString("\u001F")) }
+    }
+
+    /**
+     * Remove a single entry from search history.
+     */
+    fun removeSearchHistory(query: String) {
+        val current = getSearchHistory().toMutableList()
+        current.removeAll { it.equals(query, ignoreCase = true) }
+        prefs.edit { putString(KEY_SEARCH_HISTORY, current.joinToString("\u001F")) }
+    }
+
+    /**
+     * Clear all search history.
+     */
+    fun clearSearchHistory() {
+        prefs.edit { remove(KEY_SEARCH_HISTORY) }
+    }
+
+    /**
+     * Get the EPG search history as an ordered list (most recent first).
+     */
+    fun getEpgSearchHistory(): List<String> {
+        val joined = prefs.getString(KEY_EPG_SEARCH_HISTORY, null) ?: return emptyList()
+        return joined.split("\u001F").filter { it.isNotBlank() }
+    }
+
+    /**
+     * Add a search term to EPG history. Deduplicates (case-insensitive) and caps at [MAX_SEARCH_HISTORY].
+     */
+    fun addEpgSearchHistory(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return
+        val current = getEpgSearchHistory().toMutableList()
+        current.removeAll { it.equals(trimmed, ignoreCase = true) }
+        current.add(0, trimmed)
+        val capped = current.take(MAX_SEARCH_HISTORY)
+        prefs.edit { putString(KEY_EPG_SEARCH_HISTORY, capped.joinToString("\u001F")) }
+    }
+
+    /**
+     * Remove a single entry from EPG search history.
+     */
+    fun removeEpgSearchHistory(query: String) {
+        val current = getEpgSearchHistory().toMutableList()
+        current.removeAll { it.equals(query, ignoreCase = true) }
+        prefs.edit { putString(KEY_EPG_SEARCH_HISTORY, current.joinToString("\u001F")) }
+    }
+
+    /**
+     * Clear all EPG search history.
+     */
+    fun clearEpgSearchHistory() {
+        prefs.edit { remove(KEY_EPG_SEARCH_HISTORY) }
+    }
 
     /**
      * Reset both cellular buffer multipliers to default (1.0x).

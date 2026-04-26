@@ -2,9 +2,9 @@ package org.njarasoa.fijerena.feature.category.components
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.tv.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -21,7 +21,7 @@ internal sealed class FavoriteMenuTarget {
         val categoryId: String,
         val categoryName: String,
         val contentType: String,
-        val isFavorite: Boolean
+        val isFavorite: Boolean,
     ) : FavoriteMenuTarget()
 
     data class Stream(
@@ -29,7 +29,7 @@ internal sealed class FavoriteMenuTarget {
         val itemName: String,
         val categoryId: String,
         val contentType: String,
-        val isFavorite: Boolean
+        val isFavorite: Boolean,
     ) : FavoriteMenuTarget()
 }
 
@@ -42,12 +42,13 @@ internal sealed class FavoriteMenuTarget {
 internal fun FavoriteContextMenuDialog(
     target: FavoriteMenuTarget,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
-    val (itemName, isFavorite) = when (target) {
-        is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
-        is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
-    }
+    val (itemName, isFavorite) =
+        when (target) {
+            is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
+            is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
+        }
 
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 
@@ -58,7 +59,7 @@ internal fun FavoriteContextMenuDialog(
                 text = itemName,
                 style = MaterialTheme.typography.titleMedium,
                 color = CinemaTextPrimary,
-                maxLines = 2
+                maxLines = 2,
             )
         },
         text = null,
@@ -68,18 +69,18 @@ internal fun FavoriteContextMenuDialog(
                     onConfirm()
                     onDismiss()
                 },
-                text = actionText
+                text = actionText,
             )
         },
         dismissButton = {
             CinemaSecondaryButton(
                 onClick = onDismiss,
-                text = "Cancel"
+                text = "Cancel",
             )
         },
         containerColor = CinemaSurface,
         titleContentColor = CinemaTextPrimary,
         textContentColor = CinemaTextSecondary,
-        shape = RoundedCornerShape(CornerRadius.large)
+        shape = RoundedCornerShape(CornerRadius.large),
     )
 }

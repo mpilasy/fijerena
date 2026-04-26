@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,22 +24,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.network.AccountManager
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
-import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.AboutSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.CloudSyncSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ConflictResolutionDialog
@@ -58,11 +56,6 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Settings screen for app configuration.
- *
- * Features:
- * - Change provider URL
- * - Adjust watch history size
- * - Toggle developer mode
  */
 @Composable
 fun SettingsScreen(
@@ -71,43 +64,21 @@ fun SettingsScreen(
     onUiScaleChanged: (Float) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onManageEpg: () -> Unit = {},
-    onProviderChanged: () -> Unit
+    onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
-    val repository = remember {
-        val accountManager = AccountManager(context.applicationContext)
-        XtreamRepository(accountManager, context.applicationContext)
-    }
+    val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
-    val appSettings = remember { AppSettings(context.applicationContext) }
     val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Get active provider info from ProviderEntity (not legacy AppSettings)
-    var providerName by remember { mutableStateOf("") }
-    var currentUrl by remember { mutableStateOf("") }
-    var currentUsername by remember { mutableStateOf("") }
-    var activeProviderId by remember { mutableStateOf<Long?>(null) }
-    var subscriptionExpiry by remember { mutableStateOf<String?>(null) }
-    var subscriptionStatus by remember { mutableStateOf<String?>(null) }
-    var subscriptionMaxCons by remember { mutableStateOf<String?>(null) }
-    var subscriptionIsTrial by remember { mutableStateOf(false) }
-
     // Track whether we had a provider at initial load
     var hadProviderOnLoad by remember { mutableStateOf<Boolean?>(null) }
 
-    // Global settings
-    var isDevMode by remember { mutableStateOf(appSettings.isDevMode) }
-    var selectedThemeId by remember { mutableStateOf(appSettings.themeId) }
-    var watchDelaySeconds by remember { mutableStateOf(appSettings.watchDelaySeconds) }
-
-    // Use scale from CompositionLocal for display
-    val currentUiScale = LocalUiScale.current
-
-    // Export/Import state
-    var exportImportMessage by remember { mutableStateOf<String?>(null) }
-    var epgRefreshTrigger by remember { mutableStateOf(0) }
+    // Export/Import transient state (not in ViewModel yet as it involves SAF Launchers)
     var pendingExportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var pendingImportPath by remember { mutableStateOf<String?>(null) }
@@ -117,20 +88,22 @@ fun SettingsScreen(
     var pendingImportOptions by remember { mutableStateOf(SettingsExportManager.ImportOptions()) }
 
     // SAF launcher for export (create file)
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri -> pendingExportUri = uri }
+    val exportLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("application/json"),
+        ) { uri -> pendingExportUri = uri }
 
     // SAF launcher for import (open file)
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri -> pendingImportUri = uri }
+    val importLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+        ) { uri -> pendingImportUri = uri }
 
     // Process export in LaunchedEffect (survives recomposition)
     LaunchedEffect(pendingExportUri) {
         val uri = pendingExportUri ?: return@LaunchedEffect
         val success = exportManager.exportToUri(uri)
-        exportImportMessage = if (success) "Settings exported successfully" else "Export failed"
+        viewModel.setExportImportMessage(if (success) "Settings exported successfully" else "Export failed")
         pendingExportUri = null
     }
 
@@ -138,13 +111,14 @@ fun SettingsScreen(
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportUri(uri)
-        parseResult.onSuccess { parsed ->
-            pendingParsedImport = parsed
-            pendingImportOptions = SettingsExportManager.ImportOptions()
-            showImportOptionsDialog = true
-        }.onFailure { e ->
-            exportImportMessage = "Import failed: ${e.message}"
-        }
+        parseResult
+            .onSuccess { parsed ->
+                pendingParsedImport = parsed
+                pendingImportOptions = SettingsExportManager.ImportOptions()
+                showImportOptionsDialog = true
+            }.onFailure { e ->
+                viewModel.setExportImportMessage("Import failed: ${e.message}")
+            }
         pendingImportUri = null
     }
 
@@ -152,36 +126,15 @@ fun SettingsScreen(
     LaunchedEffect(pendingImportPath) {
         val path = pendingImportPath ?: return@LaunchedEffect
         val parseResult = exportManager.parseImportPath(path)
-        parseResult.onSuccess { parsed ->
-            pendingParsedImport = parsed
-            pendingImportOptions = SettingsExportManager.ImportOptions()
-            showImportOptionsDialog = true
-        }.onFailure { e ->
-            exportImportMessage = "Import failed: ${e.message}"
-        }
-        pendingImportPath = null
-    }
-
-    // Helper to perform import and refresh UI state
-    fun doImport(parsed: SettingsExportManager.ParsedImport, resolution: SettingsExportManager.ConflictResolution, options: SettingsExportManager.ImportOptions) {
-        coroutineScope.launch {
-            val result = exportManager.importFromParsed(parsed, resolution, options)
-            exportImportMessage = result.toSummary()
-            if (result.isSuccess) {
-                if (options.importGlobalSettings) {
-                    selectedThemeId = appSettings.themeId
-                    onThemeChanged(appSettings.themeId)
-                    onUiScaleChanged(appSettings.uiScale)
-                    isDevMode = appSettings.isDevMode
-                }
-                val activeProvider = providerRepo.getActiveProvider()
-                providerName = activeProvider?.name ?: "No provider"
-                currentUrl = activeProvider?.url ?: ""
-                currentUsername = activeProvider?.username ?: ""
-                activeProviderId = activeProvider?.id
-                epgRefreshTrigger++
+        parseResult
+            .onSuccess { parsed ->
+                pendingParsedImport = parsed
+                pendingImportOptions = SettingsExportManager.ImportOptions()
+                showImportOptionsDialog = true
+            }.onFailure { e ->
+                viewModel.setExportImportMessage("Import failed: ${e.message}")
             }
-        }
+        pendingImportPath = null
     }
 
     // Drive sync state
@@ -192,54 +145,23 @@ fun SettingsScreen(
     var signInError by remember { mutableStateOf<String?>(null) }
 
     // Google Sign-In launcher
-    val signInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        coroutineScope.launch {
-            val success = syncManager.handleSignInResult(result.data)
-            if (!success) {
-                signInError = "Sign-in failed. Check Google Play Services."
-            } else {
-                signInError = null
+    val signInLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            coroutineScope.launch {
+                val success = syncManager.handleSignInResult(result.data)
+                if (!success) {
+                    signInError = "Sign-in failed. Check Google Play Services."
+                } else {
+                    signInError = null
+                }
             }
         }
-    }
 
     // Initialize sync on startup
     LaunchedEffect(Unit) {
         syncManager.initialize()
-    }
-
-    LaunchedEffect(Unit) {
-        val activeProvider = providerRepo.getActiveProvider()
-        providerName = activeProvider?.name ?: "No provider"
-        currentUrl = activeProvider?.url ?: ""
-        currentUsername = activeProvider?.username ?: ""
-        activeProviderId = activeProvider?.id
-        hadProviderOnLoad = activeProvider != null
-
-        if (activeProvider?.type == "XTREAM") {
-            val accountManager = org.njarasoa.fijerena.core.network.AccountManager(context.applicationContext)
-            accountManager.getAuthResponse()?.userInfo?.let { info ->
-                subscriptionStatus = info.status
-                subscriptionMaxCons = info.maxConnections
-                subscriptionIsTrial = info.isTrial == "1"
-                val expDate = info.expDate
-                subscriptionExpiry = when {
-                    expDate.isNullOrEmpty() -> null
-                    expDate.equals("Unlimited", ignoreCase = true) -> "Unlimited"
-                    else -> {
-                        val epoch = expDate.toLongOrNull()
-                        if (epoch != null) {
-                            val date = java.time.Instant.ofEpochSecond(epoch)
-                                .atZone(java.time.ZoneId.systemDefault())
-                                .toLocalDate()
-                            date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy"))
-                        } else expDate
-                    }
-                }
-            }
-        }
     }
 
     // Re-check provider when returning from provider management screens
@@ -248,13 +170,12 @@ fun SettingsScreen(
     LaunchedEffect(lifecycleState) {
         if (lifecycleState == Lifecycle.State.RESUMED) {
             val activeProvider = providerRepo.getActiveProvider()
-            val hadProvider = hadProviderOnLoad
-            providerName = activeProvider?.name ?: "No provider"
-            currentUrl = activeProvider?.url ?: ""
-            currentUsername = activeProvider?.username ?: ""
-            activeProviderId = activeProvider?.id
-            // Navigate to content selection if we just got our first provider
-            if (hadProvider == false && activeProvider != null) {
+            val hadOnLoad = hadProviderOnLoad
+            viewModel.refreshProviderInfo()
+
+            if (hadOnLoad == null) {
+                hadProviderOnLoad = activeProvider != null
+            } else if (hadOnLoad == false && activeProvider != null) {
                 hadProviderOnLoad = true
                 onProviderChanged()
             }
@@ -265,23 +186,24 @@ fun SettingsScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    horizontal = Spacing.tvSafeMarginHorizontal,
-                    vertical = Spacing.tvSafeMarginVertical
-                )
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = Spacing.tvSafeMarginHorizontal,
+                        vertical = Spacing.tvSafeMarginVertical,
+                    ),
         ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "Settings",
                     style = MaterialTheme.typography.displaySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -291,44 +213,42 @@ fun SettingsScreen(
             TvLazyColumn(
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) {
                 // Provider Details
                 item {
                     ProviderSettingsCard(
-                        providerName = providerName,
-                        currentUrl = currentUrl,
-                        subscriptionExpiry = subscriptionExpiry,
-                        subscriptionMaxCons = subscriptionMaxCons,
-                        subscriptionIsTrial = subscriptionIsTrial,
-                        subscriptionStatus = subscriptionStatus,
+                        providerName = uiState.providerName,
+                        currentUrl = uiState.currentUrl,
+                        subscriptionExpiry = uiState.subscriptionExpiry,
+                        subscriptionMaxCons = uiState.subscriptionMaxCons,
+                        subscriptionIsTrial = uiState.subscriptionIsTrial,
+                        subscriptionStatus = uiState.subscriptionStatus,
                         onManageProviders = onManageProviders,
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
                 // Playback
                 item {
                     PlaybackSettingsCard(
-                        watchDelaySeconds = watchDelaySeconds,
+                        watchDelaySeconds = uiState.watchDelaySeconds,
                         onWatchDelayChanged = { seconds ->
-                            watchDelaySeconds = seconds
-                            appSettings.watchDelaySeconds = seconds
+                            viewModel.updateWatchDelay(seconds)
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
                 // Theme Selection
                 item {
                     ThemeSettingsCard(
-                        selectedThemeId = selectedThemeId,
+                        selectedThemeId = uiState.themeId,
                         onThemeSelected = { newThemeId ->
-                            selectedThemeId = newThemeId
-                            appSettings.themeId = newThemeId
+                            viewModel.updateTheme(newThemeId)
                             onThemeChanged(newThemeId)
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -336,32 +256,32 @@ fun SettingsScreen(
                 item {
                     EpgSettingsCard(
                         context = context,
-                        epgRefreshTrigger = epgRefreshTrigger,
+                        epgRefreshTrigger = uiState.epgRefreshTrigger,
                         onManageEpg = onManageEpg,
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
                 // UI Scale
                 item {
                     UiScaleSettingsCard(
-                        uiScale = currentUiScale,
+                        uiScale = uiState.uiScale,
                         onScaleSelected = { newScale ->
+                            viewModel.updateUiScale(newScale)
                             onUiScaleChanged(newScale)
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
                 // Developer Mode
                 item {
                     DeveloperSettingsCard(
-                        isDevMode = isDevMode,
+                        isDevMode = uiState.isDevMode,
                         onDevModeChanged = { enabled ->
-                            isDevMode = enabled
-                            appSettings.isDevMode = enabled
+                            viewModel.updateDevMode(enabled)
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -377,7 +297,7 @@ fun SettingsScreen(
                             signInError = null
                             signInLauncher.launch(syncManager.getSignInIntent())
                         },
-                        scale = scale
+                        scale = scale,
                     )
                 }
 
@@ -387,22 +307,15 @@ fun SettingsScreen(
                         onExport = { exportLauncher.launch("fijerena_settings.json") },
                         onImport = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
                         onQuickImport = {
-                            val downloadPath = "/sdcard/Download/fijerena_settings.json"
-                            val privatePath = context.getExternalFilesDir(null)?.absolutePath + "/fijerena_settings.json"
-                            
-                            coroutineScope.launch {
-                                // Try public download folder first
-                                val file = java.io.File(downloadPath)
-                                if (file.exists() && file.canRead()) {
-                                    pendingImportPath = downloadPath
-                                } else {
-                                    // Fallback to app private folder (no permission needed)
-                                    pendingImportPath = privatePath
-                                }
+                            val path = exportManager.getQuickImportPath()
+                            if (path != null) {
+                                pendingImportPath = path
+                            } else {
+                                viewModel.setExportImportMessage("Settings file not found in Downloads or app folder")
                             }
                         },
-                        exportImportMessage = exportImportMessage,
-                        scale = scale
+                        exportImportMessage = uiState.exportImportMessage,
+                        scale = scale,
                     )
                 }
 
@@ -427,13 +340,13 @@ fun SettingsScreen(
                     } else {
                         pendingParsedImport = null
                         showImportOptionsDialog = false
-                        doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
+                        viewModel.doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
                     }
                 },
                 onCancel = {
                     showImportOptionsDialog = false
                     if (!showConflictDialog) pendingParsedImport = null
-                }
+                },
             )
         }
 
@@ -447,12 +360,12 @@ fun SettingsScreen(
                     val parsed = pendingParsedImport!!
                     val options = pendingImportOptions
                     pendingParsedImport = null
-                    doImport(parsed, resolution, options)
+                    viewModel.doImport(parsed, resolution, options)
                 },
                 onCancel = {
                     showConflictDialog = false
                     pendingParsedImport = null
-                }
+                },
             )
         }
     }

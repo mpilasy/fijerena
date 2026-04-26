@@ -8,7 +8,7 @@ data class MovieDetail(
     val extension: String? = null,
     val videoInfo: VideoTechInfo? = null,
     val audioTracks: List<AudioTechInfo> = emptyList(),
-    val subtitleTracks: List<SubtitleTechInfo> = emptyList()
+    val subtitleTracks: List<SubtitleTechInfo> = emptyList(),
 )
 
 data class VideoTechInfo(
@@ -17,7 +17,7 @@ data class VideoTechInfo(
     val codecName: String? = null,
     val bitrate: Int? = null,
     val videoRange: String? = null,
-    val displayTitle: String? = null
+    val displayTitle: String? = null,
 )
 
 data class AudioTechInfo(
@@ -26,12 +26,12 @@ data class AudioTechInfo(
     val channels: Int? = null,
     val sampleRate: Int? = null,
     val displayTitle: String? = null,
-    val isDefault: Boolean = false
+    val isDefault: Boolean = false,
 )
 
 data class SubtitleTechInfo(
     val codecName: String? = null,
     val language: String? = null,
     val displayTitle: String? = null,
-    val isDefault: Boolean = false
+    val isDefault: Boolean = false,
 )

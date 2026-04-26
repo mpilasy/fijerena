@@ -36,9 +36,9 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
@@ -54,7 +54,7 @@ enum class QuadrantPosition {
     TOP_LEFT,
     TOP_RIGHT,
     BOTTOM_LEFT,
-    BOTTOM_RIGHT
+    BOTTOM_RIGHT,
 }
 
 /**
@@ -71,7 +71,7 @@ fun StatsOverlay(
     visible: Boolean,
     stats: Map<String, String>,
     modifier: Modifier = Modifier,
-    interactive: Boolean = true
+    interactive: Boolean = true,
 ) {
     if (!visible || stats.isEmpty()) return
 
@@ -85,95 +85,99 @@ fun StatsOverlay(
     val overlayHeight = (configuration.screenHeightDp * 0.25).dp
 
     Box(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize(),
     ) {
         // Use Surface for interactive overlay, Box for non-interactive
         if (interactive) {
             Surface(
-                modifier = Modifier
-                    .width(overlayWidth)
-                    .height(overlayHeight)
-                    .align(getAlignment(position))
-                    .focusRequester(focusRequester)
-                    .onFocusChanged { isFocused = it.isFocused }
-                    .onKeyEvent { keyEvent ->
-                        if (keyEvent.type == KeyEventType.KeyDown) {
-                            when (keyEvent.key) {
-                                Key.DirectionUp -> {
-                                    position = when (position) {
-                                        QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.TOP_LEFT
-                                        QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.TOP_RIGHT
-                                        else -> position
+                modifier =
+                    Modifier
+                        .width(overlayWidth)
+                        .height(overlayHeight)
+                        .align(getAlignment(position))
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { isFocused = it.isFocused }
+                        .onKeyEvent { keyEvent ->
+                            if (keyEvent.type == KeyEventType.KeyDown) {
+                                when (keyEvent.key) {
+                                    Key.DirectionUp -> {
+                                        position =
+                                            when (position) {
+                                                QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.TOP_LEFT
+                                                QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.TOP_RIGHT
+                                                else -> position
+                                            }
+                                        true
                                     }
-                                    true
-                                }
-                                Key.DirectionDown -> {
-                                    position = when (position) {
-                                        QuadrantPosition.TOP_LEFT -> QuadrantPosition.BOTTOM_LEFT
-                                        QuadrantPosition.TOP_RIGHT -> QuadrantPosition.BOTTOM_RIGHT
-                                        else -> position
+                                    Key.DirectionDown -> {
+                                        position =
+                                            when (position) {
+                                                QuadrantPosition.TOP_LEFT -> QuadrantPosition.BOTTOM_LEFT
+                                                QuadrantPosition.TOP_RIGHT -> QuadrantPosition.BOTTOM_RIGHT
+                                                else -> position
+                                            }
+                                        true
                                     }
-                                    true
-                                }
-                                Key.DirectionLeft -> {
-                                    position = when (position) {
-                                        QuadrantPosition.TOP_RIGHT -> QuadrantPosition.TOP_LEFT
-                                        QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.BOTTOM_LEFT
-                                        else -> position
+                                    Key.DirectionLeft -> {
+                                        position =
+                                            when (position) {
+                                                QuadrantPosition.TOP_RIGHT -> QuadrantPosition.TOP_LEFT
+                                                QuadrantPosition.BOTTOM_RIGHT -> QuadrantPosition.BOTTOM_LEFT
+                                                else -> position
+                                            }
+                                        true
                                     }
-                                    true
-                                }
-                                Key.DirectionRight -> {
-                                    position = when (position) {
-                                        QuadrantPosition.TOP_LEFT -> QuadrantPosition.TOP_RIGHT
-                                        QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.BOTTOM_RIGHT
-                                        else -> position
+                                    Key.DirectionRight -> {
+                                        position =
+                                            when (position) {
+                                                QuadrantPosition.TOP_LEFT -> QuadrantPosition.TOP_RIGHT
+                                                QuadrantPosition.BOTTOM_LEFT -> QuadrantPosition.BOTTOM_RIGHT
+                                                else -> position
+                                            }
+                                        true
                                     }
-                                    true
+                                    else -> false
                                 }
-                                else -> false
+                            } else {
+                                false
                             }
-                        } else {
-                            false
-                        }
-                    }
-                    .border(
-                        width = if (isFocused) TvDimensions.borderFocusedStats else TvDimensions.borderDefault,
-                        color = if (isFocused) CinemaAccentLight else CinemaSurfaceLight,
-                        shape = MaterialTheme.shapes.medium
-                    )
-                    .background(
-                        color = CinemaGlassBackground,
-                        shape = MaterialTheme.shapes.medium
-                    ),
-                onClick = { /* Click to focus */ }
+                        }.border(
+                            width = if (isFocused) TvDimensions.borderFocusedStats else TvDimensions.borderDefault,
+                            color = if (isFocused) CinemaAccentLight else CinemaSurfaceLight,
+                            shape = MaterialTheme.shapes.medium,
+                        ).background(
+                            color = CinemaGlassBackground,
+                            shape = MaterialTheme.shapes.medium,
+                        ),
+                onClick = { /* Click to focus */ },
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(Spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                 ) {
                     Text(
                         text = "Stats for Nerds",
                         style = MaterialTheme.typography.titleSmall,
-                        color = CinemaAccent
+                        color = CinemaAccent,
                     )
 
                     stats.forEach { (label, value) ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
                                 text = "$label:",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             )
                             Text(
                                 text = value,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextPrimary
+                                color = CinemaTextPrimary,
                             )
                         }
                     }
@@ -183,7 +187,7 @@ fun StatsOverlay(
                         Text(
                             text = "Use D-pad to move",
                             style = MaterialTheme.typography.labelSmall,
-                            color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh)
+                            color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh),
                         )
                     }
                 }
@@ -191,45 +195,44 @@ fun StatsOverlay(
         } else {
             // Non-interactive: plain Box, not focusable
             Box(
-                modifier = Modifier
-                    .width(overlayWidth)
-                    .height(overlayHeight)
-                    .align(getAlignment(position))
-                    .border(
-                        width = TvDimensions.borderDefault,
-                        color = CinemaSurfaceLight,
-                        shape = MaterialTheme.shapes.medium
-                    )
-                    .background(
-                        color = CinemaSurface.copy(alpha = CinemaAlpha.overlayHeavy),
-                        shape = MaterialTheme.shapes.medium
-                    )
-                    .padding(Spacing.sm)
+                modifier =
+                    Modifier
+                        .width(overlayWidth)
+                        .height(overlayHeight)
+                        .align(getAlignment(position))
+                        .border(
+                            width = TvDimensions.borderDefault,
+                            color = CinemaSurfaceLight,
+                            shape = MaterialTheme.shapes.medium,
+                        ).background(
+                            color = CinemaSurface.copy(alpha = CinemaAlpha.overlayHeavy),
+                            shape = MaterialTheme.shapes.medium,
+                        ).padding(Spacing.sm),
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                 ) {
                     Text(
                         text = "Stats for Nerds",
                         style = MaterialTheme.typography.titleSmall,
-                        color = CinemaAccent
+                        color = CinemaAccent,
                     )
 
                     stats.forEach { (label, value) ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
                                 text = "$label:",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             )
                             Text(
                                 text = value,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextPrimary
+                                color = CinemaTextPrimary,
                             )
                         }
                     }
@@ -242,7 +245,10 @@ fun StatsOverlay(
     if (interactive) {
         LaunchedEffect(visible) {
             if (visible) {
-                try { focusRequester.requestFocus() } catch (_: IllegalStateException) {}
+                try {
+                    focusRequester.requestFocus()
+                } catch (_: IllegalStateException) {
+                }
             }
         }
     }
@@ -251,11 +257,10 @@ fun StatsOverlay(
 /**
  * Get Box alignment for quadrant position
  */
-private fun getAlignment(position: QuadrantPosition): Alignment {
-    return when (position) {
+private fun getAlignment(position: QuadrantPosition): Alignment =
+    when (position) {
         QuadrantPosition.TOP_LEFT -> Alignment.TopStart
         QuadrantPosition.TOP_RIGHT -> Alignment.TopEnd
         QuadrantPosition.BOTTOM_LEFT -> Alignment.BottomStart
         QuadrantPosition.BOTTOM_RIGHT -> Alignment.BottomEnd
     }
-}

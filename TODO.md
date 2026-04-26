@@ -9,7 +9,7 @@ The build environment is fully operational. All recent commits compile and deplo
 ## Open Investigation
 
 ### Cellular Streaming Buffering
-CDN throttles to ~1.5 Mbps per connection on cellular; stream is 1080p single-quality at ~1.3 Mbps. iMPlayer plays smoothly with same bandwidth — root cause still unknown. See `docs/CELLULAR_STREAMING_INVESTIGATION.md` for details.
+CDN throttles to ~1.5 Mbps per connection on cellular; stream is 1080p single-quality at ~1.3 Mbps. iMPlayer plays smoothly with same bandwidth — root cause still unknown.
 
 **Next step:** Packet capture (PCAPdroid) comparison between our app and iMPlayer.
 
@@ -50,3 +50,4 @@ Prefer real hardware for validation:
 11. ~~**Fix virtual categories FilterChipColors not using hoisted chipColors**~~ DONE
 12. ~~**Extract scale options list in UiScaleSettingsCard**~~ DONE
 13. ~~**Hoist AppSettings outside while(true) loop in EpgFileManager**~~ DONE
+14. ~~**Optimize audio processing and media source allocation**~~ DONE

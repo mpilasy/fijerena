@@ -21,9 +21,8 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
  * @param repository Repository for Xtream API operations and credential management.
  */
 class LoginViewModel(
-    private val repository: XtreamRepository
+    private val repository: XtreamRepository,
 ) : ViewModel() {
-
     /**
      * UI state sealed class representing all possible login states.
      */
@@ -41,12 +40,16 @@ class LoginViewModel(
         /**
          * Success state with authentication response data.
          */
-        data class Success(val authResponse: XtreamAuthResponse) : UiState()
+        data class Success(
+            val authResponse: XtreamAuthResponse,
+        ) : UiState()
 
         /**
          * Error state with error message.
          */
-        data class Error(val message: String) : UiState()
+        data class Error(
+            val message: String,
+        ) : UiState()
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -66,7 +69,12 @@ class LoginViewModel(
      * @param password Xtream account password
      * @param rememberMe Whether to persist credentials for auto-login
      */
-    fun login(url: String, username: String, password: String, rememberMe: Boolean = false) {
+    fun login(
+        url: String,
+        username: String,
+        password: String,
+        rememberMe: Boolean = false,
+    ) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
 
@@ -76,20 +84,21 @@ class LoginViewModel(
                 }
                 is Result.Error -> {
                     // Handle network errors, timeouts, invalid JSON, etc.
-                    val errorMessage = when {
-                        result.message?.contains("timeout", ignoreCase = true) == true ->
-                            "Connection timeout. Check your network or server URL."
-                        result.message?.contains("401") == true || result.message?.contains("Unauthorized") == true ->
-                            "Invalid username or password."
-                        result.message?.contains("404") == true || result.message?.contains("Not Found") == true ->
-                            "Server not found. Check your URL."
-                        result.message?.contains("Invalid credentials") == true ->
-                            "Invalid username or password."
-                        result.message?.contains("not active", ignoreCase = true) == true ->
-                            result.message ?: "Account is not active"
-                        else ->
-                            "Login failed: ${result.message ?: "Unknown error"}"
-                    }
+                    val errorMessage =
+                        when {
+                            result.message?.contains("timeout", ignoreCase = true) == true ->
+                                "Connection timeout. Check your network or server URL."
+                            result.message?.contains("401") == true || result.message?.contains("Unauthorized") == true ->
+                                "Invalid username or password."
+                            result.message?.contains("404") == true || result.message?.contains("Not Found") == true ->
+                                "Server not found. Check your URL."
+                            result.message?.contains("Invalid credentials") == true ->
+                                "Invalid username or password."
+                            result.message?.contains("not active", ignoreCase = true) == true ->
+                                result.message ?: "Account is not active"
+                            else ->
+                                "Login failed: ${result.message ?: "Unknown error"}"
+                        }
                     _uiState.value = UiState.Error(errorMessage)
                 }
             }

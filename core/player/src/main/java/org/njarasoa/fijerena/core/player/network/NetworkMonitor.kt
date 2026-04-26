@@ -21,7 +21,6 @@ import org.njarasoa.fijerena.core.player.config.NetworkType
  * Safe to call [init] multiple times (idempotent). Call [release] when done.
  */
 object NetworkMonitor {
-
     private const val TAG = "NetworkMonitor"
 
     private val _networkType = MutableStateFlow(NetworkType.WIFI)
@@ -51,25 +50,31 @@ object NetworkMonitor {
         updateType(initial)
         Log.i(TAG, "Initialized. Current network: $initial")
 
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
+        val request =
+            NetworkRequest
+                .Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
 
-        val networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                val type = resolveNetworkType(caps)
-                if (type != currentNetworkType) {
-                    Log.i(TAG, "Network changed: $currentNetworkType -> $type")
-                    updateType(type)
+        val networkCallback =
+            object : ConnectivityManager.NetworkCallback() {
+                override fun onCapabilitiesChanged(
+                    network: Network,
+                    caps: NetworkCapabilities,
+                ) {
+                    val type = resolveNetworkType(caps)
+                    if (type != currentNetworkType) {
+                        Log.i(TAG, "Network changed: $currentNetworkType -> $type")
+                        updateType(type)
+                    }
+                }
+
+                override fun onLost(network: Network) {
+                    // Network lost — fall back to UNKNOWN (will use WIFI-like defaults)
+                    Log.i(TAG, "Network lost, falling back to UNKNOWN")
+                    updateType(NetworkType.UNKNOWN)
                 }
             }
-
-            override fun onLost(network: Network) {
-                // Network lost — fall back to UNKNOWN (will use WIFI-like defaults)
-                Log.i(TAG, "Network lost, falling back to UNKNOWN")
-                updateType(NetworkType.UNKNOWN)
-            }
-        }
         callback = networkCallback
         cm.registerNetworkCallback(request, networkCallback)
     }

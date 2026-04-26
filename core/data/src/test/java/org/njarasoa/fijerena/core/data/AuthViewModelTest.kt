@@ -8,7 +8,6 @@ import org.njarasoa.fijerena.core.player.model.XtreamServerInfo
 import org.njarasoa.fijerena.core.player.model.XtreamUserInfo
 
 class AuthViewModelTest {
-
     @Test
     fun `isSessionExpired returns true when no session exists`() {
         val viewModel = AuthViewModel()
@@ -67,20 +66,21 @@ class AuthViewModelTest {
         assertFalse(viewModel.isSessionExpired())
     }
 
-    private fun createAuthResponse(expDate: String?): XtreamAuthResponse {
-        return XtreamAuthResponse(
-            userInfo = XtreamUserInfo(
-                username = "testuser",
-                password = "password",
-                auth = 1,
-                status = "Active",
-                expDate = expDate
-            ),
-            serverInfo = XtreamServerInfo(
-                url = "http://example.com",
-                port = "80",
-                serverProtocol = "http"
-            )
+    private fun createAuthResponse(expDate: String?): XtreamAuthResponse =
+        XtreamAuthResponse(
+            userInfo =
+                XtreamUserInfo(
+                    username = "testuser",
+                    password = "password",
+                    auth = 1,
+                    status = "Active",
+                    expDate = expDate,
+                ),
+            serverInfo =
+                XtreamServerInfo(
+                    url = "http://example.com",
+                    port = "80",
+                    serverProtocol = "http",
+                ),
         )
-    }
 }

@@ -20,19 +20,28 @@ object TimeFormat {
     private val formatter24 = DateTimeFormatter.ofPattern("HH:mm")
     private val formatter12 = DateTimeFormatter.ofPattern("h:mm a")
 
-    fun formatTime(context: Context, epochSeconds: Long): String {
-        val localTime = LocalDateTime.ofInstant(
-            Instant.ofEpochSecond(epochSeconds),
-            ZoneId.systemDefault()
-        )
+    fun formatTime(
+        context: Context,
+        epochSeconds: Long,
+    ): String {
+        val localTime =
+            LocalDateTime.ofInstant(
+                Instant.ofEpochSecond(epochSeconds),
+                ZoneId.systemDefault(),
+            )
         return localTime.format(if (DateFormat.is24HourFormat(context)) formatter24 else formatter12)
     }
 
-    fun formatTimeRange(context: Context, startEpochSeconds: Long, endEpochSeconds: Long): String {
-        return "${formatTime(context, startEpochSeconds)} - ${formatTime(context, endEpochSeconds)}"
-    }
+    fun formatTimeRange(
+        context: Context,
+        startEpochSeconds: Long,
+        endEpochSeconds: Long,
+    ): String = "${formatTime(context, startEpochSeconds)} - ${formatTime(context, endEpochSeconds)}"
 
-    fun formatClockTime(context: Context, date: Date): String {
+    fun formatClockTime(
+        context: Context,
+        date: Date,
+    ): String {
         val pattern = if (DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm a"
         return SimpleDateFormat(pattern, Locale.getDefault()).format(date)
     }

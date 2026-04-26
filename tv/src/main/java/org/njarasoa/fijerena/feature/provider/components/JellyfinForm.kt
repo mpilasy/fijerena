@@ -31,12 +31,13 @@ fun JellyfinForm(
     isEditMode: Boolean,
     isBusy: Boolean,
     onErrorChange: (String?) -> Unit,
-    onQuickConnectClick: () -> Unit
+    onQuickConnectClick: () -> Unit,
 ) {
     val scale = LocalUiScale.current
-    val scaledBodySmall = MaterialTheme.typography.bodySmall.let { style ->
-        remember(scale, style) { style.copy(fontSize = style.fontSize.scaled(scale)) }
-    }
+    val scaledBodySmall =
+        MaterialTheme.typography.bodySmall.let { style ->
+            remember(scale, style) { style.copy(fontSize = style.fontSize.scaled(scale)) }
+        }
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
@@ -55,7 +56,7 @@ fun JellyfinForm(
         },
         label = "Server URL",
         placeholder = "http://192.168.1.100:8096",
-        keyboardType = KeyboardType.Uri
+        keyboardType = KeyboardType.Uri,
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -66,7 +67,7 @@ fun JellyfinForm(
             onUsernameChange(it)
             onErrorChange(null)
         },
-        label = "Username"
+        label = "Username",
     )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -80,19 +81,19 @@ fun JellyfinForm(
         label = "Password",
         visualTransformation = PasswordVisualTransformation(),
         keyboardType = KeyboardType.Password,
-        displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else ""
+        displayText = if (password.isNotEmpty()) "\u2022".repeat(password.length) else "",
     )
 
     if (!isEditMode) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = "— or —",
                 style = scaledBodySmall,
-                color = CinemaTextSecondary
+                color = CinemaTextSecondary,
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             CinemaSecondaryButton(
@@ -104,7 +105,7 @@ fun JellyfinForm(
                     }
                 },
                 text = "Use Quick Connect",
-                enabled = !isBusy
+                enabled = !isBusy,
             )
         }
     }

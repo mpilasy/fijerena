@@ -3,10 +3,13 @@
 package org.njarasoa.fijerena.ui.components.buttons
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -16,20 +19,23 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrangeLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
 /**
  * Primary Button - Main CTAs
@@ -46,42 +52,47 @@ fun CinemaPrimaryButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     val scale = LocalUiScale.current
     Button(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        colors = ButtonDefaults.colors(
-            containerColor = CinemaAccent,
-            contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaAccentLight,
-            focusedContentColor = CinemaTextPrimary,
-            pressedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
-            disabledContainerColor = CinemaSurfaceVariant,
-            disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint)
-        ),
-        scale = ButtonDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
-            pressedScale = TvFocusTokens.pressedScale,
-            disabledScale = TvFocusTokens.defaultScale
-        ),
-        border = ButtonDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary)
-            )
-        ),
+        colors =
+            ButtonDefaults.colors(
+                containerColor = CinemaAccent,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = CinemaAccentLight,
+                focusedContentColor = CinemaTextPrimary,
+                pressedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
+                disabledContainerColor = CinemaSurfaceVariant,
+                disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
+            ),
+        scale =
+            ButtonDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScale,
+                pressedScale = TvFocusTokens.pressedScale,
+                disabledScale = TvFocusTokens.defaultScale,
+            ),
+        border =
+            ButtonDefaults.border(
+                focusedBorder =
+                    Border(
+                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary),
+                    ),
+            ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding = PaddingValues(
-            horizontal = Spacing.md.scaled(scale),
-            vertical = Spacing.sm.scaled(scale)
-        )
+        contentPadding =
+            PaddingValues(
+                horizontal = Spacing.md.scaled(scale),
+                vertical = Spacing.sm.scaled(scale),
+            ),
     ) {
         Text(
             text = text,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -101,42 +112,47 @@ fun CinemaSecondaryButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     val scale = LocalUiScale.current
     Button(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        colors = ButtonDefaults.colors(
-            containerColor = CinemaSurfaceVariant,
-            contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaSurface,
-            focusedContentColor = CinemaAccentLight,
-            pressedContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textMedium),
-            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
-            disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint)
-        ),
-        scale = ButtonDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
-            pressedScale = TvFocusTokens.pressedScale,
-            disabledScale = TvFocusTokens.defaultScale
-        ),
-        border = ButtonDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
-            )
-        ),
+        colors =
+            ButtonDefaults.colors(
+                containerColor = CinemaSurfaceVariant,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = CinemaSurface,
+                focusedContentColor = CinemaAccentLight,
+                pressedContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textMedium),
+                disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
+                disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
+            ),
+        scale =
+            ButtonDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScale,
+                pressedScale = TvFocusTokens.pressedScale,
+                disabledScale = TvFocusTokens.defaultScale,
+            ),
+        border =
+            ButtonDefaults.border(
+                focusedBorder =
+                    Border(
+                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight),
+                    ),
+            ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding = PaddingValues(
-            horizontal = Spacing.md.scaled(scale),
-            vertical = Spacing.sm.scaled(scale)
-        )
+        contentPadding =
+            PaddingValues(
+                horizontal = Spacing.md.scaled(scale),
+                vertical = Spacing.sm.scaled(scale),
+            ),
     ) {
         Text(
             text = text,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -156,48 +172,59 @@ fun CinemaTertiaryButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     val scale = LocalUiScale.current
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        colors = ButtonDefaults.colors(
-            containerColor = Color.Transparent,
-            contentColor = CinemaAccent,
-            focusedContainerColor = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
-            focusedContentColor = CinemaAccentLight,
-            pressedContainerColor = CinemaSurface.copy(alpha = CinemaAlpha.tint),
-            disabledContainerColor = Color.Transparent,
-            disabledContentColor = CinemaAccent.copy(alpha = CinemaAlpha.textFaint)
-        ),
-        scale = ButtonDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
-            pressedScale = TvFocusTokens.pressedScale,
-            disabledScale = TvFocusTokens.defaultScale
-        ),
-        border = ButtonDefaults.border(
-            border = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccent)
+        colors =
+            ButtonDefaults.colors(
+                containerColor = Color.Transparent,
+                contentColor = CinemaAccent,
+                focusedContainerColor = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
+                focusedContentColor = CinemaAccentLight,
+                pressedContainerColor = CinemaSurface.copy(alpha = CinemaAlpha.tint),
+                disabledContainerColor = Color.Transparent,
+                disabledContentColor = CinemaAccent.copy(alpha = CinemaAlpha.textFaint),
             ),
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
+        scale =
+            ButtonDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScale,
+                pressedScale = TvFocusTokens.pressedScale,
+                disabledScale = TvFocusTokens.defaultScale,
             ),
-            disabledBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow))
-            )
-        ),
+        border =
+            ButtonDefaults.border(
+                border =
+                    Border(
+                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccent),
+                    ),
+                focusedBorder =
+                    Border(
+                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight),
+                    ),
+                disabledBorder =
+                    Border(
+                        border =
+                            BorderStroke(
+                                width = TvFocusTokens.focusBorderWidth.scaled(scale),
+                                color = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
+                            ),
+                    ),
+            ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding = PaddingValues(
-            horizontal = Spacing.md.scaled(scale),
-            vertical = Spacing.sm.scaled(scale)
-        )
+        contentPadding =
+            PaddingValues(
+                horizontal = Spacing.md.scaled(scale),
+                vertical = Spacing.sm.scaled(scale),
+            ),
     ) {
         Text(
             text = text,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -218,49 +245,48 @@ fun CinemaIconButton(
     icon: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    size: androidx.compose.ui.unit.Dp = 48.dp
+    size: androidx.compose.ui.unit.Dp = 48.dp,
 ) {
     val scale = LocalUiScale.current
-    Button(
+    androidx.tv.material3.Surface(
         onClick = onClick,
-        modifier = modifier.size(size.scaled(scale)),
         enabled = enabled,
-        colors = ButtonDefaults.colors(
-            containerColor = CinemaSurfaceVariant,
-            contentColor = CinemaAccent,
-            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-            focusedContentColor = CinemaAccentLight,
-            pressedContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textMedium),
-            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
-            disabledContentColor = CinemaAccent.copy(alpha = CinemaAlpha.textFaint)
-        ),
-        scale = ButtonDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = 1.15f,
-            pressedScale = 0.9f,
-            disabledScale = TvFocusTokens.defaultScale
-        ),
-        border = ButtonDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight)
-            )
-        ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding = PaddingValues(Spacing.xs.scaled(scale))
+        modifier = modifier.size(size.scaled(scale)),
+        colors =
+            androidx.tv.material3.ClickableSurfaceDefaults.colors(
+                containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = CinemaAccent,
+                focusedContentColor = CinemaBackground,
+                pressedContainerColor = CinemaAccentLight,
+                pressedContentColor = CinemaBackground,
+            ),
+        scale =
+            androidx.tv.material3.ClickableSurfaceDefaults.scale(
+                focusedScale = 1.1f,
+            ),
+        shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+        border =
+            androidx.tv.material3.ClickableSurfaceDefaults.border(
+                border = Border(BorderStroke(1.dp.scaled(scale), CinemaTextPrimary.copy(alpha = 0.3f))),
+                focusedBorder = Border(BorderStroke(2.dp.scaled(scale), CinemaTextPrimary)),
+            ),
     ) {
-        icon()
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.tv.material3.LocalContentColor provides if (enabled) CinemaTextPrimary else CinemaTextDisabled
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                icon()
+            }
+        }
     }
 }
 
 /**
- * Danger Icon Button - For destructive icon-only actions
- * Square button with icon, uses orange/danger color scheme.
- *
- * @param onClick Callback when button is clicked
- * @param icon Composable icon content
- * @param modifier Optional modifier
- * @param enabled Whether button is enabled (default true)
- * @param size Button size (default 48.dp)
+ * Danger Icon Button - Circular variant with standard TV interaction
  */
 @Composable
 fun CinemaDangerIconButton(
@@ -268,37 +294,41 @@ fun CinemaDangerIconButton(
     icon: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    size: androidx.compose.ui.unit.Dp = 48.dp
+    size: androidx.compose.ui.unit.Dp = 48.dp,
 ) {
     val scale = LocalUiScale.current
-    Button(
+    androidx.tv.material3.Surface(
         onClick = onClick,
-        modifier = modifier.size(size.scaled(scale)),
         enabled = enabled,
-        colors = ButtonDefaults.colors(
-            containerColor = CinemaOrange.copy(alpha = CinemaAlpha.tint),
-            contentColor = CinemaOrange,
-            focusedContainerColor = CinemaOrange,
-            focusedContentColor = CinemaTextPrimary,
-            pressedContainerColor = CinemaOrange.copy(alpha = CinemaAlpha.textMedium),
-            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
-            disabledContentColor = CinemaOrange.copy(alpha = CinemaAlpha.textFaint)
-        ),
-        scale = ButtonDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = 1.15f,
-            pressedScale = 0.9f,
-            disabledScale = TvFocusTokens.defaultScale
-        ),
-        border = ButtonDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary)
-            )
-        ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding = PaddingValues(Spacing.xs.scaled(scale))
+        modifier = modifier.size(size.scaled(scale)),
+        colors =
+            androidx.tv.material3.ClickableSurfaceDefaults.colors(
+                containerColor = CinemaOrange.copy(alpha = 0.4f),
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = CinemaOrange,
+                focusedContentColor = CinemaBackground,
+            ),
+        scale =
+            androidx.tv.material3.ClickableSurfaceDefaults.scale(
+                focusedScale = 1.1f,
+            ),
+        shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+        border =
+            androidx.tv.material3.ClickableSurfaceDefaults.border(
+                border = Border(BorderStroke(2.dp.scaled(scale), CinemaOrange.copy(alpha = 0.6f))),
+                focusedBorder = Border(BorderStroke(2.dp.scaled(scale), CinemaTextPrimary)),
+            ),
     ) {
-        icon()
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.tv.material3.LocalContentColor provides CinemaTextPrimary
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                icon()
+            }
+        }
     }
 }
 
@@ -317,42 +347,47 @@ fun CinemaDangerButton(
     onClick: () -> Unit,
     text: String,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     val scale = LocalUiScale.current
     Button(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        colors = ButtonDefaults.colors(
-            containerColor = CinemaOrange,
-            contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaOrangeLight,
-            focusedContentColor = CinemaBackground,
-            pressedContainerColor = CinemaOrange.copy(alpha = CinemaAlpha.textMedium),
-            disabledContainerColor = CinemaSurfaceVariant,
-            disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint)
-        ),
-        scale = ButtonDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScale,
-            pressedScale = TvFocusTokens.pressedScale,
-            disabledScale = TvFocusTokens.defaultScale
-        ),
-        border = ButtonDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary)
-            )
-        ),
+        colors =
+            ButtonDefaults.colors(
+                containerColor = CinemaOrange,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = CinemaOrangeLight,
+                focusedContentColor = CinemaBackground,
+                pressedContainerColor = CinemaOrange.copy(alpha = CinemaAlpha.textMedium),
+                disabledContainerColor = CinemaSurfaceVariant,
+                disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
+            ),
+        scale =
+            ButtonDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScale,
+                pressedScale = TvFocusTokens.pressedScale,
+                disabledScale = TvFocusTokens.defaultScale,
+            ),
+        border =
+            ButtonDefaults.border(
+                focusedBorder =
+                    Border(
+                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaTextPrimary),
+                    ),
+            ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding = PaddingValues(
-            horizontal = Spacing.md.scaled(scale),
-            vertical = Spacing.sm.scaled(scale)
-        )
+        contentPadding =
+            PaddingValues(
+                horizontal = Spacing.md.scaled(scale),
+                vertical = Spacing.sm.scaled(scale),
+            ),
     ) {
         Text(
             text = text,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
     }
 }

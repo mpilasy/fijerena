@@ -12,13 +12,13 @@ import org.njarasoa.fijerena.core.network.xtream.manager.XtreamMetricsManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamSessionManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamStatsManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamUserDataManager
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
-import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
  * Represents a watched stream in the history
@@ -30,9 +30,9 @@ data class WatchedStream(
     val categoryId: String,
     val contentType: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val playbackPosition: Long = 0L,      // Current position in ms
-    val duration: Long = 0L,               // Total duration in ms
-    val isCompleted: Boolean = false       // True if watched > 95%
+    val playbackPosition: Long = 0L, // Current position in ms
+    val duration: Long = 0L, // Total duration in ms
+    val isCompleted: Boolean = false, // True if watched > 95%
 )
 
 /**
@@ -40,25 +40,26 @@ data class WatchedStream(
  */
 @Serializable
 data class FavoriteStream(
-    val streamId: Int,           // streamId for Live/Movies, seriesId for TV Shows
-    val streamName: String,       // Display name
-    val categoryId: String,       // Original category reference
-    val contentType: String,      // ContentType.LIVE_TV, ContentType.MOVIES, or ContentType.TV_SHOWS
-    val timestamp: Long = System.currentTimeMillis()  // For ordering
+    val streamId: Int, // streamId for Live/Movies, seriesId for TV Shows
+    val streamName: String, // Display name
+    val categoryId: String, // Original category reference
+    val contentType: String, // ContentType.LIVE_TV, ContentType.MOVIES, or ContentType.TV_SHOWS
+    val timestamp: Long = System.currentTimeMillis(), // For ordering
 )
 
 class XtreamRepository(
     private val accountManager: AccountManager,
     context: Context,
     private val providerId: Long = 0L,
-    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT
+    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
 ) {
     private val cacheName = if (providerId > 0L) "xtream_cache_$providerId" else "xtream_cache"
-    private val cache: SharedPreferences = context.getSharedPreferences(
-        cacheName,
-        Context.MODE_PRIVATE
-    )
-    private val appSettings = AppSettings(context)  // Keep for global settings (isDevMode)
+    private val cache: SharedPreferences =
+        context.getSharedPreferences(
+            cacheName,
+            Context.MODE_PRIVATE,
+        )
+    private val appSettings = AppSettings(context) // Keep for global settings (isDevMode)
     private val database = XtreamDatabase.getInstance(context)
 
     // Managers
@@ -67,30 +68,47 @@ class XtreamRepository(
     // StatsManager (needs to be initialized early for onClearCache callback if needed, but here onClearCache is just a lambda)
     private val statsManager = XtreamStatsManager(database, cache, metricsManager, providerId)
 
-    private val sessionManager = XtreamSessionManager(accountManager) {
-        statsManager.clearCache()
-    }
+    private val sessionManager =
+        XtreamSessionManager(
+            context,
+            accountManager,
+            { statsManager.clearCache() },
+            providerSettings.streamOutputFormat,
+            providerId,
+        )
 
-    private val contentManager = XtreamContentManager(
-        sessionManager, database, cache, providerSettings, metricsManager, providerId
-    )
+    private val contentManager =
+        XtreamContentManager(
+            sessionManager,
+            database,
+            cache,
+            providerSettings,
+            metricsManager,
+            providerId,
+        )
 
     private val userDataManager = XtreamUserDataManager(cache, providerSettings, providerId)
 
     private val epgManager = XtreamEpgManager(sessionManager, cache, providerSettings)
 
-
     // Delegate methods
 
-    suspend fun login(url: String, username: String, password: String, rememberMe: Boolean): Result<XtreamAuthResponse> =
-        sessionManager.login(url, username, password, rememberMe)
+    suspend fun login(
+        url: String,
+        username: String,
+        password: String,
+        rememberMe: Boolean,
+    ): Result<XtreamAuthResponse> = sessionManager.login(url, username, password, rememberMe)
 
     suspend fun restoreSession(): Result<XtreamAuthResponse> = sessionManager.restoreSession()
 
     suspend fun updateProviderUrl(newUrl: String): Result<XtreamAuthResponse> = sessionManager.updateProviderUrl(newUrl)
 
-    suspend fun reinitialize(url: String, username: String, password: String): Result<XtreamAuthResponse> =
-        sessionManager.reinitialize(url, username, password)
+    suspend fun reinitialize(
+        url: String,
+        username: String,
+        password: String,
+    ): Result<XtreamAuthResponse> = sessionManager.reinitialize(url, username, password)
 
     fun isAuthenticated(): Boolean = sessionManager.isAuthenticated()
 
@@ -102,7 +120,6 @@ class XtreamRepository(
 
     fun getCurrentPassword(): String? = sessionManager.getCurrentPassword()
 
-
     suspend fun getCategories(): Result<List<XtreamCategory>> = contentManager.getCategories()
 
     suspend fun getVodCategories(): Result<List<XtreamCategory>> = contentManager.getVodCategories()
@@ -111,18 +128,22 @@ class XtreamRepository(
 
     suspend fun syncCategories(type: String): Deferred<Unit> = contentManager.syncCategories(type)
 
+    suspend fun getAllStreams(contentType: String): Result<List<XtreamStream>> = contentManager.getAllStreams(contentType)
 
-    suspend fun getAllStreams(contentType: String): Result<List<XtreamStream>> =
-         contentManager.getAllStreams(contentType)
+    suspend fun getStreams(
+        categoryId: String,
+        forSearch: Boolean = false,
+    ): Result<List<XtreamStream>> = contentManager.getStreams(categoryId, forSearch)
 
-    suspend fun getStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> =
-        contentManager.getStreams(categoryId, forSearch)
+    suspend fun getVodStreams(
+        categoryId: String,
+        forSearch: Boolean = false,
+    ): Result<List<XtreamStream>> = contentManager.getVodStreams(categoryId, forSearch)
 
-    suspend fun getVodStreams(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> =
-        contentManager.getVodStreams(categoryId, forSearch)
-
-    suspend fun getSeries(categoryId: String, forSearch: Boolean = false): Result<List<XtreamStream>> =
-        contentManager.getSeries(categoryId, forSearch)
+    suspend fun getSeries(
+        categoryId: String,
+        forSearch: Boolean = false,
+    ): Result<List<XtreamStream>> = contentManager.getSeries(categoryId, forSearch)
 
     suspend fun syncStreams(type: String): Deferred<Unit> = contentManager.syncStreams(type)
 
@@ -134,19 +155,25 @@ class XtreamRepository(
 
     fun getSeriesCached(categoryId: String): List<XtreamStream>? = contentManager.getSeriesCached(categoryId)
 
-    fun buildStreamUrl(streamId: Int, contentType: String = ContentType.LIVE_TV, extension: String? = null): Result<String> =
-        contentManager.buildStreamUrl(streamId, contentType, extension)
+    fun buildStreamUrl(
+        streamId: Int,
+        contentType: String = ContentType.LIVE_TV,
+        extension: String? = null,
+    ): Result<String> = contentManager.buildStreamUrl(streamId, contentType, extension)
 
-    fun buildEpisodeStreamUrl(episodeId: String, extension: String): Result<String> =
-        contentManager.buildEpisodeStreamUrl(episodeId, extension)
+    fun buildEpisodeStreamUrl(
+        episodeId: String,
+        extension: String,
+    ): Result<String> = contentManager.buildEpisodeStreamUrl(episodeId, extension)
 
-    suspend fun getStreamName(streamId: Int, contentType: String): String? =
-        contentManager.getStreamName(streamId, contentType)
+    suspend fun getStreamName(
+        streamId: Int,
+        contentType: String,
+    ): String? = contentManager.getStreamName(streamId, contentType)
 
     suspend fun getSeriesInfo(seriesId: Int): Result<SeriesInfo> = contentManager.getSeriesInfo(seriesId)
 
     suspend fun getVodInfo(vodId: Int): Result<VodInfo> = contentManager.getVodInfo(vodId)
-
 
     suspend fun getEpgForStream(streamId: Int): Result<EpgResponse> = epgManager.getEpgForStream(streamId)
 
@@ -156,9 +183,12 @@ class XtreamRepository(
 
     fun clearAllEpgCache() = epgManager.clearAllEpgCache()
 
-
-    fun saveLastPlayedStream(categoryId: String, streamId: Int, streamName: String, contentType: String) =
-        userDataManager.saveLastPlayedStream(categoryId, streamId, streamName, contentType)
+    fun saveLastPlayedStream(
+        categoryId: String,
+        streamId: Int,
+        streamName: String,
+        contentType: String,
+    ) = userDataManager.saveLastPlayedStream(categoryId, streamId, streamName, contentType)
 
     fun getLastCategoryId(contentType: String): String? = userDataManager.getLastCategoryId(contentType)
 
@@ -170,29 +200,47 @@ class XtreamRepository(
 
     fun clearWatchHistory() = userDataManager.clearWatchHistory()
 
-    fun addFavorite(streamId: Int, streamName: String, categoryId: String, contentType: String): Boolean =
-        userDataManager.addFavorite(streamId, streamName, categoryId, contentType)
+    fun addFavorite(
+        streamId: Int,
+        streamName: String,
+        categoryId: String,
+        contentType: String,
+    ): Boolean = userDataManager.addFavorite(streamId, streamName, categoryId, contentType)
 
-    fun removeFavorite(streamId: Int, contentType: String): Boolean =
-        userDataManager.removeFavorite(streamId, contentType)
+    fun removeFavorite(
+        streamId: Int,
+        contentType: String,
+    ): Boolean = userDataManager.removeFavorite(streamId, contentType)
 
     fun getFavorites(): List<FavoriteStream> = userDataManager.getFavorites()
 
-    fun isFavorite(streamId: Int, contentType: String): Boolean = userDataManager.isFavorite(streamId, contentType)
+    fun isFavorite(
+        streamId: Int,
+        contentType: String,
+    ): Boolean = userDataManager.isFavorite(streamId, contentType)
 
     fun clearFavorites() = userDataManager.clearFavorites()
 
     fun savePlaybackPosition(
-        streamId: Int, streamName: String, categoryId: String, contentType: String, position: Long, duration: Long
+        streamId: Int,
+        streamName: String,
+        categoryId: String,
+        contentType: String,
+        position: Long,
+        duration: Long,
     ) = userDataManager.savePlaybackPosition(streamId, streamName, categoryId, contentType, position, duration)
 
-    fun getPlaybackPosition(streamId: Int, contentType: String): WatchedStream? =
-        userDataManager.getPlaybackPosition(streamId, contentType)
+    fun getPlaybackPosition(
+        streamId: Int,
+        contentType: String,
+    ): WatchedStream? = userDataManager.getPlaybackPosition(streamId, contentType)
 
     fun getInProgressStreams(contentType: String): List<WatchedStream> = userDataManager.getInProgressStreams(contentType)
 
-    fun clearPlaybackPosition(streamId: Int, contentType: String) = userDataManager.clearPlaybackPosition(streamId, contentType)
-
+    fun clearPlaybackPosition(
+        streamId: Int,
+        contentType: String,
+    ) = userDataManager.clearPlaybackPosition(streamId, contentType)
 
     suspend fun clearCache() = statsManager.clearCache()
 
@@ -205,7 +253,6 @@ class XtreamRepository(
     suspend fun clearStreamsCache(categoryId: String) = statsManager.clearStreamsCache(categoryId)
 
     suspend fun clearCategoriesCache(contentType: String) = statsManager.clearCategoriesCache(contentType)
-
 
     // Metrics (Delegated partially via getFetchTime/Formatted)
 
@@ -220,8 +267,9 @@ class XtreamRepository(
      */
     data class ContentTypeCacheStats(
         val size: Long, // kept for compatibility, always 0
-        val categoryCached: Boolean,
-        val streamListsCount: Int
+        val categoryCount: Int,
+        val itemsCount: Int, // Streams for Live/VOD, Series for TV Shows
+        val episodesCount: Int = 0, // Only for TV Shows
     )
 
     data class CacheStats(
@@ -230,6 +278,6 @@ class XtreamRepository(
         val movies: ContentTypeCacheStats,
         val tvShows: ContentTypeCacheStats,
         val epgCount: Int,
-        val otherSize: Long
+        val otherSize: Long,
     )
 }

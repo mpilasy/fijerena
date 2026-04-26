@@ -6,14 +6,14 @@ data class SeriesDetail(
     val metadata: MediaMetadata = MediaMetadata(),
     val coverUrl: String? = null,
     val seasons: List<SeasonInfo> = emptyList(),
-    val episodes: Map<String, List<EpisodeItem>> = emptyMap()
+    val episodes: Map<String, List<EpisodeItem>> = emptyMap(),
 )
 
 data class SeasonInfo(
     val seasonNumber: Int,
     val name: String,
     val episodeCount: Int? = null,
-    val coverUrl: String? = null
+    val coverUrl: String? = null,
 )
 
 data class EpisodeItem(
@@ -23,5 +23,5 @@ data class EpisodeItem(
     val seasonNumber: Int? = null,
     val extension: String? = null,
     val metadata: MediaMetadata = MediaMetadata(),
-    val thumbnailUrl: String? = null
+    val thumbnailUrl: String? = null,
 )

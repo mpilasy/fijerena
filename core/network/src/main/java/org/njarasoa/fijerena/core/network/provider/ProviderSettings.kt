@@ -10,24 +10,22 @@ import kotlinx.serialization.Serializable
 data class ProviderSettings(
     /** Maximum number of items in watch history for this provider (1-100) */
     val watchHistorySize: Int = 25,
-
     /** Maximum number of favorites for this provider (10-500) */
     val favoritesMaxSize: Int = 100,
-
     /** Whether to auto-resume playback from last position */
     val autoResumeEnabled: Boolean = true,
-
     /** Cache expiry time in hours (1-168, i.e., 1 hour to 1 week) */
     val cacheExpiryHours: Int = 24,
-
     /** Whether caching is enabled for this provider */
     val cachingEnabled: Boolean = true,
-
     /** Category filtering rules */
     val categoryFilters: CategoryFilters = CategoryFilters(),
-
     /** External XMLTV EPG URL for this provider (empty = use provider's native EPG) */
-    val epgUrl: String = ""
+    val epgUrl: String = "",
+    /** Stream output format for live streams: "m3u8" (HLS) or "ts" (MPEG-TS) */
+    val streamOutputFormat: String = "m3u8",
+    /** Playlist type for Xtream API: "m3u_plus" (extended M3U with EPG) or "simple" (basic M3U) */
+    val playlistType: String = "m3u_plus",
 ) {
     /** Cache expiry time in milliseconds */
     val cacheExpiryMs: Long get() = cacheExpiryHours.toLong() * 60 * 60 * 1000
@@ -46,12 +44,10 @@ data class ProviderSettings(
 data class CategoryFilters(
     /** Filter mode: EXCLUDE hides matching, INCLUDE shows only matching */
     val mode: FilterMode = FilterMode.EXCLUDE,
-
     /** List of prefixes to match against category names (case-insensitive) */
     val prefixes: List<String> = emptyList(),
-
     /** Allowed Unicode scripts — empty means show all */
-    val allowedScripts: Set<ScriptType> = emptySet()
+    val allowedScripts: Set<ScriptType> = emptySet(),
 ) {
     /**
      * Check if a category should be visible based on filter rules.
@@ -62,13 +58,15 @@ data class CategoryFilters(
     fun shouldShowCategory(categoryName: String): Boolean {
         // Prefix filter
         if (prefixes.isNotEmpty()) {
-            val matchesAnyPrefix = prefixes.any { prefix ->
-                categoryName.startsWith(prefix, ignoreCase = true)
-            }
-            val passesPrefix = when (mode) {
-                FilterMode.EXCLUDE -> !matchesAnyPrefix
-                FilterMode.INCLUDE -> matchesAnyPrefix
-            }
+            val matchesAnyPrefix =
+                prefixes.any { prefix ->
+                    categoryName.startsWith(prefix, ignoreCase = true)
+                }
+            val passesPrefix =
+                when (mode) {
+                    FilterMode.EXCLUDE -> !matchesAnyPrefix
+                    FilterMode.INCLUDE -> matchesAnyPrefix
+                }
             if (!passesPrefix) return false
         }
         // Script filter
@@ -86,6 +84,7 @@ data class CategoryFilters(
 enum class FilterMode {
     /** Hide categories that match the prefixes */
     EXCLUDE,
+
     /** Show only categories that match the prefixes */
-    INCLUDE
+    INCLUDE,
 }

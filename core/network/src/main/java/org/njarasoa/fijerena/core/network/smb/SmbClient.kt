@@ -20,7 +20,7 @@ class SmbClient(
     private val shareName: String,
     private val domain: String = "WORKGROUP",
     private val username: String? = null,
-    private val password: String? = null
+    private val password: String? = null,
 ) {
     private val TAG = "SmbClient"
 
@@ -29,23 +29,25 @@ class SmbClient(
     private var session: Session? = null
     private var share: DiskShare? = null
 
-    suspend fun connect(): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            client = SMBClient()
-            connection = client!!.connect(host)
-            val authContext = if (username != null && password != null) {
-                AuthenticationContext(username, password.toCharArray(), domain)
-            } else {
-                AuthenticationContext.anonymous()
+    suspend fun connect(): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                client = SMBClient()
+                connection = client!!.connect(host)
+                val authContext =
+                    if (username != null && password != null) {
+                        AuthenticationContext(username, password.toCharArray(), domain)
+                    } else {
+                        AuthenticationContext.anonymous()
+                    }
+                session = connection!!.authenticate(authContext)
+                share = session!!.connectShare(shareName) as DiskShare
+                Result.success(Unit)
+            } catch (e: Exception) {
+                disconnect()
+                Result.failure(e)
             }
-            session = connection!!.authenticate(authContext)
-            share = session!!.connectShare(shareName) as DiskShare
-            Result.success(Unit)
-        } catch (e: Exception) {
-            disconnect()
-            Result.failure(e)
         }
-    }
 
     fun disconnect() {
         try { share?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close share", e) }
@@ -81,14 +83,15 @@ class SmbClient(
 
     fun openInputStream(path: String): InputStream {
         val diskShare = share ?: throw IllegalStateException("Not connected")
-        val file = diskShare.openFile(
-            path,
-            EnumSet.of(AccessMask.GENERIC_READ),
-            null,
-            EnumSet.of(SMB2ShareAccess.FILE_SHARE_READ),
-            SMB2CreateDisposition.FILE_OPEN,
-            null
-        )
+        val file =
+            diskShare.openFile(
+                path,
+                EnumSet.of(AccessMask.GENERIC_READ),
+                null,
+                EnumSet.of(SMB2ShareAccess.FILE_SHARE_READ),
+                SMB2CreateDisposition.FILE_OPEN,
+                null,
+            )
         return file.inputStream
     }
 }

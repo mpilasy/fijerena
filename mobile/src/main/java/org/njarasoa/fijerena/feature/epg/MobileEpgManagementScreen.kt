@@ -1,99 +1,63 @@
 package org.njarasoa.fijerena.feature.epg
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.*
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
-import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun MobileEpgManagementScreen(
-    onBack: () -> Unit
-) {
+fun MobileEpgManagementScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val viewModel: EpgManagementViewModel = viewModel(
-        factory = remember { EpgManagementViewModelFactory(context.applicationContext) }
-    )
+    val viewModel: EpgManagementViewModel =
+        viewModel(
+            factory = remember { SettingsViewModelFactory(context.applicationContext) },
+        )
 
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
+    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
+    val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
+    val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
+    val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
-    val dbStats by viewModel.dbStats.collectAsStateWithLifecycle()
     val queuedTaskIds by viewModel.queuedTaskIds.collectAsStateWithLifecycle()
-    val hasStrayFiles by viewModel.hasStrayFiles.collectAsStateWithLifecycle()
-    val staleProgrammeCount by viewModel.staleProgrammeCount.collectAsStateWithLifecycle()
+    val lastPipelineStats by viewModel.lastPipelineStats.collectAsStateWithLifecycle()
 
     val nowMs = remember { System.currentTimeMillis() }
 
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
-            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast
+                .makeText(context, message, android.widget.Toast.LENGTH_SHORT)
+                .show()
         }
     }
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
-    var autoRefreshEnabled by remember { mutableStateOf(viewModel.autoRefreshEnabled) }
-    var epgRefreshTime by remember { mutableStateOf(viewModel.epgRefreshTime) }
-    var showTimeDialog by remember { mutableStateOf(false) }
-    var showCleanupConfirm by remember { mutableStateOf(false) }
-    var showPurgeConfirm by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf<Long?>(null) }
-    var selectedSourceIds by remember { mutableStateOf(emptySet<Long>()) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
 
     Scaffold(
         topBar = {
@@ -101,701 +65,597 @@ fun MobileEpgManagementScreen(
                 title = { Text("EPG Management") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Source")
+                        Icon(Icons.Rounded.Add, contentDescription = "Add Source")
                     }
-                }
+                },
             )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(CinemaSpacing.md),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)
-        ) {
-            // Status
-            SettingsSection(title = "Status") {
-                val statusText = when (val state = indexState) {
-                    is EpgIndexState.NotIndexed -> "No EPG data"
-                    is EpgIndexState.Indexing -> "Indexing: ${state.progressPercent}%"
-                    is EpgIndexState.Indexed -> "${NumberUtils.formatCount(state.channelCount)} channels, ${NumberUtils.formatCount(state.programmeCount)} programmes"
-                    is EpgIndexState.Failed -> "Failed: ${state.reason}"
-                }
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = when (indexState) {
-                        is EpgIndexState.Indexed -> MaterialTheme.colorScheme.primary
-                        is EpgIndexState.Failed -> CinemaError
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+        },
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(CinemaSpacing.md),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+            ) {
+                // Quick Actions
+                if (staleSourceCount > 0 || failedSourceCount > 0 || selectedIds.isNotEmpty()) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                            if (selectedIds.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            viewModel.refreshSelected(selectedIds)
+                                            viewModel.clearSelection()
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                        Text("Refresh (${selectedIds.size})")
+                                    }
+
+                                    Button(
+                                        onClick = { deleteSelectedIds = selectedIds },
+                                        modifier = Modifier.weight(1f),
+                                        colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                                    ) {
+                                        Icon(Icons.Rounded.Delete, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                        Text("Delete (${selectedIds.size})")
+                                    }
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                            ) {
+                                if (staleSourceCount > 0) {
+                                    Button(
+                                        onClick = { viewModel.refreshStale() },
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text("Refresh Stale ($staleSourceCount)")
+                                    }
+                                }
+                                if (failedSourceCount > 0) {
+                                    Button(
+                                        onClick = { viewModel.refreshFailed() },
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text("Retry Failed ($failedSourceCount)")
+                                    }
+                                }
+                            }
+                        }
                     }
+                }
+
+                // Processing section
+                item {
+                    EpgStatusCard(processingState, indexState, queuedTaskIds, lastPipelineStats)
+                }
+
+                // Maintenance section
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md)) {
+                        // Maintenance Card
+                        GlassPanel {
+                            Column(modifier = Modifier.padding(CinemaSpacing.md)) {
+                                Text("Maintenance", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                                Text(
+                                    "Manage local database and temporary files.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                )
+
+                                Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.cleanupFiles() },
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text("Cleanup")
+                                    }
+                                    OutlinedButton(
+                                        onClick = { viewModel.purgeOldProgrammes() },
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text("Purge")
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+
+                                Button(
+                                    onClick = { showClearConfirm = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.DeleteForever,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(ButtonDefaults.IconSize),
+                                    )
+                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                                    Text("Clear All Data")
+                                }
+                            }
+                        }
+
+                        // Automation Card
+                        GlassPanel {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .padding(CinemaSpacing.md)
+                                        .clickable { showTimePicker = true },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                                    Text(
+                                        "Daily update at ${viewModel.epgRefreshTime}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                    )
+                                }
+                                Switch(
+                                    checked = viewModel.autoRefreshEnabled,
+                                    onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Source rows
+                item {
+                    Text("Sources", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                }
+
+                items(sources, key = { it.id }) { source ->
+                    val isSelected = selectedIds.contains(source.id)
+                    val latestTime = latestProgrammeTimes[source.id] ?: 0L
+
+                    // Look for active progress for this source
+                    val activeProgress =
+                        if (processingState is MultiSourceState.Processing) {
+                            (processingState as MultiSourceState.Processing).activeProgress[source.id]
+                        } else {
+                            null
+                        }
+
+                    EpgSourceCard(
+                        source = source,
+                        isSelected = isSelected,
+                        latestProgrammeTime = latestTime,
+                        activeProgress = activeProgress,
+                        nowMs = nowMs,
+                        onRefresh = { viewModel.refreshSource(source.id) },
+                        onEdit = { editingSource = source },
+                        onDelete = { viewModel.deleteSource(source.id) },
+                        onToggleSelection = { viewModel.toggleSelection(source.id) },
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        EpgSourceEditDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { url, label, tz, method, enabled ->
+                viewModel.addSource(url, label, tz, method, enabled)
+                showAddDialog = false
+            },
+        )
+    }
+
+    editingSource?.let { source ->
+        EpgSourceEditDialog(
+            initialSource = source,
+            onDismiss = { editingSource = null },
+            onConfirm = { url, label, tz, method, enabled ->
+                viewModel.updateSource(
+                    source.copy(url = url, label = label, timezoneOffsetHours = tz, ingestMethod = method, enabled = enabled),
                 )
-
-                val procState = processingState
-                if (procState is EpgFileManager.MultiSourceState.Processing) {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                    Row(
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${procState.completedCount}/${procState.totalSources} sources",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TextButton(onClick = { viewModel.cancelProcessing() }) {
-                            Text("Cancel", style = MaterialTheme.typography.labelSmall, color = CinemaError)
-                        }
-                    }
-                    if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
-                        Text(
-                            text = "Total: ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                if (procState is EpgFileManager.MultiSourceState.Completed) {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                    Text(
-                        text = "Completed: ${procState.sourcesProcessed} sources" +
-                            if (procState.errors > 0) " (${procState.errors} errors)" else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (procState.errors > 0) CinemaError else MaterialTheme.colorScheme.primary
-                    )
-                    if (viewModel.isDevMode) {
-                        Text(
-                            text = "Last update: ${NumberUtils.formatTimestamp(context, procState.updatedAtMs)} (took ${NumberUtils.formatDuration(procState.durationMs)})",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Total: ${NumberUtils.formatBytes(procState.totalDownloadBytes)}, ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                if (procState is EpgFileManager.MultiSourceState.Error) {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                    Text(
-                        text = procState.reason,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaError
-                    )
-                }
-            }
-
-            // Sources
-            SettingsSection(title = "Sources (${sources.size})") {
-                sources.forEach { source ->
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val isSelected = source.id in selectedSourceIds
-                        IconButton(
-                            onClick = {
-                                selectedSourceIds = if (isSelected) selectedSourceIds - source.id
-                                else selectedSourceIds + source.id
-                            },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                if (isSelected) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
-                                contentDescription = "Select",
-                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-
-                        val isQueued = queuedTaskIds.contains("epg_refresh_source_${source.id}") || queuedTaskIds.contains("epg_refresh_all")
-
-                        val dotColor = when {
-                            isQueued -> androidx.compose.ui.graphics.Color.Yellow
-                            !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                            source.lastError != null -> CinemaError
-                            source.lastIngestedAtMs > 0 && (nowMs - source.lastIngestedAtMs) < 24 * 3600 * 1000 -> MaterialTheme.colorScheme.primary
-                            source.lastIngestedAtMs > 0 -> androidx.compose.ui.graphics.Color(0xFFFFAB40)
-                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                        }
-                        Surface(
-                            modifier = Modifier.size(CinemaSpacing.sm),
-                            shape = CircleShape,
-                            color = dotColor
-                        ) {}
-
-                        Spacer(modifier = Modifier.width(CinemaSpacing.sm))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = source.label.ifBlank { EpgFileManager.extractLabel(source.url) },
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text = source.url,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                maxLines = 1
-                            )
-                            val tzLabel = if (source.timezoneOffsetHours == 0) "Auto" else {
-                                val sign = if (source.timezoneOffsetHours >= 0) "+" else ""
-                                "UTC${sign}${source.timezoneOffsetHours}"
-                            }
-                            Text(
-                                text = "TZ: $tzLabel" +
-                                    (if (source.lastIngestedAtMs > 0) " | ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}" else "") +
-                                    (if (source.lastDownloadDurationMs > 0) " | DL: ${NumberUtils.formatDuration(source.lastDownloadDurationMs)}" else "") +
-                                    (if (source.lastIngestionDurationMs > 0) " | Ingest: ${NumberUtils.formatDuration(source.lastIngestionDurationMs)}" else "") +
-                                    (if (!source.enabled) " | DISABLED" else ""),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                            )
-                            source.lastError?.let { error ->
-                                Text(
-                                    text = error,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = CinemaError,
-                                    maxLines = 1
-                                )
-                            }
-
-                            // In-progress or completed stats from current processing
-                            val procState = processingState
-                            if (procState is EpgFileManager.MultiSourceState.Processing) {
-                                val progress = procState.activeProgress[source.id]
-                                val completedStat = procState.completedSourceStats[source.id]
-
-                                if (progress != null) {
-                                    val progressText = buildString {
-                                        append(progress.phase)
-                                        if (progress.progressPercent in 0..100) {
-                                            append(" ${progress.progressPercent}%")
-                                        }
-                                        if (progress.phase == "Downloading") {
-                                            append(" (${NumberUtils.formatBytes(progress.downloadedBytes)}")
-                                            if (progress.downloadTotalBytes > 0) {
-                                                append("/${NumberUtils.formatBytes(progress.downloadTotalBytes)}")
-                                            }
-                                            append(")")
-                                        } else if (progress.phase == "Awaiting Ingestion") {
-                                            append(" (${NumberUtils.formatBytes(progress.downloadedBytes)})")
-                                        } else if (progress.programmes > 0) {
-                                            append(" (${NumberUtils.formatCount(progress.channels)}ch, ${NumberUtils.formatCount(progress.programmes)}prg)")
-                                        }
-                                    }
-                                    Text(
-                                        text = progressText,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                } else if (completedStat != null) {
-                                    val statText = buildString {
-                                        append("Completed")
-                                        append(" (${NumberUtils.formatBytes(completedStat.downloadBytes)}, ${NumberUtils.formatCount(completedStat.channelsIngested)}ch, ${NumberUtils.formatCount(completedStat.programmesIngested)}prg)")
-                                        if (completedStat.durationMs > 0) {
-                                            append(" in ${NumberUtils.formatDuration(completedStat.durationMs)}")
-                                        }
-                                        if (completedStat.error != null) append(" [${completedStat.error}]")
-                                    }
-                                    Text(
-                                        text = statText,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (completedStat.error != null) CinemaError else MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            } else if (procState is EpgFileManager.MultiSourceState.Completed) {
-                                val stat = procState.sourceStats[source.id]
-                                if (stat != null) {
-                                    val statText = buildString {
-                                        append("Finished")
-                                        append(" (${NumberUtils.formatBytes(stat.downloadBytes)}, ${NumberUtils.formatCount(stat.channelsIngested)}ch, ${NumberUtils.formatCount(stat.programmesIngested)}prg)")
-                                        if (stat.durationMs > 0) {
-                                            append(" in ${NumberUtils.formatDuration(stat.durationMs)}")
-                                        }
-                                        if (stat.error != null) append(" [${stat.error}]")
-                                    }
-                                    Text(
-                                        text = statText,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (stat.error != null) CinemaError else MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-
-                            if (viewModel.isDevMode && source.lastIngestedAtMs > 0) {
-                                val sizeStr = if (source.ingestMethod != "STREAMED") {
-                                    ", ${NumberUtils.formatBytes(source.lastDownloadBytes)}"
-                                } else {
-                                    ""
-                                }
-                                Text(
-                                    text = "${NumberUtils.formatCount(source.lastChannels)}ch, ${NumberUtils.formatCount(source.lastProgrammes)}prg$sizeStr",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                                )
-                                var latestTime by remember { mutableStateOf<Long?>(null) }
-                                LaunchedEffect(source.id, source.lastIngestedAtMs) {
-                                    latestTime = viewModel.getLatestProgrammeTime(source.id)
-                                }
-                                latestTime?.let { epoch ->
-                                    Text(
-                                        text = "Latest: ${NumberUtils.formatEpochDate(context, epoch)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End)
-                    ) {
-                        IconButton(onClick = { viewModel.refreshSource(source.id) }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                        }
-                        IconButton(onClick = { editingSource = source }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
-                        }
-                        IconButton(onClick = { showDeleteConfirm = source.id }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = CinemaError)
-                        }
-                    }
-                }
-            }
-
-            // Actions
-            SettingsSection(title = "Actions") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Auto-refresh (every 24h)",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Switch(
-                        checked = autoRefreshEnabled,
-                        onCheckedChange = {
-                            autoRefreshEnabled = it
-                            viewModel.setAutoRefreshEnabled(it)
-                        }
-                    )
-                }
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Refresh Time",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    OutlinedButton(onClick = { showTimeDialog = true }) {
-                        Text(epgRefreshTime)
-                    }
-                }
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                ) {
-                    Button(
-                        onClick = { viewModel.refreshAll() },
-                        enabled = sources.isNotEmpty(),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                        Text("Refresh All")
-                    }
-                    if (selectedSourceIds.isNotEmpty()) {
-                        Button(
-                            onClick = {
-                                viewModel.refreshSelected(selectedSourceIds)
-                                selectedSourceIds = emptySet()
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                            Text("Selected (${selectedSourceIds.size})")
-                        }
-                    }
-                }
-                if (viewModel.isDevMode) {
-                    val hasFailed = sources.any { it.enabled && it.lastError != null }
-                    val hasOutdated = sources.any { it.enabled && (it.lastIngestedAtMs == 0L || (nowMs - it.lastIngestedAtMs) > 24 * 3600 * 1000) }
-                    if (hasFailed || hasOutdated) {
-                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                        ) {
-                            if (hasFailed) {
-                                OutlinedButton(
-                                    onClick = { viewModel.refreshFailed() },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.ErrorOutline, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                    Text("Failed")
-                                }
-                            }
-                            if (hasOutdated) {
-                                OutlinedButton(
-                                    onClick = { viewModel.refreshOutdated() },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.Update, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                    Text("Outdated")
-                                }
-                            }
-                        }
-                    }
-                }
-                if (hasStrayFiles || staleProgrammeCount > 0) {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)
-                    ) {
-                        if (hasStrayFiles) {
-                            OutlinedButton(
-                                onClick = { showCleanupConfirm = true },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                Text("Cleanup")
-                            }
-                        }
-                        if (staleProgrammeCount > 0) {
-                            OutlinedButton(
-                                onClick = { showPurgeConfirm = true },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                Text("Purge >2d")
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Button(
-                    onClick = { showClearConfirm = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                    Text("Clear All Data")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-        }
-    }
-
-    // Add/Edit Source Dialog
-    if (showAddDialog || editingSource != null) {
-        MobileSourceDialog(
-            source = editingSource,
-            onDismiss = {
-                showAddDialog = false
                 editingSource = null
             },
-            onSave = { url, label, tz ->
-                if (editingSource != null) {
-                    viewModel.updateSource(
-                        editingSource!!.copy(url = url, label = label, timezoneOffsetHours = tz)
-                    )
-                } else {
-                    viewModel.addSource(url, label, tz)
-                }
-                showAddDialog = false
-                editingSource = null
-            }
-        )
-    }
-
-    if (showTimeDialog) {
-        MobileTimeDialog(
-            currentTime = epgRefreshTime,
-            onDismiss = { showTimeDialog = false },
-            onSave = { newTime ->
-                epgRefreshTime = newTime
-                viewModel.setEpgRefreshTime(newTime)
-                showTimeDialog = false
-            }
-        )
-    }
-
-    if (showCleanupConfirm) {
-        AlertDialog(
-            onDismissRequest = { showCleanupConfirm = false },
-            title = { Text("Cleanup Files") },
-            text = { Text("This will delete any downloaded EPG files that are no longer associated with a source. The indexed data in the database is not affected.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.cleanupFiles()
-                        showCleanupConfirm = false
-                    }
-                ) { Text("Cleanup") }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showCleanupConfirm = false }) { Text("Cancel") }
-            }
-        )
-    }
-
-    if (showPurgeConfirm) {
-        AlertDialog(
-            onDismissRequest = { showPurgeConfirm = false },
-            title = { Text("Purge Old Programmes") },
-            text = { Text("This will permanently delete all programme data older than 2 days from the database. Channel entries are not affected.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.purgeOldProgrammes()
-                        showPurgeConfirm = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
-                ) { Text("Purge") }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showPurgeConfirm = false }) { Text("Cancel") }
-            }
         )
     }
 
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            title = { Text("Clear All EPG Data") },
-            text = { Text("This will delete all indexed programmes and channels. Sources will be kept.") },
             confirmButton = {
                 Button(
                     onClick = {
                         viewModel.clearDatabase()
                         showClearConfirm = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
-                ) { Text("Clear") }
+                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                ) { Text("Clear Everything") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showClearConfirm = false }) { Text("Cancel") }
-            }
+                TextButton(onClick = { showClearConfirm = false }) { Text("Cancel") }
+            },
+            title = { Text("Clear EPG Data?") },
+            text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") },
         )
     }
 
-    showDeleteConfirm?.let { sourceId ->
+    deleteSelectedIds?.let { idsToDelete ->
         AlertDialog(
-            onDismissRequest = { showDeleteConfirm = null },
-            title = { Text("Delete Source") },
-            text = { Text("Remove this EPG source?") },
+            onDismissRequest = { deleteSelectedIds = null },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteSource(sourceId)
-                        showDeleteConfirm = null
+                        viewModel.deleteSelected(idsToDelete)
+                        deleteSelectedIds = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError)
-                ) { Text("Delete") }
+                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                ) { Text("Delete ${idsToDelete.size} Source(s)") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showDeleteConfirm = null }) { Text("Cancel") }
-            }
+                TextButton(onClick = { deleteSelectedIds = null }) { Text("Cancel") }
+            },
+            title = { Text("Delete Selected Sources?") },
+            text = { Text("This will permanently remove ${idsToDelete.size} source(s) and all their indexed data.") },
         )
     }
 
-    // Blocking overlay while clearing data
-    if (processingState is EpgFileManager.MultiSourceState.Clearing) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = androidx.compose.ui.Alignment.Center
-        ) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
-            )
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-            ) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                Text(
-                    text = "Clearing all EPG data...",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+    if (showTimePicker) {
+        var timeInput by remember { mutableStateOf(viewModel.epgRefreshTime) }
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Set Refresh Time") },
+            text = {
+                OutlinedTextField(
+                    value = timeInput,
+                    onValueChange = { timeInput = it },
+                    label = { Text("Time (HH:mm)") },
+                    placeholder = { Text("e.g. 04:00") },
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                Text(
-                    text = "This may take a moment",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.setEpgRefreshTime(timeInput)
+                        showTimePicker = false
+                    },
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+            },
+        )
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MobileTimeDialog(
-    currentTime: String,
-    onDismiss: () -> Unit,
-    onSave: (String) -> Unit
+private fun EpgSourceCard(
+    source: EpgSourceEntity,
+    isSelected: Boolean,
+    latestProgrammeTime: Long,
+    activeProgress: org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.ActiveSourceProgress?,
+    nowMs: Long,
+    onRefresh: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onToggleSelection: () -> Unit,
 ) {
-    val initialHour = currentTime.substringBefore(":").toIntOrNull() ?: 2
-    val initialMinute = currentTime.substringAfter(":").toIntOrNull() ?: 0
-    var hour by remember { mutableIntStateOf(initialHour) }
-    var minute by remember { mutableIntStateOf(initialMinute) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("EPG Refresh Time") },
-        text = {
+    GlassPanel(modifier = Modifier.clickable { onToggleSelection() }) {
+        Column(modifier = Modifier.padding(CinemaSpacing.md)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    IconButton(onClick = { hour = (hour + 1) % 24 }) {
-                        Icon(Icons.Default.KeyboardArrowUp, "Hour Up")
-                    }
-                    Text(
-                        text = "%02d".format(hour),
-                        style = MaterialTheme.typography.displayMedium
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onToggleSelection() },
                     )
-                    IconButton(onClick = { hour = if (hour == 0) 23 else hour - 1 }) {
-                        Icon(Icons.Default.KeyboardArrowDown, "Hour Down")
+
+                    StatusIndicator(source, nowMs)
+
+                    Column {
+                        Text(
+                            text = source.label.ifBlank { "Unnamed Source" },
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = source.url,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        )
                     }
                 }
+
+                IconButton(onClick = onRefresh) {
+                    Icon(Icons.Rounded.Refresh, "Refresh")
+                }
+            }
+
+            if (activeProgress != null) {
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = "${activeProgress.phase}...",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = "${activeProgress.progressPercent}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { activeProgress.progressPercent / 100f },
+                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                ) {
+                    val lastIngested =
+                        if (source.lastIngestedAtMs > 0) {
+                            java.text
+                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                .format(java.util.Date(source.lastIngestedAtMs))
+                        } else {
+                            "Never"
+                        }
+
+                    val latestProgStr =
+                        if (latestProgrammeTime > 0) {
+                            java.text
+                                .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                                .format(java.util.Date(latestProgrammeTime * 1000L))
+                        } else {
+                            "None"
+                        }
+
+                    SourceStat("Last Sync", lastIngested)
+                    SourceStat("Download", NumberUtils.formatDuration(source.lastDownloadDurationMs))
+                    SourceStat("Ingest", NumberUtils.formatDuration(source.lastIngestionDurationMs))
+                    SourceStat("Latest Prog", latestProgStr)
+                    SourceStat("Channels", NumberUtils.formatCount(source.lastChannels))
+                    SourceStat("Programmes", NumberUtils.formatCount(source.lastProgrammes))
+                }
+            }
+
+            if (source.lastError != null) {
                 Text(
-                    text = ":",
-                    style = MaterialTheme.typography.displayMedium,
-                    modifier = Modifier.padding(horizontal = CinemaSpacing.md)
+                    text = "Error: ${source.lastError}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CinemaError,
+                    modifier = Modifier.padding(top = CinemaSpacing.xs),
                 )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    IconButton(onClick = { minute = (minute + 1) % 60 }) {
-                        Icon(Icons.Default.KeyboardArrowUp, "Minute Up")
-                    }
-                    Text(
-                        text = "%02d".format(minute),
-                        style = MaterialTheme.typography.displayMedium
-                    )
-                    IconButton(onClick = { minute = if (minute == 0) 59 else minute - 1 }) {
-                        Icon(Icons.Default.KeyboardArrowDown, "Minute Down")
-                    }
+            }
+
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onEdit) {
+                    Text("Edit")
                 }
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onSave("%02d:%02d".format(hour, minute)) }) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
+                TextButton(
+                    onClick = { showDeleteConfirm = true },
+                    colors = ButtonDefaults.textButtonColors(contentColor = CinemaError),
+                ) {
+                    Text("Delete")
+                }
             }
         }
-    )
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete()
+                        showDeleteConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            },
+            title = { Text("Delete Source?") },
+            text = { Text("Are you sure you want to remove '${source.label}'? All associated EPG data will be deleted.") },
+        )
+    }
 }
 
 @Composable
-private fun SettingsSection(
-    title: String,
-    content: @Composable () -> Unit
+private fun StatusIndicator(
+    source: EpgSourceEntity,
+    nowMs: Long,
 ) {
-    GlassPanel(modifier = Modifier.fillMaxWidth()) {
+    val color =
+        when {
+            !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+            source.lastError != null -> CinemaError
+            source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+            nowMs - source.lastIngestedAtMs > 24 * 3600 * 1000 -> org.njarasoa.fijerena.ui.theme.CinemaWarning
+            else -> CinemaSuccess
+        }
+
+    androidx.compose.foundation.Canvas(modifier = Modifier.size(10.dp)) {
+        drawCircle(color = color)
+    }
+}
+
+@Composable
+private fun SourceStat(
+    label: String,
+    value: String,
+) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+@Composable
+private fun EpgStatusCard(
+    multiState: MultiSourceState,
+    indexState: EpgIndexState,
+    queuedTaskIds: Set<String>,
+    lastRun: org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity?,
+) {
+    GlassPanel {
         Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Text("System Status", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            content()
+
+            // Indexer State
+            val indexText =
+                when (indexState) {
+                    is EpgIndexState.Indexed -> "Database: ${NumberUtils.formatCount(indexState.programmeCount)} programmes indexed"
+                    is EpgIndexState.Indexing -> "Database: Indexing in progress..."
+                    is EpgIndexState.NotIndexed -> "Database: Empty"
+                    is EpgIndexState.Failed -> "Database Error: ${indexState.reason}"
+                }
+            Text(indexText, style = MaterialTheme.typography.bodySmall)
+
+            // Current Pipeline State
+            val currentStatusText =
+                when (multiState) {
+                    is MultiSourceState.Idle -> {
+                        val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
+                        if (queued > 0) "Current Status: $queued refresh tasks queued" else "Current Status: Idle"
+                    }
+                    is MultiSourceState.Processing -> "Current Status: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
+                    is MultiSourceState.Completed -> "Current Status: Finished run"
+                    is MultiSourceState.Finalizing -> "Current Status: Finalizing (${multiState.phase})..."
+                    is MultiSourceState.Clearing -> "Current Status: Clearing data..."
+                    is MultiSourceState.Error -> "Current Status Error: ${multiState.reason}"
+                    else -> "Current Status: Idle"
+                }
+            Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
+
+            // Last Pipeline Run
+            lastRun?.let { stats ->
+                val context = LocalContext.current
+                val time = NumberUtils.formatTimestamp(context, stats.updatedAtMs)
+                val duration = NumberUtils.formatDuration(stats.durationMs)
+                val errorText = if (stats.errors > 0) " (${stats.errors} errors)" else ""
+                Text(
+                    text = "Last Run: Finished at $time • ${stats.sourcesProcessed} sources in $duration$errorText",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun MobileSourceDialog(
-    source: EpgSourceEntity?,
+private fun EpgSourceEditDialog(
+    initialSource: EpgSourceEntity? = null,
     onDismiss: () -> Unit,
-    onSave: (url: String, label: String, tz: Int) -> Unit
+    onConfirm: (url: String, label: String, tz: Int, method: String, enabled: Boolean) -> Unit,
 ) {
-    var url by remember { mutableStateOf(source?.url ?: "") }
-    var label by remember { mutableStateOf(source?.label ?: "") }
-    var tzOffset by remember { mutableIntStateOf(source?.timezoneOffsetHours ?: 0) }
+    var url by remember { mutableStateOf(initialSource?.url ?: "") }
+    var label by remember { mutableStateOf(initialSource?.label ?: "") }
+    var tzOffset by remember { mutableStateOf(initialSource?.timezoneOffsetHours?.toString() ?: "0") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (source != null) "Edit Source" else "Add Source") },
+        title = { Text(if (initialSource == null) "Add EPG Source" else "Edit EPG Source") },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm(
+                        url,
+                        label,
+                        tzOffset.toIntOrNull() ?: 0,
+                        initialSource?.ingestMethod ?: "DOWNLOADED",
+                        initialSource?.enabled ?: true,
+                    )
+                },
+                enabled = url.isNotBlank(),
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text(if (source != null) "XMLTV URL" else "XMLTV URL(s)") },
-                    placeholder = { Text(if (source != null) "https://epg.example.com/guide.xml.gz" else "One or more URLs (one per line)") },
-                    singleLine = source != null,
-                    maxLines = if (source != null) 1 else 5,
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("XMLTV URL") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Label (optional)") },
-                    placeholder = { Text("Auto-detected from URL") },
+                    label = { Text("Label (Optional)") },
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Timezone:",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Spacer(modifier = Modifier.width(CinemaSpacing.sm))
-                    val tzLabel = if (tzOffset == 0) "Auto (from data)" else {
-                        val sign = if (tzOffset >= 0) "+" else ""
-                        "UTC${sign}${tzOffset}"
-                    }
-                    OutlinedButton(onClick = {
-                        tzOffset = (tzOffset + 1).let { if (it > 14) -12 else it }
-                    }) {
-                        Text(tzLabel)
-                    }
-                }
+                OutlinedTextField(
+                    value = tzOffset,
+                    onValueChange = { tzOffset = it },
+                    label = { Text("Timezone Offset (Hours)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
             }
         },
-        confirmButton = {
-            Button(
-                onClick = { onSave(url, label, tzOffset) },
-                enabled = url.isNotBlank()
-            ) { Text("Save") }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) { Text("Cancel") }
-        }
     )
 }

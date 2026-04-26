@@ -2,8 +2,13 @@ package org.njarasoa.fijerena.core.network
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Handler
+import android.os.Looper
+import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.serialization.encodeToString
@@ -12,27 +17,23 @@ import io.mockk.mockkStatic
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import io.mockk.mockkConstructor
-import io.mockk.clearAllMocks
-import io.mockk.mockkStatic
-import android.os.Looper
-import android.os.Handler
-import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 
 class MediaRepositoryTest {
-
     private lateinit var context: Context
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var editor: SharedPreferences.Editor
     private lateinit var repository: MediaRepository
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
     private val KEY_WATCH_HISTORY = "watch_history_v2"
     private val KEY_LAST_LIVE_CATEGORY = "last_live_category"
     private val KEY_LAST_LIVE_ITEM = "last_live_item"
     private val KEY_LAST_CONTENT_TYPE = "last_content_type"
-
 
     @Before
     fun setup() {

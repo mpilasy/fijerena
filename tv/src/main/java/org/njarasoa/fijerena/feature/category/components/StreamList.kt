@@ -4,7 +4,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,11 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,12 +31,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.LocalContentColor
+import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -49,6 +49,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -57,13 +58,14 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
-import org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -79,10 +81,10 @@ internal fun StreamList(
     isDevMode: Boolean,
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onStreamLongPress: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
@@ -101,7 +103,7 @@ internal fun StreamList(
     val rotation by animateFloatAsState(
         targetValue = targetRotation,
         animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
-        label = "refresh_rotation"
+        label = "refresh_rotation",
     )
     val listState = rememberTvLazyListState()
     // FocusRequester for auto-scroll target — cleared on each category switch to avoid unbounded growth
@@ -117,7 +119,10 @@ internal fun StreamList(
             val lastPlayedIndex = streams.indexOfFirst { it.id == lastPlayedItemId }
             if (lastPlayedIndex != -1) {
                 listState.animateScrollToItem(lastPlayedIndex)
-                try { lastPlayedFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
+                try {
+                    lastPlayedFocusRequester.requestFocus()
+                } catch (_: IllegalStateException) {
+                }
                 lastFocusedItemId = lastPlayedItemId
             }
         }
@@ -127,89 +132,100 @@ internal fun StreamList(
         Column(modifier = Modifier.padding(bottom = Spacing.md.scaled(scale))) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
             ) {
                 Text(
                     text = selectedCategoryName ?: "Select a category",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
+                    style =
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize =
+                                MaterialTheme.typography.titleLarge.fontSize
+                                    .scaled(scale),
+                        ),
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 // Always show refresh button when a category is selected
                 selectedCategoryId?.let { categoryId ->
-                    IconButton(
+                    CinemaIconButton(
                         onClick = { onRefreshStreams(categoryId) },
                         enabled = !streamsLoading,
-                        modifier = Modifier.size(Spacing.lg.scaled(scale))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh streams",
-                            tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                            modifier = Modifier
-                                .size(TvDimensions.iconSmall.scaled(scale))
-                                .rotate(rotation)
-                        )
-                    }
+                        size = 40.dp,
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Refresh,
+                                contentDescription = "Refresh streams",
+                                tint = CinemaTextPrimary,
+                                modifier =
+                                    Modifier
+                                        .size(TvDimensions.iconMedium.scaled(scale))
+                                        .rotate(rotation),
+                            )
+                        }
+                    )
                 }
             }
             // Show stream count
             if (streams != null) {
-                val streamCountText = buildString {
-                    append("${streams.size} streams")
-                    if (isDevMode && selectedCategoryId != null) {
-                        categoryViewModel.getPayloadSize(selectedCategoryId)?.let {
-                            append(" | $it")
-                        }
-                        categoryViewModel.getFetchTime(selectedCategoryId)?.let {
-                            append(" in $it")
+                val streamCountText =
+                    buildString {
+                        append("${streams.size} streams")
+                        if (isDevMode && selectedCategoryId != null) {
+                            categoryViewModel.getPayloadSize(selectedCategoryId)?.let {
+                                append(" | $it")
+                            }
+                            categoryViewModel.getFetchTime(selectedCategoryId)?.let {
+                                append(" in $it")
+                            }
                         }
                     }
-                }
                 Text(
                     text = streamCountText,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = MaterialTheme.typography.labelSmall.fontSize.scaled(scale)
-                    ),
-                    color = CinemaTextSecondary
+                    style =
+                        MaterialTheme.typography.labelSmall.copy(
+                            fontSize =
+                                MaterialTheme.typography.labelSmall.fontSize
+                                    .scaled(scale),
+                        ),
+                    color = CinemaTextSecondary,
                 )
             }
         }
 
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    color = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.tint),
-                    shape = RoundedCornerShape(CornerRadius.small)
-                )
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.tint),
+                        shape = RoundedCornerShape(CornerRadius.small),
+                    ),
         ) {
             when {
                 streamsLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(TvDimensions.progressIndicator),
-                            color = CinemaAccent
+                            color = CinemaAccent,
                         )
                     }
                 }
                 streams.isNullOrEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = if (streams == null) {
-                                "Select a category to view channels"
-                            } else {
-                                "No channels in this category"
-                            },
+                            text =
+                                if (streams == null) {
+                                    "Select a category to view channels"
+                                } else {
+                                    "No channels in this category"
+                                },
                             style = MaterialTheme.typography.bodyLarge,
-                            color = CinemaTextSecondary
+                            color = CinemaTextSecondary,
                         )
                     }
                 }
@@ -217,22 +233,22 @@ internal fun StreamList(
                     TvLazyColumn(
                         state = listState,
                         contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                     ) {
                         items(
                             items = streams,
                             key = { it.id },
-                            contentType = { "stream" }
+                            contentType = { "stream" },
                         ) { item ->
                             StreamItem(
                                 item = item,
                                 isFavorite = item.id in favoriteIds,
                                 watchProgress = watchProgress[item.id] ?: 0f,
                                 nowPlayingProgram = nowPlaying[item.id],
-                                onClick = { onStreamSelected(item.id, item.name, item.categoryId) },
+                                onClick = { onStreamSelected(item.id, item.name, item.categoryId, item.providerData) },
                                 onLongPress = { onStreamLongPress(item) },
                                 // Only the last-played item gets a focus requester for auto-scroll
-                                focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null
+                                focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null,
                             )
                         }
                     }
@@ -251,80 +267,88 @@ private fun StreamItem(
     nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
-    focusRequester: FocusRequester? = null
+    focusRequester: FocusRequester? = null,
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val scaledStyles = remember(scale, typography) {
-        object {
-            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+    val scaledStyles =
+        remember(scale, typography) {
+            object {
+                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+            }
         }
-    }
 
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .padding(horizontal = Spacing.md.scaled(scale))
-            .fillMaxWidth()
-            .tvLongPress(onLongPress)
-            .then(
-                if (focusRequester != null) {
-                    Modifier.focusRequester(focusRequester)
-                } else {
-                    Modifier
-                }
+        modifier =
+            Modifier
+                .padding(horizontal = Spacing.md.scaled(scale))
+                .fillMaxWidth()
+                .tvLongPress(onLongPress)
+                .then(
+                    if (focusRequester != null) {
+                        Modifier.focusRequester(focusRequester)
+                    } else {
+                        Modifier
+                    },
+                ),
+        colors =
+            CardDefaults.colors(
+                containerColor = CinemaSurface,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                focusedContentColor = CinemaTextPrimary,
             ),
-        colors = CardDefaults.colors(
-            containerColor = CinemaSurface,
-            contentColor = CinemaTextPrimary,
-            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-            focusedContentColor = CinemaTextPrimary
-        ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
-        scale = CardDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleContent,
-            pressedScale = TvFocusTokens.pressedScaleSubtle
-        ),
-        glow = CardDefaults.glow(
-            focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                elevation = TvFocusTokens.focusShadowElevation
-            )
-        )
+        scale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    androidx.tv.material3.Glow(
+                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
     ) {
         Column {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(Spacing.sm.scaled(scale)),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.sm.scaled(scale)),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
             ) {
                 // Poster thumbnail
                 CinemaThumbnail(
                     url = item.thumbnailUrl,
                     fallbackLetter = item.name.firstOrNull(),
                     contentType = ThumbnailContentType.DEFAULT,
-                    modifier = Modifier
-                        .size(
-                            width = TvDimensions.posterWidth.scaled(scale),
-                            height = TvDimensions.posterHeight.scaled(scale)
-                        )
+                    modifier =
+                        Modifier
+                            .size(
+                                width = TvDimensions.posterWidth.scaled(scale),
+                                height = TvDimensions.posterHeight.scaled(scale),
+                            ),
                 )
 
                 // Text info
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (isFavorite) {
                             Text(
                                 text = "\u2605",
                                 style = scaledStyles.titleMedium,
-                                color = CinemaAccent
+                                color = CinemaAccent,
                             )
                         }
 
@@ -333,7 +357,7 @@ private fun StreamItem(
                             style = scaledStyles.titleMedium,
                             color = CinemaTextPrimary,
                             maxLines = 1,
-                            modifier = Modifier.bounceMarquee()
+                            modifier = Modifier.bounceMarquee(),
                         )
                     }
                     // Rating (e.g. "7.9 | PG-13")
@@ -342,7 +366,7 @@ private fun StreamItem(
                             text = "★ $rating",
                             style = scaledStyles.bodySmall,
                             color = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
-                            maxLines = 1
+                            maxLines = 1,
                         )
                     }
                     // "What's On Now" for Live TV
@@ -352,7 +376,7 @@ private fun StreamItem(
                             style = scaledStyles.bodySmall,
                             color = CinemaOrangeLight,
                             maxLines = 1,
-                            modifier = Modifier.bounceMarquee()
+                            modifier = Modifier.bounceMarquee(),
                         )
                     }
                 }
@@ -362,11 +386,12 @@ private fun StreamItem(
             if (watchProgress > 0f) {
                 androidx.compose.material3.LinearProgressIndicator(
                     progress = { watchProgress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(TvDimensions.borderFocused.scaled(scale)),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(TvDimensions.borderFocused.scaled(scale)),
                     color = CinemaAccent,
-                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint)
+                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
                 )
             }
         }

@@ -9,11 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProviderDao {
-
-    @Query("SELECT * FROM providers ORDER BY lastUsedAt DESC")
+    @Query("SELECT * FROM providers ORDER BY isActive DESC, name COLLATE NOCASE ASC")
     fun getAllProviders(): Flow<List<ProviderEntity>>
 
-    @Query("SELECT * FROM providers ORDER BY lastUsedAt DESC")
+    @Query("SELECT * FROM providers ORDER BY isActive DESC, name COLLATE NOCASE ASC")
     suspend fun getAllProvidersList(): List<ProviderEntity>
 
     @Query("SELECT * FROM providers WHERE isActive = 1 LIMIT 1")
@@ -38,5 +37,18 @@ interface ProviderDao {
     suspend fun deactivateAll()
 
     @Query("UPDATE providers SET isActive = 1, lastUsedAt = :timestamp WHERE id = :id")
-    suspend fun activateProvider(id: Long, timestamp: Long = System.currentTimeMillis())
+    suspend fun activateProvider(
+        id: Long,
+        timestamp: Long = System.currentTimeMillis(),
+    )
+
+    @Query(
+        "UPDATE providers SET lastSyncedAtMs = :timestamp, lastSyncDurationMs = :durationMs, lastSyncError = :error WHERE id = :id",
+    )
+    suspend fun updateSyncStats(
+        id: Long,
+        timestamp: Long,
+        durationMs: Long,
+        error: String?,
+    )
 }
