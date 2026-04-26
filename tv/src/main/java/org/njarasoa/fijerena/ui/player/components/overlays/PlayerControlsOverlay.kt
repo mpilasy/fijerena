@@ -98,7 +98,11 @@ fun PlayerControlsOverlay(
         if (showFullControls) {
             // Small delay to allow composition to complete
             delay(100)
-            try { controlsFocusRequester.requestFocus() } catch (_: Exception) {}
+            try {
+                controlsFocusRequester.requestFocus()
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerControlsOverlay", "Failed to request focus for controls", e)
+            }
         }
     }
 

@@ -38,6 +38,11 @@ class EpgBrowserViewModel(
     private val context: Context
 ) : ViewModel() {
 
+    enum class SearchMode {
+        PROGRAMME,
+        CHANNEL
+    }
+
     sealed interface UiState {
         data object Idle : UiState
         data object NoEpgFile : UiState
@@ -66,12 +71,27 @@ class EpgBrowserViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    private val _searchMode = MutableStateFlow(SearchMode.PROGRAMME)
+    val searchMode: StateFlow<SearchMode> = _searchMode.asStateFlow()
+
+    private val _activeProviderName = MutableStateFlow<String?>(null)
+    val activeProviderName: StateFlow<String?> = _activeProviderName.asStateFlow()
+
+    fun setSearchMode(mode: SearchMode) {
+        if (_searchMode.value != mode) {
+            _searchMode.value = mode
+            _uiState.value = UiState.Idle
+            _pagedSearchResults.value = emptyFlow()
+        }
+    }
+
     /** Indexer state exposed for UI (progress banner, settings display). */
     val indexState: StateFlow<EpgIndexState> = EpgIndexer.getInstance(context).state
 
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
     private var channelMatcher: EpgChannelMatcher? = null
+    @Volatile private var lastMatcherProviderId: Long? = null
 
     // Cache AppSettings instance to avoid constructing a new object on every property read
     private val appSettings = AppSettings(context)
@@ -97,21 +117,41 @@ class EpgBrowserViewModel(
             _uiState.value = UiState.NoEpgFile
         }
         loadSourceLabels()
-        loadChannelMatcher()
+        viewModelScope.launch { ensureChannelMatcherCurrent() }
+        loadActiveProviderName()
     }
 
-    private fun loadChannelMatcher() {
+    private fun loadActiveProviderName() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 try {
                     val provider = ProviderDatabase.getInstance(context)
-                        .providerDao().getActiveProvider() ?: return@withContext
-                    val liveStreams = XtreamDatabase.getInstance(context)
-                        .streamDao().getAllStreams(provider.id, XtreamStreamEntity.TYPE_LIVE)
-                    if (liveStreams.isNotEmpty()) {
-                        channelMatcher = EpgChannelMatcher(liveStreams)
-                    }
-                } catch (_: Exception) { }
+                        .providerDao().getActiveProvider()
+                    _activeProviderName.value = provider?.name
+                } catch (e: Exception) {
+                    android.util.Log.e("EpgBrowserViewModel", "Failed to load active provider name", e)
+                }
+            }
+        }
+    }
+
+    /**
+     * Loads (or refreshes) [channelMatcher] for the currently active provider.
+     * If the active provider hasn't changed since the last load, this is a no-op.
+     * Must be called from a coroutine; runs its DB work on [Dispatchers.IO].
+     */
+    private suspend fun ensureChannelMatcherCurrent() {
+        withContext(Dispatchers.IO) {
+            try {
+                val provider = ProviderDatabase.getInstance(context)
+                    .providerDao().getActiveProvider() ?: return@withContext
+                if (provider.id == lastMatcherProviderId) return@withContext
+                val liveStreams = XtreamDatabase.getInstance(context)
+                    .streamDao().getAllStreams(provider.id, XtreamStreamEntity.TYPE_LIVE)
+                channelMatcher = if (liveStreams.isNotEmpty()) EpgChannelMatcher(liveStreams) else null
+                lastMatcherProviderId = provider.id
+            } catch (e: Exception) {
+                android.util.Log.e("EpgBrowserViewModel", "Failed to load live streams for channel matching", e)
             }
         }
     }
@@ -123,7 +163,9 @@ class EpgBrowserViewModel(
                     val db = EpgIndexDatabase.getInstance(context)
                     val sources = db.epgSourceDao().getAllSourcesOnce()
                     _sourceLabels.value = sources.associate { it.id to it.label }
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    android.util.Log.e("EpgBrowserViewModel", "Failed to load EPG source labels", e)
+                }
             }
         }
     }
@@ -153,9 +195,14 @@ class EpgBrowserViewModel(
         searchJob = viewModelScope.launch {
             _uiState.value = UiState.Searching
             try {
+                ensureChannelMatcherCurrent()
                 val startTime = System.currentTimeMillis()
+                val mode = _searchMode.value
                 val result = withContext(Dispatchers.IO) {
-                    searchService.search(query)
+                    when (mode) {
+                        SearchMode.PROGRAMME -> searchService.search(query)
+                        SearchMode.CHANNEL -> searchService.searchByChannel(query)
+                    }
                 }
                 val elapsed = System.currentTimeMillis() - startTime
 
@@ -183,7 +230,10 @@ class EpgBrowserViewModel(
                 }
 
                 // Group by date, then by programme within each date
-                val dateGroups = applyChannelMatching(groupByDate(allAirings))
+                val dateGroups = applyChannelMatching(
+                    if (mode == SearchMode.PROGRAMME) groupByDate(allAirings)
+                    else groupByChannel(allAirings)
+                )
                 val totalAirings = allAirings.size
                 val totalPrograms = dateGroups.sumOf { it.programs.size }
 
@@ -276,42 +326,46 @@ class EpgBrowserViewModel(
     }
 
     private fun groupByDate(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
-        val tz = TimeZone.getDefault()
-        // Reuse a single formatter instance for display labels only
-        val labelFormat = java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL, Locale.getDefault()).apply { timeZone = tz }
+        val zoneId = java.time.ZoneId.systemDefault()
+        val labelFormat = java.text.DateFormat.getDateInstance(java.text.DateFormat.FULL, Locale.getDefault())
 
-        // Use epoch arithmetic for day-key grouping (avoids Date + SimpleDateFormat per airing)
-        fun localDayOf(epochMillis: Long): Long = (epochMillis + tz.getOffset(epochMillis)) / 86400000L
-        val nowMillis = System.currentTimeMillis()
-        val todayDay = localDayOf(nowMillis)
-        val tomorrowDay = todayDay + 1
+        val now = java.time.Instant.now()
+        val today = now.atZone(zoneId).toLocalDate()
+        val tomorrow = today.plusDays(1)
 
-        // Group airings by their local day number
-        val byDay = airings.groupBy { localDayOf(it.airing.startEpoch * 1000L) }
+        // Group airings by their local date
+        val byDay = airings.groupBy {
+            java.time.Instant.ofEpochSecond(it.airing.startEpoch)
+                .atZone(zoneId)
+                .toLocalDate()
+        }
 
         return byDay.entries
             .sortedBy { it.key }
-            .map { (dayKey, dayAirings) ->
+            .map { (localDate, dayAirings) ->
                 // Compute date label
-                val sampleDate = Date(dayAirings.first().airing.startEpoch * 1000L)
-                val label = when (dayKey) {
-                    todayDay -> "Today"
-                    tomorrowDay -> "Tomorrow"
-                    else -> labelFormat.format(sampleDate)
+                val label = when (localDate) {
+                    today -> "Today"
+                    tomorrow -> "Tomorrow"
+                    else -> {
+                        val zdt = localDate.atStartOfDay(zoneId)
+                        labelFormat.format(java.util.Date.from(zdt.toInstant()))
+                    }
                 }
 
-                // Compute day start epoch for sorting
-                val dayCal = Calendar.getInstance(tz).apply {
-                    time = sampleDate
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
+                // Compute day start epoch (midnight local time) for sorting
+                val dayStartEpoch = localDate.atStartOfDay(zoneId).toInstant().epochSecond
 
                 // Group by programme within this day
                 val programs = dayAirings
-                    .groupBy { it.title.trim().lowercase() to (it.description?.trim()?.lowercase() ?: "") }
+                    .groupBy { 
+                        // Include startEpoch in grouping key to differentiate identical titles at different times
+                        // if they are truly different airings, but here we want to group the SAME programme 
+                        // (e.g. same movie shown twice) if desired, OR keep them separate.
+                        // The crash was a UI key collision, not necessarily a grouping problem.
+                        // We'll keep the grouping as-is (by title/desc) but ensure UI keys are unique.
+                        it.title.trim().lowercase() to (it.description?.trim()?.lowercase() ?: "") 
+                    }
                     .map { (_, group) ->
                         val rep = group.first()
                         EpgBrowserProgram(
@@ -325,7 +379,34 @@ class EpgBrowserViewModel(
 
                 EpgBrowserDateGroup(
                     dateLabel = label,
-                    dayStartEpoch = dayCal.timeInMillis / 1000L,
+                    dayStartEpoch = dayStartEpoch,
+                    programs = programs
+                )
+            }
+    }
+
+    private fun groupByChannel(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
+        // For "What's on", we group by channel name and reuse EpgBrowserDateGroup
+        // with the channel name as the label.
+        val byChannel = airings.groupBy { it.airing.channelId to it.airing.channelName }
+
+        return byChannel.entries
+            .sortedBy { it.key.second.lowercase() }
+            .mapIndexed { index, (channelKey, channelAirings) ->
+                val (channelId, channelName) = channelKey
+                val programs = channelAirings.map { airingWithProg ->
+                    EpgBrowserProgram(
+                        title = airingWithProg.title,
+                        description = airingWithProg.description,
+                        category = airingWithProg.category,
+                        airings = listOf(airingWithProg.airing)
+                    )
+                }.sortedBy { it.airings.first().startEpoch }
+
+                EpgBrowserDateGroup(
+                    dateLabel = channelName,
+                    // Use a unique ID derived from channelId hash or index to avoid collisions
+                    dayStartEpoch = (channelId.hashCode().toLong() and 0xFFFFFFFFL) or (index.toLong() shl 32),
                     programs = programs
                 )
             }

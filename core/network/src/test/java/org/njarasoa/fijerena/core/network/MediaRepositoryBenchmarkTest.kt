@@ -7,9 +7,12 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import io.mockk.mockkStatic
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import io.mockk.mockkStatic
+import android.os.Looper
 import kotlin.system.measureNanoTime
 
 class MediaRepositoryBenchmarkTest {
@@ -23,8 +26,19 @@ class MediaRepositoryBenchmarkTest {
 
     @Before
     fun setup() {
+        mockkStatic(android.os.Looper::class)
+        val mainLooper = mockk<android.os.Looper>(relaxed = true)
+        every { android.os.Looper.getMainLooper() } returns mainLooper
+
+        io.mockk.mockkConstructor(android.os.Handler::class)
+        every { anyConstructed<android.os.Handler>().postDelayed(any(), any()) } returns true
+        every { anyConstructed<android.os.Handler>().removeCallbacks(any()) } returns Unit
+
         context = mockk(relaxed = true)
         sharedPreferences = mockk(relaxed = true)
+
+        io.mockk.mockkStatic(android.os.Looper::class)
+        every { android.os.Looper.getMainLooper() } returns mockk(relaxed = true)
 
         // Mock SharedPreferences
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences

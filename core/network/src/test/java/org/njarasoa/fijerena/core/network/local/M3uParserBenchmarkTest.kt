@@ -20,7 +20,7 @@ class M3uParserBenchmarkTest {
 
         // Warmup
         repeat(5) {
-            M3uParser.parse(content)
+            M3uParser.parse(content.reader().buffered()).toList()
         }
 
         var totalTime = 0L
@@ -29,7 +29,7 @@ class M3uParserBenchmarkTest {
         // Measure
         repeat(iterations) {
             val time = measureTimeMillis {
-                M3uParser.parse(content)
+                M3uParser.parse(content.reader().buffered()).toList()
             }
             totalTime += time
         }

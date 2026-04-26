@@ -16,18 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.CheckBox
-import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -63,6 +53,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSourceEntity
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModelFactory
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -96,6 +87,8 @@ fun MobileEpgManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var autoRefreshEnabled by remember { mutableStateOf(viewModel.autoRefreshEnabled) }
+    var epgRefreshTime by remember { mutableStateOf(viewModel.epgRefreshTime) }
+    var showTimeDialog by remember { mutableStateOf(false) }
     var showCleanupConfirm by remember { mutableStateOf(false) }
     var showPurgeConfirm by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
@@ -132,7 +125,7 @@ fun MobileEpgManagementScreen(
                 val statusText = when (val state = indexState) {
                     is EpgIndexState.NotIndexed -> "No EPG data"
                     is EpgIndexState.Indexing -> "Indexing: ${state.progressPercent}%"
-                    is EpgIndexState.Indexed -> "${formatCount(state.channelCount)} channels, ${formatCount(state.programmeCount)} programmes"
+                    is EpgIndexState.Indexed -> "${NumberUtils.formatCount(state.channelCount)} channels, ${NumberUtils.formatCount(state.programmeCount)} programmes"
                     is EpgIndexState.Failed -> "Failed: ${state.reason}"
                 }
                 Text(
@@ -161,47 +154,12 @@ fun MobileEpgManagementScreen(
                             Text("Cancel", style = MaterialTheme.typography.labelSmall, color = CinemaError)
                         }
                     }
-                    // Per-source active progress
-                    procState.activeProgress.forEach { progress ->
-                        val progressText = buildString {
-                            append(progress.label)
-                            append(": ")
-                            append(progress.phase)
-                            if (progress.progressPercent in 0..100) {
-                                append(" ${progress.progressPercent}%")
-                            }
-                            if (progress.phase == "Downloading" || progress.phase == "Awaiting Ingestion") {
-                                append(" (${formatBytes(progress.downloadedBytes)}")
-                                if (progress.downloadTotalBytes > 0) {
-                                    append("/${formatBytes(progress.downloadTotalBytes)}")
-                                }
-                                append(")")
-                            } else if (progress.programmes > 0) {
-                                append(" (${formatCount(progress.channels)}ch, ${formatCount(progress.programmes)}prg)")
-                            }
-                        }
-                        Text(
-                            text = progressText,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                     if (procState.totalChannels > 0 || procState.totalProgrammes > 0) {
                         Text(
-                            text = "Total: ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
+                            text = "Total: ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                    if (viewModel.isDevMode && procState.completedSourceStats.isNotEmpty()) {
-                        procState.completedSourceStats.forEach { stat ->
-                            Text(
-                                text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
-                                    (stat.error?.let { " [$it]" } ?: ""),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (stat.error != null) CinemaError else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
                 if (procState is EpgFileManager.MultiSourceState.Completed) {
@@ -214,18 +172,15 @@ fun MobileEpgManagementScreen(
                     )
                     if (viewModel.isDevMode) {
                         Text(
-                            text = "Total: ${formatBytes(procState.totalDownloadBytes)}, ${formatCount(procState.totalChannels)}ch, ${formatCount(procState.totalProgrammes)}prg",
+                            text = "Last update: ${NumberUtils.formatTimestamp(context, procState.updatedAtMs)} (took ${NumberUtils.formatDuration(procState.durationMs)})",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        procState.sourceStats.forEach { stat ->
-                            Text(
-                                text = "${stat.label}: ${formatBytes(stat.downloadBytes)}, ${formatCount(stat.channelsIngested)}ch, ${formatCount(stat.programmesIngested)}prg" +
-                                    (stat.error?.let { " [$it]" } ?: ""),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (stat.error != null) CinemaError else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(
+                            text = "Total: ${NumberUtils.formatBytes(procState.totalDownloadBytes)}, ${NumberUtils.formatCount(procState.totalChannels)}ch, ${NumberUtils.formatCount(procState.totalProgrammes)}prg",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
                 if (procState is EpgFileManager.MultiSourceState.Error) {
@@ -298,7 +253,9 @@ fun MobileEpgManagementScreen(
                             }
                             Text(
                                 text = "TZ: $tzLabel" +
-                                    (if (source.lastIngestedAtMs > 0) " | ${formatTimestamp(context, source.lastIngestedAtMs)}" else "") +
+                                    (if (source.lastIngestedAtMs > 0) " | ${NumberUtils.formatTimestamp(context, source.lastIngestedAtMs)}" else "") +
+                                    (if (source.lastDownloadDurationMs > 0) " | DL: ${NumberUtils.formatDuration(source.lastDownloadDurationMs)}" else "") +
+                                    (if (source.lastIngestionDurationMs > 0) " | Ingest: ${NumberUtils.formatDuration(source.lastIngestionDurationMs)}" else "") +
                                     (if (!source.enabled) " | DISABLED" else ""),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
@@ -311,14 +268,78 @@ fun MobileEpgManagementScreen(
                                     maxLines = 1
                                 )
                             }
+
+                            // In-progress or completed stats from current processing
+                            val procState = processingState
+                            if (procState is EpgFileManager.MultiSourceState.Processing) {
+                                val progress = procState.activeProgress[source.id]
+                                val completedStat = procState.completedSourceStats[source.id]
+
+                                if (progress != null) {
+                                    val progressText = buildString {
+                                        append(progress.phase)
+                                        if (progress.progressPercent in 0..100) {
+                                            append(" ${progress.progressPercent}%")
+                                        }
+                                        if (progress.phase == "Downloading") {
+                                            append(" (${NumberUtils.formatBytes(progress.downloadedBytes)}")
+                                            if (progress.downloadTotalBytes > 0) {
+                                                append("/${NumberUtils.formatBytes(progress.downloadTotalBytes)}")
+                                            }
+                                            append(")")
+                                        } else if (progress.phase == "Awaiting Ingestion") {
+                                            append(" (${NumberUtils.formatBytes(progress.downloadedBytes)})")
+                                        } else if (progress.programmes > 0) {
+                                            append(" (${NumberUtils.formatCount(progress.channels)}ch, ${NumberUtils.formatCount(progress.programmes)}prg)")
+                                        }
+                                    }
+                                    Text(
+                                        text = progressText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else if (completedStat != null) {
+                                    val statText = buildString {
+                                        append("Completed")
+                                        append(" (${NumberUtils.formatBytes(completedStat.downloadBytes)}, ${NumberUtils.formatCount(completedStat.channelsIngested)}ch, ${NumberUtils.formatCount(completedStat.programmesIngested)}prg)")
+                                        if (completedStat.durationMs > 0) {
+                                            append(" in ${NumberUtils.formatDuration(completedStat.durationMs)}")
+                                        }
+                                        if (completedStat.error != null) append(" [${completedStat.error}]")
+                                    }
+                                    Text(
+                                        text = statText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (completedStat.error != null) CinemaError else MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            } else if (procState is EpgFileManager.MultiSourceState.Completed) {
+                                val stat = procState.sourceStats[source.id]
+                                if (stat != null) {
+                                    val statText = buildString {
+                                        append("Finished")
+                                        append(" (${NumberUtils.formatBytes(stat.downloadBytes)}, ${NumberUtils.formatCount(stat.channelsIngested)}ch, ${NumberUtils.formatCount(stat.programmesIngested)}prg)")
+                                        if (stat.durationMs > 0) {
+                                            append(" in ${NumberUtils.formatDuration(stat.durationMs)}")
+                                        }
+                                        if (stat.error != null) append(" [${stat.error}]")
+                                    }
+                                    Text(
+                                        text = statText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (stat.error != null) CinemaError else MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+
                             if (viewModel.isDevMode && source.lastIngestedAtMs > 0) {
                                 val sizeStr = if (source.ingestMethod != "STREAMED") {
-                                    ", ${formatBytes(source.lastDownloadBytes)}"
+                                    ", ${NumberUtils.formatBytes(source.lastDownloadBytes)}"
                                 } else {
                                     ""
                                 }
                                 Text(
-                                    text = "${formatCount(source.lastChannels)}ch, ${formatCount(source.lastProgrammes)}prg$sizeStr",
+                                    text = "${NumberUtils.formatCount(source.lastChannels)}ch, ${NumberUtils.formatCount(source.lastProgrammes)}prg$sizeStr",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                                 )
@@ -328,7 +349,7 @@ fun MobileEpgManagementScreen(
                                 }
                                 latestTime?.let { epoch ->
                                     Text(
-                                        text = "Latest: ${formatEpochDate(context, epoch)}",
+                                        text = "Latest: ${NumberUtils.formatEpochDate(context, epoch)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                                     )
@@ -371,6 +392,20 @@ fun MobileEpgManagementScreen(
                             viewModel.setAutoRefreshEnabled(it)
                         }
                     )
+                }
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Refresh Time",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    OutlinedButton(onClick = { showTimeDialog = true }) {
+                        Text(epgRefreshTime)
+                    }
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Row(
@@ -498,6 +533,18 @@ fun MobileEpgManagementScreen(
         )
     }
 
+    if (showTimeDialog) {
+        MobileTimeDialog(
+            currentTime = epgRefreshTime,
+            onDismiss = { showTimeDialog = false },
+            onSave = { newTime ->
+                epgRefreshTime = newTime
+                viewModel.setEpgRefreshTime(newTime)
+                showTimeDialog = false
+            }
+        )
+    }
+
     if (showCleanupConfirm) {
         AlertDialog(
             onDismissRequest = { showCleanupConfirm = false },
@@ -610,6 +657,70 @@ fun MobileEpgManagementScreen(
 }
 
 @Composable
+private fun MobileTimeDialog(
+    currentTime: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    val initialHour = currentTime.substringBefore(":").toIntOrNull() ?: 2
+    val initialMinute = currentTime.substringAfter(":").toIntOrNull() ?: 0
+    var hour by remember { mutableIntStateOf(initialHour) }
+    var minute by remember { mutableIntStateOf(initialMinute) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("EPG Refresh Time") },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = { hour = (hour + 1) % 24 }) {
+                        Icon(Icons.Default.KeyboardArrowUp, "Hour Up")
+                    }
+                    Text(
+                        text = "%02d".format(hour),
+                        style = MaterialTheme.typography.displayMedium
+                    )
+                    IconButton(onClick = { hour = if (hour == 0) 23 else hour - 1 }) {
+                        Icon(Icons.Default.KeyboardArrowDown, "Hour Down")
+                    }
+                }
+                Text(
+                    text = ":",
+                    style = MaterialTheme.typography.displayMedium,
+                    modifier = Modifier.padding(horizontal = CinemaSpacing.md)
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = { minute = (minute + 1) % 60 }) {
+                        Icon(Icons.Default.KeyboardArrowUp, "Minute Up")
+                    }
+                    Text(
+                        text = "%02d".format(minute),
+                        style = MaterialTheme.typography.displayMedium
+                    )
+                    IconButton(onClick = { minute = if (minute == 0) 59 else minute - 1 }) {
+                        Icon(Icons.Default.KeyboardArrowDown, "Minute Down")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave("%02d:%02d".format(hour, minute)) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
 private fun SettingsSection(
     title: String,
     content: @Composable () -> Unit
@@ -687,32 +798,4 @@ private fun MobileSourceDialog(
             OutlinedButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
-}
-
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes >= 1_073_741_824 -> "%.1fGB".format(bytes / 1_073_741_824.0)
-        bytes >= 1_048_576 -> "%.1fMB".format(bytes / 1_048_576.0)
-        bytes >= 1_024 -> "%.1fKB".format(bytes / 1_024.0)
-        else -> "${bytes}B"
-    }
-}
-
-private fun formatCount(count: Int): String {
-    return when {
-        count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
-        count >= 1_000 -> "%.1fK".format(count / 1_000.0)
-        else -> count.toString()
-    }
-}
-
-private fun formatTimestamp(context: android.content.Context, millis: Long): String {
-    val dateFormat = android.text.format.DateFormat.getMediumDateFormat(context)
-    val timeFormat = android.text.format.DateFormat.getTimeFormat(context)
-    val date = java.util.Date(millis)
-    return "${dateFormat.format(date)}, ${timeFormat.format(date)}"
-}
-
-private fun formatEpochDate(context: android.content.Context, epochSeconds: Long): String {
-    return formatTimestamp(context, epochSeconds * 1000L)
 }

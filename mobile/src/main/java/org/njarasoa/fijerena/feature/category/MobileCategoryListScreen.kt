@@ -64,6 +64,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
@@ -201,7 +202,7 @@ fun MobileCategoryListScreen(
                             if (isDevMode) {
                                 val epgInfo = when (val epg = epgIndexState) {
                                     is EpgIndexState.Indexed -> {
-                                        "EPG: ${epg.programmeCount} progs, ${epg.channelCount} channels"
+                                        "EPG: ${NumberUtils.formatCount(epg.programmeCount)} progs, ${NumberUtils.formatCount(epg.channelCount)} channels"
                                     }
                                     is EpgIndexState.Indexing -> "EPG: Indexing..."
                                     else -> null

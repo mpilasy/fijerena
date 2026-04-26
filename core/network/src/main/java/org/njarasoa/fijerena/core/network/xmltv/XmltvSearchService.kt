@@ -21,6 +21,41 @@ class XmltvSearchService(private val context: Context) {
     }
 
     /**
+     * Search channels by name and return the next 6 hours of programmes
+     * on all matching channels.
+     *
+     * @param query Case-insensitive substring to match against channel display names
+     * @return [XmltvSearchResult] or null if no index is available.
+     */
+    suspend fun searchByChannel(query: String): XmltvSearchResult? {
+        val indexer = EpgIndexer.getInstance(context)
+        if (indexer.state.value !is EpgIndexState.Indexed) {
+            return null
+        }
+
+        val now = System.currentTimeMillis() / 1000L
+        val twoHoursLater = now + 2 * 3600L
+
+        return try {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+
+            val queryLower = query.lowercase(Locale.ROOT)
+            val matchedChannels = dao.searchChannelsByName(queryLower)
+            if (matchedChannels.isEmpty()) {
+                return rowsToSearchResult(emptyList(), searchedFromIndex = true)
+            }
+
+            val channelIds = matchedChannels.map { it.xmltvId }
+            val rows = dao.getProgrammesForChannels(channelIds, now, twoHoursLater)
+            rowsToSearchResult(rows, searchedFromIndex = true)
+        } catch (e: Exception) {
+            Log.w(TAG, "Channel search failed", e)
+            null
+        }
+    }
+
+    /**
      * Search programme titles in the local EPG index.
      *
      * @param query Case-insensitive substring to match

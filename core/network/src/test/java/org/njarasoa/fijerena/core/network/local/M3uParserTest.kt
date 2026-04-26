@@ -17,7 +17,7 @@ class M3uParserTest {
             http://example.com/2
         """.trimIndent()
 
-        val entries = M3uParser.parse(content)
+        val entries = M3uParser.parse(content.reader().buffered()).toList()
 
         assert(entries.size == 2)
         assert(entries[0].name == "Channel 1")

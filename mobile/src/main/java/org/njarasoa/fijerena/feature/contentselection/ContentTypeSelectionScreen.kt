@@ -129,7 +129,7 @@ fun MobileContentTypeSelectionScreen(
     Scaffold(
         topBar = {
             val displayName = buildString {
-                append("fijerena")
+                append(providerName.ifEmpty { "fijerena" })
                 if (appSettings.isDevMode && providerType.isNotEmpty()) {
                     append(" ($providerType)")
                 }

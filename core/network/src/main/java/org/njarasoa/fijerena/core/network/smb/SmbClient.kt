@@ -48,26 +48,10 @@ class SmbClient(
     }
 
     fun disconnect() {
-        try {
-            share?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to close share", e)
-        }
-        try {
-            session?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to close session", e)
-        }
-        try {
-            connection?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to close connection", e)
-        }
-        try {
-            client?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to close client", e)
-        }
+        try { share?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close share", e) }
+        try { session?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close session", e) }
+        try { connection?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close connection", e) }
+        try { client?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close client", e) }
         share = null
         session = null
         connection = null
