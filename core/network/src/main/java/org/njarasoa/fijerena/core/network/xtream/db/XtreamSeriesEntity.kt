@@ -8,13 +8,12 @@ import androidx.room.Index
     primaryKeys = ["seriesId", "providerId"],
     indices = [
         Index(value = ["providerId"]),
-        Index(value = ["categoryId", "providerId"])
-    ]
+        Index(value = ["categoryId", "providerId"]),
+    ],
 )
 data class XtreamSeriesEntity(
     val seriesId: Int,
     val providerId: Long,
-
     val num: Int? = null,
     val name: String,
     val cover: String? = null,
@@ -30,7 +29,7 @@ data class XtreamSeriesEntity(
     val episodeRunTime: String? = null,
     val categoryId: String,
     val backdropPath: String? = null, // Comma separated URLs
-    val contentHash: Int = 0
+    val contentHash: Int = 0,
 ) {
     companion object {
         fun computeHash(
@@ -50,7 +49,7 @@ data class XtreamSeriesEntity(
             youtubeTrailer: String?,
             episodeRunTime: String?,
             categoryId: String,
-            backdropPath: String?
+            backdropPath: String?,
         ): Int {
             var result = seriesId
             result = 31 * result + providerId.hashCode()

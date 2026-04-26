@@ -1,11 +1,15 @@
 package org.njarasoa.fijerena.core.network
-
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -15,12 +19,8 @@ import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.PlayableStream
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
-import org.njarasoa.fijerena.core.player.model.EpgResponse
-import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.EpgResponse
 import java.util.concurrent.ConcurrentHashMap
 
 @Serializable
@@ -32,7 +32,13 @@ data class WatchedItem(
     val timestamp: Long = System.currentTimeMillis(),
     val playbackPosition: Long = 0L,
     val duration: Long = 0L,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val episodeId: String? = null,
+    val episodeExtension: String? = null,
+    val seriesId: String? = null,
+    val seriesName: String? = null,
+    val audioTrackIndex: Int? = null,
+    val subtitleTrackIndex: Int? = null,
 )
 
 @Serializable
@@ -41,7 +47,7 @@ data class FavoriteItem(
     val itemName: String,
     val categoryId: String,
     val contentType: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
 )
 
 @Serializable
@@ -49,7 +55,7 @@ data class FavoriteCategoryItem(
     val categoryId: String,
     val categoryName: String,
     val contentType: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
 )
 
 @Serializable
@@ -59,7 +65,7 @@ data class FavoriteShowItem(
     val categoryId: String,
     val contentType: String,
     val thumbnailUrl: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
 )
 
 @Serializable
@@ -67,27 +73,29 @@ data class RecentCategory(
     val categoryId: String,
     val categoryName: String,
     val contentType: String,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
 )
 
 class MediaRepository(
     private val context: Context,
     private val providerId: Long,
-    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT
+    private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
 ) {
     @Volatile
     private var provider: MediaProvider? = null
 
     private val cacheName = "media_cache_$providerId"
-    private val cache: SharedPreferences = context.getSharedPreferences(
-        cacheName,
-        Context.MODE_PRIVATE
-    )
-    private val appSettings = AppSettings(context)  // Keep for global settings (isDevMode)
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val cache: SharedPreferences =
+        context.getSharedPreferences(
+            cacheName,
+            Context.MODE_PRIVATE,
+        )
+    private val appSettings = AppSettings(context) // Keep for global settings (isDevMode)
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     private val xmltvEpgService: XmltvEpgService by lazy {
         XmltvEpgService(context, providerId)
@@ -98,6 +106,7 @@ class MediaRepository(
 
     // In-memory caches to avoid repeated JSON deserialization from SharedPreferences
     private var cachedWatchHistory: List<WatchedItem>? = null
+
     // O(1) lookup map for getPlaybackPosition — keyed by (itemId, contentType)
     private var watchHistoryLookup: Map<Pair<String, String>, WatchedItem>? = null
     private var cachedFavorites: List<FavoriteItem>? = null
@@ -151,11 +160,11 @@ class MediaRepository(
 
     fun isCachingEnabled(): Boolean = providerSettings.cachingEnabled
 
+    fun getProviderId(): Long = providerId
+
     // --- Provider-delegated operations ---
 
-    suspend fun connect(): kotlin.Result<Unit> {
-        return provider?.connect() ?: kotlin.Result.failure(Exception("No provider set"))
-    }
+    suspend fun connect(): kotlin.Result<Unit> = provider?.connect() ?: kotlin.Result.failure(Exception("No provider set"))
 
     suspend fun disconnect() {
         provider?.disconnect()
@@ -163,10 +172,9 @@ class MediaRepository(
 
     fun isConnected(): Boolean = provider?.isConnected() == true
 
-    suspend fun getCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
-        return provider?.getCategories(contentType)
+    suspend fun getCategories(contentType: String): kotlin.Result<List<MediaCategory>> =
+        provider?.getCategories(contentType)
             ?: kotlin.Result.failure(Exception("No provider set"))
-    }
 
     /**
      * Get categories filtered by provider's category filters.
@@ -186,60 +194,56 @@ class MediaRepository(
         }
     }
 
-    suspend fun getItems(categoryId: String, contentType: String): kotlin.Result<List<MediaItem>> {
-        return provider?.getItems(categoryId, contentType)
+    suspend fun getItems(
+        categoryId: String,
+        contentType: String,
+    ): kotlin.Result<List<MediaItem>> =
+        provider?.getItems(categoryId, contentType)
             ?: kotlin.Result.failure(Exception("No provider set"))
-    }
 
-    fun getItemsIfCached(categoryId: String, contentType: String): List<MediaItem>? {
-        return provider?.getItemsIfCached(categoryId, contentType)
-    }
+    fun getItemsIfCached(
+        categoryId: String,
+        contentType: String,
+    ): List<MediaItem>? = provider?.getItemsIfCached(categoryId, contentType)
 
-    suspend fun getItemsForSearch(categoryId: String, contentType: String): kotlin.Result<List<MediaItem>> {
-        return provider?.getItems(categoryId, contentType)
+    suspend fun getItemsForSearch(
+        categoryId: String,
+        contentType: String,
+    ): kotlin.Result<List<MediaItem>> =
+        provider?.getItems(categoryId, contentType)
             ?: kotlin.Result.failure(Exception("No provider set"))
-    }
 
-    suspend fun getAllItems(contentType: String): kotlin.Result<List<MediaItem>> {
-        return provider?.getAllItems(contentType)
+    suspend fun getAllItems(contentType: String): kotlin.Result<List<MediaItem>> =
+        provider?.getAllItems(contentType)
             ?: kotlin.Result.failure(Exception("No provider set"))
-    }
 
-    suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> {
-        return provider?.getSeriesDetail(seriesId)
+    suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> =
+        provider?.getSeriesDetail(seriesId)
             ?: kotlin.Result.failure(Exception("No provider set"))
-    }
 
-    suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
-        return provider?.getMovieDetail(movieId)
+    suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> =
+        provider?.getMovieDetail(movieId)
             ?: kotlin.Result.failure(Exception("No provider set"))
-    }
 
     suspend fun resolvePlayableStream(
         itemId: String,
         contentType: String,
         episodeId: String? = null,
-        extension: String? = null
-    ): kotlin.Result<PlayableStream> {
-        return provider?.resolvePlayableStream(itemId, contentType, episodeId, extension)
+        extension: String? = null,
+    ): kotlin.Result<PlayableStream> =
+        provider?.resolvePlayableStream(itemId, contentType, episodeId, extension)
             ?: kotlin.Result.failure(Exception("No provider set"))
-    }
 
-    suspend fun search(query: String, contentType: String): kotlin.Result<List<MediaItem>>? {
-        return provider?.search(query, contentType)
-    }
+    suspend fun search(
+        query: String,
+        contentType: String,
+    ): kotlin.Result<List<MediaItem>>? = provider?.search(query, contentType)
 
-    fun getLastSearchDataSize(contentType: String): Long? {
-        return provider?.getLastSearchDataSize(contentType)
-    }
+    fun getLastSearchDataSize(contentType: String): Long? = provider?.getLastSearchDataSize(contentType)
 
-    suspend fun getEpg(streamId: String): kotlin.Result<EpgResponse>? {
-        return provider?.getEpg(streamId)
-    }
+    suspend fun getEpg(streamId: String): kotlin.Result<EpgResponse>? = provider?.getEpg(streamId)
 
-    suspend fun getEpgBulk(streamIds: List<String>): kotlin.Result<Map<String, EpgResponse>>? {
-        return provider?.getEpgBulk(streamIds)
-    }
+    suspend fun getEpgBulk(streamIds: List<String>): kotlin.Result<Map<String, EpgResponse>>? = provider?.getEpgBulk(streamIds)
 
     suspend fun clearEpgCache() {
         provider?.clearEpgCache()
@@ -270,13 +274,12 @@ class MediaRepository(
      * Lightweight now-playing query from the EPG index.
      * Returns map of itemId → currently-airing EpgProgram.
      */
-    suspend fun getNowPlayingFromIndex(items: List<MediaItem>): Map<String, EpgProgram> {
-        return try {
+    suspend fun getNowPlayingFromIndex(items: List<MediaItem>): Map<String, EpgProgram> =
+        try {
             xmltvEpgService.getNowPlayingForItems(items)
         } catch (_: Exception) {
             emptyMap()
         }
-    }
 
     /**
      * Ingest Xtream API EPG into the EPG index if not done recently.
@@ -288,9 +291,11 @@ class MediaRepository(
         if (System.currentTimeMillis() - lastIngested < XTREAM_EPG_TTL_MS) return
 
         try {
-            val streams = XtreamDatabase.getInstance(context)
-                .streamDao()
-                .getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE)
+            val streams =
+                XtreamDatabase
+                    .getInstance(context)
+                    .streamDao()
+                    .getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE)
             if (streams.isEmpty()) return
 
             val streamIds = streams.map { it.streamId.toString() }
@@ -305,22 +310,24 @@ class MediaRepository(
             }
             if (intEpgMap.isEmpty()) return
 
-            val streamInfo = streams.associate { stream ->
-                stream.streamId to EpgIndexer.XtreamStreamInfo(
-                    streamId = stream.streamId,
-                    name = stream.name,
-                    epgChannelId = stream.epgChannelId,
-                    iconUrl = stream.streamIcon
-                )
-            }
+            val streamInfo =
+                streams.associate { stream ->
+                    stream.streamId to
+                        EpgIndexer.XtreamStreamInfo(
+                            streamId = stream.streamId,
+                            name = stream.name,
+                            epgChannelId = stream.epgChannelId,
+                            iconUrl = stream.streamIcon,
+                        )
+                }
 
             EpgIndexer.getInstance(context).ingestFromXtreamEpg(
                 epgByStreamId = intEpgMap,
                 streamInfo = streamInfo,
-                providerId = providerId
+                providerId = providerId,
             )
 
-            prefs.edit().putLong(KEY_XTREAM_EPG_INGESTED_AT, System.currentTimeMillis()).apply()
+            prefs.edit { putLong(KEY_XTREAM_EPG_INGESTED_AT, System.currentTimeMillis()) }
         } catch (_: Exception) {
             // Non-critical — silently fail
         }
@@ -329,60 +336,93 @@ class MediaRepository(
     /**
      * Check whether the SQLite EPG index has data available for search/display.
      */
-    fun hasIndexedEpgData(): Boolean {
-        return org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-            .getInstance(context).state.value is
+    fun hasIndexedEpgData(): Boolean =
+        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+            .getInstance(context)
+            .state.value is
             org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
-    }
 
     // --- Progress sync hook ---
 
-    suspend fun onPlaybackProgress(itemId: String, positionMs: Long, durationMs: Long) {
-        provider?.onPlaybackProgress(itemId, positionMs, durationMs)
+    suspend fun onPlaybackStarted(itemId: String) {
+        provider?.onPlaybackStarted(itemId)
+    }
+
+    suspend fun onPlaybackProgress(
+        itemId: String,
+        positionMs: Long,
+        durationMs: Long,
+        isPaused: Boolean = false,
+    ) {
+        provider?.onPlaybackProgress(itemId, positionMs, durationMs, isPaused)
+    }
+
+    suspend fun onPlaybackStopped(
+        itemId: String,
+        positionMs: Long,
+        durationMs: Long,
+    ) {
+        provider?.onPlaybackStopped(itemId, positionMs, durationMs)
     }
 
     // --- Local-only operations (favorites, watch history, playback progress) ---
 
-    fun saveLastPlayedItem(categoryId: String, itemId: String, itemName: String, contentType: String) {
-        val editor = cache.edit()
-        when (contentType) {
-            ContentType.LIVE_TV -> {
-                editor.putString(KEY_LAST_LIVE_CATEGORY, categoryId)
-                editor.putString(KEY_LAST_LIVE_ITEM, itemId)
+    fun saveLastPlayedItem(
+        categoryId: String,
+        itemId: String,
+        itemName: String,
+        contentType: String,
+        episodeId: String? = null,
+        episodeExtension: String? = null,
+        seriesId: String? = null,
+        seriesName: String? = null,
+    ) {
+        cache.edit {
+            when (contentType) {
+                ContentType.LIVE_TV -> {
+                    putString(KEY_LAST_LIVE_CATEGORY, categoryId)
+                    putString(KEY_LAST_LIVE_ITEM, itemId)
+                }
+                ContentType.MOVIES -> {
+                    putString(KEY_LAST_MOVIES_CATEGORY, categoryId)
+                    putString(KEY_LAST_MOVIES_ITEM, itemId)
+                }
+                ContentType.TV_SHOWS -> {
+                    putString(KEY_LAST_TVSHOWS_CATEGORY, categoryId)
+                    putString(KEY_LAST_TVSHOWS_ITEM, itemId)
+                }
             }
-            ContentType.MOVIES -> {
-                editor.putString(KEY_LAST_MOVIES_CATEGORY, categoryId)
-                editor.putString(KEY_LAST_MOVIES_ITEM, itemId)
-            }
-            ContentType.TV_SHOWS -> {
-                editor.putString(KEY_LAST_TVSHOWS_CATEGORY, categoryId)
-                editor.putString(KEY_LAST_TVSHOWS_ITEM, itemId)
-            }
+            putString(KEY_LAST_CONTENT_TYPE, contentType)
         }
-        editor.putString(KEY_LAST_CONTENT_TYPE, contentType)
-        editor.apply()
-        if (!usesServerUserData) {
-            addToWatchHistory(itemId, itemName, categoryId, contentType)
-        }
+
+        // ALWAYS save to local watch history as a robust fallback
+        addToWatchHistory(
+            itemId,
+            itemName,
+            categoryId,
+            contentType,
+            episodeId = episodeId,
+            episodeExtension = episodeExtension,
+            seriesId = seriesId,
+            seriesName = seriesName,
+        )
     }
 
-    fun getLastCategoryId(contentType: String): String? {
-        return when (contentType) {
+    fun getLastCategoryId(contentType: String): String? =
+        when (contentType) {
             ContentType.LIVE_TV -> cache.getString(KEY_LAST_LIVE_CATEGORY, null)
             ContentType.MOVIES -> cache.getString(KEY_LAST_MOVIES_CATEGORY, null)
             ContentType.TV_SHOWS -> cache.getString(KEY_LAST_TVSHOWS_CATEGORY, null)
             else -> null
         }
-    }
 
-    fun getLastItemId(contentType: String): String? {
-        return when (contentType) {
+    fun getLastItemId(contentType: String): String? =
+        when (contentType) {
             ContentType.LIVE_TV -> cache.getString(KEY_LAST_LIVE_ITEM, null)
             ContentType.MOVIES -> cache.getString(KEY_LAST_MOVIES_ITEM, null)
             ContentType.TV_SHOWS -> cache.getString(KEY_LAST_TVSHOWS_ITEM, null)
             else -> null
         }
-    }
 
     fun getLastContentType(): String? = cache.getString(KEY_LAST_CONTENT_TYPE, null)
 
@@ -391,7 +431,11 @@ class MediaRepository(
     // In-memory cache for recent categories — avoids JSON deserialization from SharedPreferences on every call
     private var cachedRecentCategories: MutableMap<String, List<RecentCategory>> = mutableMapOf()
 
-    fun addToCategoryHistory(categoryId: String, categoryName: String, contentType: String) {
+    fun addToCategoryHistory(
+        categoryId: String,
+        categoryName: String,
+        contentType: String,
+    ) {
         val key = KEY_RECENT_CATEGORIES + "_" + contentType
         val existing = getRecentCategoryList(key)
         // Remove existing entry for same category, add new one at front
@@ -399,7 +443,7 @@ class MediaRepository(
         updated.add(0, RecentCategory(categoryId, categoryName, contentType, System.currentTimeMillis()))
         // Keep max 20 entries
         val trimmed = updated.take(MAX_RECENT_CATEGORIES)
-        cache.edit().putString(key, json.encodeToString(trimmed)).apply()
+        cache.edit { putString(key, json.encodeToString(trimmed)) }
         cachedRecentCategories[contentType] = trimmed
     }
 
@@ -425,16 +469,36 @@ class MediaRepository(
         contentType: String,
         playbackPosition: Long = 0L,
         duration: Long = 0L,
-        isCompleted: Boolean = false
+        isCompleted: Boolean = false,
+        episodeId: String? = null,
+        episodeExtension: String? = null,
+        seriesId: String? = null,
+        seriesName: String? = null,
+        audioTrackIndex: Int? = null,
+        subtitleTrackIndex: Int? = null,
     ) {
         synchronized(watchHistoryLock) {
             val history = getWatchHistoryLocked().toMutableList()
             history.removeAll { it.itemId == itemId && it.contentType == contentType }
-            history.add(0, WatchedItem(
-                itemId, itemName, categoryId, contentType,
-                System.currentTimeMillis(),
-                playbackPosition, duration, isCompleted
-            ))
+            history.add(
+                0,
+                WatchedItem(
+                    itemId,
+                    itemName,
+                    categoryId,
+                    contentType,
+                    System.currentTimeMillis(),
+                    playbackPosition,
+                    duration,
+                    isCompleted,
+                    episodeId = episodeId,
+                    episodeExtension = episodeExtension,
+                    seriesId = seriesId,
+                    seriesName = seriesName,
+                    audioTrackIndex = audioTrackIndex,
+                    subtitleTrackIndex = subtitleTrackIndex,
+                ),
+            )
             val trimmed = history.take(providerSettings.watchHistorySize)
 
             // Update in-memory cache immediately (reads always see latest data)
@@ -458,15 +522,16 @@ class MediaRepository(
         cachedWatchHistory?.let { return it }
 
         val historyJson = cache.getString(KEY_WATCH_HISTORY, null)
-        val history = if (historyJson == null) {
-            emptyList()
-        } else {
-            try {
-                json.decodeFromString<List<WatchedItem>>(historyJson)
-            } catch (e: Exception) {
+        val history =
+            if (historyJson == null) {
                 emptyList()
+            } else {
+                try {
+                    json.decodeFromString<List<WatchedItem>>(historyJson)
+                } catch (e: Exception) {
+                    emptyList()
+                }
             }
-        }
 
         // Populate cache
         cachedWatchHistory = history
@@ -476,7 +541,8 @@ class MediaRepository(
 
     fun getWatchHistoryForContentType(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
-        return getWatchHistory().asSequence()
+        return getWatchHistory()
+            .asSequence()
             .filter { it.contentType == contentType }
             .map { watched ->
                 MediaItem(
@@ -484,21 +550,25 @@ class MediaRepository(
                     name = watched.itemName,
                     mediaType = mediaType,
                     categoryId = watched.categoryId,
-                    providerData = buildMap {
-                        put("playbackPosition", watched.playbackPosition.toString())
-                        put("duration", watched.duration.toString())
-                        put("isCompleted", watched.isCompleted.toString())
-                    }
+                    providerData =
+                        buildMap {
+                            put("playbackPosition", watched.playbackPosition.toString())
+                            put("duration", watched.duration.toString())
+                            put("isCompleted", watched.isCompleted.toString())
+                            watched.episodeId?.let { put("episodeId", it) }
+                            watched.episodeExtension?.let { put("episodeExtension", it) }
+                            watched.seriesId?.let { put("seriesId", it) }
+                            watched.seriesName?.let { put("seriesName", it) }
+                        },
                 )
-            }
-            .toList()
+            }.toList()
     }
 
     fun flushWatchHistory() {
         synchronized(watchHistoryLock) {
             if (!watchHistoryDirty) return
             cachedWatchHistory?.let { history ->
-                cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
+                cache.edit { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
             }
             watchHistoryDirty = false
         }
@@ -510,28 +580,36 @@ class MediaRepository(
             cachedWatchHistory = emptyList()
             watchHistoryLookup = null
             watchHistoryDirty = false
-            cache.edit().remove(KEY_WATCH_HISTORY).apply()
+            cache.edit { remove(KEY_WATCH_HISTORY) }
         }
     }
 
-    fun addFavorite(itemId: String, itemName: String, categoryId: String, contentType: String): Boolean {
+    fun addFavorite(
+        itemId: String,
+        itemName: String,
+        categoryId: String,
+        contentType: String,
+    ): Boolean {
         val favorites = getFavoriteItems().toMutableList()
         if (favorites.any { it.itemId == itemId && it.contentType == contentType }) {
             return false
         }
         favorites.add(0, FavoriteItem(itemId, itemName, categoryId, contentType))
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
-        cache.edit().putString(KEY_FAVORITES, json.encodeToString(trimmed)).apply()
+        cache.edit { putString(KEY_FAVORITES, json.encodeToString(trimmed)) }
         cachedFavorites = trimmed
         favoriteIdSet = null
         return true
     }
 
-    fun removeFavorite(itemId: String, contentType: String): Boolean {
+    fun removeFavorite(
+        itemId: String,
+        contentType: String,
+    ): Boolean {
         val favorites = getFavoriteItems().toMutableList()
         val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
         if (!removed) return false
-        cache.edit().putString(KEY_FAVORITES, json.encodeToString(favorites)).apply()
+        cache.edit { putString(KEY_FAVORITES, json.encodeToString(favorites)) }
         cachedFavorites = favorites
         favoriteIdSet = null
         return true
@@ -549,52 +627,63 @@ class MediaRepository(
 
     fun getFavoritesForContentType(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
-        return getFavoriteItems().asSequence()
+        return getFavoriteItems()
+            .asSequence()
             .filter { it.contentType == contentType }
             .map { fav ->
                 MediaItem(
                     id = fav.itemId,
                     name = fav.itemName,
                     mediaType = mediaType,
-                    categoryId = fav.categoryId
+                    categoryId = fav.categoryId,
                 )
-            }
-            .toList()
+            }.toList()
     }
 
-    fun isFavorite(itemId: String, contentType: String): Boolean {
-        val set = favoriteIdSet ?: getFavoriteItems()
-            .mapTo(HashSet()) { it.itemId to it.contentType }
-            .also { favoriteIdSet = it }
+    fun isFavorite(
+        itemId: String,
+        contentType: String,
+    ): Boolean {
+        val set =
+            favoriteIdSet ?: getFavoriteItems()
+                .mapTo(HashSet()) { it.itemId to it.contentType }
+                .also { favoriteIdSet = it }
         return (itemId to contentType) in set
     }
 
     fun clearFavorites() {
         cachedFavorites = emptyList()
         favoriteIdSet = null
-        cache.edit().remove(KEY_FAVORITES).apply()
+        cache.edit { remove(KEY_FAVORITES) }
     }
 
     // --- Favorite Categories ---
 
-    fun addFavoriteCategory(categoryId: String, categoryName: String, contentType: String): Boolean {
+    fun addFavoriteCategory(
+        categoryId: String,
+        categoryName: String,
+        contentType: String,
+    ): Boolean {
         val favorites = getFavoriteCategoryItems().toMutableList()
         if (favorites.any { it.categoryId == categoryId && it.contentType == contentType }) {
             return false
         }
         favorites.add(0, FavoriteCategoryItem(categoryId, categoryName, contentType))
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
-        cache.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(trimmed)).apply()
+        cache.edit { putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(trimmed)) }
         cachedFavoriteCategories = trimmed
         favoriteCategoryIdSet = null
         return true
     }
 
-    fun removeFavoriteCategory(categoryId: String, contentType: String): Boolean {
+    fun removeFavoriteCategory(
+        categoryId: String,
+        contentType: String,
+    ): Boolean {
         val favorites = getFavoriteCategoryItems().toMutableList()
         val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
         if (!removed) return false
-        cache.edit().putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(favorites)).apply()
+        cache.edit { putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(favorites)) }
         cachedFavoriteCategories = favorites
         favoriteCategoryIdSet = null
         return true
@@ -602,7 +691,9 @@ class MediaRepository(
 
     fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> {
         cachedFavoriteCategories?.let { return it }
-        val raw = cache.getString(KEY_FAVORITE_CATEGORIES, null) ?: return emptyList<FavoriteCategoryItem>().also { cachedFavoriteCategories = it }
+        val raw =
+            cache.getString(KEY_FAVORITE_CATEGORIES, null)
+                ?: return emptyList<FavoriteCategoryItem>().also { cachedFavoriteCategories = it }
         return try {
             json.decodeFromString<List<FavoriteCategoryItem>>(raw).also { cachedFavoriteCategories = it }
         } catch (_: Exception) {
@@ -610,52 +701,64 @@ class MediaRepository(
         }
     }
 
-    fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> {
-        return getFavoriteCategoryItems().asSequence()
+    fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> =
+        getFavoriteCategoryItems()
+            .asSequence()
             .filter { it.contentType == contentType }
             .map { fav ->
                 MediaCategory(
                     id = fav.categoryId,
                     name = fav.categoryName,
-                    isVirtual = false
+                    isVirtual = false,
                 )
-            }
-            .toList()
-    }
+            }.toList()
 
-    fun isFavoriteCategory(categoryId: String, contentType: String): Boolean {
-        val set = favoriteCategoryIdSet ?: getFavoriteCategoryItems()
-            .mapTo(HashSet()) { it.categoryId to it.contentType }
-            .also { favoriteCategoryIdSet = it }
+    fun isFavoriteCategory(
+        categoryId: String,
+        contentType: String,
+    ): Boolean {
+        val set =
+            favoriteCategoryIdSet ?: getFavoriteCategoryItems()
+                .mapTo(HashSet()) { it.categoryId to it.contentType }
+                .also { favoriteCategoryIdSet = it }
         return (categoryId to contentType) in set
     }
 
     fun clearFavoriteCategories() {
         cachedFavoriteCategories = emptyList()
         favoriteCategoryIdSet = null
-        cache.edit().remove(KEY_FAVORITE_CATEGORIES).apply()
+        cache.edit { remove(KEY_FAVORITE_CATEGORIES) }
     }
 
     // --- Favorite Shows ---
 
-    fun addFavoriteShow(showId: String, showName: String, categoryId: String, contentType: String, thumbnailUrl: String? = null): Boolean {
+    fun addFavoriteShow(
+        showId: String,
+        showName: String,
+        categoryId: String,
+        contentType: String,
+        thumbnailUrl: String? = null,
+    ): Boolean {
         val favorites = getFavoriteShowItems().toMutableList()
         if (favorites.any { it.showId == showId && it.contentType == contentType }) {
             return false
         }
         favorites.add(0, FavoriteShowItem(showId, showName, categoryId, contentType, thumbnailUrl))
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
-        cache.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(trimmed)).apply()
+        cache.edit { putString(KEY_FAVORITE_SHOWS, json.encodeToString(trimmed)) }
         cachedFavoriteShows = trimmed
         favoriteShowIdSet = null
         return true
     }
 
-    fun removeFavoriteShow(showId: String, contentType: String): Boolean {
+    fun removeFavoriteShow(
+        showId: String,
+        contentType: String,
+    ): Boolean {
         val favorites = getFavoriteShowItems().toMutableList()
         val removed = favorites.removeAll { it.showId == showId && it.contentType == contentType }
         if (!removed) return false
-        cache.edit().putString(KEY_FAVORITE_SHOWS, json.encodeToString(favorites)).apply()
+        cache.edit { putString(KEY_FAVORITE_SHOWS, json.encodeToString(favorites)) }
         cachedFavoriteShows = favorites
         favoriteShowIdSet = null
         return true
@@ -671,8 +774,9 @@ class MediaRepository(
         }
     }
 
-    fun getFavoriteShowsForContentType(contentType: String): List<MediaItem> {
-        return getFavoriteShowItems().asSequence()
+    fun getFavoriteShowsForContentType(contentType: String): List<MediaItem> =
+        getFavoriteShowItems()
+            .asSequence()
             .filter { it.contentType == contentType }
             .map { fav ->
                 MediaItem(
@@ -680,23 +784,25 @@ class MediaRepository(
                     name = fav.showName,
                     mediaType = MediaType.SERIES,
                     categoryId = fav.categoryId,
-                    thumbnailUrl = fav.thumbnailUrl
+                    thumbnailUrl = fav.thumbnailUrl,
                 )
-            }
-            .toList()
-    }
+            }.toList()
 
-    fun isFavoriteShow(showId: String, contentType: String): Boolean {
-        val set = favoriteShowIdSet ?: getFavoriteShowItems()
-            .mapTo(HashSet()) { it.showId to it.contentType }
-            .also { favoriteShowIdSet = it }
+    fun isFavoriteShow(
+        showId: String,
+        contentType: String,
+    ): Boolean {
+        val set =
+            favoriteShowIdSet ?: getFavoriteShowItems()
+                .mapTo(HashSet()) { it.showId to it.contentType }
+                .also { favoriteShowIdSet = it }
         return (showId to contentType) in set
     }
 
     fun clearFavoriteShows() {
         cachedFavoriteShows = emptyList()
         favoriteShowIdSet = null
-        cache.edit().remove(KEY_FAVORITE_SHOWS).apply()
+        cache.edit { remove(KEY_FAVORITE_SHOWS) }
     }
 
     fun savePlaybackPosition(
@@ -705,58 +811,103 @@ class MediaRepository(
         categoryId: String,
         contentType: String,
         position: Long,
-        duration: Long
+        duration: Long,
+        audioTrackIndex: Int? = null,
+        subtitleTrackIndex: Int? = null,
     ) {
         if (contentType == ContentType.LIVE_TV) return
         if (usesServerUserData) return
-        val progressPercent = if (duration > 0) {
-            (position.toFloat() / duration.toFloat()) * 100f
-        } else 0f
+        val progressPercent =
+            if (duration > 0) {
+                (position.toFloat() / duration.toFloat()) * 100f
+            } else {
+                0f
+            }
         val isCompleted = progressPercent > 95.0f
-        addToWatchHistory(itemId, itemName, categoryId, contentType, position, duration, isCompleted)
+        // Preserve metadata from existing entry
+        val existing =
+            synchronized(watchHistoryLock) {
+                getWatchHistoryLocked().firstOrNull { it.itemId == itemId && it.contentType == contentType }
+            }
+        addToWatchHistory(
+            itemId,
+            itemName,
+            categoryId,
+            contentType,
+            position,
+            duration,
+            isCompleted,
+            episodeId = existing?.episodeId,
+            episodeExtension = existing?.episodeExtension,
+            seriesId = existing?.seriesId,
+            seriesName = existing?.seriesName,
+            audioTrackIndex = audioTrackIndex ?: existing?.audioTrackIndex,
+            subtitleTrackIndex = subtitleTrackIndex ?: existing?.subtitleTrackIndex,
+        )
     }
 
-    fun getPlaybackPosition(itemId: String, contentType: String): WatchedItem? {
+    fun getPlaybackPosition(
+        itemId: String,
+        contentType: String,
+    ): WatchedItem? {
+        synchronized(watchHistoryLock) {
+            val map =
+                watchHistoryLookup ?: getWatchHistoryLocked()
+                    .associateBy { it.itemId to it.contentType }
+                    .also { watchHistoryLookup = it }
+            return map[itemId to contentType]
+        }
+    }
+
+    fun getPlaybackPositions(itemIds: List<String>, contentType: String): Map<String, WatchedItem> {
         synchronized(watchHistoryLock) {
             val map = watchHistoryLookup ?: getWatchHistoryLocked()
                 .associateBy { it.itemId to it.contentType }
                 .also { watchHistoryLookup = it }
-            return map[itemId to contentType]
+
+            val result = HashMap<String, WatchedItem>()
+            for (id in itemIds) {
+                map[id to contentType]?.let { result[id] = it }
+            }
+            return result
         }
     }
 
     fun getInProgressItems(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
-        return getWatchHistory().asSequence()
+        return getWatchHistory()
+            .asSequence()
             .filter { item ->
                 item.contentType == contentType &&
-                !item.isCompleted &&
-                item.playbackPosition > 0 &&
-                item.duration > 0 &&
-                run {
-                    val progress = (item.playbackPosition.toFloat() / item.duration.toFloat()) * 100f
-                    progress in 2.0..95.0
-                }
-            }
-            .map { watched ->
+                    !item.isCompleted &&
+                    item.playbackPosition > 0 &&
+                    item.duration > 0 &&
+                    run {
+                        val progress = (item.playbackPosition.toFloat() / item.duration.toFloat()) * 100f
+                        progress in 2.0..95.0
+                    }
+            }.map { watched ->
                 MediaItem(
                     id = watched.itemId,
                     name = watched.itemName,
                     mediaType = mediaType,
                     categoryId = watched.categoryId,
-                    providerData = buildMap {
-                        put("playbackPosition", watched.playbackPosition.toString())
-                        put("duration", watched.duration.toString())
-                        put("isCompleted", watched.isCompleted.toString())
-                    }
+                    providerData =
+                        buildMap {
+                            put("playbackPosition", watched.playbackPosition.toString())
+                            put("duration", watched.duration.toString())
+                            put("isCompleted", watched.isCompleted.toString())
+                        },
                 )
-            }
-            .toList()
+            }.toList()
     }
 
     // --- Server-aware suspend methods (branch on supportsServerUserData) ---
 
-    suspend fun isFavoriteSuspend(itemId: String, contentType: String): Boolean {
+    suspend fun isFavoriteSuspend(
+        itemId: String,
+        contentType: String,
+    ): Boolean {
         if (usesServerUserData) {
             return provider?.isFavorite(itemId) ?: false
         }
@@ -767,7 +918,7 @@ class MediaRepository(
         itemId: String,
         itemName: String,
         categoryId: String,
-        contentType: String
+        contentType: String,
     ): Boolean {
         if (usesServerUserData) {
             return provider?.setFavorite(itemId, true)?.isSuccess ?: false
@@ -775,7 +926,10 @@ class MediaRepository(
         return addFavorite(itemId, itemName, categoryId, contentType)
     }
 
-    suspend fun removeFavoriteSuspend(itemId: String, contentType: String): Boolean {
+    suspend fun removeFavoriteSuspend(
+        itemId: String,
+        contentType: String,
+    ): Boolean {
         if (usesServerUserData) {
             return provider?.setFavorite(itemId, false)?.isSuccess ?: false
         }
@@ -803,7 +957,10 @@ class MediaRepository(
         return getWatchHistoryForContentType(contentType)
     }
 
-    suspend fun getPlaybackPositionSuspend(itemId: String, contentType: String): WatchedItem? {
+    suspend fun getPlaybackPositionSuspend(
+        itemId: String,
+        contentType: String,
+    ): WatchedItem? {
         if (usesServerUserData) {
             val (posMs, durMs) = provider?.getPlaybackPosition(itemId) ?: return null
             return WatchedItem(
@@ -813,18 +970,22 @@ class MediaRepository(
                 contentType = contentType,
                 playbackPosition = posMs,
                 duration = durMs,
-                isCompleted = false
+                isCompleted = false,
             )
         }
         return getPlaybackPosition(itemId, contentType)
     }
 
-    fun clearPlaybackPosition(itemId: String, contentType: String) {
+    fun clearPlaybackPosition(
+        itemId: String,
+        contentType: String,
+    ) {
         synchronized(watchHistoryLock) {
             val history = getWatchHistoryLocked().toMutableList()
-            val index = history.indexOfFirst {
-                it.itemId == itemId && it.contentType == contentType
-            }
+            val index =
+                history.indexOfFirst {
+                    it.itemId == itemId && it.contentType == contentType
+                }
             if (index != -1) {
                 val item = history[index]
                 history[index] = item.copy(playbackPosition = 0L, isCompleted = false)
@@ -833,7 +994,7 @@ class MediaRepository(
                 cachedWatchHistory = history
                 watchHistoryLookup = null
 
-                cache.edit().putString(KEY_WATCH_HISTORY, json.encodeToString(history)).apply()
+                cache.edit { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
             }
         }
     }
@@ -851,13 +1012,13 @@ class MediaRepository(
     fun getFetchTimeFormatted(key: String): String? {
         if (!appSettings.isDevMode) return null
         val timeMs = fetchTimes[key] ?: return null
-        return "${timeMs} ms"
+        return "$timeMs ms"
     }
 
     // --- Cache management ---
 
     fun clearCache() {
-        cache.edit().clear().apply()
+        cache.edit { clear() }
         payloadSizes.clear()
         fetchTimes.clear()
         cachedFavorites = null
@@ -884,21 +1045,19 @@ class MediaRepository(
         return totalSize
     }
 
-    private fun formatBytes(bytes: Long): String {
-        return when {
+    private fun formatBytes(bytes: Long): String =
+        when {
             bytes < 1024 -> "$bytes B"
             bytes < 1024 * 1024 -> String.format("%.2f KB", bytes / 1024.0)
             bytes < 1024 * 1024 * 1024 -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
             else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
         }
-    }
 
-    private fun contentTypeToMediaType(contentType: String): MediaType {
-        return when (contentType) {
+    private fun contentTypeToMediaType(contentType: String): MediaType =
+        when (contentType) {
             ContentType.LIVE_TV -> MediaType.LIVE_CHANNEL
             ContentType.MOVIES -> MediaType.MOVIE
             ContentType.TV_SHOWS -> MediaType.SERIES
             else -> MediaType.LIVE_CHANNEL
         }
-    }
 }

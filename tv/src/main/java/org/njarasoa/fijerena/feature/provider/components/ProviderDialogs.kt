@@ -16,8 +16,6 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -51,7 +51,7 @@ fun ConfirmActionDialog(
     confirmText: String = "Clear",
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    isDanger: Boolean = true
+    isDanger: Boolean = true,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -60,22 +60,24 @@ fun ConfirmActionDialog(
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = if (isDanger) CinemaError else CinemaAccent,
-                    contentColor = if (isDanger) Color.White else CinemaTextPrimary
-                )
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = if (isDanger) CinemaError else CinemaAccent,
+                        contentColor = if (isDanger) Color.White else CinemaTextPrimary,
+                    ),
             ) { Text(confirmText) }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = CinemaSurfaceVariant,
-                    contentColor = CinemaTextPrimary
-                )
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary,
+                    ),
             ) { Text("Cancel") }
         },
-        containerColor = CinemaSurface
+        containerColor = CinemaSurface,
     )
 }
 
@@ -83,17 +85,18 @@ fun ConfirmActionDialog(
 fun CategoryFilterDialog(
     currentFilters: CategoryFilters,
     onSave: (CategoryFilters) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val scaledStyles = remember(scale, typography) {
-        object {
-            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-            val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+    val scaledStyles =
+        remember(scale, typography) {
+            object {
+                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+            }
         }
-    }
     var filterMode by remember { mutableStateOf(currentFilters.mode) }
     var prefixesText by remember { mutableStateOf(currentFilters.prefixes.joinToString(", ")) }
     var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
@@ -104,31 +107,36 @@ fun CategoryFilterDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale))
+                verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
             ) {
                 Text("Filter Mode:", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     androidx.tv.material3.Button(
                         onClick = { filterMode = FilterMode.EXCLUDE },
-                        colors = androidx.tv.material3.ButtonDefaults.colors(
-                            containerColor = if (filterMode == FilterMode.EXCLUDE) CinemaAccent else CinemaSurfaceVariant
-                        )
+                        colors =
+                            androidx.tv.material3.ButtonDefaults.colors(
+                                containerColor = if (filterMode == FilterMode.EXCLUDE) CinemaAccent else CinemaSurfaceVariant,
+                            ),
                     ) { Text("Exclude") }
                     androidx.tv.material3.Button(
                         onClick = { filterMode = FilterMode.INCLUDE },
-                        colors = androidx.tv.material3.ButtonDefaults.colors(
-                            containerColor = if (filterMode == FilterMode.INCLUDE) CinemaAccent else CinemaSurfaceVariant
-                        )
+                        colors =
+                            androidx.tv.material3.ButtonDefaults.colors(
+                                containerColor = if (filterMode == FilterMode.INCLUDE) CinemaAccent else CinemaSurfaceVariant,
+                            ),
                     ) { Text("Include") }
                 }
                 Text(
-                    if (filterMode == FilterMode.EXCLUDE) "Hide categories that start with these prefixes"
-                    else "Show only categories that start with these prefixes",
+                    if (filterMode == FilterMode.EXCLUDE) {
+                        "Hide categories that start with these prefixes"
+                    } else {
+                        "Show only categories that start with these prefixes"
+                    },
                     style = scaledStyles.bodySmall,
-                    color = CinemaTextSecondary
+                    color = CinemaTextSecondary,
                 )
                 Text("Prefixes (comma-separated):", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 OutlinedTextField(
@@ -139,37 +147,43 @@ fun CategoryFilterDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
                     maxLines = 3,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = CinemaSurface,
-                        unfocusedContainerColor = CinemaSurface,
-                        focusedBorderColor = CinemaAccent,
-                        unfocusedBorderColor = CinemaSurfaceVariant,
-                        focusedTextColor = CinemaTextPrimary,
-                        unfocusedTextColor = CinemaTextPrimary,
-                        focusedLabelColor = CinemaAccent,
-                        unfocusedLabelColor = CinemaTextSecondary,
-                        cursorColor = CinemaAccent
-                    )
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = CinemaSurface,
+                            unfocusedContainerColor = CinemaSurface,
+                            focusedBorderColor = CinemaAccent,
+                            unfocusedBorderColor = CinemaSurfaceVariant,
+                            focusedTextColor = CinemaTextPrimary,
+                            unfocusedTextColor = CinemaTextPrimary,
+                            focusedLabelColor = CinemaAccent,
+                            unfocusedLabelColor = CinemaTextSecondary,
+                            cursorColor = CinemaAccent,
+                        ),
                 )
                 Text("Language Script Filter:", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
-                Text("Show only categories in selected scripts (none = show all)", style = scaledStyles.bodySmall, color = CinemaTextSecondary)
+                Text(
+                    "Show only categories in selected scripts (none = show all)",
+                    style = scaledStyles.bodySmall,
+                    color = CinemaTextSecondary,
+                )
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    val scriptCheckboxColors = CheckboxDefaults.colors(
-                        checkedColor = CinemaAccent,
-                        uncheckedColor = CinemaTextSecondary,
-                        checkmarkColor = CinemaTextPrimary
-                    )
+                    val scriptCheckboxColors =
+                        CheckboxDefaults.colors(
+                            checkedColor = CinemaAccent,
+                            uncheckedColor = CinemaTextSecondary,
+                            checkmarkColor = CinemaTextPrimary,
+                        )
                     ScriptType.entries.forEach { script ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.tvFocusableNoScale()
+                            modifier = Modifier.tvFocusableNoScale(),
                         ) {
                             Checkbox(
                                 checked = script in selectedScripts,
                                 onCheckedChange = { checked ->
                                     selectedScripts = if (checked) selectedScripts + script else selectedScripts - script
                                 },
-                                colors = scriptCheckboxColors
+                                colors = scriptCheckboxColors,
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             Text(text = script.displayName, style = scaledStyles.bodyMedium, color = CinemaTextPrimary)
@@ -185,16 +199,24 @@ fun CategoryFilterDialog(
                     val newFilters = CategoryFilters(mode = filterMode, prefixes = prefixes, allowedScripts = selectedScripts)
                     onSave(newFilters)
                 },
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaAccent, contentColor = CinemaTextPrimary)
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaAccent,
+                        contentColor = CinemaTextPrimary,
+                    ),
             ) { Text("Save") }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = CinemaSurfaceVariant, contentColor = CinemaTextPrimary)
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary,
+                    ),
             ) { Text("Cancel") }
         },
-        containerColor = CinemaSurface
+        containerColor = CinemaSurface,
     )
 }
 
@@ -202,7 +224,7 @@ fun CategoryFilterDialog(
 fun QuickConnectDialog(
     url: String,
     onSuccess: (name: String, username: String, token: String, userId: String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val scale = LocalUiScale.current
@@ -214,10 +236,11 @@ fun QuickConnectDialog(
         qcCode = ""
         qcSecret = ""
         qcError = null
-        val deviceId = android.provider.Settings.Secure.getString(
-            context.contentResolver,
-            android.provider.Settings.Secure.ANDROID_ID
-        ) ?: "fijerena"
+        val deviceId =
+            android.provider.Settings.Secure.getString(
+                context.contentResolver,
+                android.provider.Settings.Secure.ANDROID_ID,
+            ) ?: "fijerena"
         val api = JellyfinApiService(url.trimEnd('/'), deviceId)
         val initResult = api.initiateQuickConnect()
         if (initResult.isFailure) {
@@ -255,14 +278,14 @@ fun QuickConnectDialog(
         text = {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 when {
                     qcError != null -> {
                         Text(
                             text = qcError!!,
                             color = CinemaError,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                     qcCode.isEmpty() -> {
@@ -271,26 +294,31 @@ fun QuickConnectDialog(
                         Text(
                             text = "Connecting to server...",
                             color = CinemaTextSecondary,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                     else -> {
                         Text(
                             text = "Enter this code in Jellyfin:",
                             color = CinemaTextSecondary,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         Text(
                             text = qcCode,
                             color = CinemaAccent,
-                            style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale))
+                            style =
+                                MaterialTheme.typography.displayMedium.copy(
+                                    fontSize =
+                                        MaterialTheme.typography.displayMedium.fontSize
+                                            .scaled(scale),
+                                ),
                         )
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                         Text(
                             text = "Open Jellyfin → Dashboard → Quick Connect, then enter the code above.",
                             color = CinemaTextSecondary,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
                         )
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                         CircularProgressIndicator(color = CinemaAccent)
@@ -298,7 +326,7 @@ fun QuickConnectDialog(
                         Text(
                             text = "Waiting for approval...",
                             color = CinemaTextSecondary,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
@@ -308,12 +336,13 @@ fun QuickConnectDialog(
         dismissButton = {
             Button(
                 onClick = onDismiss,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = CinemaSurfaceVariant,
-                    contentColor = CinemaTextPrimary
-                )
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary,
+                    ),
             ) { Text("Cancel") }
         },
-        containerColor = CinemaSurface
+        containerColor = CinemaSurface,
     )
 }

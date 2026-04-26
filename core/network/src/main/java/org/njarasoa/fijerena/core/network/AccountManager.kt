@@ -1,7 +1,7 @@
 package org.njarasoa.fijerena.core.network
-
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.serialization.Serializable
@@ -12,26 +12,32 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 data class StoredCredentials(
     val url: String,
     val username: String,
-    val password: String? = null
+    val password: String? = null,
 )
 
-class AccountManager(context: Context) {
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+class AccountManager(
+    context: Context,
+) {
+    private val masterKey =
+        MasterKey
+            .Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
 
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "xtream_secure_credentials",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val prefs: SharedPreferences =
+        EncryptedSharedPreferences.create(
+            context,
+            "xtream_secure_credentials",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     companion object {
         private const val KEY_URL = "url"
@@ -46,7 +52,7 @@ class AccountManager(context: Context) {
         username: String,
         password: String,
         authResponse: XtreamAuthResponse,
-        rememberMe: Boolean
+        rememberMe: Boolean,
     ) {
         prefs.edit().apply {
             putString(KEY_URL, url)
@@ -69,13 +75,9 @@ class AccountManager(context: Context) {
         return StoredCredentials(url, username, password)
     }
 
-    fun hasStoredCredentials(): Boolean {
-        return prefs.contains(KEY_URL) && prefs.contains(KEY_USERNAME)
-    }
+    fun hasStoredCredentials(): Boolean = prefs.contains(KEY_URL) && prefs.contains(KEY_USERNAME)
 
-    fun hasRememberedCredentials(): Boolean {
-        return hasStoredCredentials() && prefs.contains(KEY_PASSWORD)
-    }
+    fun hasRememberedCredentials(): Boolean = hasStoredCredentials() && prefs.contains(KEY_PASSWORD)
 
     fun getAuthResponse(): XtreamAuthResponse? {
         val authResponseJson = prefs.getString(KEY_AUTH_RESPONSE, null) ?: return null
@@ -101,7 +103,11 @@ class AccountManager(context: Context) {
      * Store basic credentials without an auth response.
      * Used by MediaProviderFactory to seed credentials for XtreamRepository.restoreSession().
      */
-    fun storeBasicCredentials(url: String, username: String, password: String) {
+    fun storeBasicCredentials(
+        url: String,
+        username: String,
+        password: String,
+    ) {
         prefs.edit().apply {
             putString(KEY_URL, url)
             putString(KEY_USERNAME, username)
@@ -112,7 +118,7 @@ class AccountManager(context: Context) {
     }
 
     fun clearAuthResponse() {
-        prefs.edit().remove(KEY_AUTH_RESPONSE).apply()
+        prefs.edit { remove(KEY_AUTH_RESPONSE) }
     }
 
     /**

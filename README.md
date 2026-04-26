@@ -37,7 +37,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ### 📺 Content Types
 - **Live TV** - Live television channels with fast channel switching
 - **Movies (VOD)** - On-demand movie content with resume support
-- **TV Shows** - Series browsing with season/episode selection
+- **TV Shows** - Series browsing with season/episode selection; enriched with **TMDB synopses** per episode
 - **EPG Guide** - 24-hour Electronic Program Guide with grid layout
 
 ### 🎮 Playback Features
@@ -46,6 +46,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Multi-Audio Tracks** - Language and format selection (Stereo, 5.1, 7.1)
 - **Subtitles/Captions** - Support for SRT, VTT, TTML, CEA-608/708
 - **Adaptive Quality** - Manual and automatic bitrate selection
+- **Episode Navigation** - Swipe or D-pad Left/Right to skip between episodes in-player
 - **Content-Type Aware Buffering**:
   - Live TV: Fast zapping profile (2-5s buffer)
   - VOD: Smooth playback profile (15-50s buffer)
@@ -66,9 +67,11 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ### 🔧 Advanced Features
 - **Virtual Categories**:
   - Favorites - User-curated collection (configurable size: 10-500 items)
-  - Last Watched - Recent viewing history (added after 5s of viewing, configurable size: 1-100 items)
-- **Playback Resume** - Automatic position restore for VOD content (2-95% range)
-- **Stats for Nerds** - Real-time playback metrics overlay
+  - Last Watched - Recent viewing history (added after 10s of viewing, configurable size: 1-100 items)- **Playback Resume** - Automatic position restore for VOD content (2-95% range)
+- **Stats for Nerds** - Comprehensive playback metrics overlay including:
+  - **Video/Audio**: Codecs, bitrates, resolution, frame rate
+  - **Network**: Speed, bandwidth, buffer health, rebuffer stats
+  - **Build**: Compile time and git hash for version tracking
 - **Channel Switching** - D-pad up/down for live TV channel navigation
 - **Channel Overlays** - Category and last-watched side panels (D-pad Left/Right on TV, swipe on mobile)
 - **VOD Seek Controls** - Rewind −30s and Fast-forward +1min via buttons or remote media keys
@@ -95,10 +98,10 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ## 🖥️ Supported Devices
 
 ### ✅ Tested & Optimized
-- **Android Mobile** - Phones & tablets (Android 11+)
-- **NVIDIA Shield** - Shield TV & Shield TV Pro (prioritizes AV1/HEVC codecs)
-- **Chromecast with Google TV** - 4K & HD models
-- **Sony Bravia** - Android TV models (HEVC optimization)
+- **Android Mobile** - Phones & tablets (Android 11+).
+- **NVIDIA Shield** - Shield TV & Shield TV Pro (prioritizes AV1/HEVC codecs).
+- **Chromecast with Google TV** - 4K & HD models.
+- **Sony Bravia** - Android TV models (HEVC optimization).
 
 ### 🎯 Target Platform
 - **Minimum SDK**: 30 (Android 11)
@@ -148,8 +151,13 @@ fijerena/
 │   ├── data/                 # Room database & encrypted storage
 │   ├── ui/                   # Shared Compose components & design tokens
 │   └── navigation/           # Type-safe navigation definitions
-├── docs/                     # Additional documentation
-├── CLAUDE.md                 # Technical specification & coding standards
+├── docs/                     # In-depth technical documentation
+├── AGENTS.md                 # AI agent guide (single source of truth)
+├── CLAUDE.md                 # → AGENTS.md (Claude)
+├── GEMINI.md                 # → AGENTS.md (Gemini)
+├── CODEX.md                  # → AGENTS.md (Codex)
+├── .cursorrules              # → AGENTS.md (Cursor)
+├── .github/copilot-instructions.md  # → AGENTS.md (Copilot)
 └── README.md                 # This file
 ```
 
@@ -196,8 +204,11 @@ No additional configuration is required for the initial build. The app will prom
 ```
 
 **Output Locations:**
-- Mobile: `mobile/build/outputs/apk/debug/mobile-debug.apk`
-- TV: `tv/build/outputs/apk/debug/tv-debug.apk`
+All generated APKs are automatically collected into the root directory:
+- `build/outputs/apk/fijerena-mobile-debug.apk`
+- `build/outputs/apk/fijerena-tv-debug.apk`
+
+*Note: APKs are prefixed with `fijerena-` and collected from their respective module build folders.*
 
 ### Release Builds
 
@@ -297,14 +308,29 @@ All UI values (colors, spacing, dimensions, animations) **must** come from desig
 
 ## 📚 Documentation
 
-Comprehensive documentation is available in the following files:
+### AI Agent Instructions
 
-- **[CLAUDE.md](CLAUDE.md)** - Complete technical specification, coding standards, and architectural guidelines
-- **[docs/FEATURES.md](docs/FEATURES.md)** - Detailed feature documentation with API references
-- **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - App navigation flow and screen hierarchy
-- **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Version history and changelog
+A single **[AGENTS.md](AGENTS.md)** file serves as the canonical guide for all AI coding assistants. Vendor-specific entry points all redirect there:
+
+| File | Tool |
+|------|------|
+| `CLAUDE.md` | Claude Code, Claude |
+| `GEMINI.md` | Gemini CLI, Jules |
+| `CODEX.md` | OpenAI Codex |
+| `.cursorrules` | Cursor |
+| `.github/copilot-instructions.md` | GitHub Copilot |
+
+### Technical Documentation
+
 - **[docs/design.md](docs/design.md)** - System design and architecture
+- **[docs/FEATURES.md](docs/FEATURES.md)** - Detailed feature documentation with API references
+- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Complete database schema
+- **[docs/epg_guide.md](docs/epg_guide.md)** - EPG pipeline implementation guide
+- **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - App navigation flow and screen hierarchy
 - **[docs/ui-theme-options.md](docs/ui-theme-options.md)** - Theme system documentation
+- **[docs/MOBILE_RUN_GUIDE.md](docs/MOBILE_RUN_GUIDE.md)** - Mobile build, install, and run guide
+- **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Version history and changelog
+- **[TODO.md](TODO.md)** - Known issues and optimization status
 
 ## 🎨 Theme System
 
@@ -327,7 +353,7 @@ All themes feature:
 
 Contributions are welcome! Please follow these guidelines:
 
-1. **Read the Documentation** - Familiarize yourself with [CLAUDE.md](CLAUDE.md) for coding standards
+1. **Read the Documentation** - Familiarize yourself with [AGENTS.md](AGENTS.md) for coding standards
 2. **Create a Feature Branch** - `git checkout -b feature/your-feature-name`
 3. **Follow Design Tokens** - Never use hardcoded UI values (colors, spacing, etc.)
 4. **Maintain D-Pad Navigation** - All UI must be remote-navigable on TV
@@ -368,7 +394,7 @@ copyright holder.
 For issues, questions, or feature requests:
 - Open an issue on GitHub
 - Check existing documentation in the `docs/` directory
-- Review [CLAUDE.md](CLAUDE.md) for technical details
+- Review [AGENTS.md](AGENTS.md) for technical details
 
 ---
 

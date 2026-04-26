@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
@@ -9,6 +11,17 @@ android {
     compileSdk = 36
     defaultConfig {
         minSdk = 30
+
+        val tmdbApiKey =
+            runCatching {
+                val props = Properties()
+                rootProject.file("local.properties").inputStream().use { props.load(it) }
+                props.getProperty("TMDB_API_KEY") ?: ""
+            }.getOrDefault("")
+        buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
+    }
+    buildFeatures {
+        buildConfig = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -41,6 +54,9 @@ dependencies {
     implementation(libs.room.ktx)
     implementation(libs.room.paging)
     ksp(libs.room.compiler)
+
+    // Bundled SQLite with FTS5 support (system SQLite may lack FTS5 on some OEM builds)
+    implementation(libs.sqlite.android)
 
     // Paging
     api(libs.paging.runtime)

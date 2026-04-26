@@ -30,7 +30,9 @@ sealed interface Screen {
      * @param editId If > 0, edit the provider with this ID instead of creating new
      */
     @Serializable
-    data class AddProvider(val editId: Long = -1L) : Screen
+    data class AddProvider(
+        val editId: Long = -1L,
+    ) : Screen
 
     /**
      * Login screen destination.
@@ -69,7 +71,7 @@ sealed interface Screen {
     @Serializable
     data class CategoryList(
         val contentType: String,
-        val initialCategoryId: String? = null
+        val initialCategoryId: String? = null,
     ) : Screen
 
     /**
@@ -84,7 +86,7 @@ sealed interface Screen {
     data class EpisodeSelection(
         val seriesId: String,
         val seriesName: String,
-        val categoryId: String
+        val categoryId: String,
     ) : Screen
 
     /**
@@ -99,7 +101,7 @@ sealed interface Screen {
     data class MovieDetails(
         val movieId: String,
         val movieName: String,
-        val categoryId: String
+        val categoryId: String,
     ) : Screen
 
     /**
@@ -110,7 +112,7 @@ sealed interface Screen {
      */
     @Serializable
     data class Search(
-        val contentType: String
+        val contentType: String,
     ) : Screen
 
     /**
@@ -123,7 +125,7 @@ sealed interface Screen {
     @Serializable
     data class EpgGuide(
         val categoryId: String,
-        val categoryName: String
+        val categoryName: String,
     ) : Screen
 
     /**
@@ -169,6 +171,6 @@ sealed interface Screen {
         val episodeExtension: String? = null,
         val seriesId: String? = null,
         val seriesName: String? = null,
-        val startFromBeginning: Boolean = false
+        val startFromBeginning: Boolean = false,
     ) : Screen
 }

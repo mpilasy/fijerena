@@ -17,17 +17,19 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 @Composable
 fun GradientOverlay(
     modifier: Modifier = Modifier,
-    alpha: Float = CinemaAlpha.imageOverlay
+    alpha: Float = CinemaAlpha.imageOverlay,
 ) {
     val palette = CinemaThemeHolder.current
     // Memoize brush to avoid allocating new Brush + listOf on every recomposition
-    val brush = remember(palette.background, alpha) {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color.Transparent,
-                palette.background.copy(alpha = alpha)
+    val brush =
+        remember(palette.background, alpha) {
+            Brush.verticalGradient(
+                colors =
+                    listOf(
+                        Color.Transparent,
+                        palette.background.copy(alpha = alpha),
+                    ),
             )
-        )
-    }
+        }
     Box(modifier = modifier.background(brush))
 }

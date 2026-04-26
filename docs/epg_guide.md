@@ -75,7 +75,7 @@ Downloads and ingestion are decoupled via a Kotlin `Channel<DownloadedSource>`. 
 - **Concurrency:** Up to 3 concurrent downloads on mobile (controlled by `Semaphore`), 2 on TV/fixed devices
 - **Download phase:** Each source is downloaded to a cache file (`xmltv_source_<id>_tmp`). On success, the `DownloadedSource` is sent to the ingestion channel.
 - **Ingestion phase:** 2 parallel workers read from the channel and ingest files into SQLite via `EpgIndexer.ingestFromStream()`.
-- **Completion:** After all download coroutines finish, the channel is closed. The ingestion coroutine drains remaining items, then the pipeline completes.
+- **Completion:** After all download coroutines finish, the channel is closed. The ingestion coroutine drains remaining items, then the pipeline completes by updating `EpgPipelineStatsEntity` in `providers.db`.
 
 **Progress tracking (`ActiveSourceProgress`):**
 
@@ -146,11 +146,12 @@ Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync
 
 ### Database Schema
 
-**Room database** `epg_index.db` (version 8, WAL mode):
+**Room database** `epg_index.db` (version 13, WAL mode):
 
 ```
 epg_channel
-├── xmltv_id       TEXT  (PK)
+├── xmltv_id       TEXT  (Composite PK with source_id)
+├── source_id      INTEGER (Composite PK with xmltv_id)
 ├── display_name   TEXT
 └── icon_url       TEXT?
 
@@ -165,12 +166,15 @@ epg_programme
 ├── end_epoch        LONG
 └── source_id        LONG
 
-Indices:
-├── idx_programme_start        (start_epoch)
-├── idx_programme_end          (end_epoch)
-├── idx_programme_time_range   (start_epoch, end_epoch)
-├── idx_programme_channel      (channel_id)
-└── idx_programme_title_lower  (title_lowercase)
+Indices (8):
+├── idx_programme_start          (start_epoch)
+├── idx_programme_end            (end_epoch)
+├── idx_programme_time_range     (start_epoch, end_epoch)
+├── idx_programme_channel        (channel_id)
+├── idx_programme_title_lower    (title_lowercase)
+├── idx_programme_dedup          (channel_id, source_id, start_epoch) UNIQUE
+├── idx_programme_source         (source_id)
+└── idx_programme_channel_source (channel_id, source_id)
 
 epg_programme_fts  (FTS4 virtual table, content=epg_programme, tokenizer=unicode61)
 └── title          TEXT
@@ -184,19 +188,21 @@ epg_index_metadata
 ├── programme_count        INTEGER
 └── timezone_offset_hours  INTEGER  (default 0)
 
-epg_source
-├── id                     LONG     (PK, autoGenerate)
-├── url                    TEXT
-├── label                  TEXT
-├── timezone_offset_hours  INT
-├── added_at_ms            LONG
-├── last_ingested_at_ms    LONG
-├── last_error             TEXT?
-├── enabled                BOOLEAN
-├── last_channels          INT
-├── last_programmes        INT
-├── last_download_bytes    LONG
-└── ingest_method          TEXT     ("DOWNLOADED", "STREAMED", or "XTREAM_API")
+epg_source (in providers.db)
+├── id                           LONG     (PK, autoGenerate)
+├── url                          TEXT
+├── label                        TEXT
+├── timezone_offset_hours        INT
+├── added_at_ms                  LONG
+├── last_ingested_at_ms          LONG
+├── last_error                   TEXT?
+├── enabled                      BOOLEAN
+├── last_channels                INT
+├── last_programmes              INT
+├── last_download_bytes          LONG
+├── ingest_method                TEXT     ("DOWNLOADED", "STREAMED", or "XTREAM_API")
+├── last_ingestion_duration_ms   LONG
+└── last_download_duration_ms    LONG
 ```
 
 **Database configuration:**
@@ -217,7 +223,7 @@ The FTS4 virtual table with `unicode61` tokenizer enables sub-100ms full-text se
 - `setIndexing()` — sets state to `Indexing` if not already `Indexed`. Called once before parallel ingestion begins to coordinate state across concurrent source processing.
 - `ingestFromStream(inputStream, sourceId, timezoneOverrideHours, onProgress)` — returns `IngestionStats(channelsIngested, programmesIngested)`. Uses 500-row batch INSERTs with Room `withTransaction`. Commits per-batch (not one giant transaction). Inserts channels with `IGNORE` conflict strategy, programmes with `REPLACE` on unique `(channel_id, start_epoch)`. Yields CPU between batches (`delay(5)` for channels, `delay(100)` for programmes) to avoid starving video playback. Skips programmes whose end time is before yesterday.
 - `ingestFromXtreamEpg(epgByStreamId, streamInfo, providerId)` — ingests EPG data from the Xtream API. Creates/upserts an `EpgSource` with `ingestMethod=XTREAM_API`, clears old data for that source, then batch-inserts.
-- `rebuildFtsAndUpdateState()` — rebuild FTS index and update metadata after all sources processed
+- `rebuildFtsAndUpdateState()` — rebuild FTS index and update metadata after all sources processed. Triggers an update to `EpgPipelineStatsEntity` in `providers.db` with the final run summary.
 - `clearAll()` — saves source configs, destroys DB file (instant regardless of data size), Room recreates schema, restores sources with stats reset
 - `purgeOldProgrammes(cutoffEpoch)` — delete old programmes with FTS rebuild and incremental vacuum
 - `incrementalVacuum()` — reclaims free pages via `PRAGMA incremental_vacuum`
@@ -425,25 +431,38 @@ data class ActiveSourceProgress(val label: String, val phase: String,
                                 val downloadTotalBytes: Long, val channels: Int,
                                 val programmes: Int)
 ```
+### Room Entities
 
-### Room Entities (`core/network/.../xmltv/epgindex/`)
+**Settings Entities (`core/network/.../provider/`)**
 
 ```kotlin
-data class EpgChannelEntity(val xmltvId: String, val displayName: String, val iconUrl: String?)
-data class EpgProgrammeEntity(val id: Long, val channelId: String, val title: String,
-                              val titleLowercase: String, val description: String?,
-                              val category: String?, val startEpoch: Long, val endEpoch: Long,
-                              val sourceId: Long)
-data class EpgProgrammeFts(val title: String)  // FTS4 content table
-data class EpgIndexMetadata(val id: Int, val fileSizeBytes: Long, val fileLastModifiedMs: Long,
-                            val indexedAtMs: Long, val channelCount: Int,
-                            val programmeCount: Int, val timezoneOffsetHours: Int)
 data class EpgSourceEntity(val id: Long, val url: String, val label: String,
                            val timezoneOffsetHours: Int, val addedAtMs: Long,
                            val lastIngestedAtMs: Long, val lastError: String?,
                            val enabled: Boolean, val lastChannels: Int,
                            val lastProgrammes: Int, val lastDownloadBytes: Long,
-                           val ingestMethod: String)
+                           val ingestMethod: String, val lastIngestionDurationMs: Long,
+                           val lastDownloadDurationMs: Long)
+
+data class EpgPipelineStatsEntity(val id: Int = 1, val updatedAtMs: Long,
+                                  val durationMs: Long, val sourcesProcessed: Int,
+                                  val errors: Int, val totalChannels: Int,
+                                  val totalProgrammes: Int)
+```
+
+**Index Entities (`core/network/.../xmltv/epgindex/`)**
+
+```kotlin
+data class EpgChannelEntity(val xmltvId: String, val sourceId: Long, val displayName: String, val iconUrl: String?)
+data class EpgProgrammeEntity(val id: Long, val channelId: String, val title: String,
+                              val titleLowercase: String, val description: String?,
+                              val category: String?, val startEpoch: Long, val endEpoch: Long,
+                              val sourceId: Long)
+```
+data class EpgProgrammeFts(val title: String)  // FTS4 content table
+data class EpgIndexMetadata(val id: Int, val fileSizeBytes: Long, val fileLastModifiedMs: Long,
+                            val indexedAtMs: Long, val channelCount: Int,
+                            val programmeCount: Int, val timezoneOffsetHours: Int)
 data class EpgSearchResultRow(val id: Long, val channelId: String, val title: String,
                               val titleLowercase: String, val description: String?,
                               val category: String?, val startEpoch: Long, val endEpoch: Long,
@@ -479,7 +498,7 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 | File | Type | Description |
 |------|------|-------------|
 | `EpgIndexer.kt` | Singleton | Index builder (streaming + batch transactional) |
-| `EpgIndexDatabase.kt` | Room DB | Database singleton (v8, WAL, with destroy/recreate) |
+| `EpgIndexDatabase.kt` | Room DB | Database singleton (v13, WAL, with destroy/recreate) |
 | `EpgSourceEntity.kt` | Entity | EPG source config (URL, label, tz, enabled, stats, ingestMethod) |
 | `EpgSourceDao.kt` | DAO | CRUD for EPG sources, resetAllIngestionState() |
 | `EpgIndexDao.kt` | DAO | FTS MATCH, LIKE, paged queries |

@@ -17,52 +17,56 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
 fun ControlHintsOverlay(
     onDismiss: () -> Unit,
-    onDontShowAgain: () -> Unit
+    onDontShowAgain: () -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = CinemaAlpha.glass)),
-        contentAlignment = Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(
+                    org.njarasoa.fijerena.core.ui.theme.CinemaBackground
+                        .copy(alpha = CinemaAlpha.glass),
+                ),
+        contentAlignment = Center,
     ) {
         TvGlassPanel(
-            modifier = Modifier
-                .width(TvDimensions.dialogWidthLarge)
-                .padding(Spacing.xxl)
+            modifier =
+                Modifier
+                    .width(TvDimensions.dialogWidthLarge)
+                    .padding(Spacing.xxl),
         ) {
             Column(
-                modifier = Modifier
-                    .padding(Spacing.xxl),
-                verticalArrangement = Arrangement.spacedBy(Spacing.lg)
+                modifier =
+                    Modifier
+                        .padding(Spacing.xxl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
                 // Header
                 Text(
                     text = "🎮 Player Controls",
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
                 )
 
                 // Control hints
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     ControlHint("OK Button", "Show/hide controls")
                     ControlHint("Double-tap OK", "Toggle stats overlay")
@@ -81,20 +85,21 @@ fun ControlHintsOverlay(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Button(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     ) {
                         Text("Got it!")
                     }
                     Button(
                         onClick = onDontShowAgain,
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.colors(
-                            containerColor = CinemaSurfaceVariant
-                        )
+                        colors =
+                            ButtonDefaults.colors(
+                                containerColor = CinemaSurfaceVariant,
+                            ),
                     ) {
                         Text("Don't show again")
                     }
@@ -104,9 +109,9 @@ fun ControlHintsOverlay(
                 Text(
                     text = "This message will auto-dismiss in 7 seconds",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = CinemaAlpha.textDisabled),
+                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -114,28 +119,30 @@ fun ControlHintsOverlay(
 }
 
 @Composable
-private fun ControlHint(control: String, description: String) {
+private fun ControlHint(
+    control: String,
+    description: String,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = control,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.width(TvDimensions.audioTrackSelectorWidth)
+            modifier = Modifier.width(TvDimensions.audioTrackSelectorWidth),
         )
         Text(
             text = "→",
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.White.copy(alpha = CinemaAlpha.textDisabled)
+            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
         )
         Text(
             text = description,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color.White
+            color = CinemaTextPrimary,
         )
     }
 }

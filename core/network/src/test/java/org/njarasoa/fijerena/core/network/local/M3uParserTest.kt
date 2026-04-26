@@ -4,10 +4,10 @@ import org.junit.Test
 import java.io.File
 
 class M3uParserTest {
-
     @Test
     fun testCorrectness() {
-        val content = """
+        val content =
+            """
             #EXTM3U
             #EXTINF:-1 group-title="News",Channel 1
             http://example.com/1
@@ -15,7 +15,7 @@ class M3uParserTest {
             #EXTINF:-1,Channel 2
             #EXTVLCOPT:foo=bar
             http://example.com/2
-        """.trimIndent()
+            """.trimIndent()
 
         val entries = M3uParser.parse(content.reader().buffered()).toList()
 

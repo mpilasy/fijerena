@@ -1,5 +1,99 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Navigation Streamlining & Content Depth
+**Release Date:** 2026-04-22
+
+### Core Navigation Refactor
+- **Direct Entry:** The app now always lands on the Content Type Selection screen upon startup (once a provider is configured). Removed the "restore last browsed category" startup logic to provide a more predictable and cleaner entry point.
+- **Simplified Flow:** Streamlined the transition between content selection and category browsing for a faster "cold start" experience.
+
+### EPG Browser Enhancements
+- **Data Freshness Indicator:** Added a "Data Freshness" status to the EPG Browser header, showing how long ago the index was last updated.
+- **Refresh-Stale Button:** Introduced a contextual "Refresh" button in the EPG Browser that appears when data is older than 24 hours, allowing users to trigger a targeted update without leaving the search interface.
+
+### TV Show & Episode Experience
+- **Single-Press Activation (TV):** Refined the episode selection on TV; a single OK press now initiates playback immediately, reducing friction.
+- **In-Player Episode Navigation:** Added swipe (mobile) and D-pad Left/Right (TV) navigation between episodes directly within the player for TV Shows.
+- **Enhanced Episode Metadata:** Episode titles, synopses, and thumbnails are now more prominent.
+- **TMDB Integration:** Series now fetch per-episode synopses from TMDB when available, providing much richer context than standard IPTV metadata.
+
+### Player & Stability Polish
+- **Buffering Awareness:** Replaced the intrusive stats overlay with a discrete toast notification during excessive buffering events, keeping the focus on the content.
+- **Stats Overlay Pass-through:** Player controls now pass through the stats overlay, allowing for simultaneous diagnostic monitoring and playback control (seeking/switching).
+- **Auto-Refresh Stream List:** Fixed an issue where the category stream list didn't update when switching channels via D-pad Up/Down.
+- **Audio Processing Optimization:** Fine-tuned the audio processing pipeline and media source allocation for lower latency and better stability on mid-range TV hardware.
+
+### UI & Focus Management
+- **Focus Requester Safety:** Added robust error handling for `FocusRequester` on TV to prevent crashes during rapid navigation or screen transitions.
+- **Dialog Readability:** Improved the layout and contrast of player dialogs (Audio/Subtitle/Quality) for better visibility on large screens.
+
+## Version: Static Stats & Stream Specs
+**Release Date:** 2026-03-18
+
+### TV Player Refinements
+- **Static Stats Overlay:** The "Stats for Nerds" is now fixed to the top-right corner. It is completely non-focusable, allowing full D-pad control of the stream (channel switching, seeking) while diagnostics are visible.
+- **Double-OK Dismissal:** Added a convenient double-click OK gesture to hide the stats overlay instantly.
+- **Stream Specs:** Current resolution (e.g., 1080p) and codec (e.g., HEVC) are now displayed in the top-left info panel whenever it appears.
+- **Icon Visibility Fix:** Resolved an issue where control buttons appeared "black on black" when not focused; icons are now correctly white-on-dark.
+
+### Mobile Player Improvements
+- **Status Bar Integration:** All top-aligned player overlays (title, clock, stats, channel toasts) now properly respect the phone's status bar padding, preventing visual overlap with system icons.
+- **Stream Specs:** Ported the resolution and codec information to the mobile player, displayed underneath the stream title.
+
+### Architecture & Stability
+- **Interaction State:** Added `lastOkClickTime` to `PlayerScreenState` for reliable multi-tap gesture detection.
+- **Build & Deploy:** Synchronized debug APK collection and multi-device deployment pipeline.
+
+## Version: History Reliability & VOD Thresholds
+**Release Date:** 2026-03-18
+
+### Watch History & Progress Reporting
+- **Reduced Live TV Delay:** Channels are now added to "Recently Watched" after 10 seconds (was 30s) for better responsiveness.
+- **VOD Percentage Threshold:** Movies and TV Shows now require a minimum of 2% watch progress before being added to history, preventing clutter from accidental clicks.
+- **Reliable Session Termination:** Fixed an issue where Live TV history was lost on app exit by ensuring final session closure and disk commits for all content types.
+- **Real-time UI Updates:** The "Last Watched" player overlay now refreshes immediately once the watch thresholds are met.
+- **Unified Platform Logic:** Synchronized session finalization logic between TV and Mobile players.
+
+## Version: Enhanced Diagnostics & Experimental AI Audio
+**Release Date:** 2026-03-20
+
+### AI Audio Suite (EXPERIMENTAL / WIP)
+- **Clear Voice (Dialogue Boost):** Integrated two-stage DTLN models for speech enhancement. **(Currently non-functional / Under development)**.
+- **Smart Night Mode:** Added real-time dynamics compression and limiting (HAL/APP fallback).
+- **Sony Voice Zoom:** Experimental native integration for Sony Bravia (XR Processor required). **(Status unverified)**.
+- **Latency Guard:** Implemented 25ms inference timing guard and auto-disable safety valve.
+- **Tier Detection:** Enhanced `SearchCapabilityDetector` for `AudioProcessingTier.REALTIME` on NVIDIA Shield and OnePlus 12/12R/13.
+
+### Stats for Nerds & Diagnostics
+- **AI DSP Stats:** Added real-time tracking for AI tier, inference latency (current/avg), frame processing stats (processed vs skipped), and DSP engine status.
+- **Enhanced Overlay:** New sections for DEVICE info and AI AUDIO DSP metrics. Added build time and git hash for precise version tracking.
+- **Quadrant Movement:** Stats overlay can now be moved to any of the 4 screen corners via D-pad on TV.
+
+### Build & Deployment
+- **Automatic APK Collection:** All generated APKs are now automatically collected into the root `build/outputs/apk/` directory after an `assemble` task.
+- **Consistent Naming:** Collected APKs are prefixed with `fijerena-` for easier identification.
+
+---
+
+## Version: AI Semantic Search & EPG Management Restore
+**Release Date:** 2026-03-11
+
+### AI & Semantic Search
+- **AI Module:** Extracted AI logic into a dedicated `:core:ai` module.
+- **Semantic Search Engine:** Implemented conceptual query processing.
+- **Hybrid Search:** Integrated FTS4 + Semantic search strategy in `EpgBrowserViewModel`.
+- **Vector Database Optimization:** Separated vector embeddings into dedicated tables (v7) to prevent cache bloat.
+- **Background Metadata Crawling:** Added `AiVectorizationWorker` for VODs, Series, and Episodes.
+- **AI Settings:** Added AI UI and stats tracking for Mobile and TV platforms.
+
+### EPG Management & Stats
+- **Persistent Pipeline Stats:** Added `EpgPipelineStatsEntity` to `SettingsDatabase` (v5) to track last run summary.
+- **EPG Management Features Restored:** Selective refresh, per-source stats, checkboxes, cleanup files, and purge controls.
+- **Dual-row Status Layout:** Enhanced `EpgStatusCard` to show real-time status and persisted last-run summary.
+- **Fix:** Addressed 'No EPG Data' state issue by syncing indexer state with database contents.
+
+---
+
 ## Version: Parallel EPG Pipeline, Clear Fix & TV Stability
 **Release Date:** 2026-03-01
 

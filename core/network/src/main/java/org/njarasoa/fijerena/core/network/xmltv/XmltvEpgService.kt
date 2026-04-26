@@ -3,9 +3,11 @@ package org.njarasoa.fijerena.core.network.xmltv
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -15,7 +17,7 @@ import org.njarasoa.fijerena.core.player.model.EpgResponse
 
 class XmltvEpgService(
     private val context: Context,
-    private val providerId: Long
+    private val providerId: Long,
 ) {
     companion object {
         private const val TAG = "XmltvEpgService"
@@ -24,15 +26,17 @@ class XmltvEpgService(
         private const val KEY_CACHE_TIMESTAMP = "xmltv_cache_timestamp"
     }
 
-    private val cache: SharedPreferences = context.getSharedPreferences(
-        "xmltv_cache_$providerId",
-        Context.MODE_PRIVATE
-    )
+    private val cache: SharedPreferences =
+        context.getSharedPreferences(
+            "xmltv_cache_$providerId",
+            Context.MODE_PRIVATE,
+        )
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     // In-memory cache — avoid re-deserializing full EPG JSON from SharedPreferences on every call
     private var parsedEpgCache: Map<String, EpgResponse>? = null
@@ -46,15 +50,21 @@ class XmltvEpgService(
         val byIdLower: Map<String, String>,
         val byName: Map<String, String>,
         val byNormalized: Map<String, String>,
-        val normalizedEntries: List<Pair<String, String>>
+        val normalizedEntries: List<Pair<String, String>>,
     )
 
     private suspend fun buildChannelMatchMaps(): ChannelMatchMaps? {
         // Return cached maps if available — avoids full DB scan on every call
         cachedChannelMaps?.let { return it }
 
+        val settingsDb = SettingsDatabase.getInstance(context)
+        val sourceDao = settingsDb.epgSourceDao()
+        val validSources = sourceDao.getEnabledSourcesForSearch(if (providerId != -1L) providerId else null)
+        val sourceIds = validSources.map { it.id }.toSet()
+        if (sourceIds.isEmpty()) return null
+
         val db = EpgIndexDatabase.getInstance(context)
-        val allXmltvChannels = db.epgIndexDao().getAllChannels()
+        val allXmltvChannels = db.epgIndexDao().getAllChannels().filter { it.sourceId in sourceIds }
         if (allXmltvChannels.isEmpty()) return null
 
         val byId = mutableMapOf<String, String>()
@@ -80,7 +90,7 @@ class XmltvEpgService(
 
     private fun matchItems(
         items: List<MediaItem>,
-        maps: ChannelMatchMaps
+        maps: ChannelMatchMaps,
     ): Map<String, String> {
         val matchedIds = mutableMapOf<String, String>()
         for (item in items) {
@@ -96,53 +106,106 @@ class XmltvEpgService(
      * Get EPG data for channels from the SQLite index.
      * Returns empty map if no index is available.
      */
-    suspend fun getEpgForChannels(
-        channels: List<MediaItem>
-    ): Map<String, EpgResponse> = withContext(Dispatchers.IO) {
-        val indexer = EpgIndexer.getInstance(context)
-        if (indexer.state.value !is EpgIndexState.Indexed) {
-            return@withContext emptyMap()
-        }
-
-        val cachedResult = getCachedEpg()
-        if (cachedResult != null) {
-            // Only use cache if ALL requested channels are present in it.
-            // The player calls this with a single channel; a stale cache from a
-            // previous single-channel call would otherwise hide the current one.
-            val allPresent = channels.all { cachedResult.containsKey(it.id) }
-            if (allPresent) {
-                Log.d(TAG, "Returning cached XMLTV EPG for ${cachedResult.size} channels")
-                return@withContext cachedResult
-            }
-            Log.d(TAG, "Cache miss: ${channels.size} requested, ${cachedResult.size} cached")
-        }
-
-        try {
-            val maps = buildChannelMatchMaps() ?: return@withContext emptyMap()
-            val matchedIds = matchItems(channels, maps)
-
-            if (matchedIds.isEmpty()) {
-                Log.d(TAG, "No XMLTV channel matches for ${channels.size} channels")
+    suspend fun getEpgForChannels(channels: List<MediaItem>): Map<String, EpgResponse> =
+        withContext(Dispatchers.IO) {
+            val indexer = EpgIndexer.getInstance(context)
+            if (indexer.state.value !is EpgIndexState.Indexed) {
                 return@withContext emptyMap()
             }
 
-            val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
-            val nowSeconds = System.currentTimeMillis() / 1000
-            val windowStart = nowSeconds - 24 * 3600
-            val windowEnd = nowSeconds + 24 * 3600
-
-            val uniqueXmltvIds = matchedIds.values.distinct()
-            val allProgrammes = uniqueXmltvIds.chunked(500).flatMap { chunk ->
-                dao.getProgrammesForChannels(chunk, windowStart, windowEnd)
+            val cachedResult = getCachedEpg()
+            if (cachedResult != null) {
+                // Only use cache if ALL requested channels are present in it.
+                // The player calls this with a single channel; a stale cache from a
+                // previous single-channel call would otherwise hide the current one.
+                val allPresent = channels.all { cachedResult.containsKey(it.id) }
+                if (allPresent) {
+                    return@withContext cachedResult
+                }
             }
-            val programmesByChannel = allProgrammes.groupBy { it.channelId }
 
-            val result = mutableMapOf<String, EpgResponse>()
-            for ((itemId, xmltvId) in matchedIds) {
-                val progs = programmesByChannel[xmltvId] ?: continue
-                if (progs.isEmpty()) continue
-                result[itemId] = EpgResponse(
-                    listings = progs.map { row ->
+            try {
+                val maps = buildChannelMatchMaps() ?: return@withContext emptyMap()
+                val matchedIds = matchItems(channels, maps)
+
+                if (matchedIds.isEmpty()) {
+                    return@withContext emptyMap()
+                }
+
+                val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
+                val nowSeconds = System.currentTimeMillis() / 1000
+                val windowStart = nowSeconds - 24 * 3600
+                val windowEnd = nowSeconds + 24 * 3600
+
+                val uniqueXmltvIds = matchedIds.values.distinct()
+                val allProgrammes =
+                    uniqueXmltvIds.chunked(500).flatMap { chunk ->
+                        dao.getProgrammesForChannels(chunk, windowStart, windowEnd)
+                    }
+                val programmesByChannel = allProgrammes.groupBy { it.channelId }
+
+                val result = mutableMapOf<String, EpgResponse>()
+                for ((itemId, xmltvId) in matchedIds) {
+                    val progs = programmesByChannel[xmltvId] ?: continue
+                    if (progs.isEmpty()) continue
+                    result[itemId] =
+                        EpgResponse(
+                            listings =
+                                progs.map { row ->
+                                    EpgProgram(
+                                        id = "${row.channelId}_${row.startEpoch}",
+                                        epgId = row.channelId,
+                                        title = row.title,
+                                        start = row.startEpoch.toString(),
+                                        end = row.endEpoch.toString(),
+                                        description = row.description,
+                                        channelId = row.channelId,
+                                    )
+                                },
+                        )
+                }
+
+                // Merge fresh results into existing cache so previous channels aren't lost
+                val merged = (cachedResult ?: emptyMap()) + result
+                cacheEpg(merged)
+                merged
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to query XMLTV EPG from index: ${e.message}", e)
+                emptyMap()
+            }
+        }
+
+    /**
+     * Lightweight now-playing query: returns only the currently airing programme per item.
+     * Uses the same 6-level channel matching but queries only current programmes.
+     */
+    suspend fun getNowPlayingForItems(items: List<MediaItem>): Map<String, EpgProgram> =
+        withContext(Dispatchers.IO) {
+            val indexer = EpgIndexer.getInstance(context)
+            if (indexer.state.value !is EpgIndexState.Indexed) {
+                return@withContext emptyMap()
+            }
+
+            try {
+                val maps = buildChannelMatchMaps() ?: return@withContext emptyMap()
+                val matchedIds = matchItems(items, maps)
+
+                if (matchedIds.isEmpty()) return@withContext emptyMap()
+
+                val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
+                val nowEpoch = System.currentTimeMillis() / 1000
+
+                val uniqueXmltvIds = matchedIds.values.distinct()
+                val nowPlayingRows =
+                    uniqueXmltvIds.chunked(500).flatMap { chunk ->
+                        dao.getNowPlayingForChannels(chunk, nowEpoch)
+                    }
+                val nowPlayingByChannel = nowPlayingRows.associateBy { it.channelId }
+
+                val result = mutableMapOf<String, EpgProgram>()
+                for ((itemId, xmltvId) in matchedIds) {
+                    val row = nowPlayingByChannel[xmltvId] ?: continue
+                    result[itemId] =
                         EpgProgram(
                             id = "${row.channelId}_${row.startEpoch}",
                             epgId = row.channelId,
@@ -150,74 +213,19 @@ class XmltvEpgService(
                             start = row.startEpoch.toString(),
                             end = row.endEpoch.toString(),
                             description = row.description,
-                            channelId = row.channelId
+                            channelId = row.channelId,
                         )
-                    }
-                )
+                }
+
+                result
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to query now-playing from index: ${e.message}", e)
+                emptyMap()
             }
-
-            // Merge fresh results into existing cache so previous channels aren't lost
-            val merged = (cachedResult ?: emptyMap()) + result
-            cacheEpg(merged)
-            Log.d(TAG, "Matched XMLTV EPG for ${result.size} of ${channels.size} channels (cache now ${merged.size})")
-            merged
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to query XMLTV EPG from index: ${e.message}", e)
-            emptyMap()
         }
-    }
-
-    /**
-     * Lightweight now-playing query: returns only the currently airing programme per item.
-     * Uses the same 6-level channel matching but queries only current programmes.
-     */
-    suspend fun getNowPlayingForItems(
-        items: List<MediaItem>
-    ): Map<String, EpgProgram> = withContext(Dispatchers.IO) {
-        val indexer = EpgIndexer.getInstance(context)
-        if (indexer.state.value !is EpgIndexState.Indexed) {
-            return@withContext emptyMap()
-        }
-
-        try {
-            val maps = buildChannelMatchMaps() ?: return@withContext emptyMap()
-            val matchedIds = matchItems(items, maps)
-
-            if (matchedIds.isEmpty()) return@withContext emptyMap()
-
-            val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
-            val nowEpoch = System.currentTimeMillis() / 1000
-
-            val uniqueXmltvIds = matchedIds.values.distinct()
-            val nowPlayingRows = uniqueXmltvIds.chunked(500).flatMap { chunk ->
-                dao.getNowPlayingForChannels(chunk, nowEpoch)
-            }
-            val nowPlayingByChannel = nowPlayingRows.associateBy { it.channelId }
-
-            val result = mutableMapOf<String, EpgProgram>()
-            for ((itemId, xmltvId) in matchedIds) {
-                val row = nowPlayingByChannel[xmltvId] ?: continue
-                result[itemId] = EpgProgram(
-                    id = "${row.channelId}_${row.startEpoch}",
-                    epgId = row.channelId,
-                    title = row.title,
-                    start = row.startEpoch.toString(),
-                    end = row.endEpoch.toString(),
-                    description = row.description,
-                    channelId = row.channelId
-                )
-            }
-
-            Log.d(TAG, "Now-playing from index: ${result.size} of ${items.size} items")
-            result
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to query now-playing from index: ${e.message}", e)
-            emptyMap()
-        }
-    }
 
     fun clearCache() {
-        cache.edit().clear().apply()
+        cache.edit { clear() }
         parsedEpgCache = null
         cachedChannelMaps = null
     }
@@ -248,10 +256,10 @@ class XmltvEpgService(
         try {
             val now = System.currentTimeMillis()
             val serialized = json.encodeToString(data)
-            cache.edit()
-                .putString(KEY_CACHED_EPG, serialized)
-                .putLong(KEY_CACHE_TIMESTAMP, now)
-                .apply()
+            cache.edit {
+                putString(KEY_CACHED_EPG, serialized)
+                    .putLong(KEY_CACHE_TIMESTAMP, now)
+            }
             parsedEpgCache = data
             parsedEpgTimestamp = now
         } catch (e: Exception) {
@@ -274,7 +282,7 @@ class XmltvEpgService(
         byIdLower: Map<String, String>,
         byName: Map<String, String>,
         byNormalized: Map<String, String>,
-        normalizedEntries: List<Pair<String, String>>
+        normalizedEntries: List<Pair<String, String>>,
     ): String? {
         val epgChannelId = item.providerData["epgChannelId"]
 
@@ -320,5 +328,4 @@ class XmltvEpgService(
     }
 
     private fun normalizeName(name: String): String = ChannelNameNormalizer.normalize(name)
-
 }

@@ -5,6 +5,7 @@ package org.njarasoa.fijerena.feature.movie
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,12 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.tv.material3.Icon
+import androidx.tv.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -36,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,15 +52,16 @@ import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -81,7 +82,7 @@ fun MovieDetailsScreen(
     movieName: String,
     categoryId: String,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -126,7 +127,7 @@ fun MovieDetailsScreen(
             onFailure = { e ->
                 error = e.message ?: "Failed to load movie info"
                 isLoading = false
-            }
+            },
         )
 
         // Load resume position
@@ -149,7 +150,7 @@ fun MovieDetailsScreen(
             error != null -> {
                 ErrorScreen(
                     message = error ?: "Unknown error",
-                    onBack = onBack
+                    onBack = onBack,
                 )
             }
             movieDetail != null -> {
@@ -163,7 +164,7 @@ fun MovieDetailsScreen(
                     resumeDurationMs = resumeDurationMs,
                     onPlayMovie = onPlayMovie,
                     onRefresh = { refresh() },
-                    onBack = onBack
+                    onBack = onBack,
                 )
             }
         }
@@ -181,7 +182,7 @@ private fun MovieDetailsContent(
     resumeDurationMs: Long,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onRefresh: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -189,16 +190,17 @@ private fun MovieDetailsContent(
     val extension = movieDetail.extension ?: "mp4"
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val scaledStyles = remember(scale, typography) {
-        object {
-            val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
-            val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-            val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-            val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-            val bodyLarge = typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale))
-            val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+    val scaledStyles =
+        remember(scale, typography) {
+            object {
+                val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
+                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+                val bodyLarge = typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale))
+                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+            }
         }
-    }
 
     // Favorite state
     var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, ContentType.MOVIES)) }
@@ -208,7 +210,10 @@ private fun MovieDetailsContent(
 
     // Request focus on Play/Resume button when screen loads or resume data arrives
     LaunchedEffect(resumePositionMs) {
-        try { playButtonFocusRequester.requestFocus() } catch (_: IllegalStateException) {}
+        try {
+            playButtonFocusRequester.requestFocus()
+        } catch (_: IllegalStateException) {
+        }
     }
 
     // Track refresh state for animation
@@ -218,7 +223,7 @@ private fun MovieDetailsContent(
     val rotation by animateFloatAsState(
         targetValue = targetRotation,
         animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
-        label = "refresh_rotation"
+        label = "refresh_rotation",
     )
 
     LaunchedEffect(isRefreshing) {
@@ -231,30 +236,31 @@ private fun MovieDetailsContent(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .focusable()
-            .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .focusable()
+                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
     ) {
         // Header with back button
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.Top,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                 ) {
                     Text(
                         text = movieDetail.name.ifEmpty { movieName },
                         style = scaledStyles.displaySmall,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     // Favorite button
-                    IconButton(
+                    CinemaIconButton(
                         onClick = {
                             if (isFavorite) {
                                 mediaRepository.removeFavorite(movieId, ContentType.MOVIES)
@@ -263,43 +269,41 @@ private fun MovieDetailsContent(
                             }
                             isFavorite = !isFavorite
                         },
-                        modifier = Modifier
-                            .size(TvDimensions.iconMedium.scaled(scale))
-                            .tvFocusableNoScale()
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
-                            contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
-                            tint = if (isFavorite) CinemaAccent else CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale))
-                        )
-                    }
+                        icon = {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                                tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        }
+                    )
                     // Refresh button
-                    IconButton(
+                    CinemaIconButton(
                         onClick = {
                             isRefreshing = true
                             onRefresh()
                             isRefreshing = false
                         },
                         enabled = !isRefreshing,
-                        modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh movie info",
-                            tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                            modifier = Modifier
-                                .size(TvDimensions.iconSmall.scaled(scale))
-                                .rotate(rotation)
-                        )
-                    }
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Refresh,
+                                contentDescription = "Refresh movie info",
+                                modifier =
+                                    Modifier
+                                        .size(TvDimensions.iconSmall.scaled(scale))
+                                        .rotate(rotation),
+                            )
+                        }
+                    )
                 }
             }
             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
             Text(
                 text = providerName,
                 style = scaledStyles.titleSmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
         }
 
@@ -308,204 +312,217 @@ private fun MovieDetailsContent(
         // Movie content: poster + metadata
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale))
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
         ) {
             // Cover image
             CinemaThumbnail(
                 url = movieDetail.coverUrl,
                 fallbackLetter = movieDetail.name.firstOrNull(),
                 contentType = ThumbnailContentType.MOVIE,
-                modifier = Modifier
-                    .width(TvDimensions.posterWidth.scaled(scale))
-                    .height(TvDimensions.posterHeightLarge.scaled(scale))
+                modifier =
+                    Modifier
+                        .width(TvDimensions.posterWidth.scaled(scale))
+                        .height(TvDimensions.posterHeightLarge.scaled(scale)),
             )
 
             // Metadata in glass panel
             GlassPanel(modifier = Modifier.weight(1f)) {
-            Column(modifier = Modifier.padding(Spacing.lg.scaled(scale))) {
-
-        // Metadata header row: rating | year | duration | ends at
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            movieDetail.metadata?.rating?.let { rating ->
-                Text(
-                    text = "★ $rating",
-                    style = scaledStyles.titleMedium,
-                    color = CinemaAccent
-                )
-            }
-            movieDetail.metadata?.year?.let { year ->
-                Text(
-                    text = "$year",
-                    style = scaledStyles.titleMedium,
-                    color = CinemaTextSecondary
-                )
-            }
-            movieDetail.metadata?.duration?.let { duration ->
-                Text(
-                    text = formatDuration(duration),
-                    style = scaledStyles.titleMedium,
-                    color = CinemaTextSecondary
-                )
-            }
-            // "Ends at" based on remaining duration
-            val endsAtContext = LocalContext.current
-            val endsAtText = remember(movieDetail.metadata?.duration, resumePositionMs) {
-                computeEndsAt(endsAtContext, movieDetail.metadata?.duration, resumePositionMs)
-            }
-            if (endsAtText != null) {
-                Text(
-                    text = "Ends at $endsAtText",
-                    style = scaledStyles.titleMedium,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium)
-                )
-            }
-        }
-
-        // Genre tags
-        movieDetail.metadata?.genre?.let { genre ->
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            Text(
-                text = genre,
-                style = scaledStyles.bodyMedium,
-                color = CinemaAccent
-            )
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-
-        // Play / Resume buttons
-        val hasResume = resumePositionMs > 0L
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (hasResume) {
-                val resumeTimeText = formatMillis(resumePositionMs)
-                CinemaPrimaryButton(
-                    onClick = {
-                        onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
-                    },
-                    text = "▶ Resume from $resumeTimeText",
-                    modifier = Modifier
-                        .focusRequester(playButtonFocusRequester)
-                )
-                CinemaSecondaryButton(
-                    onClick = {
-                        onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true)
-                    },
-                    text = "Start from Beginning"
-                )
-            } else {
-                CinemaPrimaryButton(
-                    onClick = {
-                        onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
-                    },
-                    text = "▶ Play Movie",
-                    modifier = Modifier
-                        .focusRequester(playButtonFocusRequester)
-                )
-            }
-        }
-
-        // Plot/Description
-        movieDetail.metadata?.plot?.let { plot ->
-            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-            Text(
-                text = plot,
-                style = scaledStyles.bodyLarge,
-                color = CinemaTextPrimary,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-        // Cast, Director
-        movieDetail.metadata?.cast?.let { cast ->
-            Text(
-                text = "Cast: $cast",
-                style = scaledStyles.bodySmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-        }
-        movieDetail.metadata?.director?.let { director ->
-            Text(
-                text = "Director: $director",
-                style = scaledStyles.bodySmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
-            )
-            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-        }
-
-        // Technical stream info (Jellyfin-style labeled rows)
-        val hasVideoInfo = movieDetail.videoInfo != null &&
-            (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
-        if (hasVideoInfo || movieDetail.audioTracks.isNotEmpty() || movieDetail.subtitleTracks.isNotEmpty() || movieDetail.extension != null) {
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            movieDetail.videoInfo?.let { video ->
-                val videoText = video.displayTitle ?: run {
-                    val parts = mutableListOf<String>()
-                    video.width?.let { w ->
-                        video.height?.let { h ->
-                            parts.add(resolutionLabel(w, h))
+                Column(modifier = Modifier.padding(Spacing.lg.scaled(scale))) {
+                    // Metadata header row: rating | year | duration | ends at
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        movieDetail.metadata.rating?.let { rating ->
+                            Text(
+                                text = "★ $rating",
+                                style = scaledStyles.titleMedium,
+                                color = CinemaAccent,
+                            )
+                        }
+                        movieDetail.metadata.year?.let { year ->
+                            Text(
+                                text = "$year",
+                                style = scaledStyles.titleMedium,
+                                color = CinemaTextSecondary,
+                            )
+                        }
+                        movieDetail.metadata.duration?.let { duration ->
+                            Text(
+                                text = formatDuration(duration),
+                                style = scaledStyles.titleMedium,
+                                color = CinemaTextSecondary,
+                            )
+                        }
+                        // "Ends at" based on remaining duration
+                        val endsAtContext = LocalContext.current
+                        val endsAtText =
+                            remember(movieDetail.metadata.duration, resumePositionMs) {
+                                computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
+                            }
+                        if (endsAtText != null) {
+                            Text(
+                                text = "Ends at $endsAtText",
+                                style = scaledStyles.titleMedium,
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
+                            )
                         }
                     }
-                    video.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                    video.videoRange?.let { range -> parts.add(range) }
-                    video.width?.let { w ->
-                        video.height?.let { h ->
-                            parts.add("${w}×${h}")
+
+                    // Genre tags
+                    movieDetail.metadata.genre?.let { genre ->
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        Text(
+                            text = genre,
+                            style = scaledStyles.bodyMedium,
+                            color = CinemaAccent,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+
+                    // Play / Resume buttons
+                    val hasResume = resumePositionMs > 0L
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (hasResume) {
+                            val resumeTimeText = formatMillis(resumePositionMs)
+                            CinemaPrimaryButton(
+                                onClick = {
+                                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
+                                },
+                                text = "▶ Resume from $resumeTimeText",
+                                modifier =
+                                    Modifier
+                                        .focusRequester(playButtonFocusRequester),
+                            )
+                            CinemaSecondaryButton(
+                                onClick = {
+                                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true)
+                                },
+                                text = "Start from Beginning",
+                            )
+                        } else {
+                            CinemaPrimaryButton(
+                                onClick = {
+                                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
+                                },
+                                text = "▶ Play Movie",
+                                modifier =
+                                    Modifier
+                                        .focusRequester(playButtonFocusRequester),
+                            )
                         }
                     }
-                    parts.joinToString(" · ")
-                }
-                if (videoText.isNotBlank()) {
-                    TechInfoRow(label = "Video:", value = videoText)
-                }
-            }
-            if (movieDetail.audioTracks.isNotEmpty()) {
-                val audioTexts = movieDetail.audioTracks.mapNotNull { audio ->
-                    val text = audio.displayTitle ?: run {
-                        val parts = mutableListOf<String>()
-                        audio.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
-                        audio.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                        audio.channels?.let { ch -> parts.add(channelLabel(ch)) }
-                        if (audio.isDefault) parts.add("Default")
-                        parts.joinToString(" · ")
+
+                    // Plot/Description
+                    movieDetail.metadata.plot?.let { plot ->
+                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+                        Text(
+                            text = plot,
+                            style = scaledStyles.bodyLarge,
+                            color = CinemaTextPrimary,
+                            maxLines = 6,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
-                    text.ifBlank { null }
-                }
-                if (audioTexts.isNotEmpty()) {
-                    TechInfoRow(label = "Audio:", value = audioTexts.joinToString("\n"))
-                }
-            }
-            if (movieDetail.subtitleTracks.isNotEmpty()) {
-                val subTexts = movieDetail.subtitleTracks.mapNotNull { sub ->
-                    val text = sub.displayTitle ?: run {
-                        val parts = mutableListOf<String>()
-                        sub.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
-                        sub.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                        if (sub.isDefault) parts.add("Default")
-                        parts.joinToString(" · ")
+
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+                    // Cast, Director
+                    movieDetail.metadata.cast?.let { cast ->
+                        Text(
+                            text = "Cast: $cast",
+                            style = scaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     }
-                    text.ifBlank { null }
-                }
-                if (subTexts.isNotEmpty()) {
-                    TechInfoRow(label = "Subtitle:", value = subTexts.joinToString("\n"))
-                }
-            }
-            movieDetail.extension?.let { ext ->
-                TechInfoRow(label = "Container:", value = ext.uppercase())
-            }
-        }
-            } // GlassPanel Column
+                    movieDetail.metadata.director?.let { director ->
+                        Text(
+                            text = "Director: $director",
+                            style = scaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    }
+
+                    // Technical stream info (Jellyfin-style labeled rows)
+                    val hasVideoInfo =
+                        movieDetail.videoInfo != null &&
+                            (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
+                    if (hasVideoInfo ||
+                        movieDetail.audioTracks.isNotEmpty() ||
+                        movieDetail.subtitleTracks.isNotEmpty() ||
+                        movieDetail.extension != null
+                    ) {
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                        movieDetail.videoInfo?.let { video ->
+                            val videoText =
+                                video.displayTitle ?: run {
+                                    val parts = mutableListOf<String>()
+                                    video.width?.let { w ->
+                                        video.height?.let { h ->
+                                            parts.add(resolutionLabel(w, h))
+                                        }
+                                    }
+                                    video.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                                    video.videoRange?.let { range -> parts.add(range) }
+                                    video.width?.let { w ->
+                                        video.height?.let { h ->
+                                            parts.add("$w×$h")
+                                        }
+                                    }
+                                    parts.joinToString(" · ")
+                                }
+                            if (videoText.isNotBlank()) {
+                                TechInfoRow(label = "Video:", value = videoText)
+                            }
+                        }
+                        if (movieDetail.audioTracks.isNotEmpty()) {
+                            val audioTexts =
+                                movieDetail.audioTracks.mapNotNull { audio ->
+                                    val text =
+                                        audio.displayTitle ?: run {
+                                            val parts = mutableListOf<String>()
+                                            audio.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
+                                            audio.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                                            audio.channels?.let { ch -> parts.add(channelLabel(ch)) }
+                                            if (audio.isDefault) parts.add("Default")
+                                            parts.joinToString(" · ")
+                                        }
+                                    text.ifBlank { null }
+                                }
+                            if (audioTexts.isNotEmpty()) {
+                                TechInfoRow(label = "Audio:", value = audioTexts.joinToString("\n"))
+                            }
+                        }
+                        if (movieDetail.subtitleTracks.isNotEmpty()) {
+                            val subTexts =
+                                movieDetail.subtitleTracks.mapNotNull { sub ->
+                                    val text =
+                                        sub.displayTitle ?: run {
+                                            val parts = mutableListOf<String>()
+                                            sub.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
+                                            sub.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                                            if (sub.isDefault) parts.add("Default")
+                                            parts.joinToString(" · ")
+                                        }
+                                    text.ifBlank { null }
+                                }
+                            if (subTexts.isNotEmpty()) {
+                                TechInfoRow(label = "Subtitle:", value = subTexts.joinToString("\n"))
+                            }
+                        }
+                        movieDetail.extension?.let { ext ->
+                            TechInfoRow(label = "Container:", value = ext.uppercase())
+                        }
+                    }
+                } // GlassPanel Column
             } // GlassPanel
         } // Outer Row (poster + metadata)
     }
@@ -516,22 +533,25 @@ private fun LoadingScreen() {
     val scale = LocalUiScale.current
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             CircularProgressIndicator(
                 modifier = Modifier.size(TvDimensions.progressIndicator.scaled(scale)),
-                color = CinemaAccent
+                color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = "Loading movie details...",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = MaterialTheme.typography.titleLarge.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleLarge.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary,
             )
         }
     }
@@ -540,61 +560,76 @@ private fun LoadingScreen() {
 @Composable
 private fun ErrorScreen(
     message: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val scale = LocalUiScale.current
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(Spacing.xl.scaled(scale))
+            modifier = Modifier.padding(Spacing.xl.scaled(scale)),
         ) {
             Text(
                 text = "Error Loading Movie",
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontSize = MaterialTheme.typography.displayMedium.fontSize.scaled(scale)
-                ),
-                color = CinemaError
+                style =
+                    MaterialTheme.typography.displayMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.displayMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaError,
             )
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = MaterialTheme.typography.bodyLarge.fontSize.scaled(scale)
-                ),
-                color = CinemaTextSecondary
+                style =
+                    MaterialTheme.typography.bodyLarge.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodyLarge.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary,
             )
             Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onBack,
-                text = "Back to Movies"
+                text = "Back to Movies",
             )
         }
     }
 }
 
 @Composable
-private fun TechInfoRow(label: String, value: String) {
+private fun TechInfoRow(
+    label: String,
+    value: String,
+) {
     val scale = LocalUiScale.current
     Row(
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.Top,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-            ),
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+            style =
+                MaterialTheme.typography.bodyMedium.copy(
+                    fontSize =
+                        MaterialTheme.typography.bodyMedium.fontSize
+                            .scaled(scale),
+                ),
+            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)
-            ),
-            color = CinemaTextPrimary
+            style =
+                MaterialTheme.typography.bodyMedium.copy(
+                    fontSize =
+                        MaterialTheme.typography.bodyMedium.fontSize
+                            .scaled(scale),
+                ),
+            color = CinemaTextPrimary,
         )
     }
 }
@@ -602,21 +637,23 @@ private fun TechInfoRow(label: String, value: String) {
 /**
  * Returns a human-readable channel layout label (e.g., "5.1", "7.1", "Stereo")
  */
-private fun channelLabel(channels: Int): String {
-    return when (channels) {
+private fun channelLabel(channels: Int): String =
+    when (channels) {
         1 -> "Mono"
         2 -> "Stereo"
         6 -> "5.1"
         8 -> "7.1"
         else -> "${channels}ch"
     }
-}
 
 /**
  * Returns a human-readable resolution label (e.g., "4K", "1080p", "720p")
  */
-private fun resolutionLabel(width: Int, height: Int): String {
-    return when {
+private fun resolutionLabel(
+    width: Int,
+    height: Int,
+): String =
+    when {
         width >= 3840 || height >= 2160 -> "4K"
         width >= 2560 || height >= 1440 -> "1440p"
         width >= 1920 || height >= 1080 -> "1080p"
@@ -624,7 +661,6 @@ private fun resolutionLabel(width: Int, height: Int): String {
         width >= 854 || height >= 480 -> "480p"
         else -> "${height}p"
     }
-}
 
 /**
  * Parses a duration string that can be either raw seconds ("7200") or h:mm:ss / m:ss format ("1:23:45").
@@ -655,7 +691,11 @@ private fun parseDurationToSeconds(duration: String): Long? {
  * Computes "Ends at" time based on duration and optional resume position.
  * Returns formatted time string like "10:30 PM" or null if duration unavailable.
  */
-private fun computeEndsAt(context: android.content.Context, duration: String?, resumePositionMs: Long): String? {
+private fun computeEndsAt(
+    context: android.content.Context,
+    duration: String?,
+    resumePositionMs: Long,
+): String? {
     if (duration == null) return null
     val totalSeconds = parseDurationToSeconds(duration) ?: return null
     if (totalSeconds <= 0) return null
@@ -663,7 +703,8 @@ private fun computeEndsAt(context: android.content.Context, duration: String?, r
     val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
     val calendar = java.util.Calendar.getInstance()
     calendar.add(java.util.Calendar.MILLISECOND, remainingMs.toInt())
-    return org.njarasoa.fijerena.core.player.model.TimeFormat.formatClockTime(context, calendar.time)
+    return org.njarasoa.fijerena.core.player.model.TimeFormat
+        .formatClockTime(context, calendar.time)
 }
 
 /**
@@ -695,3 +736,4 @@ private fun formatDuration(duration: String): String {
         else -> "${seconds}s"
     }
 }
+

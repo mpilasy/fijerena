@@ -12,13 +12,12 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import java.io.File
-import kotlin.system.measureTimeMillis
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import java.io.File
+import kotlin.system.measureTimeMillis
 
 class LocalFileScannerTest {
-
     @Before
     fun setup() {
         mockkStatic(android.provider.DocumentsContract::class)
@@ -43,7 +42,10 @@ class LocalFileScannerTest {
         every { rootUri.path } returns "/media/external/file/123"
 
         // Setup a real temporary directory
-        val tempDir = java.nio.file.Files.createTempDirectory("test_media").toFile()
+        val tempDir =
+            java.nio.file.Files
+                .createTempDirectory("test_media")
+                .toFile()
         val catDir1 = File(tempDir, "cat1").apply { mkdir() }
         File(catDir1, "video1.mp4").createNewFile()
         File(catDir1, "video2.mp4").createNewFile()
@@ -83,13 +85,17 @@ class LocalFileScannerTest {
         every { android.provider.DocumentsContract.getTreeDocumentId(rootUri) } throws IllegalArgumentException("Not a tree uri")
 
         // We shouldn't hit DocumentFile.fromTreeUri because it should resolve, but mock it just in case
-        every { androidx.documentfile.provider.DocumentFile.fromTreeUri(context, rootUri) } returns null
+        every {
+            androidx.documentfile.provider.DocumentFile
+                .fromTreeUri(context, rootUri)
+        } returns null
 
         // Run scanner
         var result: Pair<List<MediaCategory>, List<MediaItem>>? = null
-        val time = measureTimeMillis {
-            result = LocalFileScanner.scanDirectory(context, rootUri)
-        }
+        val time =
+            measureTimeMillis {
+                result = LocalFileScanner.scanDirectory(context, rootUri)
+            }
 
         assertEquals(2, result?.first?.size)
         assertEquals(4, result?.second?.size)

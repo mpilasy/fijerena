@@ -4,7 +4,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,9 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,11 +40,13 @@ import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
+import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -64,13 +65,14 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 // Extracted as a top-level constant to avoid allocating a new Set on every recomposition
-private val VIRTUAL_CATEGORY_IDS = setOf(
-    CategoryViewModel.FAVORITES_CATEGORY_ID,
-    CategoryViewModel.FAVORITE_CATEGORIES_ID,
-    CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
-    CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
-    CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID
-)
+private val VIRTUAL_CATEGORY_IDS =
+    setOf(
+        CategoryViewModel.FAVORITES_CATEGORY_ID,
+        CategoryViewModel.FAVORITE_CATEGORIES_ID,
+        CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
+        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
+        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID,
+    )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -84,12 +86,13 @@ internal fun CategoryList(
     onCategorySelected: (String) -> Unit,
     onRefreshCategories: () -> Unit,
     onCategoryLongPress: (MediaCategory) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     // Single-pass partition instead of two separate filter() calls
-    val (virtualCategories, regularCategories) = remember(categories) {
-        categories.partition { it.id in VIRTUAL_CATEGORY_IDS }
-    }
+    val (virtualCategories, regularCategories) =
+        remember(categories) {
+            categories.partition { it.id in VIRTUAL_CATEGORY_IDS }
+        }
 
     val listState = rememberTvLazyListState()
     val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
@@ -99,12 +102,20 @@ internal fun CategoryList(
         if (selectedCategoryId != null) {
             if (selectedCategoryId in VIRTUAL_CATEGORY_IDS) {
                 // Focus virtual category in sidebar
-                try { focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus() } catch (_: IllegalStateException) {}
+                try {
+                    focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus()
+                } catch (_: IllegalStateException) {
+                }
             } else if (regularCategories.isNotEmpty()) {
                 val selectedIndex = regularCategories.indexOfFirst { it.id == selectedCategoryId }
                 if (selectedIndex != -1) {
                     listState.animateScrollToItem(selectedIndex)
-                    try { focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus() } catch (_: IllegalStateException) {}
+                    try {
+                        focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus()
+                    } catch (
+                        _: IllegalStateException,
+                    ) {
+                    }
                 }
             }
         }
@@ -127,67 +138,72 @@ internal fun CategoryList(
     val rotation by animateFloatAsState(
         targetValue = targetRotation,
         animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
-        label = "refresh_rotation"
+        label = "refresh_rotation",
     )
 
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val scaledTitleLarge = remember(scale, typography) {
-        typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
-    }
+    val scaledTitleLarge =
+        remember(scale, typography) {
+            typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
+        }
 
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.padding(bottom = Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
         ) {
             Text(
                 text = "Categories",
                 style = scaledTitleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            IconButton(
+            CinemaIconButton(
                 onClick = onRefreshCategories,
                 enabled = !categoriesRefreshing,
-                modifier = Modifier.size(Spacing.lg.scaled(scale))
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh categories",
-                    tint = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    modifier = Modifier
-                        .size(TvDimensions.iconSmall.scaled(scale))
-                        .rotate(rotation)
-                )
-            }
+                size = 40.dp,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = "Refresh categories",
+                        tint = CinemaTextPrimary,
+                        modifier =
+                            Modifier
+                                .size(TvDimensions.iconMedium.scaled(scale))
+                                .rotate(rotation),
+                    )
+                }
+            )
         }
 
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    color = CinemaGlassBackground,
-                    shape = RoundedCornerShape(CornerRadius.small)
-                )
-                .border(
-                    width = TvDimensions.borderDefault,
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        colors = listOf(
-                            CinemaGlassBorder,
-                            Color.White.copy(alpha = CinemaAlpha.ghost),
-                            CinemaGlassBorder
-                        )
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = CinemaGlassBackground,
+                        shape = RoundedCornerShape(CornerRadius.small),
+                    ).border(
+                        width = TvDimensions.borderDefault,
+                        brush =
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        CinemaGlassBorder,
+                                        Color.White.copy(alpha = CinemaAlpha.ghost),
+                                        CinemaGlassBorder,
+                                    ),
+                            ),
+                        shape = RoundedCornerShape(CornerRadius.small),
                     ),
-                    shape = RoundedCornerShape(CornerRadius.small)
-                )
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Sticky virtual categories section
                 if (virtualCategories.isNotEmpty()) {
                     Column(
                         modifier = Modifier.padding(Spacing.sm.scaled(scale)),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                     ) {
                         virtualCategories.forEach { category ->
                             CategoryItem(
@@ -196,18 +212,19 @@ internal fun CategoryList(
                                 isFavorite = false,
                                 onClick = { onCategorySelected(category.id) },
                                 onLongPress = {},
-                                focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() }
+                                focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() },
                             )
                         }
                     }
 
                     // Divider between virtual and regular categories
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp.scaled(scale))
-                            .padding(horizontal = Spacing.md.scaled(scale))
-                            .background(CinemaAccent.copy(alpha = CinemaAlpha.tint))
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(2.dp.scaled(scale))
+                                .padding(horizontal = Spacing.md.scaled(scale))
+                                .background(CinemaAccent.copy(alpha = CinemaAlpha.tint)),
                     )
 
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
@@ -218,12 +235,12 @@ internal fun CategoryList(
                     state = listState,
                     contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     items(
                         items = regularCategories,
                         key = { it.id },
-                        contentType = { "category" }
+                        contentType = { "category" },
                     ) { category ->
                         CategoryItem(
                             category = category,
@@ -231,7 +248,7 @@ internal fun CategoryList(
                             isFavorite = category.id in favoriteCategoryIds,
                             onClick = { onCategorySelected(category.id) },
                             onLongPress = { onCategoryLongPress(category) },
-                            focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() }
+                            focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() },
                         )
                     }
                 }
@@ -248,66 +265,75 @@ private fun CategoryItem(
     isFavorite: Boolean = false,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
-    focusRequester: FocusRequester? = null
+    focusRequester: FocusRequester? = null,
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
-    val scaledTitleMedium = remember(scale, typography) {
-        typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-    }
+    val scaledTitleMedium =
+        remember(scale, typography) {
+            typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+        }
 
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .padding(horizontal = Spacing.md.scaled(scale))
-            .fillMaxWidth()
-            .tvLongPress(onLongPress)
-            .then(
-                if (focusRequester != null) {
-                    Modifier.focusRequester(focusRequester)
-                } else {
-                    Modifier
-                }
+        modifier =
+            Modifier
+                .padding(horizontal = Spacing.md.scaled(scale))
+                .fillMaxWidth()
+                .tvLongPress(onLongPress)
+                .then(
+                    if (focusRequester != null) {
+                        Modifier.focusRequester(focusRequester)
+                    } else {
+                        Modifier
+                    },
+                ),
+        colors =
+            CardDefaults.colors(
+                containerColor =
+                    if (isSelected) {
+                        CinemaAccent.copy(alpha = CinemaAlpha.glassBorder)
+                    } else {
+                        CinemaSurface
+                    },
+                contentColor =
+                    if (isSelected) {
+                        CinemaAccent
+                    } else {
+                        CinemaTextPrimary
+                    },
+                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                focusedContentColor = CinemaTextPrimary,
             ),
-        colors = CardDefaults.colors(
-            containerColor = if (isSelected) {
-                CinemaAccent.copy(alpha = CinemaAlpha.glassBorder)
-            } else {
-                CinemaSurface
-            },
-            contentColor = if (isSelected) {
-                CinemaAccent
-            } else {
-                CinemaTextPrimary
-            },
-            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-            focusedContentColor = CinemaTextPrimary
-        ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
-        scale = CardDefaults.scale(
-            scale = TvFocusTokens.defaultScale,
-            focusedScale = TvFocusTokens.focusedScaleContent,
-            pressedScale = TvFocusTokens.pressedScaleSubtle
-        ),
-        glow = CardDefaults.glow(
-            focusedGlow = androidx.tv.material3.Glow(
-                elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                elevation = TvFocusTokens.focusShadowElevation
-            )
-        )
+        scale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    androidx.tv.material3.Glow(
+                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.md.scaled(scale)),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
         ) {
             if (isFavorite) {
                 Text(
                     text = "\u2605",
                     style = scaledTitleMedium,
-                    color = CinemaAccent
+                    color = CinemaAccent,
                 )
             }
             Text(
@@ -315,7 +341,7 @@ private fun CategoryItem(
                 style = scaledTitleMedium,
                 color = CinemaTextPrimary,
                 maxLines = 1,
-                modifier = Modifier.bounceMarquee()
+                modifier = Modifier.bounceMarquee(),
             )
         }
     }

@@ -7,35 +7,38 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
-import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
-import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeDark
-import org.njarasoa.fijerena.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -46,14 +49,18 @@ fun MobileContentTypeSelectionScreen(
     onSettings: () -> Unit = {},
     onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {},
-    onSearch: () -> Unit = {}
+    onSearch: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
     var providerName by remember { mutableStateOf("") }
     var providerType by remember { mutableStateOf("") }
-    var supportedContentTypes by remember { mutableStateOf<Set<String>>(setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS)) }
+    var supportedContentTypes by remember {
+        mutableStateOf<Set<String>>(
+            setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS),
+        )
+    }
     var showProviderPicker by remember { mutableStateOf(false) }
     var allProviders by remember { mutableStateOf<List<ProviderEntity>>(emptyList()) }
     var activeProviderId by remember { mutableStateOf(0L) }
@@ -65,15 +72,20 @@ fun MobileContentTypeSelectionScreen(
     var tvShowsCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var mediaProviderRef by remember { mutableStateOf<org.njarasoa.fijerena.core.player.domain.MediaProvider?>(null) }
     var categoryFilters by remember {
-        mutableStateOf(org.njarasoa.fijerena.core.network.provider.CategoryFilters())
+        mutableStateOf(
+            org.njarasoa.fijerena.core.network.provider
+                .CategoryFilters(),
+        )
     }
 
     // Show EPG Browser button when EPG index has data
-    val hasEpgData = remember {
-        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-            .getInstance(context.applicationContext).state.value is
-            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
-    }
+    val hasEpgData =
+        remember {
+            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+                .getInstance(context.applicationContext)
+                .state.value is
+                org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
+        }
 
     LaunchedEffect(refreshTrigger) {
         // Reset counts so stale values don't linger during provider switch
@@ -128,49 +140,71 @@ fun MobileContentTypeSelectionScreen(
 
     Scaffold(
         topBar = {
-            val displayName = buildString {
-                append(providerName.ifEmpty { "fijerena" })
-                if (appSettings.isDevMode && providerType.isNotEmpty()) {
-                    append(" ($providerType)")
+            val displayName =
+                buildString {
+                    append(providerName.ifEmpty { "fijerena" })
+                    if (appSettings.isDevMode && providerType.isNotEmpty()) {
+                        append(" ($providerType)")
+                    }
                 }
-            }
             TopAppBar(
                 title = {
-                    Text(
-                        text = displayName,
-                        modifier = Modifier.clickable { showProviderPicker = true },
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier =
+                            Modifier
+                                .clickable(role = Role.DropdownList) { showProviderPicker = true }
+                                .semantics {
+                                    contentDescription = "Switch Provider, current provider: $displayName"
+                                }.padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs),
+                    ) {
+                        Text(
+                            text = displayName,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Icon(
+                            imageVector = Icons.Rounded.ArrowDropDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 },
                 actions = {
                     if (hasEpgData) {
-                        IconButton(onClick = onEpgBrowser) {
-                            Icon(Icons.AutoMirrored.Filled.MenuBook, "EPG Browser")
+                        CinemaIconButton(onClick = onEpgBrowser,
+                            icon = {
+                                Icon(Icons.AutoMirrored.Rounded.MenuBook, "EPG Browser", tint = CinemaTextPrimary)
+                            }
+                        )
+                    }
+                    CinemaIconButton(onClick = onSearch,
+                        icon = {
+                            Icon(Icons.Rounded.Search, "Search", tint = CinemaTextPrimary)
                         }
-                    }
-                    IconButton(onClick = onSearch) {
-                        Icon(Icons.Default.Search, "Search")
-                    }
-                    IconButton(onClick = onSettings) {
-                        Icon(Icons.Default.Settings, "Settings")
-                    }
-                }
+                    )
+                    CinemaIconButton(onClick = onSettings,
+                        icon = {
+                            Icon(Icons.Rounded.Settings, "Settings", tint = CinemaTextPrimary)
+                        }
+                    )
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(CinemaSpacing.lg),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(CinemaSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = "Select Content Type",
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = CinemaSpacing.lg)
+                modifier = Modifier.padding(bottom = CinemaSpacing.lg),
             )
 
             val isDevMode = appSettings.isDevMode
@@ -181,7 +215,7 @@ fun MobileContentTypeSelectionScreen(
                     categoryCounts = liveTvCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                    onClick = { onContentTypeSelected(ContentType.LIVE_TV) }
+                    onClick = { onContentTypeSelected(ContentType.LIVE_TV) },
                 )
             }
 
@@ -192,7 +226,7 @@ fun MobileContentTypeSelectionScreen(
                     categoryCounts = moviesCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                    onClick = { onContentTypeSelected(ContentType.MOVIES) }
+                    onClick = { onContentTypeSelected(ContentType.MOVIES) },
                 )
             }
 
@@ -203,7 +237,7 @@ fun MobileContentTypeSelectionScreen(
                     categoryCounts = tvShowsCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                    onClick = { onContentTypeSelected(ContentType.TV_SHOWS) }
+                    onClick = { onContentTypeSelected(ContentType.TV_SHOWS) },
                 )
             }
         }
@@ -217,13 +251,16 @@ fun MobileContentTypeSelectionScreen(
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                 ) {
                     allProviders.forEach { provider ->
                         val isActive = provider.id == activeProviderId
-                        val label = if (appSettings.isDevMode) {
-                            "${provider.name} (${provider.type})"
-                        } else provider.name
+                        val label =
+                            if (appSettings.isDevMode) {
+                                "${provider.name} (${provider.type})"
+                            } else {
+                                provider.name
+                            }
                         Surface(
                             onClick = {
                                 if (!isActive) {
@@ -239,28 +276,31 @@ fun MobileContentTypeSelectionScreen(
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            color = if (isActive)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(CinemaCornerRadius.small)
+                            color =
+                                if (isActive) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                            shape = RoundedCornerShape(CinemaCornerRadius.small),
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(CinemaSpacing.md),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(CinemaSpacing.md),
                                 horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
                                     text = label,
-                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                                 )
                                 if (isActive) {
                                     Text(
                                         text = "Active",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }
@@ -272,7 +312,7 @@ fun MobileContentTypeSelectionScreen(
                 TextButton(onClick = { showProviderPicker = false }) {
                     Text("Close")
                 }
-            }
+            },
         )
     }
 }
@@ -287,42 +327,45 @@ private fun GradientContentCard(
     categoryCounts: Pair<Int, Int>?,
     showTotal: Boolean = false,
     gradientColors: List<androidx.compose.ui.graphics.Color>,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(MobileDimensions.contentTypeCardHeight),
-        shape = RoundedCornerShape(CinemaCornerRadius.large)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(MobileDimensions.contentTypeCardHeight),
+        shape = RoundedCornerShape(CinemaCornerRadius.large),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(colors = gradientColors),
-                    shape = RoundedCornerShape(CinemaCornerRadius.large)
-                ),
-            contentAlignment = Alignment.CenterStart
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.horizontalGradient(colors = gradientColors),
+                        shape = RoundedCornerShape(CinemaCornerRadius.large),
+                    ),
+            contentAlignment = Alignment.CenterStart,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(CinemaSpacing.lg),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(CinemaSpacing.lg),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleLarge,
                         color = CinemaTextPrimary,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium)
+                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                     )
                 }
                 if (categoryCounts != null) {
@@ -332,13 +375,13 @@ private fun GradientContentCard(
                             text = "$filtered",
                             style = MaterialTheme.typography.headlineMedium,
                             color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         )
                         if (showTotal && filtered < total) {
                             Text(
                                 text = "of $total",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow)
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
                             )
                         }
                     }

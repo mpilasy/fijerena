@@ -1,11 +1,12 @@
 # AGENTS.md - AI Agent Guide for Fijerena
 
-Welcome to the Fijerena project. This document serves as the master guide for AI agents working on this codebase. It consolidates critical architectural rules, coding standards, development workflows, and detailed feature implementations.
+This is the single source of truth for AI agents working on this codebase. All LLM tools (Claude, Gemini, Codex, Copilot, Cursor, etc.) should read this file. Vendor-specific entry points (CLAUDE.md, GEMINI.md, CODEX.md, .cursorrules, .github/copilot-instructions.md) all redirect here.
 
 ---
 
-## 📖 Project Overview
-Fijerena is a premium, native Android media player built with Kotlin and Jetpack Compose. It supports multiple content providers (Xtream IPTV, Jellyfin, SMB, Local files, Remote M3U) and provides a unified, "10-foot UI" experience for TV devices and a touch-optimized UI for mobile.
+## Project Overview
+
+Fijerena is a premium, native Android media player built with Kotlin and Jetpack Compose. It supports multiple content providers (Xtream IPTV, Jellyfin, SMB, Local files, Remote M3U) and provides a unified experience for TV devices (10-foot UI with D-pad navigation) and mobile (touch-optimized, portrait-locked).
 
 **Target Devices:** NVIDIA Shield, Chromecast with Google TV, Sony Bravia (Android TV), and Android Mobile (Android 11+).
 
@@ -13,22 +14,32 @@ Fijerena is a premium, native Android media player built with Kotlin and Jetpack
 
 ---
 
-## 🛠️ Tech Stack & Dependencies
-Refer to `gradle/libs.versions.toml` for the authoritative versions.
-- **Language:** Kotlin 2.3.0
-- **Build System:** Gradle 9.2.1
-- **UI:** 100% Jetpack Compose (2024.12.01 BOM). `androidx.tv.material3` for TV screens.
-- **Media Player:** Media3 ExoPlayer (1.7.1). Optimized for 4K/HDR hardware acceleration.
-- **Networking:** Ktor (3.4.0) with OkHttp engine & kotlinx.serialization (JSON).
-- **Navigation:** Adaptive Navigation Suite / Navigation Compose with `kotlinx.serialization`.
-- **Database:** Room (2.8.4) with FTS4 search.
-- **Image Loading:** Coil (3.1.0).
-- **SMB Support:** `smbj` (0.13.0).
-- **Theming:** Dynamic runtime switching via `CinemaThemeHolder` + `CinemaThemePalette`.
+## Tech Stack
+
+Refer to `gradle/libs.versions.toml` for authoritative versions.
+
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| Language | Kotlin | 2.3.0 |
+| Build System | Gradle | 9.2.1 |
+| UI Framework | Jetpack Compose | 2024.12.01 BOM |
+| Material Design | Material 3 | 1.4.0 |
+| TV Components | androidx.tv.material3 | 1.0.0-alpha10 |
+| Video Player | Media3 (ExoPlayer) | 1.7.1 |
+| Networking | Ktor (OkHttp engine) | 3.4.0 |
+| Serialization | kotlinx.serialization | 1.8.0 |
+| Coroutines | kotlinx.coroutines | 1.7.3 |
+| Database | Room (with FTS4) | 2.8.4 |
+| SQLite | Bundled (FTS5 capable) | 3.45.0 |
+| Image Loading | Coil | 3.1.0 |
+| Navigation | Navigation Compose | 2.8.5 |
+| SMB Client | smbj | 0.13.0 |
+| Theming | CinemaThemeHolder + CinemaThemePalette | — |
 
 ---
 
-## 🏗️ Module Architecture
+## Module Architecture
+
 ```
 fijerena/
 ├── mobile/          # Portrait-locked, touch-optimized app
@@ -39,19 +50,27 @@ fijerena/
 │   ├── navigation/  # Type-safe Screen definitions (shared)
 │   ├── ui/          # Shared ViewModels, design tokens, and components
 │   └── data/        # Shared session and auth data
+├── docs/            # In-depth technical documentation (see below)
+├── gradle/          # Version catalog (libs.versions.toml)
+└── build/           # APK outputs collected here after assembleDebug
 ```
 
-### ⚠️ Critical Architectural Constraints
+### Critical Architectural Constraints
+
 1. **No Circular Dependencies:** `core:player` **must not** depend on `core:network`. If the player needs network settings, it reads directly from `SharedPreferences`.
 2. **Unified Domain:** All provider-specific data must be mapped to unified domain models in `core:player/domain/` before reaching the UI.
-3. **String IDs:** All media and category IDs must be `String` (not `Int`) to support diverse provider formats (UUIDs, paths, etc.).
+3. **String IDs:** All media and category IDs must be `String` (not `Int`) to support diverse provider formats (UUIDs, paths, numeric IDs).
+4. **Dependency Injection:** Always use `AppContainer` (in `core:ui`) to obtain repository singletons (`MediaRepository`, `ProviderRepository`). Never manually instantiate repositories in ViewModels.
+5. **Async Initialization:** ViewModels must initialize repository dependencies asynchronously to prevent UI thread blocking during screen composition.
 
 ---
 
-## 🎨 UI & Coding Standards
+## UI & Coding Standards
 
 ### 1. STRICT: No Hardcoded UI Values
+
 Every color, dimension, spacing, and animation duration **must** come from design token constants. Never use raw literals like `16.dp` or `Color.White`.
+
 - **Shared Tokens (core/ui):** `CinemaColors`, `CinemaAlpha`, `CinemaAnimation`, `CinemaCornerRadius`, `CinemaSpacing`.
 - **TV Tokens:** `TvDimensions`, `TvFocusTokens`.
 - **Mobile Tokens:** `MobileDimensions`.
@@ -59,69 +78,91 @@ Every color, dimension, spacing, and animation duration **must** come from desig
 - **Colors:** Prefer `MaterialTheme.colorScheme.*` or platform re-exports.
 
 ### 2. D-Pad & Focus Management (TV)
+
 Every interactive `@Composable` must be D-pad navigable.
 - Use `focusRestorer()` and `focusable()`.
 - Implement clear focus indicators: Scale 1.0 -> 1.1 (200ms tween), 2dp blue border, 8dp glow. See `FocusModifiers.kt`.
 - Avoid complex animations on mid-range TV chipsets (e.g., Sony Bravia).
 
 ### 3. Safe Margins (TV Overscan)
+
 Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - `Spacing.tvSafeMarginHorizontal`, `Spacing.tvSafeMarginVertical`.
 - UI should remain 5% away from screen edges.
 
 ### 4. Typography
+
 - 13-style Roboto scale (48-14sp).
 - **Rule:** All body text **>=18sp** for TV readability.
 - UI Scaling (0.4f - 1.0f) is applied globally via `LocalDensity` in `MainActivity.kt`.
 
+### 5. Coding Style
+
+- **Single return statement** per function only.
+- **OS:** Ubuntu Linux development environment.
+- **Lint:** Run `./gradlew ktlintCheck` to verify style. Use `./gradlew ktlintFormat` to auto-fix.
+
 ---
 
-## 🎬 Player Implementation
+## Player Implementation
 
 ### Configuration & Source
+
 - **Source Creation:** Always use `StreamingMediaSourceFactory.createMediaSource()`.
 - **Formats:** HLS (`.m3u8`), DASH (`.mpd`), MPEG-TS (`.ts`, `.mpeg`).
 - **Buffer Strategy:** `AdaptiveLoadControl` dynamically swaps buffer profiles (Live TV vs VOD, WiFi vs Cellular) at runtime.
 - **Codec Priority:** Optimized per device (Shield: AV1 -> HEVC -> AVC; Sony: HEVC -> AVC).
 
 ### Controls & Navigation
+
 - **State Management:** `PlaybackViewModel` delegates to `StreamingPlaybackService` (a `MediaSessionService`).
 - **OK / Center Key:** **Shows controls only** — it never pauses or resumes playback.
+- **Double-OK:** Dismisses the stats overlay if visible.
 - **Pause:** Explicit via pause button, `KEYCODE_MEDIA_PLAY_PAUSE`, or mobile double-tap (VOD only).
-- **Seeking:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
+- **Seeking / Navigation:** 
+  - **VOD:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
+  - **TV Shows:** D-pad Left/Right (TV) or Swipe (Mobile) to skip between episodes in-player.
 - **Channel Overlays (Live TV):** D-pad Left/Right (TV) or Swipe (Mobile) open channel overlays. Use `ChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` and `GlassPanel(backgroundAlpha=0.5f)`.
 - **Mobile Gestures:** `detectTapGestures` (tap=controls, double-tap=pause/resume VOD). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
 
 ### Features
-- **Audio/Subtitle/Quality:** In-playback track switching dialogs.
-- **EPG in Player:** Shows current/next programme. Fetched via `getEpgBulkForItems()`.
-- **Stats Overlay:** Double-tap OK. Shows codecs, network stats, dropped frames, etc.
-- **Auto-resume:** Saves position every 5s; resume if 2-95% progress.
+
+- **Stats Overlay:** Double-tap OK. Comprehensive diagnostics (codecs, network speed, dropped frames, build info). Repositionable to 4 corners via D-pad. Non-focusable on TV.
+- **Stream Info Overlay:** Top-left panel showing resolution and codec underneath the title.
+- **Auto-resume:** Saves position every 10s (Live) or based on progress (VOD); resumes if 2-95% progress.
+- **Watch History Rules:**
+  - **Live TV:** Added to history after **10 seconds** of continuous playback.
+  - **VOD (Movies/Series):** Added to history only after reaching a **2% watch threshold**.
+  - **Session Finalization:** `loaderViewModel.stopPlayback()` MUST be called when exiting the player or switching streams to ensure final progress is reported and history is flushed to disk.
 
 ---
 
-## 📡 EPG & Indexing System
-- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently, and ingestion into the DB is parallelized (2 workers) via an `UNLIMITED` Channel queue. Tasks are submitted through `RefreshQueue`.
-- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 8) using FTS4. The `ingest_method` column tracks how each source was ingested.
+## EPG & Indexing System
+
+- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently (Semaphore-gated: 3 on mobile, 2 on TV), and ingestion into the DB is parallelized (2 workers) via an `UNLIMITED` Channel queue. Tasks are submitted through `RefreshQueue`.
+- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 13) using FTS4. The `ingest_method` column tracks how each source was ingested.
 - **Search:** Two-tier strategy: SQLite **FTS4 MATCH** (primary) -> **LIKE** (fallback).
 - **Timezone:** Per-source `timezoneOffsetHours` override applied at parse time.
-- **State Machine:** `MultiSourceState` sealed interface: `Idle` -> `Processing` -> `Completed`/`Error`, plus `Clearing` state for clear-all operations. Per-source progress tracked via `ActiveSourceProgress(label, phase, channels, programmes)`.
+- **State Machine:** `MultiSourceState` sealed interface: `Idle` -> `Processing` -> `Completed`/`Error`, plus `Clearing` state. Per-source progress tracked via `ActiveSourceProgress(label, phase, channels, programmes)`.
+- **Persistent Stats:** Pipeline completion triggers an update to `EpgPipelineStatsEntity` in `providers.db` (version 5).
 - **Clear All Data:** Uses DB `destroy()` + `getInstance()` (recreate) instead of `DELETE FROM` — critical for performance on large databases (4M+ rows). Cancel in-flight work via `RefreshQueue.cancelAll()`.
 - **ViewModel Resilience:** `EpgManagementViewModel` uses a `db()` function (always calls `EpgIndexDatabase.getInstance()`) and `_dbGeneration` StateFlow counter. After DB destroy/recreate, bumping the generation causes `flatMapLatest` to re-subscribe all Room Flows to the new DB instance.
 - **Management:** Multi-source EPG management in `Screen.EpgManagement`.
 
 ---
 
-## 🔄 App Navigation & Features
+## App Navigation & Features
 
 ### Flow
-1. **Startup:** Auto-navigates based on provider/saved state.
+
+1. **Startup:** Always lands on the Content Type Selection screen if a provider is configured; otherwise, navigates to Settings.
 2. **Selection:** Content Type -> Category Grid -> Details (VOD) -> Player.
 3. **Navigation IDs:** Always use `String` for IDs.
 
 ### Features
+
 - **Search:**
-  - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows. Accessible via search button on the Content Type Selection screen.
+  - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows from the Content Type Selection screen.
   - **Collapsible Groups:** Results grouped by source with collapsible headers (saved via `rememberSaveable`).
   - **Xtream:** Two-phase parallel search with multi-word matching.
   - **Jellyfin:** Server-side search.
@@ -131,9 +172,22 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ---
 
-## 🔄 Development Workflow
+## Multi-Provider Support
+
+| Provider | Live TV | Movies | TV Shows | EPG | Search | Progress Sync |
+|----------|---------|--------|----------|-----|--------|---------------|
+| **Xtream** | Yes | Yes | Yes | Yes | Client-side | No |
+| **Jellyfin** | No | Yes | Yes | No | Server-side | Yes |
+| **SMB** | No | Yes | No | No | Filename | No |
+| **Local** | M3U only | Yes | No | No | Filename | No |
+| **Remote M3U** | Yes | No | No | No | No | No |
+
+---
+
+## Development Workflow
 
 ### Build & Install
+
 ```bash
 ./gradlew assembleDebug              # Build both targets
 ./gradlew :tv:installDebug            # Install to TV (requires adb connect)
@@ -141,72 +195,104 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 ```
 
 ### Quality Control
+
 ```bash
+./gradlew ktlintCheck                 # Check code style
+./gradlew ktlintFormat                # Auto-format code
 ./gradlew lintDebug                   # Run Android Lint
 ./gradlew check                       # Run all tests and lint
 ```
 
+### APK Outputs
+
+All generated APKs are automatically collected into the root `build/outputs/apk/` directory with a `fijerena-` prefix:
+- `build/outputs/apk/fijerena-mobile-debug.apk`
+- `build/outputs/apk/fijerena-tv-debug.apk`
+
+### Deployment
+
+TV and Mobile share the same `applicationId` (`org.njarasoa.fijerena`). Use `adb -s <device_id>` when multiple devices are connected.
+
 ### Device-Specific Tips
+
 - **NVIDIA Shield:** Best for 4K/HDR and AV1 testing.
 - **Sony Bravia:** Test for UI performance and overscan compliance.
 - **Emulator:** HEVC testing is limited; Jellyfin content will trigger transcoding.
 
 ---
 
-## 🤖 Agent Workflow Rules
-1. **Start** every session by reading project documentation and this file.
-2. **Verify** every UI change: "Is this D-pad friendly?"
+## Agent Workflow Rules
+
+1. **Read first.** Start every session by reading this file and relevant docs.
+2. **Verify every UI change:** "Is this D-pad friendly?"
 3. **Never** hardcode dimensions or colors.
-4. **Use design tokens** for visual attributes.
-5. **Fulfill the Directive:** Only perform modifications when explicitly instructed.
-6. **Lint Check:** Run `./gradlew lintDebug` after changes to verify no regressions.
-7. **Build Verification:** Jules' jobs should not be considered done unless a build was run and succeeded.
+4. **Use design tokens** for all visual attributes.
+5. **Only modify when explicitly instructed.** Do not make speculative changes.
+6. **Lint check:** Run `./gradlew lintDebug` after changes to verify no regressions.
+7. **Build verification:** Changes are not done until a build succeeds.
 
-# Agent Instructions
+### Investigation Strategy
 
-## Model Routing Rules
-- [Claude] For boilerplate/docs: Use `haiku`.
-- [Gemini] For boilerplate/docs: Use `flash`.
-- [Universal] For architectural changes: Use `pro` / `sonnet`.
-
-## Shared Coding Standards (Universal)
-- **Style:** Single return statement only.
-- **OS:** Ubuntu Linux.
+When investigating issues:
+1. Read this file and relevant docs in `docs/` for technical context.
+2. Verify module dependencies in `build.gradle.kts` files.
+3. Run `./gradlew ktlintCheck` to ensure style compliance before suggesting changes.
+4. Prefer reproducing bugs on a connected device via `adb` logs.
 
 ---
 
-## 📓 Performance & Bug Journal
+## In-Depth Documentation
 
-### 2026-02-27 - SharedPreferences JSON deserialization is the #1 hotspot
-**Learning:** `getFavoriteCategoryItems()`, `getFavoriteItems()`, and `getFavoriteShowItems()` all deserialize JSON from SharedPreferences on every call with no in-memory cache. Watch history already has this pattern (`cachedWatchHistory`). The favorite category check is called per-chip inside `LazyRow items {}` in `MobileCategoryListScreen`, meaning 500+ deserializations per recompose for large providers.
-**Action:** Apply the same in-memory cache + dirty-flag + debounced-write pattern used for watch history to all favorites lists.
+For deep-dives, see the `docs/` directory:
 
-### 2026-02-27 - Category reference items treated as streams on long-press
-**Learning:** Virtual categories ("Favorite Categories", "Recent Categories") render their entries as `MediaItem` objects with `providerData["isCategoryRef"] = "true"`. The `onItemLongPress` / `onStreamLongPress` handlers in both mobile (`MobileCategoryListScreen`) and TV (`TwoColumnLayout`) were blindly creating `Stream` favorite targets for ALL items, including these category references. This caused long-pressing a category in these lists to call `addFavorite` (stream) instead of `addFavoriteCategory`.
-**Action:** Always check `providerData["isCategoryRef"]` before deciding the favorite target type in any item long-press handler.
+| Document | Contents |
+|----------|----------|
+| [docs/design.md](docs/design.md) | Full system design: module graph, domain model, player system, EPG architecture, theme system, screen inventory |
+| [docs/FEATURES.md](docs/FEATURES.md) | Comprehensive feature reference with API details |
+| [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Complete database schema for all Room DBs and SharedPreferences |
+| [docs/epg_guide.md](docs/epg_guide.md) | EPG pipeline implementation guide with data models and file inventory |
+| [docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md) | Type-safe navigation system, screen definitions, and flow diagrams |
+| [docs/ui-theme-options.md](docs/ui-theme-options.md) | Theme system design decisions and options |
+| [docs/MOBILE_RUN_GUIDE.md](docs/MOBILE_RUN_GUIDE.md) | Mobile build, install, and run guide |
+| [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) | Version history and changelog |
+| [TODO.md](TODO.md) | Known issues, open investigations, and optimization status |
 
-### 2026-02-27 - Watch history lookups are O(n×m) in refreshPerItemData
-**Learning:** `MediaRepository.getPlaybackPosition()` does a linear scan of watch history per call. `refreshPerItemData()` calls it in a loop over every stream (hundreds), making it O(n×m) on the main thread with synchronized locks.
-**Action:** Always check for linear scans inside loops first when profiling data layers. Build a Map index for O(1) lookups.
+---
 
-### 2026-02-27 - contentHash self-referential hash bug in XtreamContentManager
-**Learning:** `XtreamContentManager` computes `base.hashCode()` on a data class that includes the `contentHash` field (defaulting to 0). The stored entity has a non-zero `contentHash`, so `hashCode()` never matches on re-fetch — causing spurious DB re-inserts on every sync.
-**Action:** When using `hashCode()` for change detection on data classes, exclude the hash field itself from computation.
+## Performance & Bug Journal
 
-### 2026-03-01 - Clear All EPG Data takes 10+ minutes on Shield TV with DELETE FROM
-**Learning:** The EPG index database can grow to 4M+ rows (channels + programmes across multiple sources). Using `DELETE FROM` to clear all data on an NVIDIA Shield TV took over 10 minutes due to SQLite journaling overhead on the low-IOPS flash storage. The UI appeared frozen with no feedback.
-**Action:** Replace row-level deletion with DB `destroy()` + `getInstance()` (recreate). This deletes the database file and creates a fresh empty one — completing in under a second regardless of database size. The ViewModel must handle the DB instance changing: use a `db()` function that always calls `getInstance()` and a `_dbGeneration` counter to re-subscribe Room Flows after recreation. Always prefer file-level operations over row-level bulk deletes for large databases on constrained hardware.
+Hard-won lessons from production debugging. Read these before making changes in related areas.
 
-### 2026-03-01 - EPG pipeline lacked feedback between download completion and ingestion start
-**Learning:** The Channel-based producer-consumer pipeline decouples downloads from ingestion. A large source could finish downloading (progress reaches 100%) but then sit silently in the queue waiting for the single ingestion consumer to drain earlier sources. Users saw the progress jump to 100% and then nothing — appearing frozen.
-**Action:** Add an explicit `AwaitingIngestion` phase emitted immediately after a source is sent to the ingestion channel and before the consumer picks it up. Display downloaded bytes in the UI during both the `Downloading` and `AwaitingIngestion` phases so the user understands the source is queued and not stalled.
+### SharedPreferences JSON deserialization is the #1 hotspot
+**Context:** `getFavoriteCategoryItems()`, `getFavoriteItems()`, and `getFavoriteShowItems()` all deserialize JSON from SharedPreferences on every call with no in-memory cache. Called per-chip inside `LazyRow items {}` — 500+ deserializations per recompose for large providers.
+**Fix:** Apply in-memory cache + dirty-flag + debounced-write pattern (same as `cachedWatchHistory`).
 
-### 2026-03-01 - Compose recomposition hotspots from un-hoisted allocations
-**Learning:** Several recurring patterns caused unnecessary allocations and recompositions:
-1. `collectAsState()` instead of `collectAsStateWithLifecycle()` kept flows active when the app was backgrounded, causing redundant recompositions on return.
-2. `Color.copy()` called inside `GlassPanel` on every recompose allocated a new Color object each frame.
-3. Unnecessary `.toList()` call in `EpgIndexer` batch insert converted a sequence that was already iterable.
-4. `System.currentTimeMillis()` and `Date()` called inside composable bodies (not remembered) recalculated on every recompose.
-5. `Brush.verticalGradient(...)`, `ButtonDefaults.colors()`, and `FilterChipDefaults.filterChipColors()` allocated inside composables instead of being hoisted outside.
-6. `AppSettings` deserialized inside the `while(true)` loop in `EpgFileManager`, causing repeated SharedPreferences JSON parsing on every EPG refresh cycle.
-**Action:** Always hoist allocations that don't depend on recomposition-variable state to `remember {}` blocks or to the composable's outer scope. Prefer `collectAsStateWithLifecycle()` for all Flow collection in Composables. Move SharedPreferences reads outside tight loops — treat deserialization as expensive even for small payloads.
+### Watch history lookups are O(n*m) in refreshPerItemData
+**Context:** `MediaRepository.getPlaybackPosition()` does a linear scan of watch history per call. `refreshPerItemData()` calls it in a loop over every stream.
+**Fix:** Build a Map index for O(1) lookups. Always check for linear scans inside loops when profiling data layers.
+
+### contentHash self-referential hash bug in XtreamContentManager
+**Context:** `hashCode()` on a data class that includes the `contentHash` field (defaulting to 0). The stored entity has a non-zero `contentHash`, so `hashCode()` never matches — causing spurious DB re-inserts on every sync.
+**Fix:** Exclude the hash field itself from `hashCode()` computation.
+
+### Clear All EPG Data takes 10+ minutes with DELETE FROM
+**Context:** 4M+ rows on NVIDIA Shield with low-IOPS flash storage.
+**Fix:** Replace row-level deletion with DB `destroy()` + `getInstance()` (recreate). Use `db()` function + `_dbGeneration` counter to re-subscribe Room Flows after recreation.
+
+### EPG pipeline lacked feedback between download and ingestion
+**Context:** Channel-based producer-consumer pipeline decouples downloads from ingestion. Large source finishes downloading but sits silently queued.
+**Fix:** Add explicit `AwaitingIngestion` phase emitted after source is sent to the ingestion channel.
+
+### Compose recomposition hotspots from un-hoisted allocations
+**Patterns to avoid:**
+1. `collectAsState()` instead of `collectAsStateWithLifecycle()` — keeps flows active when backgrounded.
+2. `Color.copy()` called inside composables — allocates every frame.
+3. `System.currentTimeMillis()` / `Date()` inside composable bodies without `remember {}`.
+4. `Brush.verticalGradient()`, `ButtonDefaults.colors()`, `FilterChipDefaults.filterChipColors()` allocated inside composables instead of hoisted.
+5. `AppSettings` deserialized inside tight loops (e.g., `while(true)` in `EpgFileManager`).
+
+**Rule:** Hoist allocations that don't depend on recomposition state to `remember {}` or outer scope. Prefer `collectAsStateWithLifecycle()`. Treat SharedPreferences deserialization as expensive.
+
+### Category references treated as streams on long-press
+**Context:** Virtual categories render entries as `MediaItem` with `providerData["isCategoryRef"] = "true"`. Long-press handlers were creating `Stream` favorite targets for ALL items.
+**Fix:** Always check `providerData["isCategoryRef"]` before deciding the favorite target type.

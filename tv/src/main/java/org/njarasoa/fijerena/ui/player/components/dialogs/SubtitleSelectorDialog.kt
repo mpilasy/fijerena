@@ -29,9 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,7 +42,6 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
-import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -52,13 +51,14 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
+import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
 fun SubtitleSelectorDialog(
     viewModel: PlaybackViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val subtitleTracks = remember { viewModel.getSubtitleTracks() }
     var selectedIndex by remember { mutableStateOf(subtitleTracks.indexOfFirst { it.isSelected }.coerceAtLeast(-1)) }
@@ -76,68 +76,82 @@ fun SubtitleSelectorDialog(
     BackHandler { onDismiss() }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+        contentAlignment = Alignment.Center,
     ) {
         TvGlassPanel(
-            modifier = Modifier
-                .width(TvDimensions.dialogWidth)
-                .heightIn(max = screenHeight * 0.8f)
-                .padding(Spacing.xxl)
+            modifier =
+                Modifier
+                    .width(TvDimensions.dialogWidth)
+                    .heightIn(max = screenHeight * 0.8f)
+                    .padding(Spacing.xxl),
         ) {
             Column(
-                modifier = Modifier
-                    .padding(Spacing.xxl)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                modifier =
+                    Modifier
+                        .padding(Spacing.xxl)
+                        .verticalScroll(rememberScrollState())
+                        .focusProperties { exit = { FocusRequester.Cancel } },
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 // Header
                 Text(
                     text = "Select Subtitles",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
 
-                val defaultColors = ButtonDefaults.colors(
-                    containerColor = CinemaSurfaceVariant,
-                    contentColor = CinemaTextPrimary,
-                    focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                    focusedContentColor = CinemaTextPrimary
-                )
-                val selectedColors = ButtonDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint),
-                    contentColor = CinemaTextPrimary,
-                    focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                    focusedContentColor = CinemaTextPrimary
-                )
-                val focusedBorder = ButtonDefaults.border(
-                    focusedBorder = Border(
-                        border = BorderStroke(
-                            width = TvDimensions.borderFocused,
-                            color = MaterialTheme.colorScheme.primary
-                        ),
-                        shape = RoundedCornerShape(CinemaCornerRadius.small)
+                val defaultColors =
+                    ButtonDefaults.colors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary,
+                        focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                        focusedContentColor = CinemaTextPrimary,
                     )
-                )
-                val selectedBorder = ButtonDefaults.border(
-                    border = Border(
-                        border = BorderStroke(
-                            width = TvDimensions.borderFocused,
-                            color = MaterialTheme.colorScheme.primary
-                        ),
-                        shape = RoundedCornerShape(CinemaCornerRadius.small)
-                    ),
-                    focusedBorder = Border(
-                        border = BorderStroke(
-                            width = TvDimensions.borderFocused,
-                            color = MaterialTheme.colorScheme.primary
-                        ),
-                        shape = RoundedCornerShape(CinemaCornerRadius.small)
+                val selectedColors =
+                    ButtonDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint),
+                        contentColor = CinemaTextPrimary,
+                        focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
+                        focusedContentColor = CinemaTextPrimary,
                     )
-                )
+                val focusedBorder =
+                    ButtonDefaults.border(
+                        focusedBorder =
+                            Border(
+                                border =
+                                    BorderStroke(
+                                        width = TvDimensions.borderFocused,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    ),
+                                shape = RoundedCornerShape(CinemaCornerRadius.small),
+                            ),
+                    )
+                val selectedBorder =
+                    ButtonDefaults.border(
+                        border =
+                            Border(
+                                border =
+                                    BorderStroke(
+                                        width = TvDimensions.borderFocused,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    ),
+                                shape = RoundedCornerShape(CinemaCornerRadius.small),
+                            ),
+                        focusedBorder =
+                            Border(
+                                border =
+                                    BorderStroke(
+                                        width = TvDimensions.borderFocused,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    ),
+                                shape = RoundedCornerShape(CinemaCornerRadius.small),
+                            ),
+                    )
 
                 // "Off" option
                 val isOffSelected = selectedIndex == -1
@@ -147,34 +161,36 @@ fun SubtitleSelectorDialog(
                         viewModel.disableSubtitles()
                         onDismiss()
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequesters[0])
-                        .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
-                                selectedIndex = -1
-                            }
-                        },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequesters[0])
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    selectedIndex = -1
+                                }
+                            },
                     colors = if (isOffSelected) selectedColors else defaultColors,
-                    border = if (isOffSelected) selectedBorder else focusedBorder
+                    border = if (isOffSelected) selectedBorder else focusedBorder,
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(Spacing.xs),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(Spacing.xs),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = "Off",
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = if (isOffSelected) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (isOffSelected) FontWeight.Bold else FontWeight.Normal,
                         )
                         if (isOffSelected) {
                             Text(
                                 text = "Active",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -185,7 +201,7 @@ fun SubtitleSelectorDialog(
                         text = "No subtitle tracks available",
                         style = MaterialTheme.typography.bodyLarge,
                         color = CinemaTextSecondary,
-                        modifier = Modifier.padding(vertical = Spacing.md)
+                        modifier = Modifier.padding(vertical = Spacing.md),
                     )
                 } else {
                     // Track list
@@ -197,45 +213,47 @@ fun SubtitleSelectorDialog(
                                 viewModel.selectSubtitleTrack(track.groupIndex, track.trackIndex)
                                 onDismiss()
                             },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequesters[index + 1]) // +1 because "Off" is first
-                                .onFocusChanged { focusState ->
-                                    if (focusState.isFocused) {
-                                        selectedIndex = index
-                                    }
-                                },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequesters[index + 1]) // +1 because "Off" is first
+                                    .onFocusChanged { focusState ->
+                                        if (focusState.isFocused) {
+                                            selectedIndex = index
+                                        }
+                                    },
                             colors = if (isSelected) selectedColors else defaultColors,
-                            border = if (isSelected) selectedBorder else focusedBorder
+                            border = if (isSelected) selectedBorder else focusedBorder,
                         ) {
                             Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(Spacing.xs),
-                                verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(Spacing.xs),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
                                         text = track.label,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     )
                                     if (track.isSelected) {
                                         Text(
                                             text = "Active",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
+                                            color = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                 }
                                 Text(
                                     text = track.mimeType.substringAfterLast("/").uppercase(),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextTertiary
+                                    color = CinemaTextTertiary,
                                 )
                             }
                         }
@@ -247,9 +265,10 @@ fun SubtitleSelectorDialog(
                 // Close button
                 Button(
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .align(CenterHorizontally)
-                        .width(TvDimensions.selectionListWidth)
+                    modifier =
+                        Modifier
+                            .align(CenterHorizontally)
+                            .width(TvDimensions.selectionListWidth),
                 ) {
                     Text("Cancel")
                 }
@@ -260,7 +279,7 @@ fun SubtitleSelectorDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

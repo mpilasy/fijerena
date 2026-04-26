@@ -28,5 +28,8 @@ data class ProviderEntity(
     val providerSettings: String = "{}",
     val createdAt: Long = System.currentTimeMillis(),
     val lastUsedAt: Long = System.currentTimeMillis(),
-    val isActive: Boolean = false
+    val isActive: Boolean = false,
+    val lastSyncedAtMs: Long = 0,
+    val lastSyncDurationMs: Long = 0,
+    val lastSyncError: String? = null,
 )

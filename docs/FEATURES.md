@@ -31,6 +31,8 @@ Movie details screen with plot, cast, director, genre, rating, year, duration, v
 
 ### TV Shows
 Season accordion with episode list. Auto-expands the next unwatched season. Episode thumbnails, per-episode metadata, resume support. Series-level metadata with season fallback.
+- **TMDB Enrichment:** Fetches per-episode synopses from TMDB when available, ensuring high-quality metadata even when IPTV providers offer minimal descriptions.
+- **Episode Navigation:** Swipe (mobile) or D-pad Left/Right (TV) to jump between episodes directly from the player.
 
 ### EPG Guide (TV Guide)
 Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. 30-minute cache TTL.
@@ -64,6 +66,8 @@ Filename matching against scanned file list.
 Standalone programme title search across all indexed XMLTV data.
 
 - Access: Content Type Selection → book icon (visible when EPG index is ready)
+- **Freshness Tracking:** Displays last index update time in the header.
+- **Smart Refresh:** Shows a "Refresh Data" button when indexed programmes are older than 24 hours.
 - Results grouped by start date (Today, Tomorrow, weekday name, or "EEEE, MMM d" for later dates), then by programme within each date
 - Time window: −1 to +6 days from now, max 500 results per query
 - SQLite FTS4 MATCH for fast search (<100ms); falls back to LIKE if FTS returns empty
@@ -147,40 +151,73 @@ Before playback, the app POSTs a `DeviceProfile` to Jellyfin's `/Items/{id}/Play
 
 | Profile | Min | Max | Notes |
 |---------|-----|-----|-------|
-| WiFi Live TV | 2s | 5s | Low-latency |
-| WiFi VOD | 15s | 50s | Large pre-buffer |
-| Cellular Live TV | 10s | 40s | (multiplier-scaled) |
-| Cellular VOD | 75s | 150s | (multiplier-scaled) |
+| WiFi Live TV | 2s | 8s | Low-latency |
+| WiFi VOD | 5s | 50s | Fast startup |
+| Cellular Live TV | 50s | 50s | (multiplier-scaled) |
+| Cellular VOD | 40s | 100s | (multiplier-scaled) |
 
 Cellular multipliers are tunable 0.5×–3.0× in dev mode via Settings → Cellular Buffer Settings.
 
 ### In-Player EPG (Live TV)
-Current programme title, time range, and progress bar shown in stream info overlay. "Up Next" programme shown below. Fetched on stream start and channel switch. Degrades gracefully if no EPG data.
+Current programme title, time range, progress bar, and **video resolution/codec** shown in stream info overlay. "Up Next" programme shown below. Fetched on stream start and channel switch. Degrades gracefully if no EPG data.
 
 ### Stats for Nerds
-Double-tap OK (TV) or tap stats button (mobile) to show overlay. Repositionable to 4 corners on TV.
+Double-tap OK (TV) or tap stats button (mobile) to **dismiss** the overlay. Fixed to the top-right corner on TV and non-focusable to allow concurrent stream control (inputs pass through to the player).
+
+### Buffering Awareness
+Instead of showing the stats overlay automatically on buffering, the app now shows a discrete "High Buffering" toast when excessive buffering is detected, ensuring minimal distraction from the content while keeping the user informed of network conditions.
 
 **VIDEO:** Codec, Resolution, Frame Rate, Bitrate
 **AUDIO:** Codec, Sample Rate, Channels, Bitrate
 **NETWORK:** Speed, Measured Bandwidth, Buffer health, Buffered position, Rebuffer count/duration, ABR quality switches
 **PLAYBACK:** Position, Duration
-**PERFORMANCE:** Dropped frames (color-coded: <0.5% green, <2% yellow, ≥2% red)
+**PERFORMANCE:** Dropped frames (color-coded: <0.5% green, <2% yellow, ≥2% red), Drop Rate
+**DEVICE:** Model, Android API Level, AI Tier (REALTIME/BASIC), Build time, Git hash
+**AI AUDIO DSP:**
+- **Night Mode**: Status (ON/OFF), Engine (HAL/APP)
+- **Clear Voice**: Status (ON/OFF), Strength %, Slow-device auto-disable status
+- **AI Latency**: Current and average inference time in milliseconds
+- **AI Frames**: Count of processed vs. skipped frames (due to latency guard)
+- **Voice Zoom**: Status (Sony Bravia only)
 **STREAM:** Type (Live/VOD), Retries, Uptime, URL
 
 Mobile stats overlay: dismissible only via X button.
+
+---
+
+## AI Audio Suite (EXPERIMENTAL / WIP)
+
+Exclusive to PREMIUM tier devices (NVIDIA Shield, OnePlus 12/12R/13, high-end Sony Bravia).
+
+### Clear Voice (Dialogue Enhancement) - [UNDER DEVELOPMENT]
+**Current Status: NON-FUNCTIONAL.** 
+The implementation uses a two-stage DTLN (Dual-signal Transformation LSTM Network) model to isolate and boost speech.
+- **Experimental Stage**: Integrated into the pipeline but currently disabled or failing to process audio correctly.
+- **Planned Features**: Real-time GPU/NPU inference, 25ms latency guard, and auto-disable safety valve.
+
+### Smart Night Mode
+Real-time dynamic range compression and limiting.
+- **HAL Integration**: Prefers system-level DynamicsProcessing.
+- **APP Fallback**: Internal DSP implementation.
+
+### Sony Voice Zoom - [EXPERIMENTAL]
+**Current Status: Status unverified.** 
+Planned native integration with Sony Bravia's hardware "Voice Zoom" feature (requires compatible XR processor).
+
+---
 
 ### Track Selection
 In-playback dialogs for audio track, subtitle track, and video quality. D-pad navigable on TV.
 
 ### Auto-Resume
-Position saved every 5 seconds. On re-open, resumes if progress is 2–95%. Resume prompt with "Continue" / "Start Over".
+Position saved every 10 seconds (Live TV) or based on progress (VOD). On re-open, resumes if progress is 2–95%. Resume prompt with "Continue" / "Start Over".
 
 ### Controls
 
 **TV (D-pad remote):**
 - **OK** = show/hide controls (never pauses playback)
-- **Double-OK** = toggle stats overlay
-- **Back** = exit player
+- **Double-OK** = dismiss stats overlay (if visible)
+- **Back** = dismiss stats (if visible) or exit player
 - **D-pad Up/Down** = switch channel (Live TV only)
 - **D-pad Left** = open category channel overlay (Live TV); if last-watched overlay is open, closes it instead
 - **D-pad Right** = open last-watched channel overlay (Live TV); if category overlay is open, closes it instead
@@ -214,7 +251,7 @@ Appear alongside provider categories in the category list:
 |----------|---------------|-------------|
 | **Continue Watching** | Movies, TV Shows | Items with 2–95% progress, most recent first |
 | **Favorites** | All | Starred items, configurable max size (10–500) |
-| **Last Watched** | All | Chronological history, configurable size (1–100) |
+| **Last Watched** | All | Chronological history (Live: 10s delay; VOD: 2% threshold), configurable size (1–100) |
 | **Recent Categories** | All | Recently browsed categories (max 20, deduplicated) |
 
 Favorites and Last Watched are per-provider. Continue Watching is derived from saved progress.

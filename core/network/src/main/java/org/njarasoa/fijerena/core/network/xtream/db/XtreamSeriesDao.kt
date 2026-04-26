@@ -2,20 +2,26 @@ package org.njarasoa.fijerena.core.network.xtream.db
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.MapInfo
+import androidx.room.MapColumn
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 @Dao
 interface XtreamSeriesDao {
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId ORDER BY name ASC")
-    fun getSeriesByCategory(providerId: Long, categoryId: String): List<XtreamSeriesEntity>
+    fun getSeriesByCategory(
+        providerId: Long,
+        categoryId: String,
+    ): List<XtreamSeriesEntity>
 
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId ORDER BY name ASC")
     fun getAllSeries(providerId: Long): List<XtreamSeriesEntity>
 
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND seriesId = :seriesId LIMIT 1")
-    fun getSeriesById(providerId: Long, seriesId: Int): XtreamSeriesEntity?
+    fun getSeriesById(
+        providerId: Long,
+        seriesId: Int,
+    ): XtreamSeriesEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(series: List<XtreamSeriesEntity>)
@@ -26,18 +32,33 @@ interface XtreamSeriesDao {
     @Query("SELECT seriesId FROM xtream_series WHERE providerId = :providerId")
     fun getSeriesIds(providerId: Long): List<Int>
 
-    @MapInfo(keyColumn = "seriesId", valueColumn = "contentHash")
     @Query("SELECT seriesId, contentHash FROM xtream_series WHERE providerId = :providerId")
-    fun getSeriesHashes(providerId: Long): Map<Int, Int>
+    fun getSeriesHashes(
+        providerId: Long,
+    ): Map<
+        @MapColumn(columnName = "seriesId")
+        Int,
+        @MapColumn(columnName = "contentHash")
+        Int,
+    >
 
     @Query("DELETE FROM xtream_series WHERE providerId = :providerId AND seriesId IN (:ids)")
-    fun deleteByIds(providerId: Long, ids: List<Int>)
+    fun deleteByIds(
+        providerId: Long,
+        ids: List<Int>,
+    )
 
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND name LIKE '%' || :query || '%'")
-    fun searchSeries(providerId: Long, query: String): List<XtreamSeriesEntity>
+    fun searchSeries(
+        providerId: Long,
+        query: String,
+    ): List<XtreamSeriesEntity>
 
     @Query("DELETE FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId")
-    fun deleteByCategoryId(providerId: Long, categoryId: String)
+    fun deleteByCategoryId(
+        providerId: Long,
+        categoryId: String,
+    )
 
     @Query("SELECT COUNT(*) FROM xtream_series WHERE providerId = :providerId")
     fun countSeries(providerId: Long): Int

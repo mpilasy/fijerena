@@ -15,9 +15,8 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
  */
 class LoginViewModelFactory(
     private val context: Context,
-    private val providerId: Long = 0L
+    private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
-
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {

@@ -15,12 +15,11 @@ fijerena/
   mobile/          Android app target (phone/tablet)
   tv/              Android app target (Android TV / set-top boxes)
   core/
-    player/        Media3 player, domain models, playback service
-    network/       Provider implementations, API clients, EPG, Room databases
-    navigation/    Type-safe navigation routes (Screen sealed interface)
-    ui/            Shared theme tokens, components, ViewModels
-    data/          Auth ViewModel (legacy)
-```
+  player/        Media3 player, domain models, playback service
+  network/       Provider implementations, API clients, EPG, Room databases
+  navigation/    Type-safe navigation routes (Screen sealed interface)
+  ui/            Shared theme tokens, components, ViewModels
+  data/          Auth ViewModel (legacy)```
 
 ### Dependency Graph
 
@@ -90,11 +89,11 @@ RemoteM3uMediaProvider           -- remote M3U URL fetching + parsing
 
 | Store | Purpose | Location |
 |-------|---------|----------|
-| `providers.db` (Room v3) | Provider configurations (name, URL, type, config JSON, active flag) | `ProviderEntity` |
+| `providers.db` (Room v5) | Provider configurations (name, URL, type, config JSON, active flag), EPG sources, pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
 | EncryptedSharedPreferences | Per-provider passwords (keyed by provider ID) | `provider_password_{id}` |
 | `xtream_cache_{id}` SharedPreferences | Per-provider Xtream category/item cache | JSON blobs |
 | `app_settings` SharedPreferences | Global settings (theme, dev mode, buffer multipliers) | `AppSettings` |
-| `epg_index.db` (Room v8) | EPG programme index with FTS4 search | See EPG section |
+| `epg_index.db` (Room v13) | EPG programme index with FTS4 search | See EPG section |
 
 ---
 
@@ -135,9 +134,9 @@ Buffers swap dynamically at runtime via `AdaptiveLoadControl` without restarting
 
 | Profile | Min Buffer | Max Buffer | Playback Buffer | Rebuffer |
 |---------|-----------|-----------|----------------|---------|
-| WiFi Live TV | 2s | 5s | 250ms | 500ms |
-| WiFi VOD | 15s | 50s | 2.5s | 5s |
-| Cellular Live TV | 12s | 30s | 3s | 4s |
+| WiFi Live TV | 2s | 8s | 500ms | 500ms |
+| WiFi VOD | 5s | 50s | 1s | 2s |
+| Cellular Live TV | 50s | 50s | 2.5s | 5s |
 | Cellular VOD | 40s | 100s | 8s | 10s |
 
 Cellular buffers support a user-configurable multiplier (0.5x - 3.0x) persisted in SharedPreferences.
@@ -244,17 +243,17 @@ epg_index.db
     -> EpgManagementViewModel -> EpgManagementScreen
 ```
 
-### Database Schema (`epg_index.db`, Room v8)
+### Database Schema (`epg_index.db`, Room v13)
 
 **Tables:**
 
 | Table | Purpose |
 |-------|---------|
-| `epg_channel` | Channel ID, display name, icon URL |
-| `epg_programme` | Programme listings with time ranges, 7 indices for query performance |
+| `epg_channel` | Channel ID + source ID (composite PK), display name, icon URL |
+| `epg_programme` | Programme listings with time ranges, 8 indices for query performance |
 | `epg_programme_fts` | FTS4 virtual table for full-text search on programme titles |
 | `epg_index_metadata` | Index stats (channel count, programme count, timestamps) |
-| `epg_source` | Multi-source configuration (URL, label, timezone override, status) |
+| `epg_source` | Multi-source configuration (URL, label, timezone override, status) — stored in `providers.db` |
 
 **Key indices on `epg_programme`:**
 - `idx_programme_start` - start epoch
@@ -262,8 +261,9 @@ epg_index.db
 - `idx_programme_time_range` - composite (start, end)
 - `idx_programme_channel` - channel ID
 - `idx_programme_title_lower` - lowercase title for LIKE queries
-- `idx_programme_dedup` - unique (channel_id, start_epoch) prevents duplicates
+- `idx_programme_dedup` - unique (channel_id, source_id, start_epoch) prevents duplicates
 - `idx_programme_source` - source ID for per-source operations
+- `idx_programme_channel_source` - composite (channel_id, source_id) for per-source channel queries
 
 ### Ingestion Pipeline
 
@@ -274,7 +274,7 @@ Channel-based producer-consumer architecture:
 3. `XmltvParser` performs streaming XML parse with 128KB buffers
 4. `EpgIndexer` does 500-row batch INSERTs wrapped in Room `withTransaction`
 5. Date filter: programmes ending before yesterday (current time - 24h) are skipped during ingestion
-6. Append-only: uses REPLACE on unique (channel_id, start_epoch) index so the database stays searchable during sync
+6. Append-only: uses REPLACE on unique (channel_id, source_id, start_epoch) index so the database stays searchable during sync
 7. Temp files deleted immediately after ingestion
 8. Mobile background sync via WorkManager `EpgSyncWorker` (24h periodic)
 9. Source deletion cleans up associated programmes via `deleteBySourceId()`
@@ -428,12 +428,12 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 
 ### TV Player (`tv/ui/player/PlayerScreen.kt`)
 
-- D-pad key handling: OK = show controls, Double-OK = stats overlay, Back = exit
+- D-pad key handling: OK = show controls, Double-OK = dismiss stats overlay (if visible), Back = dismiss stats or exit
 - Channel switching: D-pad up/down (Live TV only, disabled for VOD)
 - Controls overlay: TvLazyRow of buttons (Play/Pause, Audio, Subtitle, Quality, Stats, Favorite)
-- Stream info display: title, EPG current/next programme, progress bar. Uses `basicMarquee()` for long titles.
+- Stream info display: title, **resolution/codec info**, EPG current/next programme, progress bar. Uses `basicMarquee()` for long titles.
 - Channel Overlays: Slide-in panels (Category/Last Watched) are 25% screen width. Channel names use `basicMarquee()`.
-- Stats overlay: repositionable (4 corners via D-pad), two-column layout
+- Stats overlay: static at top-right corner, non-focusable (allows background stream control)
 - Auto-hide: controls after 15s, stream info after 3s
 
 ### Mobile Player (`mobile/feature/player/MobilePlayerScreen.kt`)
@@ -441,8 +441,9 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 - Touch to show/hide controls
 - Swipe up/down for channel switching (Live TV)
 - Slider-based seek bar for VOD
-- GlassPanel-based controls overlay with scrollable button row
-- Stats overlay: dismissible only via X button (not background tap)
+- GlassPanel-based controls overlay with scrollable button row; **respects status bar padding**
+- Stream info display: title and **resolution/codec info** (top-left)
+- Stats overlay: dismissible only via X button (not background tap); **respects status bar padding**
 - Orientation: unlocked to sensor during playback, portrait on exit
 
 ### Stats for Nerds Overlay
