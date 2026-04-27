@@ -76,7 +76,6 @@ fun PlayerScreen(
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
-    val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
 
     // Capture delegated properties into local variables for stable smart casting
     val currentPs = playbackState
@@ -101,7 +100,7 @@ fun PlayerScreen(
                 .then(
                     // Only make the player box focusable when controls are not visible
                     // Stats overlay is now non-focusable and survives channel switches
-                    if (!state.showControls && !isInPipMode) {
+                    if (!state.showControls) {
                         Modifier
                             .focusRequester(state.focusRequester)
                             .focusable()
@@ -109,7 +108,6 @@ fun PlayerScreen(
                         Modifier
                     },
                 ).onKeyEvent { keyEvent ->
-                    if (isInPipMode) return@onKeyEvent false
                     handlePlayerKeyEvent(
                         keyEvent = keyEvent,
                         state = state,
@@ -158,10 +156,10 @@ fun PlayerScreen(
         ) {
             when (val ps = currentPs) {
                 PlaybackState.Idle -> { /* Silent - no UI flash before stream loads */ }
-                PlaybackState.Buffering -> if (!isInPipMode) BufferingContent()
-                is PlaybackState.Ended -> if (!isInPipMode) EndedContent(onBack)
+                PlaybackState.Buffering -> BufferingContent()
+                is PlaybackState.Ended -> EndedContent(onBack)
                 is PlaybackState.Error ->
-                    if (!isInPipMode) ErrorContent(
+                    ErrorContent(
                         error = ps,
                         onRetry = { viewModel.playStream(currentMeta) },
                         onBack = onBack,
@@ -173,7 +171,7 @@ fun PlayerScreen(
         // Stats overlay (double-click to show)
         // Visible whenever showStats is true, regardless of playbackState (survives channel switches)
         AnimatedVisibility(
-            visible = !isInPipMode && state.showStats,
+            visible = state.showStats,
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
@@ -189,7 +187,7 @@ fun PlayerScreen(
 
         // Modern unified controls overlay (mobile-style)
         AnimatedVisibility(
-            visible = !isInPipMode && (state.showControls || state.showStreamInfo),
+            visible = state.showControls || state.showStreamInfo,
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
@@ -214,7 +212,7 @@ fun PlayerScreen(
         }
 
         // Audio track selector dialog
-        if (!isInPipMode && state.showAudioTrackSelector) {
+        if (state.showAudioTrackSelector) {
             AudioTrackSelectorDialog(
                 viewModel = viewModel,
                 onDismiss = { state.showAudioTrackSelector = false },
@@ -222,7 +220,7 @@ fun PlayerScreen(
         }
 
         // Subtitle selector dialog
-        if (!isInPipMode && state.showSubtitleSelector) {
+        if (state.showSubtitleSelector) {
             SubtitleSelectorDialog(
                 viewModel = viewModel,
                 onDismiss = { state.showSubtitleSelector = false },
@@ -230,7 +228,7 @@ fun PlayerScreen(
         }
 
         // Quality selector dialog
-        if (!isInPipMode && state.showQualitySelector) {
+        if (state.showQualitySelector) {
             QualitySelectorDialog(
                 viewModel = viewModel,
                 onDismiss = { state.showQualitySelector = false },
@@ -238,7 +236,7 @@ fun PlayerScreen(
         }
 
         // Chapter selector dialog
-        if (!isInPipMode && state.showChapterSelector) {
+        if (state.showChapterSelector) {
             ChapterSelectorDialog(
                 viewModel = viewModel,
                 onDismiss = { state.showChapterSelector = false },
@@ -247,7 +245,7 @@ fun PlayerScreen(
 
         // Autonomous top-of-hour clock
         AnimatedVisibility(
-            visible = !isInPipMode && state.showTopOfHourClock && !state.showControls && !state.showStreamInfo && !state.showStats,
+            visible = state.showTopOfHourClock && !state.showControls && !state.showStreamInfo && !state.showStats,
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
@@ -277,7 +275,7 @@ fun PlayerScreen(
         }
 
         // Control hints for first-time users
-        if (!isInPipMode && state.showControlHints && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)) {
+        if (state.showControlHints && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)) {
             ControlHintsOverlay(
                 onDismiss = {
                     state.dismissControlHints()
@@ -290,7 +288,7 @@ fun PlayerScreen(
 
         // Category streams overlay — slides in from the left
         AnimatedVisibility(
-            visible = !isInPipMode && state.showCategoryOverlay,
+            visible = state.showCategoryOverlay,
             enter = slideInHorizontally { -it },
             exit = slideOutHorizontally { -it },
         ) {
@@ -309,7 +307,7 @@ fun PlayerScreen(
 
         // Last watched overlay — slides in from the right
         AnimatedVisibility(
-            visible = !isInPipMode && state.showLastWatchedOverlay,
+            visible = state.showLastWatchedOverlay,
             enter = slideInHorizontally { it },
             exit = slideOutHorizontally { it },
         ) {
