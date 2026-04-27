@@ -50,6 +50,7 @@ class JellyfinApiService(
                 append("DeviceId=\"$deviceId\", ")
                 append("Version=\"1.0.0\"")
                 accessToken?.let { append(", Token=\"$it\"") }
+                userId?.let { append(", UserId=\"$it\"") }
             }
 
     private val client =
@@ -71,6 +72,7 @@ class JellyfinApiService(
                 val h = authHeader
                 request.headers["Authorization"] = h
                 request.headers["X-Emby-Authorization"] = h
+                accessToken?.let { request.headers["X-Emby-Token"] = it }
                 execute(request)
             }
         }
@@ -103,7 +105,13 @@ class JellyfinApiService(
                 client
                     .post("$serverUrl/Users/AuthenticateByName") {
                         contentType(ContentType.Application.Json)
-                        setBody(JellyfinAuthBody(username = username, password = password))
+                        setBody(
+                            buildJsonObject {
+                                put("Username", username)
+                                put("Password", password)
+                                put("Pw", password)
+                            },
+                        )
                     }.body<JellyfinAuthResponse>()
             accessToken = response.accessToken
             userId = response.user.id
