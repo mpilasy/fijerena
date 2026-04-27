@@ -14,6 +14,8 @@ class FijerenaApplication :
     SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
+        // Initialize network module for robust DNS resolution
+        NetworkModule.init(this)
         // Initialize EPG management
         EpgFileManager.getInstance(this).initialize()
         // Initialize Provider Content sync
