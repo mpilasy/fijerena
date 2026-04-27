@@ -27,7 +27,7 @@ class XmltvSearchService(
 
     companion object {
         private const val TAG = "XmltvSearchService"
-        private const val FTS_TIMEOUT_MS = 5_000L
+        private const val FTS_TIMEOUT_MS = 10_000L
 
         // Pre-compiled regex — avoid recompiling on every search call
         private val WHITESPACE_REGEX = Regex("\\s+")
@@ -150,9 +150,8 @@ class XmltvSearchService(
                 }
 
             if (rows == null) {
-                Log.w(TAG, "FTS query timed out or failed — triggering background rebuild")
-                indexer.markFtsStale()
-                triggerBackgroundFtsRebuild()
+                Log.w(TAG, "FTS query timed out after $FTS_TIMEOUT_MS ms for query: $query")
+                // Don't trigger rebuild on timeout — it makes things slower
             } else if (rows.isNotEmpty()) {
                 return rowsToSearchResult(rows, searchedFromIndex = true)
             } else {
@@ -169,9 +168,7 @@ class XmltvSearchService(
                             null
                         }
                     if (andRows == null) {
-                        Log.w(TAG, "FTS AND query timed out — triggering background rebuild")
-                        indexer.markFtsStale()
-                        triggerBackgroundFtsRebuild()
+                        Log.w(TAG, "FTS AND query timed out after $FTS_TIMEOUT_MS ms for query: $query")
                     } else if (andRows.isNotEmpty()) {
                         return rowsToSearchResult(andRows, searchedFromIndex = true)
                     }
