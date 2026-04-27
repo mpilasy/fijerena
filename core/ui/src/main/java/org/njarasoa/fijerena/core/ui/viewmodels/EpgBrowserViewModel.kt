@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -115,6 +116,15 @@ class EpgBrowserViewModel(
     private val _epgSearchHistory = MutableStateFlow<List<String>>(emptyList())
     val epgSearchHistory: StateFlow<List<String>> = _epgSearchHistory.asStateFlow()
 
+    private val _epgSettings = MutableStateFlow(
+        EpgManagementViewModel.EpgSettings(
+            autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
+            epgRefreshTime = appSettings.epgRefreshTime,
+            epgRefreshInterval = appSettings.epgRefreshInterval,
+        )
+    )
+    val epgSettings: StateFlow<EpgManagementViewModel.EpgSettings> = _epgSettings.asStateFlow()
+
     private val _sourceLabels = MutableStateFlow<Map<Long, String>>(emptyMap())
     val sourceLabels: StateFlow<Map<Long, String>> = _sourceLabels.asStateFlow()
 
@@ -136,8 +146,10 @@ class EpgBrowserViewModel(
 
     val staleSourceCount: StateFlow<Int> =
         sourcesFlow
-            .map { list ->
-                val threshold = System.currentTimeMillis() - epgFileManager.staleThresholdMs
+            .combine(epgSettings) { list, settings ->
+                val interval = settings.epgRefreshInterval
+                val staleThreshold = if (interval <= 0) 24L * 3600 * 1000 else interval.toLong() * 3600 * 1000
+                val threshold = System.currentTimeMillis() - staleThreshold
                 list.count { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
@@ -151,7 +163,9 @@ class EpgBrowserViewModel(
             return
         }
         viewModelScope.launch {
-            val thresholdMs = System.currentTimeMillis() - epgFileManager.staleThresholdMs
+            val interval = epgSettings.value.epgRefreshInterval
+            val staleThreshold = if (interval <= 0) 24L * 3600 * 1000 else interval.toLong() * 3600 * 1000
+            val thresholdMs = System.currentTimeMillis() - staleThreshold
             val stale =
                 withContext(Dispatchers.IO) {
                     SettingsDatabase.getInstance(context).epgSourceDao().getStaleSources(thresholdMs)
@@ -422,12 +436,17 @@ class EpgBrowserViewModel(
         }
     }
 
-    /**
-     * Refresh the paged "Now Playing" data. Call when the user navigates
-     * to the Now Playing view or when enough time has passed.
-     */
     fun refreshNowPlaying() {
+        refreshSettings()
         initPagedNowPlaying()
+    }
+
+    private fun refreshSettings() {
+        _epgSettings.value = EpgManagementViewModel.EpgSettings(
+            autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
+            epgRefreshTime = appSettings.epgRefreshTime,
+            epgRefreshInterval = appSettings.epgRefreshInterval,
+        )
     }
 
     private data class AiringWithProgramme(

@@ -91,7 +91,7 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 - Parallel ingestion: sources download concurrently (3 on mobile, 2 on TV); ingestion into SQLite uses 2 parallel workers
 - Per-source progress: shows download % and ingestion % with channel/programme counts
 - Cancel button: running or queued EPG refreshes can be cancelled mid-operation
-- Auto-refresh on startup and periodic background sync (configurable 4h–48h)
+- Auto-refresh on startup and periodic background sync (configurable 4h–48h) with real-time "Next refresh" display
 - Intelligent Retries: 5-attempt retry loop with exponential backoff (1m, 2m, 4m, 8m, 16m) for the entire task
 - First source clears existing data (full rebuild); subsequent sources append
 - Selective refresh: can refresh selected sources, failed sources, or outdated sources

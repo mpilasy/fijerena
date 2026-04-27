@@ -42,6 +42,8 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val queuedTaskIds by viewModel.queuedTaskIds.collectAsStateWithLifecycle()
     val lastPipelineStats by viewModel.lastPipelineStats.collectAsStateWithLifecycle()
+    val epgSettings by viewModel.epgSettings.collectAsStateWithLifecycle()
+    val nextRefreshAtMs by viewModel.nextRefreshAtMs.collectAsStateWithLifecycle()
 
     val nowMs = remember { System.currentTimeMillis() }
 
@@ -218,10 +220,12 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
-                                    val intervalText = when(val interval = viewModel.epgRefreshInterval) {
+                                    val intervalText = when(val interval = epgSettings.epgRefreshInterval) {
                                         -1 -> "Disabled"
-                                        24 -> "Daily at ${viewModel.epgRefreshTime}"
-                                        else -> "Every $interval hours starting at ${viewModel.epgRefreshTime}"
+                                        else -> {
+                                            val timeStr = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(nextRefreshAtMs))
+                                            "Next refresh will be at $timeStr"
+                                        }
                                     }
                                     Text(
                                         intervalText,
@@ -230,7 +234,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     )
                                 }
                                 Switch(
-                                    checked = viewModel.autoRefreshEnabled,
+                                    checked = epgSettings.autoRefreshEnabled,
                                     onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
                                 )
                             }
@@ -336,7 +340,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     }
 
     if (showTimePicker) {
-        var timeInput by remember { mutableStateOf(viewModel.epgRefreshTime) }
+        var timeInput by remember { mutableStateOf(epgSettings.epgRefreshTime) }
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
             title = { Text("Set Refresh Time") },
@@ -370,7 +374,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                     intervalOptions.forEach { (interval, label) ->
-                        val isSelected = viewModel.epgRefreshInterval == interval
+                        val isSelected = epgSettings.epgRefreshInterval == interval
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -400,7 +404,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         showTimePicker = true
                                     }
                                 ) {
-                                    Text(viewModel.epgRefreshTime)
+                                    Text(epgSettings.epgRefreshTime)
                                 }
                             }
                         }
