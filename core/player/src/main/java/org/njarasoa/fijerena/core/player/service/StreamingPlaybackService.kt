@@ -276,13 +276,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     fun setContentType(contentType: PlayerConfigFactory.ContentType) {
-        mediaSession?.run {
-            player.removeListener(playerListener!!)
-            player.release()
-            release()
-        }
-        mediaSession = null
-        initializePlayer(contentType)
+        adaptiveLoadControl?.updateContentType(contentType)
     }
 
     fun setPositionSaveListener(

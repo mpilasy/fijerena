@@ -19,7 +19,7 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
  */
 @OptIn(UnstableApi::class)
 class AdaptiveLoadControl(
-    private val contentType: PlayerConfigFactory.ContentType,
+    private var contentType: PlayerConfigFactory.ContentType,
     private val cellularLiveMultiplier: Float = 1.0f,
     private val cellularVodMultiplier: Float = 1.0f,
 ) : LoadControl {
@@ -30,6 +30,11 @@ class AdaptiveLoadControl(
 
     fun updateForNetwork(networkType: NetworkType) {
         delegate = buildDelegate(networkType)
+    }
+
+    fun updateContentType(contentType: PlayerConfigFactory.ContentType) {
+        this.contentType = contentType
+        delegate = buildDelegate(NetworkMonitor.currentNetworkType)
     }
 
     private fun buildDelegate(networkType: NetworkType): DefaultLoadControl {
