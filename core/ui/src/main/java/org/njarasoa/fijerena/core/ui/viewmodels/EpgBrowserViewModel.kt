@@ -80,7 +80,6 @@ class EpgBrowserViewModel(
     companion object {
         private const val PAGE_SIZE = 50
         private const val PREFETCH_DISTANCE = 25
-        private const val STALE_THRESHOLD_MS = 6L * 3600 * 1000
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -138,7 +137,7 @@ class EpgBrowserViewModel(
     val staleSourceCount: StateFlow<Int> =
         sourcesFlow
             .map { list ->
-                val threshold = System.currentTimeMillis() - STALE_THRESHOLD_MS
+                val threshold = System.currentTimeMillis() - epgFileManager.staleThresholdMs
                 list.count { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
@@ -152,7 +151,7 @@ class EpgBrowserViewModel(
             return
         }
         viewModelScope.launch {
-            val thresholdMs = System.currentTimeMillis() - STALE_THRESHOLD_MS
+            val thresholdMs = System.currentTimeMillis() - epgFileManager.staleThresholdMs
             val stale =
                 withContext(Dispatchers.IO) {
                     SettingsDatabase.getInstance(context).epgSourceDao().getStaleSources(thresholdMs)

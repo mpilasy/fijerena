@@ -38,7 +38,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Live TV** - Live television channels with fast channel switching
 - **Movies (VOD)** - On-demand movie content with resume support
 - **TV Shows** - Series browsing with season/episode selection; enriched with **TMDB synopses** per episode
-- **EPG Guide** - 24-hour Electronic Program Guide with grid layout
+- **EPG Guide** - Electronic Program Guide with grid layout and customizable refresh interval (4h–48h)
 
 ### 🎮 Playback Features
 - **Media3 (ExoPlayer)** - Industry-leading video playback engine
@@ -80,6 +80,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Cross-Type Search** - Unified "ALL" search across Live TV, Movies, and TV Shows from content type selection
 - **Developer Mode** - Payload size tracking and debug information
 - **Cache Management** - Per-content-type cache with statistics
+- **Robust EPG Retries** - Automatic 5-attempt retry loop with exponential backoff for EPG updates
 - **UI Scale Adjustment** - 70%-100% sizing options
 - **Cellular Buffer Tuning** - Adjustable cellular buffer multipliers (0.5x-3.0x) in dev mode
 

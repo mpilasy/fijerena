@@ -64,7 +64,8 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
 **Key design decisions:**
 - Uses OkHttp `newCall()` for HTTP requests (via `NetworkModule.okHttpClient`)
 - 60-second connect timeout, 3-minute read timeout
-- 3 retries with exponential backoff (5s base, multiplied by attempt number)
+- **Global Task Retries:** 5 attempts with exponential backoff (1m, 2m, 4m, 8m, 16m) for the entire refresh task
+- **Download Retries:** 3 retries with exponential backoff (5s base) for individual file downloads
 - 128KB I/O buffers
 - `OutOfMemoryError` caught explicitly
 
@@ -94,28 +95,30 @@ Each active source has real-time progress tracked in a `ConcurrentHashMap<Long, 
 Download progress is computed from `downloadedBytes / contentLength`. Ingestion progress uses a `CountingInputStream` wrapper on the raw file input stream, computing `bytesRead / fileSize`. UI updates are throttled (every 512KB during download, every 50,000 programmes during ingestion).
 
 **State machine (`MultiSourceState` sealed interface):**
-
 | State | Fields | Description |
 |-------|--------|-------------|
 | `Idle` | — | No processing active |
+| `Pending` | — | Waiting for network or confirmation |
 | `Processing` | `completedCount`, `totalSources`, `activeSourceLabels`, `activeProgress`, `totalChannels`, `totalProgrammes`, `totalDownloadedBytes`, `completedSourceStats` | Actively processing sources with aggregate progress |
+| `Retrying` | `attempt`, `maxAttempts`, `nextRetryAtMs`, `reason` | Task failed and is waiting for the next retry attempt |
 | `Completed` | `sourcesProcessed`, `errors`, `sourceStats`, `totalChannels`, `totalProgrammes`, `totalDownloadBytes` | All sources processed, final stats |
-| `Error` | `reason` | Processing failed |
+| `Error` | `reason` | Processing failed after all retries |
 | `Clearing` | — | Blocking data clear in progress |
+| `Finalizing` | `phase`, `totalChannels`, `totalProgrammes`, `totalDownloadBytes` | Post-ingestion phase: index rebuild, FTS rebuild, or vacuum |
 
 **Cancel support:**
 
 `cancelProcessing()` cancels the coroutine `processJob` and calls `RefreshQueue.cancelAll()`, which cancels the currently executing task and clears all pending tasks. The state is immediately set to `Idle`.
 
 **Lifecycle:**
-- `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, schedules auto-refresh, schedules WorkManager periodic sync on mobile
+- `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, schedules auto-refresh, schedules WorkManager periodic sync based on user-selected interval
 - `launchProcessAllSources()` — process all enabled sources via the pipeline
 - `launchProcessSources(sources, taskId)` — process a pre-filtered list of sources
 - `launchProcessSingleSource(sourceId)` — process one source (download then ingest, no pipeline)
 - `launchClearAllData()` — cancel processing, set state to `Clearing`, delegate to `EpgIndexer.clearAll()`
-- Auto-refresh: checks for stale sources (>24h) every 4 hours, refreshes only stale ones
+- Auto-refresh: checks for stale sources (based on user interval) every 4 hours, refreshes only stale ones
 
-Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync via `EpgSyncWorker` (WorkManager, 24h periodic).
+Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync via `EpgSyncWorker` (WorkManager, periodic interval from settings).
 
 ### RefreshQueue
 
@@ -335,9 +338,11 @@ EPG is configured via **Settings -> Manage EPG Data** (`Screen.EpgManagement`). 
 | `lastDownloadBytes` | Long | Download size from last ingest |
 | `ingestMethod` | String | `"DOWNLOADED"`, `"STREAMED"`, or `"XTREAM_API"` |
 
-**Status indicators (UI):** green = ingested <24h, yellow = >24h stale, red = error, gray = disabled.
+**Status indicators (UI):** green = ingested < interval, yellow = > interval stale, red = error, gray = disabled.
 
 **Actions:** Refresh All, Refresh Selected, Cleanup Files, Purge >2 days, Clear All Data (with confirmation dialog), Cancel (visible during processing).
+
+**Refresh Interval:** User-selectable interval (4h, 8h, 12h, 24h, 48h) or "Never". Stale threshold and WorkManager schedule automatically adjust to this setting.
 
 **Selective refresh:** Checkboxes on each source row allow selecting multiple sources. A "Refresh Selected (N)" button appears when sources are selected, triggering refresh only for chosen sources.
 
@@ -370,7 +375,7 @@ No persistent XMLTV file. Mobile downloads to a temp file first, then ingests fr
 **Network constraints:**
 - EPG downloads: confirmation dialog on cellular, auto-refresh on WiFi/Ethernet
 - Streaming downloads (128KB buffers, zero in-memory buffering)
-- 3 retries with exponential backoff
+- **Automatic Retries:** Global task retry (5 attempts, exponential backoff up to 16m), plus 3 retries for individual source downloads.
 
 **Memory safety:**
 - OkHttp with streaming response body
