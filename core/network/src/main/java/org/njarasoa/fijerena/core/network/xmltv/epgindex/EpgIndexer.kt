@@ -56,7 +56,11 @@ class EpgIndexer private constructor(
         private const val TAG = "EpgIndexer"
         const val BATCH_SIZE_MOBILE = 500
         const val BATCH_SIZE_TV = 5000
-        private const val BATCH_SIZE = BATCH_SIZE_MOBILE
+
+        private fun getBatchSize(context: Context): Int {
+            val isTv = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+            return if (isTv) BATCH_SIZE_TV else BATCH_SIZE_MOBILE
+        }
 
         // Room-generated FTS content-sync trigger names for epg_programme_fts.
         // These are created in onCreate and kept alive in the SQLite file.
@@ -216,7 +220,7 @@ class EpgIndexer private constructor(
         inputStream: InputStream,
         sourceId: Long = 0,
         timezoneOverrideHours: Int = 0,
-        batchSize: Int = BATCH_SIZE,
+        batchSize: Int = getBatchSize(context),
         isPlaybackActive: () -> Boolean = { false },
         onProgress: ((channels: Int, programmes: Int) -> Unit)? = null,
     ): IngestionStats =
@@ -421,7 +425,7 @@ class EpgIndexer private constructor(
                     )
                     totalProgrammes++
 
-                    if (programmeBatch.size >= BATCH_SIZE) {
+                    if (programmeBatch.size >= getBatchSize(context)) {
                         writeMutex.withLock {
                             db.withTransaction { dao.insertProgrammes(programmeBatch) }
                         }

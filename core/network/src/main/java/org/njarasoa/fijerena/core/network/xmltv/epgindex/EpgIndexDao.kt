@@ -34,14 +34,18 @@ interface EpgIndexDao {
     @Query(
         """
         SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
-        FROM epg_programme p
-        INNER JOIN epg_programme_fts fts ON fts.rowid = p.id
+        FROM (
+            SELECT p2.*
+            FROM epg_programme p2
+            INNER JOIN epg_programme_fts fts ON fts.rowid = p2.id
+            WHERE epg_programme_fts MATCH :query
+              AND p2.source_id IN (:sourceIds)
+              AND p2.end_epoch > :windowStart AND p2.start_epoch <= :windowEnd
+            ORDER BY p2.start_epoch ASC
+            LIMIT :maxResults
+        ) p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
-        WHERE epg_programme_fts MATCH :query
-          AND p.source_id IN (:sourceIds)
-          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
-        LIMIT :maxResults
         """,
     )
     suspend fun searchByTitleFts(
@@ -55,13 +59,17 @@ interface EpgIndexDao {
     @Query(
         """
         SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
-        FROM epg_programme p
+        FROM (
+            SELECT p2.*
+            FROM epg_programme p2
+            WHERE p2.title_lowercase LIKE '%' || :queryLower || '%'
+              AND p2.source_id IN (:sourceIds)
+              AND p2.end_epoch > :windowStart AND p2.start_epoch <= :windowEnd
+            ORDER BY p2.start_epoch ASC
+            LIMIT :maxResults
+        ) p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
-        WHERE p.title_lowercase LIKE '%' || :queryLower || '%'
-          AND p.source_id IN (:sourceIds)
-          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
-        LIMIT :maxResults
         """,
     )
     suspend fun searchByTitleLike(

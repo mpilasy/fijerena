@@ -57,7 +57,9 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                                 try {
                                     // Optimize for performance
                                     db.execSQL("PRAGMA synchronous = NORMAL")
-                                    db.execSQL("PRAGMA cache_size = -8000") // 8MB cache
+                                    db.execSQL("PRAGMA cache_size = -64000") // 64MB cache for large EPG datasets
+                                    db.execSQL("PRAGMA page_size = 4096")
+                                    db.execSQL("PRAGMA temp_store = MEMORY")
 
                                     val cursor = db.query("PRAGMA auto_vacuum")
                                     val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
