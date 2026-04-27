@@ -139,6 +139,7 @@ fun MobilePlayerScreen(
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
+    val isNightModeEnabled by viewModel.nightModeEnabled.collectAsStateWithLifecycle()
 
     // Auto-show toast on repeated buffer exhaustion
     LaunchedEffect(appSettings.isDevMode, currentMetadata.streamUrl) {
@@ -477,10 +478,10 @@ fun MobilePlayerScreen(
                             loaderViewModel.toggleFavorite()
                         },
                         onToggleNightMode = {
-                            val newValue = !viewModel.nightModeEnabled.value
+                            val newValue = !isNightModeEnabled
                             viewModel.setNightMode(newValue)
                         },
-                        isNightModeEnabled = viewModel.nightModeEnabled.value,
+                        isNightModeEnabled = isNightModeEnabled,
                     )
                 }
 
