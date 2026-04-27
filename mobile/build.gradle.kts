@@ -14,7 +14,7 @@ android {
     defaultConfig {
         applicationId = "org.njarasoa.fijerena"
         minSdk = 30
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 4
         versionName = "1.0.0"
 
