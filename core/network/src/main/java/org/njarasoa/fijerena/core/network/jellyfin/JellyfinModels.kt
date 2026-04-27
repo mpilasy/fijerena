@@ -134,12 +134,6 @@ data class JellyfinPlaybackStart(
 
 // ---- Auth ----
 
-@Serializable
-data class JellyfinAuthBody(
-    @SerialName("Username") val username: String,
-    @SerialName("Password") val password: String,
-)
-
 // ---- Quick Connect ----
 
 @Serializable

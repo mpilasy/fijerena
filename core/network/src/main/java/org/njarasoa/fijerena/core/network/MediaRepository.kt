@@ -59,16 +59,6 @@ data class FavoriteCategoryItem(
 )
 
 @Serializable
-data class FavoriteShowItem(
-    val showId: String,
-    val showName: String,
-    val categoryId: String,
-    val contentType: String,
-    val thumbnailUrl: String? = null,
-    val timestamp: Long = System.currentTimeMillis(),
-)
-
-@Serializable
 data class RecentCategory(
     val categoryId: String,
     val categoryName: String,
@@ -111,12 +101,10 @@ class MediaRepository(
     private var watchHistoryLookup: Map<Pair<String, String>, WatchedItem>? = null
     private var cachedFavorites: List<FavoriteItem>? = null
     private var cachedFavoriteCategories: List<FavoriteCategoryItem>? = null
-    private var cachedFavoriteShows: List<FavoriteShowItem>? = null
 
-    // O(1) lookup sets for isFavorite/isFavoriteCategory/isFavoriteShow — rebuilt when lists change
+    // O(1) lookup sets for isFavorite/isFavoriteCategory — rebuilt when lists change
     private var favoriteIdSet: Set<Pair<String, String>>? = null
     private var favoriteCategoryIdSet: Set<Pair<String, String>>? = null
-    private var favoriteShowIdSet: Set<Pair<String, String>>? = null
     private val watchHistoryLock = Any()
     private var watchHistoryDirty = false
     private val watchHistoryWriteHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -126,7 +114,6 @@ class MediaRepository(
         private const val KEY_WATCH_HISTORY = "watch_history_v2"
         private const val KEY_FAVORITES = "favorites_v2"
         private const val KEY_FAVORITE_CATEGORIES = "favorite_categories"
-        private const val KEY_FAVORITE_SHOWS = "favorite_shows"
         private const val KEY_RECENT_CATEGORIES = "recent_categories"
         private const val MAX_RECENT_CATEGORIES = 20
 
@@ -730,81 +717,6 @@ class MediaRepository(
         cache.edit { remove(KEY_FAVORITE_CATEGORIES) }
     }
 
-    // --- Favorite Shows ---
-
-    fun addFavoriteShow(
-        showId: String,
-        showName: String,
-        categoryId: String,
-        contentType: String,
-        thumbnailUrl: String? = null,
-    ): Boolean {
-        val favorites = getFavoriteShowItems().toMutableList()
-        if (favorites.any { it.showId == showId && it.contentType == contentType }) {
-            return false
-        }
-        favorites.add(0, FavoriteShowItem(showId, showName, categoryId, contentType, thumbnailUrl))
-        val trimmed = favorites.take(providerSettings.favoritesMaxSize)
-        cache.edit { putString(KEY_FAVORITE_SHOWS, json.encodeToString(trimmed)) }
-        cachedFavoriteShows = trimmed
-        favoriteShowIdSet = null
-        return true
-    }
-
-    fun removeFavoriteShow(
-        showId: String,
-        contentType: String,
-    ): Boolean {
-        val favorites = getFavoriteShowItems().toMutableList()
-        val removed = favorites.removeAll { it.showId == showId && it.contentType == contentType }
-        if (!removed) return false
-        cache.edit { putString(KEY_FAVORITE_SHOWS, json.encodeToString(favorites)) }
-        cachedFavoriteShows = favorites
-        favoriteShowIdSet = null
-        return true
-    }
-
-    fun getFavoriteShowItems(): List<FavoriteShowItem> {
-        cachedFavoriteShows?.let { return it }
-        val raw = cache.getString(KEY_FAVORITE_SHOWS, null) ?: return emptyList<FavoriteShowItem>().also { cachedFavoriteShows = it }
-        return try {
-            json.decodeFromString<List<FavoriteShowItem>>(raw).also { cachedFavoriteShows = it }
-        } catch (_: Exception) {
-            emptyList<FavoriteShowItem>().also { cachedFavoriteShows = it }
-        }
-    }
-
-    fun getFavoriteShowsForContentType(contentType: String): List<MediaItem> =
-        getFavoriteShowItems()
-            .asSequence()
-            .filter { it.contentType == contentType }
-            .map { fav ->
-                MediaItem(
-                    id = fav.showId,
-                    name = fav.showName,
-                    mediaType = MediaType.SERIES,
-                    categoryId = fav.categoryId,
-                    thumbnailUrl = fav.thumbnailUrl,
-                )
-            }.toList()
-
-    fun isFavoriteShow(
-        showId: String,
-        contentType: String,
-    ): Boolean {
-        val set =
-            favoriteShowIdSet ?: getFavoriteShowItems()
-                .mapTo(HashSet()) { it.showId to it.contentType }
-                .also { favoriteShowIdSet = it }
-        return (showId to contentType) in set
-    }
-
-    fun clearFavoriteShows() {
-        cachedFavoriteShows = emptyList()
-        favoriteShowIdSet = null
-        cache.edit { remove(KEY_FAVORITE_SHOWS) }
-    }
-
     fun savePlaybackPosition(
         itemId: String,
         itemName: String,
@@ -1023,7 +935,6 @@ class MediaRepository(
         fetchTimes.clear()
         cachedFavorites = null
         cachedFavoriteCategories = null
-        cachedFavoriteShows = null
         cachedRecentCategories.clear()
         synchronized(watchHistoryLock) {
             cachedWatchHistory = null

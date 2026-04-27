@@ -262,8 +262,6 @@ fun PlayerScreen(
                     delay(1000L)
                 }
             }
-            @Suppress("UNUSED_VARIABLE")
-            val ignored = tick
             val screenHeight = LocalConfiguration.current.screenHeightDp.dp
             Box(
                 modifier =

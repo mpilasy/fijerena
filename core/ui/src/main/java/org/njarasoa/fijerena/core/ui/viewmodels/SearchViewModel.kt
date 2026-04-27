@@ -197,13 +197,6 @@ class SearchViewModel(
         _searchHistory.value = emptyList()
     }
 
-    private fun formatBytes(bytes: Long): String =
-        when {
-            bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
-            bytes >= 1024 -> "%.1f KB".format(bytes / 1024.0)
-            else -> "$bytes B"
-        }
-
     private fun formatSeconds(ms: Long): String = "%.1fs".format(ms / 1000.0)
 
     private suspend fun doSearch(
@@ -212,11 +205,6 @@ class SearchViewModel(
     ) {
         try {
             val startTime = System.currentTimeMillis()
-            var networkBytes = 0L
-            var networkCalls = 0
-            var failedCalls = 0
-            var accumulatedNetworkMs = 0L
-            var firstError: String? = null
 
             val repo = ensureRepo()
 
@@ -240,7 +228,6 @@ class SearchViewModel(
             // Try server-side search first (e.g., Jellyfin)
             val serverResults = mutableListOf<SearchResult>()
             var serverSearchSuccess = false
-            var serverError: String? = null
 
             for (type in targetContentTypes) {
                 val serverResult = repo.search(query, type)
@@ -248,8 +235,6 @@ class SearchViewModel(
                     serverResult.fold(
                         onSuccess = { items ->
                             serverSearchSuccess = true
-                            val bulkDataSize = repo.getLastSearchDataSize(type)
-                            networkBytes += bulkDataSize ?: items.sumOf { it.name.length.toLong() * 2 + 64 }
 
                             items.forEach { item ->
                                 serverResults.add(
@@ -265,7 +250,7 @@ class SearchViewModel(
                                 )
                             }
                         },
-                        onFailure = { serverError = it.message },
+                        onFailure = { },
                     )
                 }
             }

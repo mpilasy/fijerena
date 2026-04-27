@@ -520,8 +520,6 @@ private fun ClockDisplay() {
             delay(1000L)
         }
     }
-    @Suppress("UNUSED_VARIABLE")
-    val ignored = tick
     Text(
         text =
             org.njarasoa.fijerena.core.ui.theme.TimeFormat
