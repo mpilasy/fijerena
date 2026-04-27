@@ -25,7 +25,6 @@ import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Subtitles
@@ -90,8 +89,6 @@ fun MobileControlsOverlay(
     onSubtitle: () -> Unit,
     onQuality: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onToggleNightMode: () -> Unit = {},
-    isNightModeEnabled: Boolean = false,
     onFastForward: (() -> Unit)? = null,
     onRewind: (() -> Unit)? = null,
 ) {
@@ -484,17 +481,6 @@ fun MobileControlsOverlay(
                                 imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                 contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
                                 tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-                            )
-                        }
-                    )
-
-                    // Night Mode toggle
-                    CinemaIconButton(onClick = onToggleNightMode,
-                        icon = {
-                            Icon(
-                                Icons.Rounded.NightsStay,
-                                contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
-                                tint = if (isNightModeEnabled) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                             )
                         }
                     )

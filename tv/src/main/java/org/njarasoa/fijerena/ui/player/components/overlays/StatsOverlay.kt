@@ -104,17 +104,6 @@ fun StatsOverlay(
         ?: remember { mutableStateOf(0f) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
-    // Audio DSP stats
-    val audioDspStats by StreamingPlaybackService.getInstance()?.audioDspStats?.collectAsStateWithLifecycle(
-        org.njarasoa.fijerena.core.player.model
-            .AudioDspStats(),
-    ) ?: remember {
-        mutableStateOf(
-            org.njarasoa.fijerena.core.player.model
-                .AudioDspStats(),
-        )
-    }
-
     // Update stats periodically
     LaunchedEffect(Unit) {
         while (true) {
@@ -405,28 +394,6 @@ fun StatsOverlay(
                                     .take(15),
                             )
                             CompactStatRow("API", "${android.os.Build.VERSION.SDK_INT}")
-
-                            // Audio DSP
-                            SectionHeader("AUDIO DSP")
-                            val nmEnabled = audioDspStats.nightModeEnabled
-                            val nightModeColor = if (nmEnabled) CinemaSuccess else CinemaTextPrimary
-                            CompactStatRowColored("Night Mode", if (nmEnabled) "ON" else "OFF", nightModeColor)
-
-                            if (nmEnabled) {
-                                val nmActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.enabled ?: false }
-                                val isHalActive =
-                                    remember { StreamingPlaybackService.getInstance()?.nightModeManager?.isActuallyActive ?: false }
-                                val sessionId =
-                                    remember {
-                                        val p = StreamingPlaybackService.getInstance()?.getPlayer()
-                                        if (p is androidx.media3.exoplayer.ExoPlayer) p.audioSessionId else 0
-                                    }
-                                CompactStatRow("Audio Session", "$sessionId")
-                                CompactStatRow("DSP Active", if (nmActive && sessionId != 0) "YES" else "NO")
-                                if (nmActive) {
-                                    CompactStatRow("NM Engine", if (isHalActive) "HAL (System)" else "APP (Internal)")
-                                }
-                            }
                         }
                     }
 

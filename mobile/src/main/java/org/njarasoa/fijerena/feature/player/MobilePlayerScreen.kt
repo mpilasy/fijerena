@@ -149,7 +149,6 @@ fun MobilePlayerScreen(
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
-    val isNightModeEnabled by viewModel.nightModeEnabled.collectAsStateWithLifecycle()
     val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
 
     // Enable/disable PiP auto-enter
@@ -503,11 +502,6 @@ fun MobilePlayerScreen(
                         onToggleFavorite = {
                             loaderViewModel.toggleFavorite()
                         },
-                        onToggleNightMode = {
-                            val newValue = !isNightModeEnabled
-                            viewModel.setNightMode(newValue)
-                        },
-                        isNightModeEnabled = isNightModeEnabled,
                     )
                 }
 

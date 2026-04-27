@@ -209,11 +209,6 @@ fun PlayerScreen(
                 onShowQualitySelector = { state.showQualitySelector = true },
                 onShowChapterSelector = { state.showChapterSelector = true },
                 onShowStats = { state.showStats = !state.showStats },
-                onToggleNightMode = {
-                    val newValue = !viewModel.nightModeEnabled.value
-                    viewModel.setNightMode(newValue)
-                },
-                isNightModeEnabled = viewModel.nightModeEnabled.value,
                 seekSpeedLabel = state.seekSpeedLabel,
             )
         }

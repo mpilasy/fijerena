@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.player.viewmodel
 import android.app.Application
 import android.content.Intent
-import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
@@ -42,10 +41,6 @@ class PlaybackViewModel(
 
     private val _isInPictureInPictureMode = MutableStateFlow(false)
     val isInPictureInPictureMode: StateFlow<Boolean> = _isInPictureInPictureMode.asStateFlow()
-
-    // Audio enhancement state
-    private val _nightModeEnabled = MutableStateFlow(false)
-    val nightModeEnabled: StateFlow<Boolean> = _nightModeEnabled.asStateFlow()
 
     private var isInErrorState = false
     private var focusLostJob: Job? = null
@@ -107,10 +102,6 @@ class PlaybackViewModel(
         }
 
     init {
-        // Load persisted audio enhancement settings
-        val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
-        _nightModeEnabled.value = prefs.getBoolean("night_mode_enabled", false)
-
         viewModelScope.launch {
             startService()
             connectToService()
@@ -461,21 +452,6 @@ class PlaybackViewModel(
         viewModelScope.launch {
             val service = StreamingPlaybackService.getInstance()
             service?.enableAutoQuality()
-        }
-    }
-
-    /**
-     * Toggle Night Mode on/off. Persists setting and immediately applies to the audio session.
-     */
-    fun setNightMode(enabled: Boolean) {
-        _nightModeEnabled.value = enabled
-        val prefs = context.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
-        prefs.edit { putBoolean("night_mode_enabled", enabled) }
-
-        viewModelScope.launch {
-            val service = StreamingPlaybackService.getInstance() ?: return@launch
-            service.nightModeManager.enabled = enabled
-            service.nightModeProcessor.enabled = enabled
         }
     }
 

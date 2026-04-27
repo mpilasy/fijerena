@@ -35,7 +35,6 @@ class AppSettings(
         private const val KEY_CELLULAR_VOD_MULTIPLIER = "cellular_vod_multiplier"
         private const val KEY_HAS_PROVIDER_CACHE = "has_provider_cache"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
-        private const val KEY_NIGHT_MODE_ENABLED = "night_mode_enabled"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val MAX_SEARCH_HISTORY = 20
@@ -227,14 +226,6 @@ class AppSettings(
     var hasProviderCache: Boolean
         get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
         set(value) = prefs.edit { putBoolean(KEY_HAS_PROVIDER_CACHE, value) }
-
-    /**
-     * Night Mode: DynamicsProcessing-based compression to tame loud passages.
-     * Works on all devices (API 28+). Zero CPU overhead (runs at HAL level).
-     */
-    var nightModeEnabled: Boolean
-        get() = prefs.getBoolean(KEY_NIGHT_MODE_ENABLED, false)
-        set(value) = prefs.edit { putBoolean(KEY_NIGHT_MODE_ENABLED, value) }
 
     /**
      * Get the search history as an ordered list (most recent first).

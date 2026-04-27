@@ -25,7 +25,6 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Subtitles
@@ -99,8 +98,6 @@ fun PlayerControlsOverlay(
     onShowQualitySelector: () -> Unit,
     onShowChapterSelector: () -> Unit,
     onShowStats: () -> Unit,
-    onToggleNightMode: () -> Unit = {},
-    isNightModeEnabled: Boolean = false,
     seekSpeedLabel: String? = null,
 ) {
     val isPaused = playbackState is PlaybackState.Paused
@@ -542,36 +539,6 @@ fun PlayerControlsOverlay(
                                         },
                                 )
                             }
-                        }
-
-                        // Night Mode toggle
-                        Button(
-                            onClick = onToggleNightMode,
-                            colors =
-                                ButtonDefaults.colors(
-                                    containerColor =
-                                        if (isNightModeEnabled) {
-                                            CinemaAccent.copy(alpha = CinemaAlpha.scrim)
-                                        } else {
-                                            CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                        },
-                                    contentColor = CinemaTextPrimary,
-                                    focusedContainerColor = CinemaTextPrimary,
-                                    focusedContentColor = CinemaBackground,
-                                ),
-                        ) {
-                            Icon(
-                                Icons.Rounded.NightsStay,
-                                contentDescription = if (isNightModeEnabled) "Night Mode On" else "Night Mode Off",
-                                tint =
-                                    if (isNightModeEnabled &&
-                                        !isProgressBarFocused
-                                    ) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        Color.Unspecified
-                                    },
-                            )
                         }
 
                         // Stats for nerds (always visible)

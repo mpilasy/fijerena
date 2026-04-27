@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.player.audio.NightModeManager
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -73,13 +72,6 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _measuredFps = MutableStateFlow(0f)
     val measuredFps: StateFlow<Float> = _measuredFps.asStateFlow()
 
-    private val _audioDspStats =
-        MutableStateFlow(
-            org.njarasoa.fijerena.core.player.model
-                .AudioDspStats(),
-        )
-    val audioDspStats: StateFlow<org.njarasoa.fijerena.core.player.model.AudioDspStats> = _audioDspStats.asStateFlow()
-
     private var onPositionSaveListener: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null
 
     private var liveRetryCount = 0
@@ -89,12 +81,6 @@ class StreamingPlaybackService : MediaSessionService() {
     private var adaptiveLoadControl: AdaptiveLoadControl? = null
     private var bandwidthMeter: androidx.media3.exoplayer.upstream.DefaultBandwidthMeter? = null
     private var serviceScope: CoroutineScope? = null
-
-    // Audio enhancement
-    val nightModeManager = NightModeManager()
-    val nightModeProcessor =
-        org.njarasoa.fijerena.core.player.audio
-            .NightModeProcessor()
 
     override fun onCreate() {
         super.onCreate()
@@ -116,59 +102,14 @@ class StreamingPlaybackService : MediaSessionService() {
                 adaptiveLoadControl?.updateForNetwork(networkType)
             }
         }
-        // Periodically update Audio DSP stats for the Stats overlay
-        scope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(1000L)
-                updateAudioDspStats()
-            }
-        }
-    }
-
-    private fun updateAudioDspStats() {
-        // Smart Night Mode Fallback:
-        // If Night Mode is desired but the HAL (DynamicsProcessing) is NOT active,
-        // we enable our internal app-level processor instead.
-        val nmDesired = nightModeManager.enabled
-        val isMobile =
-            org.njarasoa.fijerena.core.player.device.DeviceDetector
-                .detect()
-                .deviceType ==
-                org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE
-
-        if (nmDesired) {
-            // On mobile, always use internal processor for reliability (HAL is often buggy).
-            // On TV (Shield/Bravia), prefer HAL for zero-CPU overhead if it's actually active.
-            nightModeProcessor.enabled = isMobile || !nightModeManager.isActuallyActive
-        } else {
-            nightModeProcessor.enabled = false
-        }
-
-        _audioDspStats.value =
-            org.njarasoa.fijerena.core.player.model.AudioDspStats(
-                nightModeEnabled = nightModeManager.enabled,
-                nmEncoding = nightModeProcessor.configuredEncoding,
-                nmEnabled = nightModeProcessor.enabled,
-                nmCallCount = nightModeProcessor.queueInputCallCount,
-            )
     }
 
     private fun initializePlayer(contentType: PlayerConfigFactory.ContentType = PlayerConfigFactory.ContentType.VOD) {
         val ffmpegAvailable = FfmpegLibrary.isAvailable()
         Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
 
-        val renderersFactory =
-            object : DefaultRenderersFactory(this) {
-                override fun buildAudioSink(
-                    context: android.content.Context,
-                    enableFloatOutput: Boolean,
-                    enableAudioTrackPlaybackParams: Boolean,
-                ): androidx.media3.exoplayer.audio.AudioSink? {
-                    return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
-                        .setAudioProcessors(arrayOf(nightModeProcessor))
-                        .build()
-                }
-            }.setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 
         val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
@@ -228,26 +169,6 @@ class StreamingPlaybackService : MediaSessionService() {
                 },
             )
         player.addListener(playerListener!!)
-
-        // Night Mode: attach DynamicsProcessing to the player's audio session
-        player.addListener(
-            object : Player.Listener {
-                override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                    // On mobile, we prefer the internal NightModeProcessor for reliability.
-                    // Only attach the HAL (DynamicsProcessing) on non-mobile devices (TV).
-                    val isTv =
-                        org.njarasoa.fijerena.core.player.device.DeviceDetector
-                            .detect()
-                            .deviceType !=
-                            org.njarasoa.fijerena.core.player.device.DeviceType.GENERIC_MOBILE
-                    if (isTv) {
-                        nightModeManager.attach(audioSessionId)
-                    } else {
-                        Log.d(TAG, "Mobile device detected, skipping HAL Night Mode attachment in favor of internal processor.")
-                    }
-                }
-            },
-        )
 
         analyticsListener =
             PerformanceAnalyticsListener(
@@ -644,7 +565,6 @@ class StreamingPlaybackService : MediaSessionService() {
             release()
         }
         mediaSession = null
-        nightModeManager.release()
         releaseWakeLock()
         wakeLock = null
         analyticsListener = null
