@@ -192,9 +192,10 @@ class PlaybackViewModel(
     /**
      * Called when the app loses focus (e.g. backgrounded).
      * Pauses playback and starts a 30s timer to stop playback completely.
+     * @param isInPip Current Picture-in-Picture state of the activity.
      */
-    fun onFocusLost() {
-        if (_isInPictureInPictureMode.value) return
+    fun onFocusLost(isInPip: Boolean = false) {
+        if (isInPip || _isInPictureInPictureMode.value) return
 
         val currentState = _playbackState.value
         if (currentState is PlaybackState.Playing || currentState is PlaybackState.Buffering) {
