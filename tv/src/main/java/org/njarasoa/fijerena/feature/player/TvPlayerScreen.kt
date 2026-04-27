@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -82,13 +83,24 @@ fun TvPlayerScreen(
         ),
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity
+
+    // Use activity-scoped ViewModel so it's shared with MainActivity for PiP updates
+    val playbackViewModel: PlaybackViewModel = viewModel(
+        viewModelStoreOwner = (activity as? ViewModelStoreOwner) ?: LocalLifecycleOwner.current as ViewModelStoreOwner
+    )
 
     // Observe app focus/lifecycle to pause on background and stop after timeout
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
-                    Lifecycle.Event.ON_PAUSE -> playbackViewModel.onFocusLost()
+                    Lifecycle.Event.ON_PAUSE -> {
+                        // Pass current PiP state from activity as a safeguard
+                        val inPip = activity?.isInPictureInPictureMode ?: false
+                        playbackViewModel.onFocusLost(inPip)
+                    }
                     Lifecycle.Event.ON_RESUME -> playbackViewModel.onFocusRegained()
                     else -> {}
                 }
@@ -102,8 +114,6 @@ fun TvPlayerScreen(
     val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
     val currentStreamState by androidx.compose.runtime.rememberUpdatedState(streamState)
     val playbackState by playbackViewModel.playbackState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val activity = context as? android.app.Activity
 
     // Enable/disable PiP auto-enter
     LaunchedEffect(playbackState::class) {

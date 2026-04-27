@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -102,12 +103,21 @@ fun MobilePlayerScreen(
     val appSettings = remember { AppSettings(context.applicationContext) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Use activity-scoped ViewModel so it's shared with MainActivity for PiP updates
+    val viewModel: PlaybackViewModel = viewModel(
+        viewModelStoreOwner = (activity as? ViewModelStoreOwner) ?: LocalLifecycleOwner.current as ViewModelStoreOwner
+    )
+
     // Observe app focus/lifecycle to pause on background and stop after timeout
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
-                    Lifecycle.Event.ON_PAUSE -> viewModel.onFocusLost()
+                    Lifecycle.Event.ON_PAUSE -> {
+                        // Pass current PiP state from activity as a safeguard
+                        val inPip = activity?.isInPictureInPictureMode ?: false
+                        viewModel.onFocusLost(inPip)
+                    }
                     Lifecycle.Event.ON_RESUME -> viewModel.onFocusRegained()
                     else -> {}
                 }
