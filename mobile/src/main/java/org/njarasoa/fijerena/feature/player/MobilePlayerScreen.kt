@@ -79,7 +79,7 @@ fun MobilePlayerScreen(
     seriesId: String? = null,
     seriesName: String? = null,
     startFromBeginning: Boolean = false,
-    viewModel: PlaybackViewModel = viewModel(),
+    viewModel: PlaybackViewModel = viewModel(LocalContext.current as androidx.activity.ComponentActivity),
     loaderViewModel: StreamLoaderViewModel =
         viewModel(
             factory =
@@ -140,6 +140,20 @@ fun MobilePlayerScreen(
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
     val isNightModeEnabled by viewModel.nightModeEnabled.collectAsStateWithLifecycle()
+    val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
+
+    // Enable/disable PiP auto-enter
+    LaunchedEffect(playbackState) {
+        val ps = playbackState
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val isPlaying = ps is PlaybackState.Playing || ps is PlaybackState.Buffering
+            activity?.setPictureInPictureParams(
+                android.app.PictureInPictureParams.Builder()
+                    .setAutoEnterEnabled(isPlaying)
+                    .build()
+            )
+        }
+    }
 
     // Auto-show toast on repeated buffer exhaustion
     LaunchedEffect(appSettings.isDevMode, currentMetadata.streamUrl) {
@@ -292,65 +306,65 @@ fun MobilePlayerScreen(
                     Modifier
                         .fillMaxSize()
                         .background(org.njarasoa.fijerena.core.ui.theme.CinemaBackground)
-                        .pointerInput(showStats, isLiveContent, playbackState) {
-                            detectTapGestures(
-                                onTap = {
-                                    if (!showStats) showControls = !showControls
-                                },
-                                onDoubleTap = {
-                                    if (!showStats && !isLiveContent) {
-                                        when (playbackState) {
-                                            is PlaybackState.Playing -> viewModel.pause()
-                                            is PlaybackState.Paused -> viewModel.resume()
-                                            else -> {}
+                        .then(
+                            if (isInPipMode) Modifier else
+                            Modifier.pointerInput(showStats, isLiveContent, playbackState) {
+                                detectTapGestures(
+                                    onTap = {
+                                        if (!showStats) showControls = !showControls
+                                    },
+                                    onDoubleTap = {
+                                        if (!showStats && !isLiveContent) {
+                                            when (playbackState) {
+                                                is PlaybackState.Playing -> viewModel.pause()
+                                                is PlaybackState.Paused -> viewModel.resume()
+                                                else -> {}
+                                            }
                                         }
-                                    }
-                                },
-                            )
-                        }.then(
-                            if (isLiveContent) {
-                                Modifier.pointerInput(state.categoryStreams, showCategoryOverlay, showLastWatchedOverlay, showStats) {
-                                    var verticalAccumulator = 0f
-                                    var horizontalAccumulator = 0f
-                                    detectDragGestures(
-                                        onDragStart = {
+                                    },
+                                )
+                            }
+                        ).then(
+                            if (isInPipMode || !isLiveContent) Modifier else
+                            Modifier.pointerInput(state.categoryStreams, showCategoryOverlay, showLastWatchedOverlay, showStats) {
+                                var verticalAccumulator = 0f
+                                var horizontalAccumulator = 0f
+                                detectDragGestures(
+                                    onDragStart = {
+                                        verticalAccumulator = 0f
+                                        horizontalAccumulator = 0f
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        if (showStats) return@detectDragGestures
+                                        change.consume()
+                                        verticalAccumulator += dragAmount.y
+                                        horizontalAccumulator += dragAmount.x
+                                        // Vertical: channel switching
+                                        if (kotlin.math.abs(verticalAccumulator) > 100f) {
+                                            if (verticalAccumulator < 0) {
+                                                loaderViewModel.nextChannel()
+                                            } else {
+                                                loaderViewModel.prevChannel()
+                                            }
                                             verticalAccumulator = 0f
+                                        }
+                                        // Horizontal: overlay panels
+                                        if (kotlin.math.abs(horizontalAccumulator) > 80f) {
+                                            when {
+                                                horizontalAccumulator > 0 && !showLastWatchedOverlay ->
+                                                    showCategoryOverlay = true
+                                                horizontalAccumulator < 0 && !showCategoryOverlay ->
+                                                    showLastWatchedOverlay = true
+                                                horizontalAccumulator > 0 && showLastWatchedOverlay ->
+                                                    showLastWatchedOverlay = false
+                                                horizontalAccumulator < 0 && showCategoryOverlay ->
+                                                    showCategoryOverlay = false
+                                            }
                                             horizontalAccumulator = 0f
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            if (showStats) return@detectDragGestures
-                                            change.consume()
-                                            verticalAccumulator += dragAmount.y
-                                            horizontalAccumulator += dragAmount.x
-                                            // Vertical: channel switching
-                                            if (kotlin.math.abs(verticalAccumulator) > 100f) {
-                                                if (verticalAccumulator < 0) {
-                                                    loaderViewModel.nextChannel()
-                                                } else {
-                                                    loaderViewModel.prevChannel()
-                                                }
-                                                verticalAccumulator = 0f
-                                            }
-                                            // Horizontal: overlay panels
-                                            if (kotlin.math.abs(horizontalAccumulator) > 80f) {
-                                                when {
-                                                    horizontalAccumulator > 0 && !showLastWatchedOverlay ->
-                                                        showCategoryOverlay = true
-                                                    horizontalAccumulator < 0 && !showCategoryOverlay ->
-                                                        showLastWatchedOverlay = true
-                                                    horizontalAccumulator > 0 && showLastWatchedOverlay ->
-                                                        showLastWatchedOverlay = false
-                                                    horizontalAccumulator < 0 && showCategoryOverlay ->
-                                                        showCategoryOverlay = false
-                                                }
-                                                horizontalAccumulator = 0f
-                                            }
-                                        },
-                                    )
-                                }
-                            } else {
-                                Modifier
-                            },
+                                        }
+                                    },
+                                )
+                            }
                         ),
             ) {
                 // Video surface
@@ -423,7 +437,7 @@ fun MobilePlayerScreen(
 
                 // Touch controls overlay
                 AnimatedVisibility(
-                    visible = showControls && !showStats && (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused),
+                    visible = !isInPipMode && showControls && !showStats && (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused),
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
@@ -487,7 +501,7 @@ fun MobilePlayerScreen(
 
                 // Stats overlay
                 AnimatedVisibility(
-                    visible = showStats,
+                    visible = !isInPipMode && showStats,
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
@@ -500,7 +514,7 @@ fun MobilePlayerScreen(
 
                 // Channel switch toast (Live TV only)
                 AnimatedVisibility(
-                    visible = showChannelToast,
+                    visible = !isInPipMode && showChannelToast,
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.TopCenter),
@@ -514,7 +528,7 @@ fun MobilePlayerScreen(
 
             // Category streams panel — slides in from the left
             AnimatedVisibility(
-                visible = showCategoryOverlay,
+                visible = !isInPipMode && showCategoryOverlay,
                 enter = slideInHorizontally { -it },
                 exit = slideOutHorizontally { -it },
             ) {
@@ -552,7 +566,7 @@ fun MobilePlayerScreen(
 
             // Last watched panel — slides in from the right
             AnimatedVisibility(
-                visible = showLastWatchedOverlay,
+                visible = !isInPipMode && showLastWatchedOverlay,
                 enter = slideInHorizontally { it },
                 exit = slideOutHorizontally { it },
             ) {

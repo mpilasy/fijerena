@@ -40,6 +40,9 @@ class PlaybackViewModel(
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
+    private val _isInPictureInPictureMode = MutableStateFlow(false)
+    val isInPictureInPictureMode: StateFlow<Boolean> = _isInPictureInPictureMode.asStateFlow()
+
     // Audio enhancement state
     private val _nightModeEnabled = MutableStateFlow(false)
     val nightModeEnabled: StateFlow<Boolean> = _nightModeEnabled.asStateFlow()
@@ -191,6 +194,8 @@ class PlaybackViewModel(
      * Pauses playback and starts a 30s timer to stop playback completely.
      */
     fun onFocusLost() {
+        if (_isInPictureInPictureMode.value) return
+
         val currentState = _playbackState.value
         if (currentState is PlaybackState.Playing || currentState is PlaybackState.Buffering) {
             pause()
@@ -471,6 +476,10 @@ class PlaybackViewModel(
             service.nightModeManager.enabled = enabled
             service.nightModeProcessor.enabled = enabled
         }
+    }
+
+    fun updatePictureInPictureMode(inPip: Boolean) {
+        _isInPictureInPictureMode.value = inPip
     }
 
     override fun onCleared() {
