@@ -11,3 +11,6 @@ In Kotlin, `data class.copy()` allocates a new object. This means every single X
 ## 2025-03-13 - Avoid Object Copying in Room Batches
 **Learning:** During large-scale local synchronization tasks (like parsing Xtream M3U streams, which can contain tens of thousands of items), accumulating entities in a `MutableList` and then passing `batch.toList()` to Room `insertAll` functions creates massive arrays to perform shallow copies. Because Android Room implementations execute the DB transaction synchronously within a suspend function, we can just pass the mutable `batch` list directly. The insertion completes before `batch.clear()` is called.
 **Action:** Removed `.toList()` allocations from Room batch inserts. Going forward, avoid `.toList()` or other defensive copies unless strictly necessary (e.g., passing mutable state to true async jobs without suspend blocking).
+## 2025-04-27 - EpgChannelMatcher Memoization
+**Learning:** EPG mapping requires O(N) string contains fallback on many channels. Caching query results dramatically reduces latency for overlapping strings.
+**Action:** Memoize string queries using ConcurrentHashMap.
