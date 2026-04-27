@@ -63,7 +63,7 @@ fun TvPlayerScreen(
     seriesId: String? = null,
     seriesName: String? = null,
     startFromBeginning: Boolean = false,
-    playbackViewModel: PlaybackViewModel = viewModel(),
+    playbackViewModel: PlaybackViewModel = viewModel(LocalContext.current as androidx.activity.ComponentActivity),
     loaderViewModel: StreamLoaderViewModel =
         viewModel(
             factory =
@@ -101,6 +101,22 @@ fun TvPlayerScreen(
 
     val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
     val currentStreamState by androidx.compose.runtime.rememberUpdatedState(streamState)
+    val playbackState by playbackViewModel.playbackState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity
+
+    // Enable/disable PiP auto-enter
+    LaunchedEffect(playbackState) {
+        val ps = playbackState
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val isPlaying = ps is PlaybackState.Playing || ps is PlaybackState.Buffering
+            activity?.setPictureInPictureParams(
+                android.app.PictureInPictureParams.Builder()
+                    .setAutoEnterEnabled(isPlaying)
+                    .build()
+            )
+        }
+    }
 
     // Stop playback when leaving the player screen
     DisposableEffect(Unit) {
