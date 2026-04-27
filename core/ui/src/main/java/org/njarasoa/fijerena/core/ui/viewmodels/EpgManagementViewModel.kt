@@ -52,7 +52,7 @@ class EpgManagementViewModel(
     val staleSourceCount: StateFlow<Int> =
         sources
             .map { list ->
-                val threshold = System.currentTimeMillis() - STALE_THRESHOLD_MS
+                val threshold = System.currentTimeMillis() - epgFileManager.staleThresholdMs
                 list.count { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
@@ -101,6 +101,10 @@ class EpgManagementViewModel(
 
     val epgRefreshTime: String get() = appSettings.epgRefreshTime
 
+    val epgRefreshInterval: Int get() = appSettings.epgRefreshInterval
+
+    val staleThresholdMs: Long get() = epgFileManager.staleThresholdMs
+
     fun toggleSelection(id: Long) {
         _selectedIds.value =
             if (_selectedIds.value.contains(id)) {
@@ -127,6 +131,11 @@ class EpgManagementViewModel(
 
     fun setEpgRefreshTime(time: String) {
         appSettings.epgRefreshTime = time
+        epgFileManager.updateAutoRefreshSchedule()
+    }
+
+    fun setEpgRefreshInterval(interval: Int) {
+        appSettings.epgRefreshInterval = interval
         epgFileManager.updateAutoRefreshSchedule()
     }
 
@@ -293,7 +302,7 @@ class EpgManagementViewModel(
 
         viewModelScope.launch {
             // Instant feedback: calculate which IDs will be refreshed and put them in the map
-            val thresholdMs = System.currentTimeMillis() - STALE_THRESHOLD_MS
+            val thresholdMs = System.currentTimeMillis() - epgFileManager.staleThresholdMs
             val sourcesToRefresh =
                 withContext(Dispatchers.IO) {
                     settingsDb().epgSourceDao().getStaleSources(thresholdMs)
@@ -497,8 +506,6 @@ class EpgManagementViewModel(
     }
 
     companion object {
-        private const val STALE_THRESHOLD_MS = 6L * 3600 * 1000
-
         private fun formatBytes(bytes: Long): String =
             when {
                 bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)

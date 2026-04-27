@@ -67,7 +67,9 @@ Standalone programme title search across all indexed XMLTV data.
 
 - Access: Content Type Selection → book icon (visible when EPG index is ready)
 - **Freshness Tracking:** Displays last index update time in the header.
-- **Smart Refresh:** Shows a "Refresh Data" button when indexed programmes are older than 24 hours.
+- **Customizable Refresh:** Configurable refresh interval (4h, 8h, 12h, 24h, 48h) or "Never".
+- **Robust Retries:** Automatic retry mechanism (5 attempts with exponential backoff: 1m to 16m) for failed updates.
+- **Smart Refresh:** Shows a "Refresh Data" button when indexed programmes are stale according to the selected interval.
 - Results grouped by start date (Today, Tomorrow, weekday name, or "EEEE, MMM d" for later dates), then by programme within each date
 - Time window: −1 to +6 days from now, max 500 results per query
 - SQLite FTS4 MATCH for fast search (<100ms); falls back to LIKE if FTS returns empty
@@ -82,14 +84,15 @@ Standalone programme title search across all indexed XMLTV data.
 Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 
 - Per-source label and timezone offset override (applies during parsing)
-- Status indicator: green = ingested <24h, yellow = >24h, red = error, gray = disabled
+- Status indicator: green = ingested < interval, yellow = > interval stale, red = error, gray = disabled
 - Download-ingest-delete pipeline: XML downloaded to temp, parsed into SQLite, file deleted immediately
 - TV/fixed devices: stream directly from network to DB (zero disk I/O)
 - Mobile: download to cache dir first, then ingest
 - Parallel ingestion: sources download concurrently (3 on mobile, 2 on TV); ingestion into SQLite uses 2 parallel workers
 - Per-source progress: shows download % and ingestion % with channel/programme counts
 - Cancel button: running or queued EPG refreshes can be cancelled mid-operation
-- Auto-refresh on startup and 24h periodic WorkManager background sync
+- Auto-refresh on startup and periodic background sync (configurable 4h–48h)
+- Intelligent Retries: 5-attempt retry loop with exponential backoff (1m, 2m, 4m, 8m, 16m) for the entire task
 - First source clears existing data (full rebuild); subsequent sources append
 - Selective refresh: can refresh selected sources, failed sources, or outdated sources
 - Source deletion cleans up associated channels and programmes from the index

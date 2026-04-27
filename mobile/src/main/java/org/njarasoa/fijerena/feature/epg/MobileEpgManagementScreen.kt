@@ -57,6 +57,17 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showIntervalPicker by remember { mutableStateOf(false) }
+    val intervalOptions = remember {
+        listOf(
+            -1 to "Never",
+            4 to "4 hours",
+            8 to "8 hours",
+            12 to "12 hours",
+            24 to "24 hours",
+            48 to "48 hours"
+        )
+    }
     var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
 
     Scaffold(
@@ -202,13 +213,18 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                 modifier =
                                     Modifier
                                         .padding(CinemaSpacing.md)
-                                        .clickable { showTimePicker = true },
+                                        .clickable { showIntervalPicker = true },
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                                    val intervalText = when(val interval = viewModel.epgRefreshInterval) {
+                                        -1 -> "Disabled"
+                                        24 -> "Daily at ${viewModel.epgRefreshTime}"
+                                        else -> "Every $interval hours starting at ${viewModel.epgRefreshTime}"
+                                    }
                                     Text(
-                                        "Daily update at ${viewModel.epgRefreshTime}",
+                                        intervalText,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                     )
@@ -245,6 +261,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                         latestProgrammeTime = latestTime,
                         activeProgress = activeProgress,
                         nowMs = nowMs,
+                        staleThresholdMs = viewModel.staleThresholdMs,
                         onRefresh = { viewModel.refreshSource(source.id) },
                         onEdit = { editingSource = source },
                         onDelete = { viewModel.deleteSource(source.id) },
@@ -345,6 +362,56 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
             },
         )
     }
+
+    if (showIntervalPicker) {
+        AlertDialog(
+            onDismissRequest = { showIntervalPicker = false },
+            title = { Text("EPG Refresh Interval") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                    intervalOptions.forEach { (interval, label) ->
+                        val isSelected = viewModel.epgRefreshInterval == interval
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { 
+                                    viewModel.setEpgRefreshInterval(interval)
+                                    if (interval == -1) {
+                                        viewModel.setAutoRefreshEnabled(false)
+                                    } else {
+                                        viewModel.setAutoRefreshEnabled(true)
+                                    }
+                                    showIntervalPicker = false
+                                }
+                                .padding(vertical = CinemaSpacing.sm),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = null
+                            )
+                            Spacer(modifier = Modifier.width(CinemaSpacing.sm))
+                            Text(label, style = MaterialTheme.typography.bodyLarge)
+                            if (interval > 0) {
+                                Spacer(modifier = Modifier.weight(1f))
+                                TextButton(
+                                    onClick = {
+                                        showIntervalPicker = false
+                                        showTimePicker = true
+                                    }
+                                ) {
+                                    Text(viewModel.epgRefreshTime)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showIntervalPicker = false }) { Text("Close") }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -355,6 +422,7 @@ private fun EpgSourceCard(
     latestProgrammeTime: Long,
     activeProgress: org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.ActiveSourceProgress?,
     nowMs: Long,
+    staleThresholdMs: Long,
     onRefresh: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -379,7 +447,7 @@ private fun EpgSourceCard(
                         onCheckedChange = { onToggleSelection() },
                     )
 
-                    StatusIndicator(source, nowMs)
+                    StatusIndicator(source, nowMs, staleThresholdMs)
 
                     Column {
                         Text(
@@ -515,13 +583,14 @@ private fun EpgSourceCard(
 private fun StatusIndicator(
     source: EpgSourceEntity,
     nowMs: Long,
+    staleThresholdMs: Long,
 ) {
     val color =
         when {
             !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
             source.lastError != null -> CinemaError
             source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-            nowMs - source.lastIngestedAtMs > 24 * 3600 * 1000 -> org.njarasoa.fijerena.ui.theme.CinemaWarning
+            nowMs - source.lastIngestedAtMs > staleThresholdMs -> org.njarasoa.fijerena.ui.theme.CinemaWarning
             else -> CinemaSuccess
         }
 
@@ -578,6 +647,10 @@ private fun EpgStatusCard(
                         if (queued > 0) "Current Status: $queued refresh tasks queued" else "Current Status: Idle"
                     }
                     is MultiSourceState.Processing -> "Current Status: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
+                    is MultiSourceState.Retrying -> {
+                        val nextRetry = NumberUtils.formatTimestamp(LocalContext.current, multiState.nextRetryAtMs)
+                        "Current Status: Error. Retrying (Attempt ${multiState.attempt}/${multiState.maxAttempts}) at $nextRetry"
+                    }
                     is MultiSourceState.Completed -> "Current Status: Finished run"
                     is MultiSourceState.Finalizing -> "Current Status: Finalizing (${multiState.phase})..."
                     is MultiSourceState.Clearing -> "Current Status: Clearing data..."

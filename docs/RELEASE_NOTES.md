@@ -1,5 +1,15 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: EPG Reliability & Customization
+**Release Date:** 2026-04-27
+
+### EPG Management Improvements
+- **Customizable Refresh Intervals:** Users can now choose how often EPG data is refreshed. Options include 4h, 8h, 12h, 24h (default), 48h, or "Never".
+- **Dynamic Staleness Logic:** The "Data Freshness" indicators and "Refresh Stale" buttons now dynamically adapt to the user-selected interval.
+- **Robust Retry Mechanism:** Introduced an automatic retry loop for all EPG refresh tasks. If an update fails (e.g., due to network issues), the app will now retry up to 5 times with exponential backoff (1m, 2m, 4m, 8m, and 16m).
+- **Retry Status Visualization:** The EPG "System Status" card now provides real-time feedback on retry attempts, including the attempt count and the scheduled time for the next retry.
+- **WorkManager Integration:** Background periodic sync now uses the user's preferred interval, ensuring consistent updates on mobile devices.
+
 ## Version: Navigation Streamlining & Content Depth
 **Release Date:** 2026-04-22
 

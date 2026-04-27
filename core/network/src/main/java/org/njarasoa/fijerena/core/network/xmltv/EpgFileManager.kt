@@ -69,7 +69,6 @@ class EpgFileManager private constructor(
         private const val STREAM_BUFFER_SIZE = 131072 // 128KB
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 5000L
-        private const val STALE_THRESHOLD_MS = 6L * 3600 * 1000
         private const val AUTO_REFRESH_CHECK_INTERVAL_MS = 4L * 3600 * 1000 // Check every 4 hours
 
         @Volatile
@@ -157,6 +156,13 @@ class EpgFileManager private constructor(
             val reason: String,
         ) : MultiSourceState
 
+        data class Retrying(
+            val attempt: Int,
+            val maxAttempts: Int,
+            val nextRetryAtMs: Long,
+            val reason: String,
+        ) : MultiSourceState
+
         data object Clearing : MultiSourceState
 
         /**
@@ -174,7 +180,19 @@ class EpgFileManager private constructor(
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val appSettings by lazy { AppSettings(context) }
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    val staleThresholdMs: Long
+        get() {
+            val interval = appSettings.epgRefreshInterval
+            return if (interval <= 0) {
+                24L * 3600 * 1000 // 24h if disabled or "Never"
+            } else {
+                interval.toLong() * 3600 * 1000
+            }
+        }
+
     private var processJob: Job? = null
     private var autoRefreshJob: Job? = null
 
@@ -222,23 +240,7 @@ class EpgFileManager private constructor(
             }
 
             // Schedule WorkManager periodic sync (Doze-aware, works on both mobile and TV)
-            val appSettings = AppSettings(context)
-            val constraints =
-                Constraints
-                    .Builder()
-                    .setRequiredNetworkType(WorkNetworkType.CONNECTED)
-                    .build()
-            val initialDelay = calculateDelayUntil(appSettings.epgRefreshTime)
-            val request =
-                PeriodicWorkRequestBuilder<EpgSyncWorker>(24, TimeUnit.HOURS)
-                    .setConstraints(constraints)
-                    .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-                    .build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                "epg_sync",
-                ExistingPeriodicWorkPolicy.REPLACE, // REPLACE so change in refresh time is applied
-                request,
-            )
+            updateAutoRefreshSchedule()
         }
     }
 
@@ -319,11 +321,49 @@ class EpgFileManager private constructor(
                         override val priority = RefreshPriority.MEDIUM
 
                         override suspend fun execute() {
-                            try {
-                                dbQueryAndProcess()
-                            } finally {
-                                onComplete?.invoke()
+                            val maxAttempts = 5
+                            val retryDelaysMs = listOf(
+                                1L * 60 * 1000,
+                                2L * 60 * 1000,
+                                4L * 60 * 1000,
+                                8L * 60 * 1000,
+                                16L * 60 * 1000
+                            )
+
+                            var currentAttempt = 0
+                            var lastException: Exception? = null
+
+                            while (currentAttempt <= maxAttempts) {
+                                try {
+                                    if (currentAttempt > 0) {
+                                        Log.i(TAG, "Retrying task $taskId (attempt $currentAttempt/$maxAttempts)")
+                                    }
+                                    dbQueryAndProcess()
+                                    onComplete?.invoke()
+                                    return // Success
+                                } catch (e: Exception) {
+                                    lastException = e
+                                    currentAttempt++
+                                    
+                                    if (currentAttempt <= maxAttempts) {
+                                        val delayMs = retryDelaysMs[currentAttempt - 1]
+                                        val nextRetryAt = System.currentTimeMillis() + delayMs
+                                        _state.value = MultiSourceState.Retrying(
+                                            attempt = currentAttempt,
+                                            maxAttempts = maxAttempts,
+                                            nextRetryAtMs = nextRetryAt,
+                                            reason = e.message ?: "Unknown error"
+                                        )
+                                        Log.w(TAG, "Task $taskId failed (attempt $currentAttempt/$maxAttempts). Retrying in ${delayMs/60000} min. Error: ${e.message}")
+                                        delay(delayMs)
+                                    }
+                                }
                             }
+
+                            // All attempts failed
+                            Log.e(TAG, "Task $taskId failed after $maxAttempts retries: ${lastException?.message}", lastException)
+                            _state.value = MultiSourceState.Error(lastException?.message ?: "Task failed after $maxAttempts retries")
+                            onComplete?.invoke()
                         }
                     }
                 RefreshQueue.submit(task)
@@ -336,7 +376,7 @@ class EpgFileManager private constructor(
     ) {
         launchGenericTask("epg_refresh_stale", onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            val thresholdMs = System.currentTimeMillis() - STALE_THRESHOLD_MS
+            val thresholdMs = System.currentTimeMillis() - staleThresholdMs
             val staleSources = sourceDao.getStaleSources(thresholdMs)
             if (staleSources.isNotEmpty()) {
                 processAllSourcesInternal(staleSources)
@@ -990,7 +1030,7 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Refresh all enabled sources that are considered stale (last ingested > 6h ago).
+     * Refresh all enabled sources that are considered stale (last ingested > interval).
      * Returns true if refresh was started (stale sources found), false otherwise.
      */
     suspend fun refreshOutdatedSources(): Boolean {
@@ -1005,7 +1045,7 @@ class EpgFileManager private constructor(
         val now = System.currentTimeMillis()
         val staleSources =
             sources.filter { source ->
-                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > STALE_THRESHOLD_MS
+                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > staleThresholdMs
             }
 
         return if (staleSources.isNotEmpty()) {
@@ -1075,7 +1115,13 @@ class EpgFileManager private constructor(
         autoRefreshJob?.cancel()
         scope.launch {
             scheduleAutoRefresh()
-            val appSettings = AppSettings(context)
+            
+            val intervalHours = appSettings.epgRefreshInterval
+            if (intervalHours == -1) {
+                WorkManager.getInstance(context).cancelUniqueWork("epg_sync")
+                return@launch
+            }
+
             val constraints =
                 Constraints
                     .Builder()
@@ -1083,7 +1129,7 @@ class EpgFileManager private constructor(
                     .build()
             val initialDelay = calculateDelayUntil(appSettings.epgRefreshTime)
             val request =
-                PeriodicWorkRequestBuilder<EpgSyncWorker>(24, TimeUnit.HOURS)
+                PeriodicWorkRequestBuilder<EpgSyncWorker>(intervalHours.toLong(), TimeUnit.HOURS)
                     .setConstraints(constraints)
                     .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
                     .build()

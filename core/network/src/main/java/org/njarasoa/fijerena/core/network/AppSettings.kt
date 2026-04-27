@@ -28,6 +28,7 @@ class AppSettings(
         private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
         private const val KEY_EPG_AUTO_REFRESH = "epg_auto_refresh"
         private const val KEY_EPG_REFRESH_TIME = "epg_refresh_time"
+        private const val KEY_EPG_REFRESH_INTERVAL = "epg_refresh_interval"
         private const val KEY_CONTENT_AUTO_REFRESH = "content_auto_refresh"
         private const val KEY_CONTENT_REFRESH_TIME = "content_refresh_time"
         private const val KEY_CELLULAR_LIVE_MULTIPLIER = "cellular_live_multiplier"
@@ -47,6 +48,7 @@ class AppSettings(
         const val DEFAULT_UI_SCALE = 1.0f
         const val DEFAULT_EPG_URL = ""
         const val DEFAULT_EPG_REFRESH_TIME = "02:00"
+        const val DEFAULT_EPG_REFRESH_INTERVAL = 24
         const val DEFAULT_CONTENT_REFRESH_TIME = "04:00"
         const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
@@ -152,6 +154,15 @@ class AppSettings(
     var epgRefreshTime: String
         get() = prefs.getString(KEY_EPG_REFRESH_TIME, DEFAULT_EPG_REFRESH_TIME) ?: DEFAULT_EPG_REFRESH_TIME
         set(value) = prefs.edit { putString(KEY_EPG_REFRESH_TIME, value) }
+
+    /**
+     * EPG refresh interval in hours.
+     * Options: 4, 8, 12, 24, 48, or -1 (Never).
+     * Default: 24 hours.
+     */
+    var epgRefreshInterval: Int
+        get() = prefs.getInt(KEY_EPG_REFRESH_INTERVAL, DEFAULT_EPG_REFRESH_INTERVAL)
+        set(value) = prefs.edit { putInt(KEY_EPG_REFRESH_INTERVAL, value) }
 
     /**
      * Enable or disable automatic background refresh of provider content (categories/streams).

@@ -70,6 +70,17 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showIntervalPicker by remember { mutableStateOf(false) }
+    val intervalOptions = remember {
+        listOf(
+            -1 to "Never",
+            4 to "4 hours",
+            8 to "8 hours",
+            12 to "12 hours",
+            24 to "24 hours",
+            48 to "48 hours"
+        )
+    }
     var deletingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
 
@@ -195,11 +206,16 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     modifier =
                                         Modifier
                                             .weight(1f)
-                                            .clickable { showTimePicker = true },
+                                            .clickable { showIntervalPicker = true },
                                 ) {
                                     Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium)
+                                    val intervalText = when(val interval = viewModel.epgRefreshInterval) {
+                                        -1 -> "Disabled"
+                                        24 -> "Daily at ${viewModel.epgRefreshTime}"
+                                        else -> "Every $interval hours starting at ${viewModel.epgRefreshTime}"
+                                    }
                                     Text(
-                                        "Daily update at ${viewModel.epgRefreshTime}",
+                                        intervalText,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                     )
@@ -290,7 +306,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     }
                                 }
 
-                                StatusIndicator(source, nowMs, scale)
+                                StatusIndicator(source, nowMs, viewModel.staleThresholdMs, scale)
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
@@ -533,12 +549,73 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
             containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
+
+    if (showIntervalPicker) {
+        AlertDialog(
+            onDismissRequest = { showIntervalPicker = false },
+            title = { Text("EPG Refresh Interval", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+                    intervalOptions.forEach { (interval, label) ->
+                        val isSelected = viewModel.epgRefreshInterval == interval
+                        androidx.tv.material3.Surface(
+                            checked = isSelected,
+                            onCheckedChange = { 
+                                viewModel.setEpgRefreshInterval(interval)
+                                if (interval == -1) {
+                                    viewModel.setAutoRefreshEnabled(false)
+                                } else {
+                                    viewModel.setAutoRefreshEnabled(true)
+                                }
+                                showIntervalPicker = false
+                            },
+                            colors = androidx.tv.material3.ToggleableSurfaceDefaults.colors(
+                                containerColor = if (isSelected) org.njarasoa.fijerena.core.ui.theme.CinemaAccent.copy(alpha = 0.2f) else org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant.copy(alpha = 0.5f),
+                                contentColor = if (isSelected) org.njarasoa.fijerena.core.ui.theme.CinemaAccent else org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                                focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground
+                            ),
+                            shape = androidx.tv.material3.ToggleableSurfaceDefaults.shape(MaterialTheme.shapes.small),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(Spacing.sm.scaled(scale)),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (isSelected) Icons.Rounded.RadioButtonChecked else Icons.Rounded.RadioButtonUnchecked,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp.scaled(scale)),
+                                    tint = if (isSelected) org.njarasoa.fijerena.core.ui.theme.CinemaAccent else org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+                                )
+                                Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
+                                Text(label)
+                                if (interval > 0) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    CinemaSecondaryButton(
+                                        onClick = { 
+                                            showIntervalPicker = false
+                                            showTimePicker = true 
+                                        },
+                                        text = if (interval == 24) "Time: ${viewModel.epgRefreshTime}" else "Start: ${viewModel.epgRefreshTime}"
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
+        )
+    }
 }
 
 @Composable
 private fun StatusIndicator(
     source: EpgSourceEntity,
     nowMs: Long,
+    staleThresholdMs: Long,
     scale: Float,
 ) {
     val color =
@@ -546,7 +623,7 @@ private fun StatusIndicator(
             !source.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
             source.lastError != null -> MaterialTheme.colorScheme.error
             source.lastIngestedAtMs == 0L -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-            nowMs - source.lastIngestedAtMs > 24 * 3600 * 1000 -> org.njarasoa.fijerena.ui.theme.CinemaWarning
+            nowMs - source.lastIngestedAtMs > staleThresholdMs -> org.njarasoa.fijerena.ui.theme.CinemaWarning
             else -> org.njarasoa.fijerena.ui.theme.CinemaSuccess
         }
 
@@ -607,6 +684,10 @@ private fun EpgStatusCard(
                         if (queued > 0) "Current Status: $queued refresh tasks queued" else "Current Status: Idle"
                     }
                     is MultiSourceState.Processing -> "Current Status: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
+                    is MultiSourceState.Retrying -> {
+                        val nextRetry = NumberUtils.formatTimestamp(LocalContext.current, multiState.nextRetryAtMs)
+                        "Current Status: Error. Retrying (Attempt ${multiState.attempt}/${multiState.maxAttempts}) at $nextRetry"
+                    }
                     is MultiSourceState.Completed -> "Current Status: Finished run"
                     is MultiSourceState.Finalizing -> "Current Status: Finalizing (${multiState.phase})..."
                     is MultiSourceState.Clearing -> "Current Status: Clearing data..."

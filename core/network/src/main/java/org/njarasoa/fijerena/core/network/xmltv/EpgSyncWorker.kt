@@ -7,7 +7,7 @@ import androidx.work.WorkerParameters
 /**
  * WorkManager worker for mobile background EPG sync.
  *
- * Scheduled as a periodic 24-hour task on mobile devices only.
+ * Scheduled as a periodic task on mobile devices based on AppSettings.
  * TV/fixed devices use coroutine-based auto-refresh instead.
  */
 class EpgSyncWorker(
