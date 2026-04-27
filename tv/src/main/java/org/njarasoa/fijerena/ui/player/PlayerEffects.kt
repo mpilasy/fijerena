@@ -55,7 +55,7 @@ fun PlayerEffects(
     }
 
     // Live position polling for smooth VOD timer updates
-    LaunchedEffect(playbackState) {
+    LaunchedEffect(playbackState::class) {
         if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused) {
             while (true) {
                 StreamingPlaybackService.getInstance()?.getPlayer()?.let { player ->
@@ -110,7 +110,7 @@ fun PlayerEffects(
     }
 
     // Update displayed metadata when stream actually starts playing
-    LaunchedEffect(currentMetadata.title, playbackState) {
+    LaunchedEffect(currentMetadata.title, playbackState::class) {
         // Only update displayed metadata when stream is actually playing/buffering
         if (currentMetadata.title.isNotEmpty() &&
             (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)
@@ -120,7 +120,7 @@ fun PlayerEffects(
     }
 
     // Reset playback speed when paused, ended, or errored
-    LaunchedEffect(playbackState) {
+    LaunchedEffect(playbackState::class) {
         if (playbackState is PlaybackState.Paused ||
             playbackState is PlaybackState.Ended ||
             playbackState is PlaybackState.Error
@@ -133,7 +133,7 @@ fun PlayerEffects(
     }
 
     // Show only stream info when stream starts from menu
-    LaunchedEffect(currentMetadata.title, playbackState) {
+    LaunchedEffect(currentMetadata.title, playbackState::class) {
         // Show only stream info when title changes on initial load from menu
         if (currentMetadata.title.isNotEmpty() &&
             currentMetadata.title != state.previousMetadataTitle &&

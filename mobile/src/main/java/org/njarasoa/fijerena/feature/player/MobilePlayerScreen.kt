@@ -79,7 +79,7 @@ fun MobilePlayerScreen(
     seriesId: String? = null,
     seriesName: String? = null,
     startFromBeginning: Boolean = false,
-    viewModel: PlaybackViewModel = viewModel(LocalContext.current as androidx.activity.ComponentActivity),
+    viewModel: PlaybackViewModel = viewModel(),
     loaderViewModel: StreamLoaderViewModel =
         viewModel(
             factory =
@@ -143,7 +143,7 @@ fun MobilePlayerScreen(
     val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
 
     // Enable/disable PiP auto-enter
-    LaunchedEffect(playbackState) {
+    LaunchedEffect(playbackState::class) {
         val ps = playbackState
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             val isPlaying = ps is PlaybackState.Playing || ps is PlaybackState.Buffering
@@ -308,14 +308,14 @@ fun MobilePlayerScreen(
                         .background(org.njarasoa.fijerena.core.ui.theme.CinemaBackground)
                         .then(
                             if (isInPipMode) Modifier else
-                            Modifier.pointerInput(showStats, isLiveContent, playbackState) {
+                            Modifier.pointerInput(showStats, isLiveContent, playbackState::class) {
                                 detectTapGestures(
                                     onTap = {
                                         if (!showStats) showControls = !showControls
                                     },
                                     onDoubleTap = {
                                         if (!showStats && !isLiveContent) {
-                                            when (playbackState) {
+                                            when (viewModel.playbackState.value) {
                                                 is PlaybackState.Playing -> viewModel.pause()
                                                 is PlaybackState.Paused -> viewModel.resume()
                                                 else -> {}
@@ -387,6 +387,8 @@ fun MobilePlayerScreen(
                     playerView.player = service?.getPlayer()
 
                     onDispose {
+                        if (viewModel.isInPictureInPictureMode.value) return@onDispose
+
                         val currentState = currentStreamState
                         if (currentState is StreamLoaderViewModel.StreamState.Success) {
                             val ps = viewModel.playbackState.value
