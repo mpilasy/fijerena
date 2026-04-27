@@ -41,7 +41,7 @@ room = "2.8.4"
 ksp = "2.3.4"
 
 # Bundled SQLite with FTS5 support (replaces system SQLite)
-sqliteAndroid = "3.45.0"
+sqliteAndroid = "3.49.0"
 
 # Paging
 paging = "3.3.6"

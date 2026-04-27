@@ -37,7 +37,7 @@ dependencies {
 
     // FFmpeg extension for software decoding of AC3, EAC3, DTS, TrueHD, etc.
     // Pre-built Media3 FFmpeg decoder from Jellyfin (Maven Central)
-    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.6.1+1")
+    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.6.1+2")
 
     // Kotlinx Coroutines
     api(libs.kotlinx.coroutines.core)
