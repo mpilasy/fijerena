@@ -57,7 +57,6 @@ class EpgIndexer private constructor(
         const val BATCH_SIZE_MOBILE = 500
         const val BATCH_SIZE_TV = 5000
         private const val BATCH_SIZE = BATCH_SIZE_MOBILE
-        private const val STREAM_BUFFER_SIZE = 65536
 
         // Room-generated FTS content-sync trigger names for epg_programme_fts.
         // These are created in onCreate and kept alive in the SQLite file.
