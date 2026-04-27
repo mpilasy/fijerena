@@ -177,7 +177,6 @@ Instead of showing the stats overlay automatically on buffering, the app now sho
 **PERFORMANCE:** Dropped frames (color-coded: <0.5% green, <2% yellow, ≥2% red), Drop Rate
 **DEVICE:** Model, Android API Level, AI Tier (REALTIME/BASIC), Build time, Git hash
 **AI AUDIO DSP:**
-- **Night Mode**: Status (ON/OFF), Engine (HAL/APP)
 - **Clear Voice**: Status (ON/OFF), Strength %, Slow-device auto-disable status
 - **AI Latency**: Current and average inference time in milliseconds
 - **AI Frames**: Count of processed vs. skipped frames (due to latency guard)
@@ -197,11 +196,6 @@ Exclusive to PREMIUM tier devices (NVIDIA Shield, OnePlus 12/12R/13, high-end So
 The implementation uses a two-stage DTLN (Dual-signal Transformation LSTM Network) model to isolate and boost speech.
 - **Experimental Stage**: Integrated into the pipeline but currently disabled or failing to process audio correctly.
 - **Planned Features**: Real-time GPU/NPU inference, 25ms latency guard, and auto-disable safety valve.
-
-### Smart Night Mode
-Real-time dynamic range compression and limiting.
-- **HAL Integration**: Prefers system-level DynamicsProcessing.
-- **APP Fallback**: Internal DSP implementation.
 
 ### Sony Voice Zoom - [EXPERIMENTAL]
 **Current Status: Status unverified.** 

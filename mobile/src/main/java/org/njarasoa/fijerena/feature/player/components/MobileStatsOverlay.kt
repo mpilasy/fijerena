@@ -96,17 +96,6 @@ fun MobileStatsOverlay(
         ?: remember { mutableStateOf(0f) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
-    // Audio DSP stats
-    val audioDspStats by StreamingPlaybackService.getInstance()?.audioDspStats?.collectAsStateWithLifecycle(
-        org.njarasoa.fijerena.core.player.model
-            .AudioDspStats(),
-    ) ?: remember {
-        mutableStateOf(
-            org.njarasoa.fijerena.core.player.model
-                .AudioDspStats(),
-        )
-    }
-
     LaunchedEffect(Unit) {
         while (true) {
             StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
@@ -340,38 +329,6 @@ fun MobileStatsOverlay(
                 SectionHeader("DEVICE")
                 StatRow("Model", android.os.Build.MODEL)
                 StatRow("API", "${android.os.Build.VERSION.SDK_INT}")
-
-                SectionHeader("AUDIO DSP")
-                val nmEnabled = audioDspStats.nightModeEnabled
-                val nightModeColor = if (nmEnabled) CinemaSuccess else CinemaTextPrimary
-                StatRowColored("Night Mode", if (nmEnabled) "ON" else "OFF", nightModeColor)
-
-                if (nmEnabled) {
-                    val nmActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.enabled ?: false }
-                    val isHalActive = remember { StreamingPlaybackService.getInstance()?.nightModeManager?.isActuallyActive ?: false }
-                    val sessionId =
-                        remember {
-                            val p = StreamingPlaybackService.getInstance()?.getPlayer()
-                            if (p is androidx.media3.exoplayer.ExoPlayer) p.audioSessionId else 0
-                        }
-                    StatRow("Audio Session", "$sessionId")
-                    StatRow("DSP Active", if (nmActive && sessionId != 0) "YES" else "NO")
-                    if (nmActive) {
-                        StatRow("NM Engine", if (isHalActive) "HAL (System)" else "APP (Internal)")
-                    }
-                    val encodingName =
-                        when (audioDspStats.nmEncoding) {
-                            androidx.media3.common.C.ENCODING_PCM_16BIT -> "PCM_16BIT"
-                            androidx.media3.common.C.ENCODING_PCM_FLOAT -> "PCM_FLOAT"
-                            androidx.media3.common.C.ENCODING_PCM_24BIT -> "PCM_24BIT"
-                            androidx.media3.common.C.ENCODING_PCM_32BIT -> "PCM_32BIT"
-                            0 -> "NOT_SET"
-                            else -> "UNKNOWN(${audioDspStats.nmEncoding})"
-                        }
-                    StatRow("NM Encoding", encodingName)
-                    StatRow("NM Proc Enabled", "${audioDspStats.nmEnabled}")
-                    StatRow("NM Calls", "${audioDspStats.nmCallCount}")
-                }
 
                 val caps =
                     remember {

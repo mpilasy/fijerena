@@ -79,11 +79,3 @@ data class ChapterInfo(
     val startTimeMs: Long,
     val endTimeMs: Long,
 )
-
-/** Audio DSP stats for the Stats for Nerds overlay */
-data class AudioDspStats(
-    val nightModeEnabled: Boolean = false,
-    val nmEncoding: Int = 0,
-    val nmEnabled: Boolean = false,
-    val nmCallCount: Long = 0L,
-)
