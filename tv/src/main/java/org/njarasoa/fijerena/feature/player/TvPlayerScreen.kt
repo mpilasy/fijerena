@@ -84,12 +84,6 @@ fun TvPlayerScreen(
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
-    val activity = context as? android.app.Activity
-
-    // Use activity-scoped ViewModel so it's shared with MainActivity for PiP updates
-    val playbackViewModel: PlaybackViewModel = viewModel(
-        viewModelStoreOwner = (activity as? ViewModelStoreOwner) ?: LocalLifecycleOwner.current as ViewModelStoreOwner
-    )
 
     // Observe app focus/lifecycle to pause on background and stop after timeout
     DisposableEffect(lifecycleOwner) {
@@ -97,9 +91,7 @@ fun TvPlayerScreen(
             LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_PAUSE -> {
-                        // Pass current PiP state from activity as a safeguard
-                        val inPip = activity?.isInPictureInPictureMode ?: false
-                        playbackViewModel.onFocusLost(inPip)
+                        playbackViewModel.onFocusLost(false)
                     }
                     Lifecycle.Event.ON_RESUME -> playbackViewModel.onFocusRegained()
                     else -> {}
@@ -115,24 +107,9 @@ fun TvPlayerScreen(
     val currentStreamState by androidx.compose.runtime.rememberUpdatedState(streamState)
     val playbackState by playbackViewModel.playbackState.collectAsStateWithLifecycle()
 
-    // Enable/disable PiP auto-enter
-    LaunchedEffect(playbackState::class) {
-        val ps = playbackState
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            val isPlaying = ps is PlaybackState.Playing || ps is PlaybackState.Buffering
-            activity?.setPictureInPictureParams(
-                android.app.PictureInPictureParams.Builder()
-                    .setAutoEnterEnabled(isPlaying)
-                    .build()
-            )
-        }
-    }
-
     // Stop playback when leaving the player screen
     DisposableEffect(Unit) {
         onDispose {
-            if (playbackViewModel.isInPictureInPictureMode.value) return@onDispose
-
             // Save final position before leaving (for VOD content)
             val currentState = currentStreamState
             if (currentState is StreamLoaderViewModel.StreamState.Success && !currentState.isLive) {
