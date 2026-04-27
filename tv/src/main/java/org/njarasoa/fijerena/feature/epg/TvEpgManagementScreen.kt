@@ -214,8 +214,9 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     val intervalText = when(val interval = epgSettings.epgRefreshInterval) {
                                         -1 -> "Disabled"
                                         else -> {
+                                            val freq = if (interval == 24) "Daily" else "Every $interval hours"
                                             val timeStr = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(nextRefreshAtMs))
-                                            "Next refresh will be at $timeStr"
+                                            "$freq. Next refresh at $timeStr"
                                         }
                                     }
                                     Text(
