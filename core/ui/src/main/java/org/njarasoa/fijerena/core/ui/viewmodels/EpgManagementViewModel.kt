@@ -95,13 +95,34 @@ class EpgManagementViewModel(
     private val _taskSourceIds = MutableStateFlow<Map<String, Set<Long>>>(emptyMap())
     val taskSourceIds: StateFlow<Map<String, Set<Long>>> = _taskSourceIds.asStateFlow()
 
+    data class EpgSettings(
+        val autoRefreshEnabled: Boolean,
+        val epgRefreshTime: String,
+        val epgRefreshInterval: Int,
+    )
+
+    private val _epgSettings = MutableStateFlow(
+        EpgSettings(
+            autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
+            epgRefreshTime = appSettings.epgRefreshTime,
+            epgRefreshInterval = appSettings.epgRefreshInterval,
+        )
+    )
+    val epgSettings: StateFlow<EpgSettings> = _epgSettings.asStateFlow()
+
+    val nextRefreshAtMs: StateFlow<Long> =
+        epgSettings
+            .map { settings ->
+                calculateNextRefreshTime(settings.epgRefreshTime, settings.epgRefreshInterval)
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
     val isDevMode: Boolean get() = appSettings.isDevMode
 
-    val autoRefreshEnabled: Boolean get() = appSettings.epgAutoRefreshEnabled
+    val autoRefreshEnabled: Boolean get() = _epgSettings.value.autoRefreshEnabled
 
-    val epgRefreshTime: String get() = appSettings.epgRefreshTime
+    val epgRefreshTime: String get() = _epgSettings.value.epgRefreshTime
 
-    val epgRefreshInterval: Int get() = appSettings.epgRefreshInterval
+    val epgRefreshInterval: Int get() = _epgSettings.value.epgRefreshInterval
 
     val staleThresholdMs: Long get() = epgFileManager.staleThresholdMs
 
@@ -126,16 +147,19 @@ class EpgManagementViewModel(
 
     fun setAutoRefreshEnabled(enabled: Boolean) {
         appSettings.epgAutoRefreshEnabled = enabled
+        _epgSettings.value = _epgSettings.value.copy(autoRefreshEnabled = enabled)
         epgFileManager.updateAutoRefreshSchedule()
     }
 
     fun setEpgRefreshTime(time: String) {
         appSettings.epgRefreshTime = time
+        _epgSettings.value = _epgSettings.value.copy(epgRefreshTime = time)
         epgFileManager.updateAutoRefreshSchedule()
     }
 
     fun setEpgRefreshInterval(interval: Int) {
         appSettings.epgRefreshInterval = interval
+        _epgSettings.value = _epgSettings.value.copy(epgRefreshInterval = interval)
         epgFileManager.updateAutoRefreshSchedule()
     }
 
@@ -506,6 +530,37 @@ class EpgManagementViewModel(
     }
 
     companion object {
+        private fun calculateNextRefreshTime(anchorTime: String, intervalHours: Int): Long {
+            if (intervalHours <= 0) return 0L
+
+            val now = java.util.Calendar.getInstance()
+            val anchor = java.util.Calendar.getInstance()
+            val parts = anchorTime.split(":")
+            if (parts.size != 2) return 0L
+            val hour = parts[0].toInt()
+            val minute = parts[1].toInt()
+
+            anchor.set(java.util.Calendar.HOUR_OF_DAY, hour)
+            anchor.set(java.util.Calendar.MINUTE, minute)
+            anchor.set(java.util.Calendar.SECOND, 0)
+            anchor.set(java.util.Calendar.MILLISECOND, 0)
+
+            val intervalMs = intervalHours.toLong() * 3600 * 1000
+            var next = anchor.timeInMillis
+
+            if (next < now.timeInMillis) {
+                val diff = now.timeInMillis - next
+                val numIntervals = (diff / intervalMs) + 1
+                next += numIntervals * intervalMs
+            } else {
+                val diff = next - now.timeInMillis
+                val numIntervals = diff / intervalMs
+                next -= numIntervals * intervalMs
+            }
+
+            return next
+        }
+
         private fun formatBytes(bytes: Long): String =
             when {
                 bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
