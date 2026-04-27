@@ -323,21 +323,16 @@ class SearchViewModel(
         normalizedQuery: String,
         queryWords: List<String>,
     ): List<SearchResult> {
-        data class SortEntry(
-            val nameLower: String,
-            val result: SearchResult,
-        )
-        val entries = results.map { SortEntry(it.streamName.lowercase(), it) }
-        return entries
+        return results
             .sortedWith(
-                compareBy<SortEntry> {
+                compareBy<SearchResult> {
                     when {
-                        it.nameLower == normalizedQuery -> 0
-                        it.nameLower.startsWith(normalizedQuery) -> 1
-                        else -> if (queryWords.isNotEmpty() && queryWords.all { w -> it.nameLower.contains(w) }) 2 else 3
+                        it.streamName.equals(normalizedQuery, ignoreCase = true) -> 0
+                        it.streamName.startsWith(normalizedQuery, ignoreCase = true) -> 1
+                        else -> if (queryWords.isNotEmpty() && queryWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
                     }
-                }.thenBy { it.result.streamName },
-            ).map { it.result }
+                }.thenBy { it.streamName },
+            )
     }
 
     fun isFavorite(

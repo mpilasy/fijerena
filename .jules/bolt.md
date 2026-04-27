@@ -14,3 +14,6 @@ In Kotlin, `data class.copy()` allocates a new object. This means every single X
 ## 2025-04-27 - EpgChannelMatcher Memoization
 **Learning:** EPG mapping requires O(N) string contains fallback on many channels. Caching query results dramatically reduces latency for overlapping strings.
 **Action:** Memoize string queries using ConcurrentHashMap.
+## 2025-05-15 - String Case Manipulations in Hot Paths
+**Learning:** During in-memory client-side searching across thousands of cached items, creating wrapper objects and caching `.lowercase()` text results in excessive short-lived allocations which can impact the GC heavily.
+**Action:** Replace `.lowercase()` conversions with `contains(..., ignoreCase = true)` or `startsWith(..., ignoreCase = true)`. These functions under the hood use zero-allocation comparisons (like `regionMatches` in Kotlin JVM).

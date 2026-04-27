@@ -12,12 +12,11 @@ object SearchUtils {
         queryWords: List<String>,
     ): Boolean {
         if (queryWords.isEmpty()) return true
-        val textLower = text.lowercase()
         return queryWords.all { word ->
             if (word.startsWith("-") && word.length > 1) {
-                !textLower.contains(word.substring(1))
+                !text.contains(word.substring(1), ignoreCase = true)
             } else {
-                textLower.contains(word)
+                text.contains(word, ignoreCase = true)
             }
         }
     }
