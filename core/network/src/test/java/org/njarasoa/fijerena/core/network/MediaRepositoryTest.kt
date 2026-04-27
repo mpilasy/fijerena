@@ -13,7 +13,6 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import io.mockk.mockkStatic
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -37,43 +36,28 @@ class MediaRepositoryTest {
 
     @Before
     fun setup() {
-        mockkStatic(android.os.Looper::class)
-        val mainLooper = mockk<android.os.Looper>(relaxed = true)
-        every { android.os.Looper.getMainLooper() } returns mainLooper
-
-        io.mockk.mockkConstructor(android.os.Handler::class)
-        every { anyConstructed<android.os.Handler>().postDelayed(any(), any()) } returns true
-        every { anyConstructed<android.os.Handler>().removeCallbacks(any()) } returns Unit
-
-        context = mockk(relaxed = true)
-        sharedPreferences = mockk(relaxed = true)
-        editor = mockk(relaxed = true)
         clearAllMocks()
-
         mockkStatic(Looper::class)
-        every { Looper.getMainLooper() } returns mockk(relaxed = true)
-
-        mockkStatic(Handler::class)
-        val mockHandler = mockk<Handler>(relaxed = true)
-        every { mockHandler.removeCallbacks(any()) } returns Unit
-        every { mockHandler.postDelayed(any(), any()) } returns true
+        val mainLooper = mockk<Looper>(relaxed = true)
+        every { Looper.getMainLooper() } returns mainLooper
 
         mockkConstructor(Handler::class)
         every { anyConstructed<Handler>().postDelayed(any(), any()) } returns true
         every { anyConstructed<Handler>().removeCallbacks(any()) } returns Unit
         every { anyConstructed<Handler>().post(any()) } returns true
 
-        io.mockk.mockkStatic(android.os.Looper::class)
-        every { android.os.Looper.getMainLooper() } returns mockk(relaxed = true)
-        io.mockk.mockkConstructor(android.os.Handler::class)
-        every { anyConstructed<android.os.Handler>().removeCallbacks(any()) } returns Unit
-        every { anyConstructed<android.os.Handler>().postDelayed(any(), any()) } returns true
+        context = mockk(relaxed = true)
+        sharedPreferences = mockk(relaxed = true)
+        editor = mockk(relaxed = true)
 
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
         every { sharedPreferences.edit() } returns editor
         every { editor.putString(any(), any()) } returns editor
-        every { editor.putInt(any(), any()) } returns editor // Int is likely used in other places or mocked generally
+        every { editor.putInt(any(), any()) } returns editor
         every { editor.remove(any()) } returns editor
+        
+        // AppSettings might also need mocking if it's used in constructor
+        every { context.getSharedPreferences("app_settings", any()) } returns mockk(relaxed = true)
     }
 
     @After
