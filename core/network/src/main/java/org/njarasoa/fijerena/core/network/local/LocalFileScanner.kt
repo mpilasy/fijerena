@@ -12,7 +12,7 @@ import java.io.File
 
 object LocalFileScanner {
     private val VIDEO_EXTENSIONS =
-        setOf(
+        arrayOf(
             "mp4",
             "mkv",
             "avi",
@@ -329,7 +329,18 @@ object LocalFileScanner {
 
     private fun isVideoFile(name: String?): Boolean {
         if (name == null) return false
-        val ext = name.substringAfterLast('.', "").lowercase()
-        return ext in VIDEO_EXTENSIONS
+        val dotIndex = name.lastIndexOf('.')
+        if (dotIndex == -1 || dotIndex == name.length - 1) return false
+
+        val exts = VIDEO_EXTENSIONS
+        val extLen = name.length - dotIndex - 1
+
+        for (i in exts.indices) {
+            val ext = exts[i]
+            if (extLen == ext.length && name.regionMatches(dotIndex + 1, ext, 0, ext.length, ignoreCase = true)) {
+                return true
+            }
+        }
+        return false
     }
 }
