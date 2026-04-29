@@ -110,19 +110,18 @@ fun MobileNavHost(
             val providerRepo = ProviderRepository(context.applicationContext)
             val activeProvider = providerRepo.getActiveProvider()
             if (activeProvider != null && activeProvider.type == "XTREAM") {
-                val repository =
-                    XtreamRepository(
-                        accountManager,
-                        context.applicationContext,
-                        activeProvider.id,
-                    )
-                when (val result = repository.restoreSession()) {
-                    is Result.Success -> {
-                        val url = repository.getCurrentUrl() ?: ""
-                        authViewModel.setAuthSession(result.data, url)
-                    }
-                    is Result.Error -> {
-                        // Silently fail - factories will handle connection
+                // Use AppContainer to get the shared repository instance.
+                // AppContainer.getMediaRepository() now handles connect() internally.
+                val repo = org.njarasoa.fijerena.core.ui.di.AppContainer
+                    .getInstance(context)
+                    .getMediaRepository(activeProvider.id)
+
+                if (repo.isConnected()) {
+                    // Update AuthViewModel for UI consistency
+                    val authResponse = accountManager.getAuthResponse()
+                    val credentials = accountManager.getCredentials()
+                    if (authResponse != null && credentials != null) {
+                        authViewModel.setAuthSession(authResponse, credentials.url)
                     }
                 }
             }
@@ -296,20 +295,19 @@ fun MobileNavHost(
                             val providerRepo = ProviderRepository(context.applicationContext)
                             providerRepo.setActiveProvider(provider.id)
 
-                            // For Xtream providers, restore session for backward compatibility
+                            // Clear AppContainer caches to force a fresh repository for the new provider
+                            val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+                            container.clearAllCaches()
+
+                            // For Xtream providers, restore session to update AuthViewModel
                             if (provider.type == "XTREAM") {
-                                val xtreamRepo =
-                                    XtreamRepository(
-                                        accountManager,
-                                        context.applicationContext,
-                                        provider.id,
-                                    )
-                                when (val result = xtreamRepo.restoreSession()) {
-                                    is Result.Success -> {
-                                        val url = xtreamRepo.getCurrentUrl() ?: ""
-                                        authViewModel.setAuthSession(result.data, url)
+                                val repo = container.getMediaRepository(provider.id)
+                                if (repo.isConnected()) {
+                                    val authResponse = accountManager.getAuthResponse()
+                                    val credentials = accountManager.getCredentials()
+                                    if (authResponse != null && credentials != null) {
+                                        authViewModel.setAuthSession(authResponse, credentials.url)
                                     }
-                                    is Result.Error -> { /* factories will handle connection */ }
                                 }
                             }
 
@@ -352,19 +350,18 @@ fun MobileNavHost(
                             val providerRepo = ProviderRepository(context.applicationContext)
                             val activeProvider = providerRepo.getActiveProvider()
 
+                            // Clear AppContainer caches for the new provider
+                            val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+                            container.clearAllCaches()
+
                             if (activeProvider != null && activeProvider.type == "XTREAM") {
-                                val xtreamRepo =
-                                    XtreamRepository(
-                                        accountManager,
-                                        context.applicationContext,
-                                        activeProvider.id,
-                                    )
-                                when (val result = xtreamRepo.restoreSession()) {
-                                    is Result.Success -> {
-                                        val url = xtreamRepo.getCurrentUrl() ?: ""
-                                        authViewModel.setAuthSession(result.data, url)
+                                val repo = container.getMediaRepository(activeProvider.id)
+                                if (repo.isConnected()) {
+                                    val authResponse = accountManager.getAuthResponse()
+                                    val credentials = accountManager.getCredentials()
+                                    if (authResponse != null && credentials != null) {
+                                        authViewModel.setAuthSession(authResponse, credentials.url)
                                     }
-                                    is Result.Error -> { /* factories will handle connection */ }
                                 }
                             }
 

@@ -43,26 +43,51 @@ class AppContainer(
             }
 
         return mutex.withLock {
-            mediaRepositories[resolvedId] ?: run {
-                val settings = providerRepository.getProviderSettings(resolvedId)
-                val repo = MediaRepository(context.applicationContext, resolvedId, settings)
+            val repo =
+                mediaRepositories[resolvedId] ?: run {
+                    val settings = providerRepository.getProviderSettings(resolvedId)
+                    val newRepo = MediaRepository(context.applicationContext, resolvedId, settings)
 
-                // Set the provider implementation
-                val entity =
-                    if (providerId > 0L) {
-                        providerRepository.getProviderById(providerId)
-                    } else {
-                        providerRepository.getActiveProvider()
+                    // Set the provider implementation
+                    val entity =
+                        if (providerId > 0L) {
+                            providerRepository.getProviderById(providerId)
+                        } else {
+                            providerRepository.getActiveProvider()
+                        }
+
+                    if (entity != null) {
+                        val password = providerRepository.getPassword(entity.id) ?: ""
+                        val provider = MediaProviderFactory.create(entity, context.applicationContext, password)
+                        newRepo.setProvider(provider)
                     }
-
-                if (entity != null) {
-                    val password = providerRepository.getPassword(entity.id) ?: ""
-                    val provider = MediaProviderFactory.create(entity, context.applicationContext, password)
-                    repo.setProvider(provider)
+                    mediaRepositories[resolvedId] = newRepo
+                    newRepo
                 }
-                mediaRepositories[resolvedId] = repo
-                repo
+
+            // Surgical Fix: Auto-restore session if not connected.
+            // This ensures direct navigation (from search, EPG browser, etc.) has a valid session.
+            // We do this inside the lock to prevent concurrent restoration attempts.
+            if (!repo.isConnected()) {
+                try {
+                    repo.connect()
+                } catch (e: Exception) {
+                    android.util.Log.e("AppContainer", "Auto-connect failed for provider $resolvedId", e)
+                }
             }
+
+            repo
+        }
+    }
+
+    /**
+     * Clears all cached repositories and providers.
+     * Call this when switching providers or on logout to ensure fresh state.
+     */
+    suspend fun clearAllCaches() {
+        mutex.withLock {
+            mediaRepositories.clear()
+            MediaProviderFactory.clearAllCaches()
         }
     }
 
