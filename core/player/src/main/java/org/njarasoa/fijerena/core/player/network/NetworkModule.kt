@@ -60,6 +60,16 @@ object NetworkModule {
      */
     private object AndroidAwareDns : Dns {
         override fun lookup(hostname: String): List<InetAddress> {
+            // Optimization: If it's an IP address, return it directly to avoid unnecessary
+            // network-specific resolution which might fail on some devices with VPNs.
+            if (isIpAddress(hostname)) {
+                try {
+                    return listOf(InetAddress.getByName(hostname))
+                } catch (_: Exception) {
+                    // Fall back if getByName fails for some reason
+                }
+            }
+
             val context = applicationContext
             if (context != null) {
                 try {
@@ -81,6 +91,11 @@ object NetworkModule {
 
             // Fallback to standard system resolver
             return Dns.SYSTEM.lookup(hostname).sortedBy { it is java.net.Inet6Address }
+        }
+
+        private fun isIpAddress(hostname: String): Boolean {
+            return hostname.matches(Regex("""^(\d{1,3}\.){3}\d{1,3}$""")) ||
+                hostname.contains(":") // Basic IPv6 check
         }
     }
 }
