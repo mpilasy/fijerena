@@ -421,6 +421,15 @@ fun MobilePlayerScreen(
                         // Stop playback when leaving the player screen
                         viewModel.stop()
                         playerView.player = null
+
+                        // Reset PiP auto-enter
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            activity?.setPictureInPictureParams(
+                                android.app.PictureInPictureParams.Builder()
+                                    .setAutoEnterEnabled(false)
+                                    .build()
+                            )
+                        }
                     }
                 }
 
