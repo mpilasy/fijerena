@@ -19,6 +19,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Ensure PiP auto-enter is disabled by default
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            setPictureInPictureParams(
+                android.app.PictureInPictureParams.Builder()
+                    .setAutoEnterEnabled(false)
+                    .build()
+            )
+        }
+
         val appSettings = AppSettings(applicationContext)
         var themeId by mutableStateOf(appSettings.themeId)
 
