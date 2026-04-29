@@ -50,7 +50,6 @@ class JellyfinApiService(
                 append("DeviceId=\"$deviceId\", ")
                 append("Version=\"1.0.0\"")
                 accessToken?.let { append(", Token=\"$it\"") }
-                userId?.let { append(", UserId=\"$it\"") }
             }
 
     private val client =
@@ -66,12 +65,10 @@ class JellyfinApiService(
                 json(json)
             }
         }.also { httpClient ->
-            // Inject both Authorization and X-Emby-Authorization on every request.
-            // Jellyfin 10.10+ requires "Authorization"; older versions used "X-Emby-Authorization".
+            // Inject Authorization and X-Emby-Token on every request.
             httpClient.plugin(HttpSend).intercept { request ->
                 val h = authHeader
                 request.headers["Authorization"] = h
-                request.headers["X-Emby-Authorization"] = h
                 accessToken?.let { request.headers["X-Emby-Token"] = it }
                 execute(request)
             }
@@ -120,7 +117,7 @@ class JellyfinApiService(
             postCapabilities()
             Result.success(response)
         } catch (e: io.ktor.client.plugins.ClientRequestException) {
-            Log.e(TAG, "Auth client error: ${e.response.status}")
+            Log.e(TAG, "Auth client error: ${e.response.status}", e)
             val message =
                 when (e.response.status.value) {
                     401 -> "Invalid username or password"
@@ -129,7 +126,7 @@ class JellyfinApiService(
                 }
             Result.failure(Exception(message, e))
         } catch (e: io.ktor.client.plugins.ServerResponseException) {
-            Log.e(TAG, "Auth server error: ${e.response.status}")
+            Log.e(TAG, "Auth server error: ${e.response.status}", e)
             if (e.response.status.value == 500 && password.isNotBlank()) {
                 // AuthenticateByName endpoint is broken on this server — try the password
                 // as a direct API key (user can generate one from Jellyfin Dashboard → API Keys)
@@ -143,7 +140,7 @@ class JellyfinApiService(
                 }
             Result.failure(Exception(message, e))
         } catch (e: Exception) {
-            Log.e(TAG, "Auth failed")
+            Log.e(TAG, "Auth failed", e)
             Result.failure(e)
         }
     }
