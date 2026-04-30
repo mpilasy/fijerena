@@ -303,12 +303,9 @@ class EpgManagementViewModel(
         if (selectedIds.isEmpty()) return
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val dao = settingsDb().epgSourceDao()
-                val indexDao = indexDb().epgIndexDao()
-                for (id in selectedIds) {
-                    dao.deleteSource(id)
-                    indexDao.deleteBySourceId(id)
-                }
+                val ids = selectedIds.toList()
+                settingsDb().epgSourceDao().deleteSources(ids)
+                indexDb().epgIndexDao().deleteBySourceIds(ids)
                 refreshDbStats()
             }
             _selectedIds.value = emptySet()
