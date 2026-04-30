@@ -350,7 +350,7 @@ fun MobileControlsOverlay(
                             )
                         }
 
-                        // Remaining time and estimated end time
+                        // Remaining time + estimated end time, grouped together at the right.
                         val remainingTime = duration - position
                         val estimatedEndTimeMillis = remember(remainingTime) { System.currentTimeMillis() + remainingTime }
                         Row(
@@ -358,17 +358,14 @@ fun MobileControlsOverlay(
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(top = 2.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.End,
                         ) {
                             Text(
-                                text = "Remaining: ${formatTime(remainingTime)}",
-                                style = labelStyle,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Text(
-                                text = "Ends at ${org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(
-                                    Date(estimatedEndTimeMillis),
-                                )}",
+                                text = "Remaining: ${formatTime(remainingTime)}  •  Ends at ${
+                                    org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(
+                                        Date(estimatedEndTimeMillis),
+                                    )
+                                }",
                                 style = labelStyle,
                                 color = MaterialTheme.colorScheme.primary,
                             )

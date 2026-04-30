@@ -208,6 +208,11 @@ fun PlayerScreen(
                 onShowChapterSelector = { state.showChapterSelector = true },
                 onShowStats = { state.showStats = !state.showStats },
                 seekSpeedLabel = state.seekSpeedLabel,
+                scrubPositionMs = state.scrubPositionMs,
+                onCommitScrub = { target ->
+                    viewModel.seekTo(target)
+                    state.scrubPositionMs = null
+                },
             )
         }
 
