@@ -33,6 +33,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
@@ -67,10 +68,9 @@ fun IdleContent(onBack: () -> Unit) {
 
 @Composable
 fun BufferingContent() {
-    CircularProgressIndicator(
+    MitohanaLoading(
+        style = MaterialTheme.typography.headlineSmall,
         color = CinemaAccent,
-        strokeWidth = TvDimensions.progressBar,
-        modifier = Modifier.size(TvDimensions.progressIndicator),
     )
 }
 

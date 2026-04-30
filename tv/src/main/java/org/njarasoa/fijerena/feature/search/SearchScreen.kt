@@ -93,6 +93,8 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import java.util.Locale
 
 /**
@@ -344,7 +346,7 @@ private fun SearchContent(
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Search field
-        SearchTextField(
+        TvSearchTextField(
             query = localQuery,
             onQueryChange = { localQuery = it },
             onSearchSubmit = { onSearchSubmit(localQuery) },
@@ -352,6 +354,7 @@ private fun SearchContent(
                 localQuery = ""
                 onClearSearch()
             },
+            placeholder = "Enter stream name...",
             focusRequester = searchFocusRequester,
         )
 
@@ -399,146 +402,6 @@ private fun SearchContent(
                 onCategoryClick = onCategoryClick,
                 onCategoryLongPress = onCategoryLongPress,
             )
-        }
-    }
-}
-
-@Composable
-private fun SearchTextField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onSearchSubmit: () -> Unit,
-    onClear: () -> Unit = {},
-    focusRequester: FocusRequester,
-) {
-    val clearFocusRequester = remember { FocusRequester() }
-    val submitFocusRequester = remember { FocusRequester() }
-
-    Row(
-        modifier = Modifier.padding(Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = { Text("Enter stream name...", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary.copy(alpha = 0.6f)) },
-            singleLine = true,
-            modifier =
-                Modifier
-                    .width(org.njarasoa.fijerena.ui.theme.TvDimensions.formFieldWidth)
-                    .focusRequester(focusRequester)
-                    .onPreviewKeyEvent { event ->
-                        if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
-                            when (event.nativeKeyEvent.keyCode) {
-                                android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                    if (query.isNotEmpty()) {
-                                        clearFocusRequester.requestFocus()
-                                    } else {
-                                        submitFocusRequester.requestFocus()
-                                    }
-                                    true
-                                }
-                                else -> false
-                            }
-                        } else false
-                    },
-            shape = androidx.compose.foundation.shape.CircleShape,
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                    unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                    cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                    focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                    unfocusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight,
-                    focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                    unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary.copy(alpha = 0.4f),
-                ),
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconMedium),
-                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-                )
-            },
-            keyboardOptions =
-                KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Search,
-                ),
-            keyboardActions =
-                KeyboardActions(
-                    onSearch = { onSearchSubmit() },
-                ),
-        )
-
-        if (query.isNotEmpty()) {
-            CinemaIconButton(
-                onClick = onClear,
-                modifier = Modifier
-                    .focusRequester(clearFocusRequester)
-                    .onPreviewKeyEvent { event ->
-                        if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
-                            when (event.nativeKeyEvent.keyCode) {
-                                android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                    focusRequester.requestFocus()
-                                    true
-                                }
-                                android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                    submitFocusRequester.requestFocus()
-                                    true
-                                }
-                                else -> false
-                            }
-                        } else false
-                    },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = "Clear",
-                        modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconSmall),
-                        tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-                    )
-                }
-            )
-        }
-
-        CinemaIconButton(
-            onClick = onSearchSubmit,
-            modifier = Modifier
-                .focusRequester(submitFocusRequester)
-                .onPreviewKeyEvent { event ->
-                    if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
-                        when (event.nativeKeyEvent.keyCode) {
-                            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                if (query.isNotEmpty()) {
-                                    clearFocusRequester.requestFocus()
-                                } else {
-                                    focusRequester.requestFocus()
-                                }
-                                true
-                            }
-                            else -> false
-                        }
-                    } else false
-                },
-            icon = {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = "Search",
-                    modifier = Modifier.size(org.njarasoa.fijerena.ui.theme.TvDimensions.iconMedium),
-                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-                )
-            }
-        )
-    }
-
-    // Auto-focus on screen open
-    LaunchedEffect(Unit) {
-        try {
-            focusRequester.requestFocus()
-        } catch (_: IllegalStateException) {
         }
     }
 }
@@ -646,8 +509,18 @@ private fun SearchResultsList(
 ) {
     // Stable map — only add missing keys, never discard existing FocusRequesters
     val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val firstItemFocusRequester = remember { FocusRequester() }
 
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
+
+    // Auto-focus logic: when results appear for the first time for a new query, focus the first item
+    LaunchedEffect(categoryResults, results, isSearching) {
+        if (!isSearching && (categoryResults.isNotEmpty() || results.isNotEmpty())) {
+            try {
+                firstItemFocusRequester.requestFocus()
+            } catch (_: Exception) {}
+        }
+    }
 
     fun toggleGroup(contentType: String) {
         expandedGroups =
@@ -664,20 +537,10 @@ private fun SearchResultsList(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(TvDimensions.iconXLarge),
-                    color = CinemaAccent,
-                )
-                Text(
-                    text = searchProgress ?: "Searching...",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CinemaTextSecondary,
-                )
-            }
+            MitadyLoading(
+                style = MaterialTheme.typography.headlineMedium,
+                color = CinemaAccent,
+            )
         }
     } else if (categoryResults.isEmpty() && results.isEmpty()) {
         // No results found after search completed
@@ -714,14 +577,13 @@ private fun SearchResultsList(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (isSearching) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(TvDimensions.iconSmall),
+                            MitadyLoading(
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = CinemaAccent,
-                                strokeWidth = TvDimensions.borderFocused,
                             )
                         }
                         Text(
-                            text = searchProgress,
+                            text = if (isSearching) " ($searchProgress)" else searchProgress,
                             style = MaterialTheme.typography.bodyMedium,
                             color = CinemaAccent,
                         )
@@ -762,6 +624,7 @@ private fun SearchResultsList(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 if (queryContentType == "ALL") {
+                    var isFirstItem = true
                     groupedByType.forEach { (type, typeCats, typeStreams) ->
 
                         if (typeCats.isNotEmpty() || typeStreams.isNotEmpty()) {
@@ -776,29 +639,32 @@ private fun SearchResultsList(
 
                             if (isExpanded) {
                                 // Show categories for this type
-                                items(
+                                itemsIndexed(
                                     typeCats,
-                                    key = { "cat_${it.categoryId}_${it.contentType}" },
-                                    contentType = { "category" },
-                                ) { catResult ->
+                                    key = { _, it -> "cat_${it.categoryId}_${it.contentType}" },
+                                    contentType = { _, _ -> "category" },
+                                ) { index, catResult ->
                                     CategoryResultItem(
                                         result = catResult,
                                         onClick = { onCategoryClick(catResult) },
                                         onLongPress = { onCategoryLongPress(catResult) },
+                                        modifier = if (isFirstItem && index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier
                                     )
+                                    if (isFirstItem && index == 0) isFirstItem = false
                                 }
                                 // Show streams for this type
-                                items(
+                                itemsIndexed(
                                     typeStreams,
-                                    key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" },
-                                    contentType = { "stream" },
-                                ) { result ->
+                                    key = { _, it -> "stream_${it.itemId}_${it.categoryId}_${it.contentType}" },
+                                    contentType = { _, _ -> "stream" },
+                                ) { index, result ->
                                     SearchResultItem(
                                         result = result,
                                         onClick = { onResultClick(result) },
                                         onLongPress = { onResultLongPress(result) },
-                                        focusRequester = focusRequesters.getOrPut(result.itemId) { FocusRequester() },
+                                        focusRequester = if (isFirstItem && index == 0) firstItemFocusRequester else focusRequesters.getOrPut(result.itemId) { FocusRequester() },
                                     )
+                                    if (isFirstItem && index == 0) isFirstItem = false
                                 }
                             }
                         }
@@ -818,15 +684,16 @@ private fun SearchResultsList(
                                     ),
                             )
                         }
-                        items(
+                        itemsIndexed(
                             categoryResults,
-                            key = { "cat_${it.categoryId}_${it.contentType}" },
-                            contentType = { "category" },
-                        ) { catResult ->
+                            key = { _, it -> "cat_${it.categoryId}_${it.contentType}" },
+                            contentType = { _, _ -> "category" },
+                        ) { index, catResult ->
                             CategoryResultItem(
                                 result = catResult,
                                 onClick = { onCategoryClick(catResult) },
                                 onLongPress = { onCategoryLongPress(catResult) },
+                                modifier = if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier
                             )
                         }
                     }
@@ -844,12 +711,12 @@ private fun SearchResultsList(
                                     ),
                             )
                         }
-                        items(results, key = { "${it.itemId}_${it.categoryId}" }, contentType = { "stream" }) { result ->
+                        itemsIndexed(results, key = { _, it -> "${it.itemId}_${it.categoryId}" }, contentType = { _, _ -> "stream" }) { index, result ->
                             SearchResultItem(
                                 result = result,
                                 onClick = { onResultClick(result) },
                                 onLongPress = { onResultLongPress(result) },
-                                focusRequester = focusRequesters.getOrPut(result.itemId) { FocusRequester() },
+                                focusRequester = if (categoryResults.isEmpty() && index == 0) firstItemFocusRequester else focusRequesters.getOrPut(result.itemId) { FocusRequester() },
                             )
                         }
                     }
@@ -925,11 +792,12 @@ private fun CategoryResultItem(
     result: CategorySearchResult,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     Card(
         onClick = onClick,
         modifier =
-            Modifier
+            modifier
                 .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight)

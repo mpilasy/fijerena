@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 
 @Composable
 fun LoadingScreen() {
@@ -31,20 +32,10 @@ fun LoadingScreen() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(MobileDimensions.iconXLarge),
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = "Loading stream...",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
+        MitohanaLoading(
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
 

@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -275,16 +276,10 @@ private fun LoadingView() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            CircularProgressIndicator()
-            Text(
-                text = "Loading categories...",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
+        MitadyLoading(
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
 
@@ -400,12 +395,12 @@ private fun SearchResults(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(MobileDimensions.progressIndicatorSmall),
-                            strokeWidth = MobileDimensions.strokeWidth,
+                        MitadyLoading(
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            text = searchProgress,
+                            text = " ($searchProgress)",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )

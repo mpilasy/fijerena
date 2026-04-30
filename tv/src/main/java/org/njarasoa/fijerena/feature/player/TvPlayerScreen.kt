@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 
 /**
  * TV player screen that integrates stream playback via StreamLoaderViewModel.
@@ -272,20 +273,10 @@ private fun LoadingScreen() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(TvDimensions.progressIndicator),
-                color = CinemaAccent,
-            )
-            Spacer(modifier = Modifier.padding(Spacing.md))
-            Text(
-                text = "Loading stream...",
-                style = MaterialTheme.typography.titleLarge,
-                color = CinemaTextSecondary,
-            )
-        }
+        MitohanaLoading(
+            style = MaterialTheme.typography.headlineMedium,
+            color = CinemaAccent,
+        )
     }
 }
 
