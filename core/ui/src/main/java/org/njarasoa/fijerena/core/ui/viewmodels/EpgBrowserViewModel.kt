@@ -546,7 +546,10 @@ class EpgBrowserViewModel(
         val byChannel = airings.groupBy { it.airing.channelId to it.airing.channelName }
 
         return byChannel.entries
-            .sortedBy { it.key.second.lowercase() }
+            // ⚡ Bolt Optimization: Use String.CASE_INSENSITIVE_ORDER instead of .sortedBy { it.lowercase() }
+            // This prevents creating a new String object for each channel during every comparison in the sort phase,
+            // significantly reducing GC overhead when grouping thousands of streams.
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key.second })
             .mapIndexed { index, (channelKey, channelAirings) ->
                 val (channelId, channelName) = channelKey
                 val programs =
