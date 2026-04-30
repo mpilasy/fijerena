@@ -223,15 +223,8 @@ fun StatsOverlay(
         }
     }
 
-    // Live streams use a compact half-screen panel anchored to the bottom-right so the EPG and
-    // channel name remain visible. VOD keeps the original tall right-side panel.
-    val isLiveStream = metadata.isLive
-    val overlayWidth = if (isLiveStream) {
-        (configuration.screenWidthDp * 0.5).dp
-    } else {
-        (configuration.screenWidthDp * 0.55).dp
-    }
-    val overlayAlignment = if (isLiveStream) Alignment.BottomEnd else Alignment.TopEnd
+    // Compact half-screen panel anchored to the bottom-right so the rest of the OSD stays visible.
+    val overlayWidth = (configuration.screenWidthDp * 0.5).dp
 
     Box(
         modifier =
@@ -243,14 +236,8 @@ fun StatsOverlay(
             modifier =
                 Modifier
                     .width(overlayWidth)
-                    .then(
-                        if (isLiveStream) {
-                            Modifier.fillMaxHeight(0.5f)
-                        } else {
-                            Modifier.fillMaxHeight()
-                        },
-                    )
-                    .align(overlayAlignment)
+                    .fillMaxHeight(0.5f)
+                    .align(Alignment.BottomEnd)
                     .background(
                         CinemaGlassBackground,
                         shape = RoundedCornerShape(CinemaCornerRadius.medium),
