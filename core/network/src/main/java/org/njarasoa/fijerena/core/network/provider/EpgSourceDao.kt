@@ -36,6 +36,9 @@ interface EpgSourceDao {
     @Query("DELETE FROM epg_source WHERE id = :id")
     suspend fun deleteSource(id: Long)
 
+    @Query("DELETE FROM epg_source WHERE id IN (:ids)")
+    suspend fun deleteSources(ids: List<Long>)
+
     @Query("DELETE FROM epg_source")
     suspend fun deleteAllSources()
 
