@@ -213,13 +213,25 @@ interface EpgIndexDao {
     @Query("DELETE FROM epg_programme WHERE source_id = :sourceId")
     suspend fun deleteProgrammesBySourceId(sourceId: Long)
 
+    @Query("DELETE FROM epg_programme WHERE source_id IN (:sourceIds)")
+    suspend fun deleteProgrammesBySourceIds(sourceIds: List<Long>)
+
     @Query("DELETE FROM epg_channel WHERE source_id = :sourceId")
     suspend fun deleteChannelsBySourceId(sourceId: Long)
+
+    @Query("DELETE FROM epg_channel WHERE source_id IN (:sourceIds)")
+    suspend fun deleteChannelsBySourceIds(sourceIds: List<Long>)
 
     @Transaction
     suspend fun deleteBySourceId(sourceId: Long) {
         deleteProgrammesBySourceId(sourceId)
         deleteChannelsBySourceId(sourceId)
+    }
+
+    @Transaction
+    suspend fun deleteBySourceIds(sourceIds: List<Long>) {
+        deleteProgrammesBySourceIds(sourceIds)
+        deleteChannelsBySourceIds(sourceIds)
     }
 
     // --------------- Metadata & cleanup ---------------
