@@ -99,6 +99,8 @@ fun PlayerControlsOverlay(
     onShowChapterSelector: () -> Unit,
     onShowStats: () -> Unit,
     seekSpeedLabel: String? = null,
+    scrubPositionMs: Long? = null,
+    onCommitScrub: (Long) -> Unit = {},
 ) {
     val isPaused = playbackState is PlaybackState.Paused
     val isLive = metadata.isLive
@@ -278,13 +280,30 @@ fun PlayerControlsOverlay(
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.xl, vertical = Spacing.md),
             ) {
+                // Stream description (above the progress / EPG section). Shown for both VOD and Live
+                // whenever the OSD is visible — TV parity with mobile.
+                val description = metadata.description
+                if (!description.isNullOrBlank()) {
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = Spacing.sm),
+                    )
+                }
+
                 // VOD progress bar and time info
                 if (!isLive) {
                     val position = livePosition
                     val duration = liveDuration
 
                     if (duration > 0) {
-                        val seekStep = 10_000L
+                        val isScrubbing = scrubPositionMs != null
+                        val displayPosition = scrubPositionMs ?: position
                         Box(
                             modifier =
                                 Modifier
@@ -295,12 +314,22 @@ fun PlayerControlsOverlay(
                                         if (event.type == KeyEventType.KeyDown) {
                                             when (event.key) {
                                                 Key.DirectionLeft -> {
-                                                    viewModel.seekTo((position - seekStep).coerceAtLeast(0L))
+                                                    val origin = scrubPositionMs ?: position
+                                                    viewModel.seekTo((origin - 10_000L).coerceAtLeast(0L))
                                                     true
                                                 }
                                                 Key.DirectionRight -> {
-                                                    viewModel.seekTo((position + seekStep).coerceAtMost(duration))
+                                                    val origin = scrubPositionMs ?: position
+                                                    viewModel.seekTo((origin + 10_000L).coerceAtMost(duration))
                                                     true
+                                                }
+                                                Key.DirectionCenter, Key.Enter -> {
+                                                    if (scrubPositionMs != null) {
+                                                        onCommitScrub(scrubPositionMs)
+                                                        true
+                                                    } else {
+                                                        false
+                                                    }
                                                 }
                                                 else -> false
                                             }
@@ -308,7 +337,7 @@ fun PlayerControlsOverlay(
                                             false
                                         }
                                     }.then(
-                                        if (isProgressBarFocused) {
+                                        if (isProgressBarFocused || isScrubbing) {
                                             Modifier.border(
                                                 width = 2.dp,
                                                 color = MaterialTheme.colorScheme.primary,
@@ -317,14 +346,14 @@ fun PlayerControlsOverlay(
                                         } else {
                                             Modifier
                                         },
-                                    ).padding(vertical = if (isProgressBarFocused) Spacing.xs else 0.dp),
+                                    ).padding(vertical = if (isProgressBarFocused || isScrubbing) Spacing.xs else 0.dp),
                         ) {
                             LinearProgressIndicator(
-                                progress = { position.toFloat() / duration.toFloat() },
+                                progress = { displayPosition.toFloat() / duration.toFloat() },
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .height(if (isProgressBarFocused) 8.dp else TvDimensions.progressBar),
+                                        .height(if (isProgressBarFocused || isScrubbing) 8.dp else TvDimensions.progressBar),
                                 color = MaterialTheme.colorScheme.primary,
                                 trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                             )
@@ -337,9 +366,10 @@ fun PlayerControlsOverlay(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
-                                text = formatTime(position),
+                                text = formatTime(displayPosition),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextPrimary,
+                                color = if (isScrubbing) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                                fontWeight = if (isScrubbing) FontWeight.Bold else FontWeight.Normal,
                             )
                             Text(
                                 text = formatTime(duration),
@@ -348,22 +378,30 @@ fun PlayerControlsOverlay(
                             )
                         }
 
-                        // Remaining time and estimated end time
-                        val remainingTime = duration - position
+                        // Remaining time + estimated end time, grouped together at the right.
+                        val remainingTime = duration - displayPosition
                         val estimatedEndTimeMillis = remember(remainingTime) { System.currentTimeMillis() + remainingTime }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.End,
                         ) {
                             Text(
-                                text = "Remaining: ${formatTime(remainingTime)}",
+                                text = "Remaining: ${formatTime(remainingTime)}  •  Ends at ${
+                                    TimeFormat.formatClockTime(Date(estimatedEndTimeMillis))
+                                }",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CinemaAccent,
                             )
+                        }
+
+                        if (isScrubbing) {
                             Text(
-                                text = "Ends at ${TimeFormat.formatClockTime(Date(estimatedEndTimeMillis))}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CinemaAccent,
+                                text = "Press OK to seek • Back to cancel",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = Spacing.xxs),
                             )
                         }
 

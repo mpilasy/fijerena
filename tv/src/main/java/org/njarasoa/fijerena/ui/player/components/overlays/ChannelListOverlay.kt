@@ -89,7 +89,7 @@ fun ChannelListOverlay(
             modifier =
                 Modifier
                     .align(panelAlignment)
-                    .fillMaxWidth(0.5f)
+                    .fillMaxWidth(1f / 3f)
                     .fillMaxHeight()
                     .padding(Spacing.xxl),
             backgroundAlpha = 0.5f,

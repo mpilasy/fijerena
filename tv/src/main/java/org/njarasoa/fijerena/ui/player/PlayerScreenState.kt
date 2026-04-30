@@ -36,6 +36,10 @@ class PlayerScreenState(
     // Fast-forward / rewind state
     var seekSpeedLabel by mutableStateOf<String?>(null)
 
+    // Scrub cursor position for VOD: non-null while user is scrubbing with D-pad.
+    // OK/Center commits the seek; Back cancels.
+    var scrubPositionMs by mutableStateOf<Long?>(null)
+
     // Data states
     var livePosition by mutableLongStateOf(0L)
     var liveDuration by mutableLongStateOf(0L)

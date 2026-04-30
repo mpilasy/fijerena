@@ -20,28 +20,9 @@ fun handlePlayerKeyEvent(
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
 ): Boolean {
-    // Handle KeyUp to reset fast-forward/rewind speed
+    // KeyUp: no-op for scrub mode (we only act on KeyDown to step the cursor and on Center to commit)
     if (keyEvent.type == KeyEventType.KeyUp) {
-        return when (keyEvent.key) {
-            Key.DirectionRight -> {
-                if (!currentMetadata.isLive && state.seekSpeedLabel != null) {
-                    viewModel.setPlaybackSpeed(1f)
-                    state.seekSpeedLabel = null
-                    true
-                } else {
-                    false
-                }
-            }
-            Key.DirectionLeft -> {
-                if (!currentMetadata.isLive && state.seekSpeedLabel != null) {
-                    state.seekSpeedLabel = null
-                    true
-                } else {
-                    false
-                }
-            }
-            else -> false
-        }
+        return false
     }
 
     if (keyEvent.type != KeyEventType.KeyDown) {
@@ -54,7 +35,14 @@ fun handlePlayerKeyEvent(
             val isDoubleClick = now - state.lastOkClickTime < 350L
             state.lastOkClickTime = now
 
-            if (isDoubleClick && state.showStats) {
+            val pendingScrub = state.scrubPositionMs
+            if (pendingScrub != null && !currentMetadata.isLive) {
+                // Commit scrub: seek to the cursor position and exit scrub mode
+                viewModel.seekTo(pendingScrub)
+                state.scrubPositionMs = null
+                state.showStreamInfo = true
+                true
+            } else if (isDoubleClick && state.showStats) {
                 // Double-click ONLY dismisses stats if they are already showing
                 state.showStats = false
                 true
@@ -122,32 +110,8 @@ fun handlePlayerKeyEvent(
                 }
                 true
             } else if (!state.showControls && !currentMetadata.isLive) {
-                // VOD: rewind with acceleration on hold
-                val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                val position =
-                    when (val ps = playbackState) {
-                        is PlaybackState.Playing -> ps.position
-                        is PlaybackState.Paused -> ps.position
-                        else -> null
-                    }
-                if (position != null) {
-                    val seekAmount =
-                        when {
-                            repeatCount < 10 -> 10_000L
-                            repeatCount < 20 -> 30_000L
-                            repeatCount < 35 -> 60_000L
-                            else -> 120_000L
-                        }
-                    state.seekSpeedLabel =
-                        when {
-                            repeatCount < 10 -> null
-                            repeatCount < 20 -> "<< 3x"
-                            repeatCount < 35 -> "<< 6x"
-                            else -> "<< 12x"
-                        }
-                    viewModel.seekTo((position - seekAmount).coerceAtLeast(0L))
-                    state.showStreamInfo = true
-                }
+                // VOD: move scrub cursor backward; OK commits the seek
+                stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent.repeatCount, forward = false)
                 true
             } else {
                 // When controls are visible, let D-pad navigate between buttons
@@ -163,38 +127,8 @@ fun handlePlayerKeyEvent(
                 }
                 true
             } else if (!state.showControls && !currentMetadata.isLive) {
-                // VOD: fast-forward with acceleration on hold
-                val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                val position =
-                    when (val ps = playbackState) {
-                        is PlaybackState.Playing -> ps.position
-                        is PlaybackState.Paused -> ps.position
-                        else -> null
-                    }
-                val duration =
-                    when (val ps = playbackState) {
-                        is PlaybackState.Playing -> ps.duration
-                        is PlaybackState.Paused -> ps.duration
-                        else -> null
-                    }
-                if (position != null && duration != null) {
-                    if (repeatCount == 0) {
-                        // Single tap: seek +10s
-                        viewModel.seekTo((position + 10_000L).coerceAtMost(duration))
-                    } else {
-                        // Held: accelerate playback speed
-                        val speed =
-                            when {
-                                repeatCount < 10 -> 2f
-                                repeatCount < 20 -> 4f
-                                repeatCount < 35 -> 8f
-                                else -> 16f
-                            }
-                        viewModel.setPlaybackSpeed(speed)
-                        state.seekSpeedLabel = ">> ${speed.toInt()}x"
-                    }
-                    state.showStreamInfo = true
-                }
+                // VOD: move scrub cursor forward; OK commits the seek
+                stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent.repeatCount, forward = true)
                 true
             } else {
                 // When controls are visible, let D-pad navigate between buttons
@@ -204,6 +138,10 @@ fun handlePlayerKeyEvent(
         Key.Back -> {
             // Close any visible overlays first, then exit
             when {
+                state.scrubPositionMs != null -> {
+                    state.scrubPositionMs = null
+                    true
+                }
                 state.showCategoryOverlay -> {
                     state.showCategoryOverlay = false
                     true
@@ -245,4 +183,36 @@ fun handlePlayerKeyEvent(
         }
         else -> false
     }
+}
+
+/**
+ * Move the scrub cursor by a step proportional to how long the user has been holding the key.
+ * Initializes the cursor at the current playback position when scrubbing starts.
+ * The actual seek happens only when the user presses OK/Center to commit.
+ */
+private fun stepScrubCursor(
+    state: PlayerScreenState,
+    playbackState: PlaybackState,
+    repeatCount: Int,
+    forward: Boolean,
+) {
+    val (position, duration) =
+        when (playbackState) {
+            is PlaybackState.Playing -> playbackState.position to playbackState.duration
+            is PlaybackState.Paused -> playbackState.position to playbackState.duration
+            else -> return
+        }
+    if (duration <= 0L) return
+
+    val origin = state.scrubPositionMs ?: position
+    val step =
+        when {
+            repeatCount < 5 -> 10_000L
+            repeatCount < 15 -> 30_000L
+            repeatCount < 30 -> 60_000L
+            else -> 120_000L
+        }
+    val delta = if (forward) step else -step
+    state.scrubPositionMs = (origin + delta).coerceIn(0L, duration)
+    state.showStreamInfo = true
 }
