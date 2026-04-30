@@ -79,6 +79,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -401,17 +402,10 @@ fun MobileEpgBrowserScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-                        ) {
-                            CircularProgressIndicator()
-                            Text(
-                                text = "Searching...",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        MitadyLoading(
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
                 }
                 is EpgBrowserViewModel.UiState.Results -> {

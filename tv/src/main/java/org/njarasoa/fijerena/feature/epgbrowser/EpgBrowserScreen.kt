@@ -98,6 +98,8 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.ui.components.TvSearchTextField
 
 @Composable
 fun EpgBrowserScreen(
@@ -309,9 +311,19 @@ private fun EpgBrowserContent(
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
 ) {
     val searchFocusRequester = remember { FocusRequester() }
+    val firstItemFocusRequester = remember { FocusRequester() }
     var localQuery by remember { mutableStateOf("") }
     var matchedOnly by remember { mutableStateOf(true) }
     val scale = LocalUiScale.current
+
+    // Auto-focus logic: when results appear for the first time for a new query, focus the first item
+    LaunchedEffect(uiState) {
+        if (uiState is EpgBrowserViewModel.UiState.Results) {
+            try {
+                firstItemFocusRequester.requestFocus()
+            } catch (_: Exception) {}
+        }
+    }
 
     LaunchedEffect(searchMode) {
         localQuery = ""
@@ -388,138 +400,20 @@ private fun EpgBrowserContent(
 
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
 
-                val clearFocusRequester = remember { FocusRequester() }
-                val submitFocusRequester = remember { FocusRequester() }
-
-                Row(
-                    modifier = Modifier.padding(Spacing.sm.scaled(scale)),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                ) {
-                    OutlinedTextField(
-                        value = localQuery,
-                        onValueChange = { localQuery = it },
-                        placeholder = {
-                            val placeholderText =
-                                when (searchMode) {
-                                    EpgBrowserViewModel.SearchMode.PROGRAMME -> "Enter programme title..."
-                                    EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
-                                }
-                            Text(placeholderText, color = CinemaTextPrimary.copy(alpha = 0.6f))
-                        },
-                        singleLine = true,
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .focusRequester(searchFocusRequester)
-                                .onPreviewKeyEvent { event ->
-                                    if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
-                                        when (event.nativeKeyEvent.keyCode) {
-                                            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                                if (localQuery.isNotEmpty()) {
-                                                    clearFocusRequester.requestFocus()
-                                                } else {
-                                                    submitFocusRequester.requestFocus()
-                                                }
-                                                true
-                                            }
-                                            else -> false
-                                        }
-                                    } else false
-                                },
-                        shape = androidx.compose.foundation.shape.CircleShape,
-                        colors =
-                            OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CinemaTextPrimary,
-                                unfocusedTextColor = CinemaTextPrimary,
-                                cursorColor = CinemaAccent,
-                                focusedContainerColor = CinemaSurfaceVariant,
-                                unfocusedContainerColor = CinemaSurfaceLight,
-                                focusedBorderColor = CinemaAccent,
-                                unfocusedBorderColor = CinemaTextPrimary.copy(alpha = 0.4f),
-                            ),
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.Search,
-                                contentDescription = null,
-                                modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                                tint = CinemaTextPrimary
-                            )
-                        },
-                        keyboardOptions =
-                            KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Search,
-                            ),
-                        keyboardActions =
-                            KeyboardActions(
-                                onSearch = { onSearch(localQuery) },
-                            ),
-                    )
-
-                    if (localQuery.isNotEmpty()) {
-                        CinemaIconButton(
-                            onClick = {
-                                localQuery = ""
-                                onClearSearch()
-                            },
-                            modifier = Modifier
-                                .focusRequester(clearFocusRequester)
-                                .onPreviewKeyEvent { event ->
-                                    if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
-                                        when (event.nativeKeyEvent.keyCode) {
-                                            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                                searchFocusRequester.requestFocus()
-                                                true
-                                            }
-                                            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                                submitFocusRequester.requestFocus()
-                                                true
-                                            }
-                                            else -> false
-                                        }
-                                    } else false
-                                },
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Rounded.Close,
-                                    contentDescription = "Clear",
-                                    modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                    tint = CinemaTextPrimary
-                                )
-                            }
-                        )
-                    }
-
-                    CinemaIconButton(
-                        onClick = { onSearch(localQuery) },
-                        modifier = Modifier
-                            .focusRequester(submitFocusRequester)
-                            .onPreviewKeyEvent { event ->
-                                if (event.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
-                                    when (event.nativeKeyEvent.keyCode) {
-                                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                            if (localQuery.isNotEmpty()) {
-                                                clearFocusRequester.requestFocus()
-                                            } else {
-                                                searchFocusRequester.requestFocus()
-                                            }
-                                            true
-                                        }
-                                        else -> false
-                                    }
-                                } else false
-                            },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Rounded.Search,
-                                contentDescription = "Search",
-                                modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                                tint = CinemaTextPrimary
-                            )
-                        }
-                    )
-                }
+                TvSearchTextField(
+                    query = localQuery,
+                    onQueryChange = { localQuery = it },
+                    onSearchSubmit = { onSearch(localQuery) },
+                    onClear = {
+                        localQuery = ""
+                        onClearSearch()
+                    },
+                    placeholder = when (searchMode) {
+                        EpgBrowserViewModel.SearchMode.PROGRAMME -> "Enter programme title..."
+                        EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
+                    },
+                    focusRequester = searchFocusRequester,
+                )
             }
         }
 
@@ -637,25 +531,10 @@ private fun EpgBrowserContent(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(TvDimensions.iconXLarge.scaled(scale)),
-                            color = CinemaAccent,
-                        )
-                        Text(
-                            text = "Searching...",
-                            style =
-                                MaterialTheme.typography.titleMedium.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.titleMedium.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = CinemaTextSecondary,
-                        )
-                    }
+                    MitadyLoading(
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = CinemaAccent,
+                    )
                 }
             }
             is EpgBrowserViewModel.UiState.Results -> {
@@ -667,6 +546,7 @@ private fun EpgBrowserContent(
                     searchMode = searchMode,
                     matchedOnly = matchedOnly,
                     onNavigateToPlayer = onNavigateToPlayer,
+                    firstItemFocusRequester = firstItemFocusRequester,
                 )
             }
             else -> {} // NoEpgFile and Error handled in parent
@@ -785,6 +665,7 @@ private fun ResultsContent(
     searchMode: EpgBrowserViewModel.SearchMode = EpgBrowserViewModel.SearchMode.PROGRAMME,
     matchedOnly: Boolean = true,
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    firstItemFocusRequester: FocusRequester? = null,
 ) {
     val scale = LocalUiScale.current
 
@@ -876,21 +757,26 @@ private fun ResultsContent(
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                     modifier = Modifier.fillMaxSize(),
                 ) {
+                    var isFirstItem = true
                     displayDateGroups.forEach { dateGroup ->
                         item(key = "date::${dateGroup.dateLabel}::${dateGroup.dayStartEpoch}::$matchedOnly", contentType = "header") {
                             DateHeader(dateLabel = dateGroup.dateLabel)
                         }
-                        items(
+                        itemsIndexed(
                             dateGroup.programs,
-                            key = { it.id },
-                            contentType = { "program" },
-                        ) { program ->
+                            key = { _, it -> it.id },
+                            contentType = { _, _ -> "program" },
+                        ) { index, program ->
                             ProgramCard(
                                 program = program,
                                 nowEpoch = nowEpoch,
                                 isDevMode = isDevMode,
                                 sourceLabels = sourceLabels,
                                 onNavigateToPlayer = onNavigateToPlayer,
+                                modifier = if (isFirstItem && index == 0) {
+                                    isFirstItem = false
+                                    if (firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier
+                                } else Modifier
                             )
                         }
                     }
@@ -937,13 +823,14 @@ private fun ProgramCard(
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
     var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
 
     androidx.compose.material3.Card(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .padding(horizontal = Spacing.xs.scaled(scale)),
         colors =

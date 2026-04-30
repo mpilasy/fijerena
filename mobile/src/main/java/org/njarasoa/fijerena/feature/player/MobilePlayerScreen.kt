@@ -441,7 +441,10 @@ fun MobilePlayerScreen(
                     when (currentPs) {
                         PlaybackState.Buffering -> {
                             if (!hasStartedPlaying) {
-                                CircularProgressIndicator(color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary)
+                                org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
+                                    style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
+                                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                                )
                             }
                         }
                         is PlaybackState.Error -> {
