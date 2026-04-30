@@ -851,7 +851,9 @@ class EpgFileManager private constructor(
                 var resolved = false
                 for (dnsAttempt in 1..3) {
                     try {
-                        java.net.InetAddress.getByName(host)
+                        withContext(Dispatchers.IO) {
+                            java.net.InetAddress.getByName(host)
+                        }
                         resolved = true
                         break
                     } catch (e: Exception) {
