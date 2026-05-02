@@ -546,7 +546,7 @@ class EpgBrowserViewModel(
         val byChannel = airings.groupBy { it.airing.channelId to it.airing.channelName }
 
         return byChannel.entries
-            .sortedBy { it.key.second.lowercase() }
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key.second })
             .mapIndexed { index, (channelKey, channelAirings) ->
                 val (channelId, channelName) = channelKey
                 val programs =
