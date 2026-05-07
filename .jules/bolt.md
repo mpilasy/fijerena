@@ -17,3 +17,6 @@ In Kotlin, `data class.copy()` allocates a new object. This means every single X
 ## 2025-05-15 - String Case Manipulations in Hot Paths
 **Learning:** During in-memory client-side searching across thousands of cached items, creating wrapper objects and caching `.lowercase()` text results in excessive short-lived allocations which can impact the GC heavily.
 **Action:** Replace `.lowercase()` conversions with `contains(..., ignoreCase = true)` or `startsWith(..., ignoreCase = true)`. These functions under the hood use zero-allocation comparisons (like `regionMatches` in Kotlin JVM).
+## 2026-05-06 - Zero-allocation file extension checking
+**Learning:** Using `substringAfterLast('.', "").lowercase()` and inline `setOf` creation inside hot paths (like scanning thousands of files or streams) allocates numerous Strings and Iterators. This strains the GC and degrades performance.
+**Action:** Replaced String creation with `lastIndexOf('.')` paired with `regionMatches(..., ignoreCase = true)` against a pre-allocated `arrayOf` to perform case-insensitive extension checking without object allocations.
