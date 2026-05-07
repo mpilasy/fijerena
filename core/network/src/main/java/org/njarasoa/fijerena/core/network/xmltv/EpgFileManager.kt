@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import okhttp3.Request
+import org.njarasoa.fijerena.core.network.utils.await
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
@@ -873,7 +874,7 @@ class EpgFileManager private constructor(
                 try {
                     val request = Request.Builder().url(source.url).build()
                     withContext(Dispatchers.IO) {
-                        okHttpClient.newCall(request).execute().use { response ->
+                        okHttpClient.newCall(request).await().use { response ->
                             if (!response.isSuccessful) {
                                 lastError = "server returned HTTP ${response.code}"
                                 Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
