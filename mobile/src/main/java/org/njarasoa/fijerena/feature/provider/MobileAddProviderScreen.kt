@@ -75,6 +75,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.feature.provider.components.ProviderFormSection
+import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
+import org.njarasoa.fijerena.feature.provider.components.DataManagementSection
+import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -287,747 +291,78 @@ fun MobileAddProviderScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // Type-specific fields
-            when (selectedType) {
-                ProviderType.XTREAM -> {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = url,
-                        onValueChange = { newValue ->
-                            val parsed = parseUrlCredentials(newValue)
-                            if (parsed != null) {
-                                url = parsed.baseUrl
-                                parsed.username?.let { username = it }
-                                parsed.password?.let { password = it }
-                                parsed.streamOutputFormat?.let { streamOutputFormat = it }
-                                parsed.playlistType?.let { playlistType = it }
-                            } else {
-                                url = newValue
-                            }
-                            error = null
-                        },
-                        label = { Text("Server URL") },
-                        placeholder = { Text("http://provider.example.com") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = {
-                            username = it
-                            error = null
-                        },
-                        label = { Text("Username") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            error = null
-                        },
-                        label = { Text("Password") },
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            val image = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility
-                            val description = if (passwordVisible) "Hide password" else "Show password"
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = description)
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                ProviderType.JELLYFIN -> {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = url,
-                        onValueChange = { newValue ->
-                            val parsed = parseUrlCredentials(newValue)
-                            if (parsed != null) {
-                                url = parsed.baseUrl
-                                parsed.username?.let { username = it }
-                                parsed.password?.let { password = it }
-                            } else {
-                                url = newValue
-                            }
-                            error = null
-                        },
-                        label = { Text("Server URL") },
-                        placeholder = { Text("http://192.168.1.100:8096") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = {
-                            username = it
-                            error = null
-                        },
-                        label = { Text("Username") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            error = null
-                        },
-                        label = { Text("Password") },
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            val image = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility
-                            val description = if (passwordVisible) "Hide password" else "Show password"
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = description)
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    if (!isEditMode) {
-                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                        Text(
-                            text = "— or —",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                        )
-                        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                        OutlinedButton(
-                            onClick = {
-                                if (url.isBlank()) {
-                                    error = "Enter the Jellyfin server URL first"
-                                } else {
-                                    qcCode = ""
-                                    qcSecret = ""
-                                    qcError = null
-                                    showQuickConnectDialog = true
-                                }
-                            },
-                            enabled = !isBusy,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Use Quick Connect")
-                        }
-                    }
-                }
-
-                ProviderType.SMB -> {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = host,
-                        onValueChange = {
-                            host = it
-                            error = null
-                        },
-                        label = { Text("Host / IP") },
-                        placeholder = { Text("192.168.1.100") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = shareName,
-                        onValueChange = {
-                            shareName = it
-                            error = null
-                        },
-                        label = { Text("Share Name") },
-                        placeholder = { Text("media") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = {
-                            username = it
-                            error = null
-                        },
-                        label = { Text("Username (optional)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            error = null
-                        },
-                        label = { Text("Password (optional)") },
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            val image = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility
-                            val description = if (passwordVisible) "Hide password" else "Show password"
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = description)
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                ProviderType.LOCAL -> {
-                    // Only the name field is needed; folder/file picker will be added later
-                }
-
-                ProviderType.REMOTE_M3U -> {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                    OutlinedTextField(
-                        value = url,
-                        onValueChange = {
-                            url = it
-                            error = null
-                        },
-                        label = { Text("M3U Playlist URL") },
-                        placeholder = { Text("https://example.com/playlist.m3u") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-
-            // Provider Settings (edit mode only)
-            if (isEditMode) {
-                Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-
-                GlassPanel(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-                        Text(
-                            text = "Provider Settings",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                        // Auto-Resume
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Auto-Resume",
-                                    style = MaterialTheme.typography.titleSmall,
-                                )
-                                Text(
-                                    text = "Resume VOD content from where you left off",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(CinemaSpacing.md))
-                            Switch(
-                                checked = autoResumeEnabled,
-                                onCheckedChange = { enabled ->
-                                    autoResumeEnabled = enabled
-                                    coroutineScope.launch {
-                                        val newSettings = providerSettings.copy(autoResumeEnabled = enabled)
-                                        providerRepo.updateProviderSettings(editId, newSettings)
-                                        providerSettings = newSettings
-                                        syncManager.syncProviderSettings(editId)
-                                    }
-                                },
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                        // Watch History Size
-                        Text(text = "Last Watched Queue Size", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            text = "Items to keep in Last Watched category (1-100)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        )
-                        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-
-                        if (!isEditingQueueSize) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(text = watchHistorySize, style = MaterialTheme.typography.titleLarge)
-                                OutlinedButton(onClick = {
-                                    isEditingQueueSize = true
-                                    newWatchHistorySize = watchHistorySize
-                                }) { Text("Edit") }
-                            }
-                        } else {
-                            OutlinedTextField(
-                                value = newWatchHistorySize,
-                                onValueChange = { if (it.isEmpty() || it.toIntOrNull() != null) newWatchHistorySize = it },
-                                label = { Text("Queue Size") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End),
-                            ) {
-                                OutlinedButton(onClick = {
-                                    isEditingQueueSize = false
-                                    newWatchHistorySize = ""
-                                }) { Text("Cancel") }
-                                Button(
-                                    onClick = {
-                                        val size = newWatchHistorySize.toIntOrNull()
-                                        if (size != null && size in 1..100) {
-                                            watchHistorySize = size.toString()
-                                            isEditingQueueSize = false
-                                            newWatchHistorySize = ""
-                                            coroutineScope.launch {
-                                                val newSettings = providerSettings.copy(watchHistorySize = size)
-                                                providerRepo.updateProviderSettings(editId, newSettings)
-                                                providerSettings = newSettings
-                                                syncManager.syncProviderSettings(editId)
-                                            }
-                                        }
-                                    },
-                                    enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true,
-                                ) { Text("Save") }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                        // Favorites Max Size
-                        Text(text = "Favorites Max Size", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            text = "Maximum number of favorites to store (10-500)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        )
-                        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-
-                        if (!isEditingFavoritesSize) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(text = favoritesMaxSize, style = MaterialTheme.typography.titleLarge)
-                                OutlinedButton(onClick = {
-                                    isEditingFavoritesSize = true
-                                    newFavoritesMaxSize = favoritesMaxSize
-                                }) { Text("Edit") }
-                            }
-                        } else {
-                            OutlinedTextField(
-                                value = newFavoritesMaxSize,
-                                onValueChange = { if (it.isEmpty() || it.toIntOrNull() != null) newFavoritesMaxSize = it },
-                                label = { Text("Max Size") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End),
-                            ) {
-                                OutlinedButton(onClick = {
-                                    isEditingFavoritesSize = false
-                                    newFavoritesMaxSize = ""
-                                }) { Text("Cancel") }
-                                Button(
-                                    onClick = {
-                                        val size = newFavoritesMaxSize.toIntOrNull()
-                                        if (size != null && size in 10..500) {
-                                            favoritesMaxSize = size.toString()
-                                            isEditingFavoritesSize = false
-                                            newFavoritesMaxSize = ""
-                                            coroutineScope.launch {
-                                                val newSettings = providerSettings.copy(favoritesMaxSize = size)
-                                                providerRepo.updateProviderSettings(editId, newSettings)
-                                                providerSettings = newSettings
-                                                syncManager.syncProviderSettings(editId)
-                                            }
-                                        }
-                                    },
-                                    enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true,
-                                ) { Text("Save") }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                        // Clear Favorites
-                        Text(text = "Clear All Favorites", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            text = "Remove all favorited streams from all content types",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        )
-                        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                        Button(
-                            onClick = { showClearFavoritesDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text("Clear All Favorites") }
-
-                        Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                        // Clear Progress
-                        Text(text = "Clear Playback Progress", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            text = "Remove all saved positions (Continue Watching will be empty)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        )
-                        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                        Button(
-                            onClick = { showClearProgressDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text("Clear All Progress") }
-
-                        // Xtream-only settings
-                        if (selectedType == ProviderType.XTREAM) {
-                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                            // Stream Output Format
-                            Text(text = "Stream Output Format", style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                text = "Format used for live stream URLs (m3u8 = HLS, ts = MPEG-TS)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                            )
-                            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                            ) {
-                                listOf("m3u8", "ts").forEach { format ->
-                                    FilterChip(
-                                        selected = streamOutputFormat == format,
-                                        onClick = {
-                                            streamOutputFormat = format
-                                            coroutineScope.launch {
-                                                val newSettings = providerSettings.copy(streamOutputFormat = format)
-                                                providerRepo.updateProviderSettings(editId, newSettings)
-                                                providerSettings = newSettings
-                                                syncManager.syncProviderSettings(editId)
-                                            }
-                                        },
-                                        label = { Text(format) },
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                            // Playlist Type
-                            Text(text = "Playlist Type", style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                text = "Playlist format (m3u_plus = extended with EPG, simple = basic)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                            )
-                            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                            ) {
-                                listOf("m3u_plus", "simple").forEach { type ->
-                                    FilterChip(
-                                        selected = playlistType == type,
-                                        onClick = {
-                                            playlistType = type
-                                            coroutineScope.launch {
-                                                val newSettings = providerSettings.copy(playlistType = type)
-                                                providerRepo.updateProviderSettings(editId, newSettings)
-                                                providerSettings = newSettings
-                                                syncManager.syncProviderSettings(editId)
-                                            }
-                                        },
-                                        label = { Text(type) },
-                                    )
-                                }
-                            }
-                        }
-
-                        // Category Filters (Xtream only)
-                        if (selectedType == ProviderType.XTREAM) {
-                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                            Text(text = "Category Filters", style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                text = "Hide categories by prefix (e.g., 'Adult', 'XXX')",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                            )
-                            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = "Mode: ${categoryFilters.mode.name}", style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        text =
-                                            if (categoryFilters.prefixes.isEmpty()) {
-                                                "No filters configured"
-                                            } else {
-                                                "${categoryFilters.prefixes.size} prefix(es): ${categoryFilters.prefixes.joinToString(
-                                                    ", ",
-                                                )}"
-                                            },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                    )
-                                    Text(
-                                        text = "Scripts: ${if (categoryFilters.allowedScripts.isEmpty()) {
-                                            "All"
-                                        } else {
-                                            categoryFilters.allowedScripts
-                                                .joinToString(
-                                                    ", ",
-                                                ) { it.displayName }
-                                        }}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                    )
-                                }
-                                OutlinedButton(onClick = { showCategoryFilterDialog = true }) { Text("Edit") }
-                            }
-
-                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                            // Enable Caching
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = "Enable Caching", style = MaterialTheme.typography.titleSmall)
-                                    Text(
-                                        text = "Enable caching for faster loading",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(CinemaSpacing.md))
-                                Switch(
-                                    checked = cachingEnabled,
-                                    onCheckedChange = { enabled ->
-                                        cachingEnabled = enabled
-                                        coroutineScope.launch {
-                                            val newSettings = providerSettings.copy(cachingEnabled = enabled)
-                                            providerRepo.updateProviderSettings(editId, newSettings)
-                                            providerSettings = newSettings
-                                            syncManager.syncProviderSettings(editId)
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    } // Column
-                } // GlassPanel
-            }
-
-            // Cache Management (edit mode only)
-            if (isEditMode) {
-                Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-
-                GlassPanel(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-                        Text(
-                            text = "Data Management",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
-                        Text(
-                            text = "Manage local database and cached data",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        )
-                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                        cacheStats?.let { stats ->
-                            // Sync Data Button (Xtream only)
-                            if (selectedType == ProviderType.XTREAM) {
-                                Button(
-                                    onClick = { viewModel.syncProvider(editId) },
-                                    enabled = !isBusy,
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Text(if (syncState is SyncState.Syncing) "Syncing..." else "Sync Data Now")
-                                }
-
-                                // Last Sync Stats
-                                if ((currentProvider?.lastSyncedAtMs ?: 0L) > 0L) {
-                                    Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
-                                    val time = NumberUtils.formatTimestamp(LocalContext.current, currentProvider?.lastSyncedAtMs ?: 0L)
-                                    val duration = NumberUtils.formatDuration(currentProvider?.lastSyncDurationMs ?: 0L)
-                                    Text(
-                                        text = "Last Sync: Finished at $time • Took $duration",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                                    )
-                                }
-
-                                if (syncState is SyncState.Error || (syncState is SyncState.Idle && currentProvider?.lastSyncError != null)) {
-                                    val errorMsg = (syncState as? SyncState.Error)?.message ?: currentProvider?.lastSyncError
-                                    if (errorMsg != null) {
-                                        Text(
-                                            text = errorMsg,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = CinemaError,
-                                        )
-                                    }
-                                }
-                                if (syncState is SyncState.Success) {
-                                    Text(
-                                        text = "Sync completed successfully",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                            }
-
-                                // Total Items
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = "Total Database Items",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                        )
-                                        val totalItems =
-                                            stats.liveTv.itemsCount + stats.movies.itemsCount + stats.tvShows.itemsCount
-                                        Text(
-                                            text = "${NumberUtils.formatCount(totalItems)} Items",
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                Button(
-                                    onClick = { showClearCacheDialog = true },
-                                    colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                                ) {
-                                    Text("Clear All")
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.divider),
-                            )
-                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                            // Live TV
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = "Live TV", style = MaterialTheme.typography.titleSmall)
-                                    Text(
-                                        text = "${NumberUtils.formatCount(stats.liveTv.categoryCount)} Categories · ${NumberUtils.formatCount(stats.liveTv.itemsCount)} Channels",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                                OutlinedButton(
-                                    onClick = { showClearLiveTvCacheDialog = true },
-                                    enabled = stats.liveTv.itemsCount > 0,
-                                ) { Text("Clear") }
-                            }
-
-                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                            // Movies
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = "Movies", style = MaterialTheme.typography.titleSmall)
-                                    Text(
-                                        text = "${NumberUtils.formatCount(stats.movies.categoryCount)} Categories · ${NumberUtils.formatCount(stats.movies.itemsCount)} Movies",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                                OutlinedButton(
-                                    onClick = { showClearMoviesCacheDialog = true },
-                                    enabled = stats.movies.itemsCount > 0,
-                                ) { Text("Clear") }
-                            }
-
-                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-
-                            // TV Shows
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = "TV Shows", style = MaterialTheme.typography.titleSmall)
-                                    Text(
-                                        text = "${NumberUtils.formatCount(stats.tvShows.categoryCount)} Cat. · ${NumberUtils.formatCount(stats.tvShows.itemsCount)} Series · ${NumberUtils.formatCount(stats.tvShows.episodesCount)} Ep.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                                OutlinedButton(
-                                    onClick = { showClearTvShowsCacheDialog = true },
-                                    enabled = stats.tvShows.itemsCount > 0,
-                                ) { Text("Clear") }
-                            }
-                        }
-                    } // Column
-                } // GlassPanel
-            }
+            ProviderFormSection(
+                selectedType = selectedType,
+                url = url,
+                onUrlChange = { url = it },
+                username = username,
+                onUsernameChange = { username = it },
+                password = password,
+                onPasswordChange = { password = it },
+                passwordVisible = passwordVisible,
+                onPasswordVisibleChange = { passwordVisible = it },
+                host = host,
+                onHostChange = { host = it },
+                shareName = shareName,
+                onShareNameChange = { shareName = it },
+                isEditMode = isEditMode,
+                isBusy = isBusy,
+                onErrorChange = { error = it },
+                onShowQuickConnectDialogChange = { showQuickConnectDialog = it },
+                onStreamOutputFormatChange = { streamOutputFormat = it },
+                onPlaylistTypeChange = { playlistType = it },
+                onQcCodeChange = { qcCode = it },
+                onQcSecretChange = { qcSecret = it },
+                onQcErrorChange = { qcError = it }
+            )
+            ProviderSettingsSection(
+                isEditMode = isEditMode,
+                editId = editId,
+                selectedType = selectedType,
+                providerSettings = providerSettings,
+                autoResumeEnabled = autoResumeEnabled,
+                watchHistorySize = watchHistorySize,
+                newWatchHistorySize = newWatchHistorySize,
+                isEditingQueueSize = isEditingQueueSize,
+                favoritesMaxSize = favoritesMaxSize,
+                newFavoritesMaxSize = newFavoritesMaxSize,
+                isEditingFavoritesSize = isEditingFavoritesSize,
+                cachingEnabled = cachingEnabled,
+                categoryFilters = categoryFilters,
+                streamOutputFormat = streamOutputFormat,
+                playlistType = playlistType,
+                coroutineScope = coroutineScope,
+                providerRepo = providerRepo,
+                syncManager = syncManager,
+                onProviderSettingsChange = { providerSettings = it },
+                onAutoResumeEnabledChange = { autoResumeEnabled = it },
+                onWatchHistorySizeChange = { watchHistorySize = it },
+                onNewWatchHistorySizeChange = { newWatchHistorySize = it },
+                onIsEditingQueueSizeChange = { isEditingQueueSize = it },
+                onFavoritesMaxSizeChange = { favoritesMaxSize = it },
+                onNewFavoritesMaxSizeChange = { newFavoritesMaxSize = it },
+                onIsEditingFavoritesSizeChange = { isEditingFavoritesSize = it },
+                onCachingEnabledChange = { cachingEnabled = it },
+                onStreamOutputFormatChange = { streamOutputFormat = it },
+                onPlaylistTypeChange = { playlistType = it },
+                onShowClearFavoritesDialogChange = { showClearFavoritesDialog = it },
+                onShowClearProgressDialogChange = { showClearProgressDialog = it },
+                onShowCategoryFilterDialogChange = { showCategoryFilterDialog = it }
+            )
+            DataManagementSection(
+                isEditMode = isEditMode,
+                editId = editId,
+                cacheStats = cacheStats,
+                selectedType = selectedType,
+                viewModel = viewModel,
+                isBusy = isBusy,
+                syncState = syncState,
+                currentProvider = currentProvider,
+                onShowClearCacheDialogChange = { showClearCacheDialog = it },
+                onShowClearLiveTvCacheDialogChange = { showClearLiveTvCacheDialog = it },
+                onShowClearMoviesCacheDialogChange = { showClearMoviesCacheDialog = it },
+                onShowClearTvShowsCacheDialogChange = { showClearTvShowsCacheDialog = it }
+            )
 
             error?.let { errorMsg ->
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -1405,117 +740,22 @@ fun MobileAddProviderScreen(
                 )
             }
 
-            // Quick Connect dialog (Jellyfin)
-            if (showQuickConnectDialog) {
-                LaunchedEffect(Unit) {
-                    qcCode = ""
-                    qcSecret = ""
-                    qcError = null
-                    val deviceId =
-                        android.provider.Settings.Secure.getString(
-                            context.contentResolver,
-                            android.provider.Settings.Secure.ANDROID_ID,
-                        ) ?: "fijerena"
-                    val api = JellyfinApiService(url.trimEnd('/'), deviceId)
-                    val initResult = api.initiateQuickConnect()
-                    if (initResult.isFailure) {
-                        qcError = initResult.exceptionOrNull()?.message ?: "Failed to start Quick Connect"
-                        return@LaunchedEffect
-                    }
-                    val init = initResult.getOrThrow()
-                    qcCode = init.code
-                    qcSecret = init.secret
-                    // Poll every 3 s for up to 2 minutes
-                    repeat(40) {
-                        delay(3_000)
-                        val poll = api.pollQuickConnect(qcSecret)
-                        if (poll.isFailure) {
-                            qcError = "Polling failed: ${poll.exceptionOrNull()?.message}"
-                            return@LaunchedEffect
-                        }
-                        if (poll.getOrThrow().authenticated) {
-                            val authResult = api.authenticateWithQuickConnect(qcSecret)
-                            if (authResult.isFailure) {
-                                qcError = "Authentication failed: ${authResult.exceptionOrNull()?.message}"
-                                return@LaunchedEffect
-                            }
-                            val auth = authResult.getOrThrow()
-                            showQuickConnectDialog = false
-                            viewModel.quickConnectSave(
-                                name = name.ifBlank { auth.user.name },
-                                url = url.trimEnd('/'),
-                                username = username.ifBlank { auth.user.name },
-                                token = auth.accessToken,
-                                userId = auth.user.id,
-                                onComplete = onSuccess,
-                            )
-                            return@LaunchedEffect
-                        }
-                    }
-                    qcError = "Timed out waiting for approval. Please try again."
-                }
-
-                AlertDialog(
-                    onDismissRequest = { showQuickConnectDialog = false },
-                    title = { Text("Quick Connect") },
-                    text = {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            when {
-                                qcError != null -> {
-                                    Text(
-                                        text = qcError!!,
-                                        color = MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                }
-                                qcCode.isEmpty() -> {
-                                    androidx.compose.material3.CircularProgressIndicator()
-                                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                                    Text(
-                                        text = "Connecting to server...",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                }
-                                else -> {
-                                    Text(
-                                        text = "Enter this code in Jellyfin:",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                                    Text(
-                                        text = qcCode,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        style = MaterialTheme.typography.displayMedium,
-                                    )
-                                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                                    Text(
-                                        text = "Open Jellyfin → Dashboard → Quick Connect, then enter the code above.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                                    androidx.compose.material3.CircularProgressIndicator()
-                                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                                    Text(
-                                        text = "Waiting for approval...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {},
-                    dismissButton = {
-                        OutlinedButton(onClick = { showQuickConnectDialog = false }) {
-                            Text("Cancel")
-                        }
-                    },
-                )
-            }
+            QuickConnectDialog(
+                showQuickConnectDialog = showQuickConnectDialog,
+                qcCode = qcCode,
+                qcSecret = qcSecret,
+                qcError = qcError,
+                url = url,
+                name = name,
+                username = username,
+                context = context,
+                viewModel = viewModel,
+                onQcCodeChange = { qcCode = it },
+                onQcSecretChange = { qcSecret = it },
+                onQcErrorChange = { qcError = it },
+                onShowQuickConnectDialogChange = { showQuickConnectDialog = it },
+                onSuccess = onSuccess
+            )
         }
     }
 }
