@@ -28,6 +28,7 @@ class ProviderRepository(
     }
 
     private val encryptedPrefsCache = java.util.concurrent.ConcurrentHashMap<Long, android.content.SharedPreferences>()
+    private val settingsCache = java.util.concurrent.ConcurrentHashMap<Long, ProviderSettings>()
 
     fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders()
 
@@ -66,6 +67,7 @@ class ProviderRepository(
             )
         val id = dao.insertProvider(entity)
         savePassword(id, password)
+        settingsCache[id] = initialSettings
         return id
     }
 
@@ -113,6 +115,7 @@ class ProviderRepository(
         dao.deleteProvider(entity)
         clearProviderPassword(id)
         clearProviderCache(id)
+        settingsCache.remove(id)
         // Clear cached provider instance
         MediaProviderFactory.clearCache(id)
     }
@@ -168,18 +171,23 @@ class ProviderRepository(
      * Returns default settings if provider not found or settings are invalid.
      */
     suspend fun getProviderSettings(providerId: Long): ProviderSettings {
+        settingsCache[providerId]?.let { return it }
         val entity = dao.getProviderById(providerId) ?: return ProviderSettings.DEFAULT
-        return parseProviderSettings(entity.providerSettings)
+        val settings = parseProviderSettings(entity.providerSettings)
+        settingsCache[providerId] = settings
+        return settings
     }
 
     /**
      * Get provider settings synchronously (for use in non-suspend contexts).
-     * Note: This performs a blocking database call - use getProviderSettings() when possible.
+     * Note: This performs a blocking database call on cache miss - use getProviderSettings() when possible.
      */
-    fun getProviderSettingsSync(providerId: Long): ProviderSettings =
-        kotlinx.coroutines.runBlocking {
+    fun getProviderSettingsSync(providerId: Long): ProviderSettings {
+        settingsCache[providerId]?.let { return it }
+        return kotlinx.coroutines.runBlocking {
             getProviderSettings(providerId)
         }
+    }
 
     /**
      * Update the settings for a provider.
@@ -191,6 +199,7 @@ class ProviderRepository(
         val entity = dao.getProviderById(providerId) ?: return
         val settingsJson = json.encodeToString(settings)
         dao.updateProvider(entity.copy(providerSettings = settingsJson))
+        settingsCache[providerId] = settings
         // Clear cached provider so it picks up new settings
         MediaProviderFactory.clearCache(providerId)
     }
