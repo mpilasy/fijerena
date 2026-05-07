@@ -4,6 +4,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
@@ -14,13 +16,15 @@ fun FirstVideoPlayerTheme(
     themeId: String = "deep_night",
     content: @Composable () -> Unit,
 ) {
-    val palette = paletteById(themeId)
+    val palette = remember(themeId) { paletteById(themeId) }
 
     // Set the global holder so non-composable code (re-export vals) can read it
-    CinemaThemeHolder.current = palette
+    SideEffect {
+        CinemaThemeHolder.current = palette
+    }
 
     // Build color scheme inside composable — NOT at file level (was a bug)
-    val colorScheme =
+    val colorScheme = remember(palette) {
         darkColorScheme(
             // Primary - accent color
             primary = palette.accent,
@@ -57,6 +61,7 @@ fun FirstVideoPlayerTheme(
             inversePrimary = palette.accentDark,
             scrim = Color.Black.copy(alpha = 0.5f),
         )
+    }
 
     CompositionLocalProvider(LocalCinemaTheme provides palette) {
         MaterialTheme(
