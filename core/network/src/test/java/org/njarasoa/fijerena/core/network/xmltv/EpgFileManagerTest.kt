@@ -6,22 +6,36 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.concurrent.CountDownLatch
-import kotlin.concurrent.thread
+import kotlinx.coroutines.withContext
 
 class EpgFileManagerTest {
     @Test
     fun testDownloadBlocking() = runBlocking {
-        // Just demonstrating that a blocking call blocks the dispatcher if not properly isolated.
-        val time = measureTimeMillis {
-            val jobs = (1..5).map {
-                launch(Dispatchers.Default) {
-                    // simulate blocking
-                    Thread.sleep(100)
+        // Demonstrate the dispatcher exhaustion issue that enqueue() aims to fix
+        val jobs = (1..50).map {
+            launch(Dispatchers.Default) {
+                withContext(Dispatchers.IO) {
+                    Thread.sleep(100) // simulate blocking IO .execute()
                 }
             }
+        }
+        val timeSync = measureTimeMillis {
             jobs.forEach { it.join() }
         }
-        println("Blocking simulated time: $time ms")
+        println("Simulated sync thread execution time: $timeSync ms")
+
+        val asyncJobs = (1..50).map {
+            launch(Dispatchers.Default) {
+                // simulate OkHttp enqueue
+                delay(100)
+                withContext(Dispatchers.IO) {
+                    Thread.sleep(1) // Just stream reading simulation
+                }
+            }
+        }
+        val timeAsync = measureTimeMillis {
+            asyncJobs.forEach { it.join() }
+        }
+        println("Simulated async thread execution time: $timeAsync ms")
     }
 }
