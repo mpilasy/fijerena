@@ -39,6 +39,8 @@ class JellyfinMediaProvider(
             }
         }
 
+    private val SUPPORTED_CONTAINERS = arrayOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd")
+
     // PlaySessionId per item, used for transcoding session reporting
     private val playSessionIds = mutableMapOf<String, String>()
     private val mediaSourceIds = mutableMapOf<String, String>()
@@ -363,7 +365,9 @@ class JellyfinMediaProvider(
                 rawContainer
                     ?.split(",")
                     ?.firstOrNull { ext ->
-                        ext.trim().lowercase() in setOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd")
+                        val trimmed = ext.trim()
+                        // ⚡ Bolt: Zero-allocation file extension matching to avoid lowercase string and set allocation
+                        SUPPORTED_CONTAINERS.any { it.length == trimmed.length && trimmed.regionMatches(0, it, 0, trimmed.length, ignoreCase = true) }
                     }?.trim() ?: rawContainer?.split(",")?.firstOrNull()?.trim()
 
             return@coroutineScope Result.success(
