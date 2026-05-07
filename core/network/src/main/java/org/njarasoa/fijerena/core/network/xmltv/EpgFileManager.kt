@@ -845,30 +845,6 @@ class EpgFileManager private constructor(
         val downloadStartMs = System.currentTimeMillis()
 
         try {
-            // DNS Pre-flight check
-            try {
-                val host = URL(source.url).host
-                var resolved = false
-                for (dnsAttempt in 1..3) {
-                    try {
-                        withContext(Dispatchers.IO) {
-                            java.net.InetAddress.getByName(host)
-                        }
-                        resolved = true
-                        break
-                    } catch (e: Exception) {
-                        Log.w(TAG, "DNS pre-flight failed for $host (attempt $dnsAttempt/3)")
-                        delay(2000L * dnsAttempt)
-                    }
-                }
-                if (!resolved) {
-                    sourceDao.markError(source.id, "DNS lookup failed for $host")
-                    return null
-                }
-            } catch (e: Exception) {
-                // Ignore URL parsing errors here, let OkHttp handle it
-            }
-
             for (attempt in 1..5) {
                 try {
                     val request = Request.Builder().url(source.url).build()
