@@ -1,0 +1,61 @@
+package org.njarasoa.fijerena.feature.settings.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
+
+@Composable
+fun DeveloperSettingsCard(
+    uiState: SettingsUiState,
+    viewModel: SettingsViewModel,
+    onCellularBuffers: () -> Unit
+) {
+    SettingsSection(title = "Developer Mode") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Enable stats for nerds and debug features",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Switch(
+                checked = uiState.isDevMode,
+                onCheckedChange = { enabled ->
+                    viewModel.updateDevMode(enabled)
+                },
+            )
+        }
+
+        if (uiState.isDevMode) {
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            Button(
+                onClick = onCellularBuffers,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Configure Cellular Buffers")
+            }
+        }
+    }
+}
