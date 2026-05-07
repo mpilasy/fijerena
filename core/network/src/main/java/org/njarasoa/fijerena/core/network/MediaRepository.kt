@@ -772,14 +772,23 @@ class MediaRepository(
     }
 
     fun getPlaybackPositions(itemIds: List<String>, contentType: String): Map<String, WatchedItem> {
-        synchronized(watchHistoryLock) {
-            val map = watchHistoryLookup ?: getWatchHistoryLocked()
-                .associateBy { it.itemId to it.contentType }
-                .also { watchHistoryLookup = it }
+        // Build a HashSet outside the synchronized block to minimize lock contention and time.
+        // This is O(N) where N is the number of items in the category (can be large).
+        val idSet = itemIds.toHashSet()
 
+        synchronized(watchHistoryLock) {
+            val history = getWatchHistoryLocked()
+
+            // Optimization: Iterate over the watch history list (capped at 100 items) instead of
+            // iterating over the potentially large itemIds list. This makes the complexity
+            // inside the synchronized block O(HistorySize) instead of O(ItemIdsSize).
             val result = HashMap<String, WatchedItem>()
-            for (id in itemIds) {
-                map[id to contentType]?.let { result[id] = it }
+            for (i in history.indices) {
+                val item = history[i]
+                // Avoid Pair allocations by comparing fields directly and using the HashSet.
+                if (item.contentType == contentType && item.itemId in idSet) {
+                    result[item.itemId] = item
+                }
             }
             return result
         }
