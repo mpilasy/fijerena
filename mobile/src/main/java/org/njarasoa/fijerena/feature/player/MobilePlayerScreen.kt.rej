@@ -1,0 +1,52 @@
+--- MobilePlayerScreen.kt
++++ MobilePlayerScreen.kt
+@@ -525,23 +493,7 @@
+                     currentStreamId = state.streamId,
+                     onSelect = { item ->
+                         // Finalize current session properly before starting new one
+-                        val ps = viewModel.playbackState.value
+-                        val pos =
+-                            when (ps) {
+-                                    is PlaybackState.Playing -> ps.position
+-                                    is PlaybackState.Paused -> ps.position
+-                                    else -> 0L
+-                                }
+-                        val dur =
+-                            when (ps) {
+-                                    is PlaybackState.Playing -> ps.duration
+-                                    is PlaybackState.Paused -> ps.duration
+-                                    else -> 0L
+-                                }
+-                        val service = StreamingPlaybackService.getInstance()
+-                        val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+-                        val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+-                        loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
++                        finalizeSession(viewModel.playbackState.value, loaderViewModel)
+
+                         showCategoryOverlay = false
+                         loaderViewModel.loadStream(item)
+@@ -565,23 +517,7 @@
+                     panelAlignment = Alignment.CenterEnd,
+                     onSelect = { item ->
+                         // Finalize current session properly before starting new one
+-                        val ps = viewModel.playbackState.value
+-                        val pos =
+-                            when (ps) {
+-                                    is PlaybackState.Playing -> ps.position
+-                                    is PlaybackState.Paused -> ps.position
+-                                    else -> 0L
+-                                }
+-                        val dur =
+-                            when (ps) {
+-                                    is PlaybackState.Playing -> ps.duration
+-                                    is PlaybackState.Paused -> ps.duration
+-                                    else -> 0L
+-                                }
+-                        val service = StreamingPlaybackService.getInstance()
+-                        val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+-                        val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+-                        loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
++                        finalizeSession(viewModel.playbackState.value, loaderViewModel)
+
+                         showLastWatchedOverlay = false
+                         loaderViewModel.loadStream(item)
