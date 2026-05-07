@@ -92,6 +92,8 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 
 /**
  * Episode selection screen for TV shows.
@@ -133,20 +135,22 @@ fun EpisodeSelectionScreen(
 
         // Initialize repository asynchronously (avoids runBlocking on main thread)
         val repo =
-            mediaRepository ?: run {
-                val appContext = context.applicationContext
-                val providerRepo = ProviderRepository(appContext)
-                val entity = providerRepo.getActiveProvider()
-                val r = MediaRepository(appContext, entity?.id ?: 0L)
-                if (entity != null) {
-                    val password = providerRepo.getPassword(entity.id) ?: ""
-                    val provider = MediaProviderFactory.create(entity, appContext, password)
-                    provider.connect()
-                    r.setProvider(provider)
+            withContext(kotlinx.coroutines.Dispatchers.IO) {
+                mediaRepository ?: run {
+                    val appContext = context.applicationContext
+                    val providerRepo = ProviderRepository(appContext)
+                    val entity = providerRepo.getActiveProvider()
+                    val r = MediaRepository(appContext, entity?.id ?: 0L)
+                    if (entity != null) {
+                        val password = providerRepo.getPassword(entity.id) ?: ""
+                        val provider = MediaProviderFactory.create(entity, appContext, password)
+                        provider.connect()
+                        r.setProvider(provider)
+                    }
+                    mediaRepository = r
+                    isFavorite = r.isFavorite(seriesId, ContentType.TV_SHOWS)
+                    r
                 }
-                mediaRepository = r
-                isFavorite = r.isFavorite(seriesId, ContentType.TV_SHOWS)
-                r
             }
 
         val result = repo.getSeriesDetail(seriesId)
