@@ -20,3 +20,6 @@ In Kotlin, `data class.copy()` allocates a new object. This means every single X
 ## 2026-05-06 - Zero-allocation file extension checking
 **Learning:** Using `substringAfterLast('.', "").lowercase()` and inline `setOf` creation inside hot paths (like scanning thousands of files or streams) allocates numerous Strings and Iterators. This strains the GC and degrades performance.
 **Action:** Replaced String creation with `lastIndexOf('.')` paired with `regionMatches(..., ignoreCase = true)` against a pre-allocated `arrayOf` to perform case-insensitive extension checking without object allocations.
+## 2025-05-20 - String allocations in groupBy
+**Learning:** Using `it.title.lowercase()` inside `groupBy` closures when iterating over large datasets (like tens of thousands of EPG airings) will aggressively allocate many short-lived strings because the closure is evaluated for every single item to generate the map key. This leads to heavy GC thrashing.
+**Action:** Replaced tuple-based lowercase string keys in `groupBy` with a lightweight, custom data class (`ProgramGroupKey`) that computes hashes iteratively using `lowercaseChar().code` and implements case-insensitive equality without creating new String objects.
