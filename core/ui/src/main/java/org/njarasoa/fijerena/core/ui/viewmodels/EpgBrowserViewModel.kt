@@ -46,6 +46,41 @@ class EpgBrowserViewModel(
     private val context: Context,
     private val providerRepository: ProviderRepository,
 ) : ViewModel() {
+
+    /**
+     * Internal key for grouping programs without allocating new lowercase strings.
+     */
+    private class ProgramGroupKey(
+        title: String,
+        description: String?,
+    ) {
+        private val trimmedTitle = title.trim()
+        private val trimmedDescription = description?.trim() ?: ""
+        private val hash: Int
+
+        init {
+            var h = 0
+            for (i in trimmedTitle.indices) h = 31 * h + trimmedTitle[i].lowercaseChar().code
+
+            // Incorporate a prime multiplier before description to reduce collisions
+            h *= 31
+            for (i in trimmedDescription.indices) h = 31 * h + trimmedDescription[i].lowercaseChar().code
+
+            hash = h
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is ProgramGroupKey) return false
+            if (this.hash != other.hash) return false
+
+            if (!this.trimmedTitle.equals(other.trimmedTitle, ignoreCase = true)) return false
+            return this.trimmedDescription.equals(other.trimmedDescription, ignoreCase = true)
+        }
+
+        override fun hashCode(): Int = hash
+    }
+
     enum class SearchMode {
         PROGRAMME,
         CHANNEL,
@@ -517,7 +552,7 @@ class EpgBrowserViewModel(
                 val programs =
                     dayAirings
                         .groupBy {
-                            it.title.trim().lowercase() to (it.description?.trim()?.lowercase() ?: "")
+                            ProgramGroupKey(it.title, it.description)
                         }.entries
                         .mapIndexed { progIndex, (key, group) ->
                             val rep = group.first()
