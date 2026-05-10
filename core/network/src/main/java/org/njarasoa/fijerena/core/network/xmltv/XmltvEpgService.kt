@@ -50,7 +50,10 @@ class XmltvEpgService(
         val byIdLower: Map<String, String>,
         val byName: Map<String, String>,
         val byNormalized: Map<String, String>,
-        val normalizedEntries: List<Pair<String, String>>,
+        // Performance Optimization: Use parallel arrays instead of List<Pair<String, String>>
+        // to avoid object boxing, allocation overhead, and iterator instantiation during hot loops.
+        val normalizedNames: Array<String>,
+        val normalizedIds: Array<String>,
     )
 
     private suspend fun buildChannelMatchMaps(): ChannelMatchMaps? {
@@ -71,7 +74,9 @@ class XmltvEpgService(
         val byIdLower = mutableMapOf<String, String>()
         val byName = mutableMapOf<String, String>()
         val byNormalized = mutableMapOf<String, String>()
-        val normalizedEntries = mutableListOf<Pair<String, String>>()
+
+        val normalizedNamesList = ArrayList<String>(allXmltvChannels.size)
+        val normalizedIdsList = ArrayList<String>(allXmltvChannels.size)
 
         for (ch in allXmltvChannels) {
             byId[ch.xmltvId] = ch.xmltvId
@@ -80,12 +85,22 @@ class XmltvEpgService(
             val norm = normalizeName(ch.displayName)
             if (norm.isNotEmpty()) {
                 byNormalized[norm] = ch.xmltvId
-                normalizedEntries.add(norm to ch.xmltvId)
+                // Filter out entries < 4 length here to avoid checking during the loop
+                if (norm.length >= 4) {
+                    normalizedNamesList.add(norm)
+                    normalizedIdsList.add(ch.xmltvId)
+                }
             }
         }
 
-        return ChannelMatchMaps(byId, byIdLower, byName, byNormalized, normalizedEntries)
-            .also { cachedChannelMaps = it }
+        return ChannelMatchMaps(
+            byId = byId,
+            byIdLower = byIdLower,
+            byName = byName,
+            byNormalized = byNormalized,
+            normalizedNames = normalizedNamesList.toTypedArray(),
+            normalizedIds = normalizedIdsList.toTypedArray()
+        ).also { cachedChannelMaps = it }
     }
 
     private fun matchItems(
@@ -94,7 +109,15 @@ class XmltvEpgService(
     ): Map<String, String> {
         val matchedIds = mutableMapOf<String, String>()
         for (item in items) {
-            val matched = matchChannel(item, maps.byId, maps.byIdLower, maps.byName, maps.byNormalized, maps.normalizedEntries)
+            val matched = matchChannel(
+                item,
+                maps.byId,
+                maps.byIdLower,
+                maps.byName,
+                maps.byNormalized,
+                maps.normalizedNames,
+                maps.normalizedIds
+            )
             if (matched != null) {
                 matchedIds[item.id] = matched
             }
@@ -282,7 +305,8 @@ class XmltvEpgService(
         byIdLower: Map<String, String>,
         byName: Map<String, String>,
         byNormalized: Map<String, String>,
-        normalizedEntries: List<Pair<String, String>>,
+        normalizedNames: Array<String>,
+        normalizedIds: Array<String>,
     ): String? {
         val epgChannelId = item.providerData["epgChannelId"]
 
@@ -316,11 +340,17 @@ class XmltvEpgService(
         // 6. Contains match (min 4 chars to avoid false positives, pre-filter by length)
         if (normalizedItemName.length >= 4) {
             val itemLen = normalizedItemName.length
-            for ((norm, xmltvId) in normalizedEntries) {
-                if (norm.length < 4) continue
+            // Performance Optimization: Use parallel arrays and index-based iteration
+            for (i in normalizedNames.indices) {
+                val norm = normalizedNames[i]
+                val normLen = norm.length
+
                 // Only check contains when needle ≤ haystack length
-                if (itemLen >= norm.length && normalizedItemName.contains(norm)) return xmltvId
-                if (norm.length >= itemLen && norm.contains(normalizedItemName)) return xmltvId
+                if (itemLen >= normLen) {
+                    if (normalizedItemName.contains(norm)) return normalizedIds[i]
+                } else {
+                    if (norm.contains(normalizedItemName)) return normalizedIds[i]
+                }
             }
         }
 
