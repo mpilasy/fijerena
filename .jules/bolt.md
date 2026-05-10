@@ -23,3 +23,6 @@ In Kotlin, `data class.copy()` allocates a new object. This means every single X
 ## 2025-05-20 - String allocations in groupBy
 **Learning:** Using `it.title.lowercase()` inside `groupBy` closures when iterating over large datasets (like tens of thousands of EPG airings) will aggressively allocate many short-lived strings because the closure is evaluated for every single item to generate the map key. This leads to heavy GC thrashing.
 **Action:** Replaced tuple-based lowercase string keys in `groupBy` with a lightweight, custom data class (`ProgramGroupKey`) that computes hashes iteratively using `lowercaseChar().code` and implements case-insensitive equality without creating new String objects.
+## 2026-05-10 - [Pre-filter before hot loop iteration]
+**Learning:** Pre-filtering collections before running hot loop iteration using index-based logic reduces branching conditions inside loops significantly, saving overhead.
+**Action:** Always pre-filter data during the lookup map/array construction instead of during loop iteration.
