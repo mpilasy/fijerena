@@ -251,7 +251,6 @@ object XmltvParser {
         val matchedChannelIds = mutableSetOf<String>()
         var totalScanned = 0
         var truncated = false
-        val queryLower = query.lowercase(Locale.ROOT)
 
         try {
             val factory = XmlPullParserFactory.newInstance()
@@ -288,7 +287,9 @@ object XmltvParser {
                                 val programme = parseProgramme(parser)
                                 if (programme != null) {
                                     totalScanned++
-                                    if (programme.title.lowercase(Locale.ROOT).contains(queryLower)) {
+                                    // Performance optimization: Avoid allocating a new lowercase String for every item
+                                    // by using contains(..., ignoreCase = true) which utilizes zero-allocation string comparison
+                                    if (programme.title.contains(query, ignoreCase = true)) {
                                         matchedProgrammes.add(programme)
                                         matchedChannelIds.add(programme.channelId)
                                         if (matchedProgrammes.size >= maxResults) {

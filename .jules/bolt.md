@@ -26,3 +26,6 @@ In Kotlin, `data class.copy()` allocates a new object. This means every single X
 ## 2026-05-10 - [Pre-filter before hot loop iteration]
 **Learning:** Pre-filtering collections before running hot loop iteration using index-based logic reduces branching conditions inside loops significantly, saving overhead.
 **Action:** Always pre-filter data during the lookup map/array construction instead of during loop iteration.
+## 2026-05-18 - Avoid lowercase allocations in XML parser/search
+**Learning:** Calling `lowercase()` inside XML parsing or DB query results filtering (e.g., iterating through thousands of programs) constantly allocates short-lived strings.
+**Action:** Instead of `val titleLower = title.lowercase()` and then `titleLower.contains(query)`, use `title.contains(query, ignoreCase = true)` to take advantage of zero-allocation `regionMatches` under the hood.

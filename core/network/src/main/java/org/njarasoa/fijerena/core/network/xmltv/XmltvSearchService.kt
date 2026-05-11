@@ -198,8 +198,9 @@ class XmltvSearchService(
             val broadRows = dao.searchByTitleLike(shortestWord, sourceIds, windowStart, windowEnd)
             val filtered =
                 broadRows.filter { row ->
-                    val titleLower = row.title.lowercase(Locale.ROOT)
-                    words.all { word -> titleLower.contains(word) }
+                    // Performance optimization: Avoid allocating a new lowercase String for every item
+                    // by using contains(..., ignoreCase = true) which utilizes zero-allocation string comparison
+                    words.all { word -> row.title.contains(word, ignoreCase = true) }
                 }
             return rowsToSearchResult(filtered, searchedFromIndex = true)
         }
