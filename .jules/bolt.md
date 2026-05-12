@@ -26,3 +26,7 @@ In Kotlin, `data class.copy()` allocates a new object. This means every single X
 ## 2026-05-10 - [Pre-filter before hot loop iteration]
 **Learning:** Pre-filtering collections before running hot loop iteration using index-based logic reduces branching conditions inside loops significantly, saving overhead.
 **Action:** Always pre-filter data during the lookup map/array construction instead of during loop iteration.
+
+## 2026-05-12 - Data-Oriented Optimization in Hot Loops
+**Learning:** In hot loops checking string properties against large object arrays (like iterating over `Array<String>` to check lengths), repeated memory dereferences to access scattered string headers cause CPU cache misses, slowing down the loop.
+**Action:** Pre-calculate and cache properties like `length` into contiguous primitive arrays (e.g., `IntArray`) during initialization. Accessing primitives sequentially minimizes cache misses.

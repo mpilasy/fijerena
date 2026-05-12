@@ -25,6 +25,8 @@ class EpgChannelMatcher(
     // Level 5: Arrays instead of lists to avoid overhead
     private val normalizedNames: Array<String>
     private val normalizedStreams: Array<XtreamStreamEntity>
+    // Cached lengths to avoid jumping to String object headers in hot loops
+    private val normalizedNamesLengths: IntArray
 
     // Memoize slow queries
     private data class MatchKey(val channelId: String, val channelName: String)
@@ -54,6 +56,7 @@ class EpgChannelMatcher(
 
         normalizedNames = namesList.toTypedArray()
         normalizedStreams = streamsList.toTypedArray()
+        normalizedNamesLengths = IntArray(namesList.size) { namesList[it].length }
     }
 
     fun match(
@@ -90,10 +93,13 @@ class EpgChannelMatcher(
             val chanLen = normalizedChannelName.length
             val names = normalizedNames
             val streams = normalizedStreams
+            val lengths = normalizedNamesLengths
             // Use traditional indexed for loop which compiles to highly optimized JVM bytecode
             for (i in names.indices) {
                 val norm = names[i]
-                val normLen = norm.length
+                // Optimization: Pre-cached lengths array minimizes CPU cache misses
+                // by avoiding repeated memory dereferences to access String headers.
+                val normLen = lengths[i]
 
                 // Only check contains when needle ≤ haystack length
                 if (chanLen >= normLen) {
