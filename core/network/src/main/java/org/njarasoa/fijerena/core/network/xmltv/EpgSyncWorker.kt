@@ -18,8 +18,12 @@ class EpgSyncWorker(
         val fileManager = EpgFileManager.getInstance(applicationContext)
 
         return try {
-            val started = fileManager.refreshOutdatedSources()
-            if (started) Result.success() else Result.failure()
+            // awaitRefreshOutdatedSources() suspends until the full download + ingestion
+            // cycle completes. This keeps WorkManager's wake lock alive for the entire
+            // operation so the OS cannot suspend the process mid-download and silently
+            // drop the work without updating the DB.
+            fileManager.awaitRefreshOutdatedSources()
+            Result.success()
         } catch (e: Exception) {
             if (runAttemptCount < 3) Result.retry() else Result.failure()
         }
