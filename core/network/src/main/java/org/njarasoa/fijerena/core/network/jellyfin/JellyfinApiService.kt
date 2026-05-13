@@ -234,12 +234,14 @@ class JellyfinApiService(
         includeItemTypes: String? = null,
         sortBy: String = "SortName",
         sortOrder: String = "Ascending",
+        ids: String? = null,
     ): Result<List<JellyfinItem>> =
         try {
             client
                 .prepareGet("$serverUrl/Users/$userId/Items") {
                     parentId?.let { parameter("ParentId", it) }
                     includeItemTypes?.let { parameter("IncludeItemTypes", it) }
+                    ids?.let { parameter("Ids", it) }
                     parameter("SortBy", sortBy)
                     parameter("SortOrder", sortOrder)
                     parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData,ParentId")

@@ -11,6 +11,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
@@ -883,18 +884,39 @@ class MediaRepository(
         contentType: String,
     ): WatchedItem? {
         if (usesServerUserData) {
-            val (posMs, durMs) = provider?.getPlaybackPosition(itemId) ?: return null
+            val status = provider?.getPlaybackPosition(itemId) ?: return null
             return WatchedItem(
                 itemId = itemId,
-                itemName = "",
-                categoryId = "",
+                itemName = status.itemName ?: "",
+                categoryId = status.categoryId ?: "",
                 contentType = contentType,
-                playbackPosition = posMs,
-                duration = durMs,
-                isCompleted = false,
+                playbackPosition = status.positionMs,
+                duration = status.durationMs,
+                isCompleted = status.isCompleted,
             )
         }
         return getPlaybackPosition(itemId, contentType)
+    }
+
+    suspend fun getPlaybackPositionsSuspend(
+        itemIds: List<String>,
+        contentType: String,
+    ): Map<String, WatchedItem> {
+        if (usesServerUserData) {
+            val positions = provider?.getPlaybackPositions(itemIds)?.getOrNull() ?: return emptyMap()
+            return positions.mapValues { (id, status) ->
+                WatchedItem(
+                    itemId = id,
+                    itemName = status.itemName ?: "",
+                    categoryId = status.categoryId ?: "",
+                    contentType = contentType,
+                    playbackPosition = status.positionMs,
+                    duration = status.durationMs,
+                    isCompleted = status.isCompleted,
+                )
+            }
+        }
+        return getPlaybackPositions(itemIds, contentType)
     }
 
     fun clearPlaybackPosition(

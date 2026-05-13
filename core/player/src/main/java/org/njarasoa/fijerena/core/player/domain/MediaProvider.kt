@@ -73,7 +73,9 @@ interface MediaProvider {
 
     suspend fun getRecentlyPlayed(contentType: String): Result<List<MediaItem>>? = null
 
-    suspend fun getPlaybackPosition(itemId: String): Pair<Long, Long>? = null // (positionMs, durationMs)
+    suspend fun getPlaybackPosition(itemId: String): PlaybackStatus? = null
+
+    suspend fun getPlaybackPositions(itemIds: List<String>): Result<Map<String, PlaybackStatus>>? = null
 
     suspend fun onPlaybackStarted(itemId: String) {}
 
@@ -83,3 +85,11 @@ interface MediaProvider {
         durationMs: Long,
     ) {}
 }
+
+data class PlaybackStatus(
+    val positionMs: Long,
+    val durationMs: Long,
+    val isCompleted: Boolean,
+    val itemName: String? = null,
+    val categoryId: String? = null,
+)
