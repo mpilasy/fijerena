@@ -1,5 +1,16 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: EPG Background Sync Reliability
+**Release Date:** 2026-05-12
+
+### EPG Wake Lock & Staleness Fixes
+- **WorkManager wake lock preserved:** `EpgSyncWorker` now calls `getStaleSources()` followed by `processAllSources()` directly in its coroutine — the full download + ingestion cycle runs inside WorkManager's wake lock. The previous path routed work through `RefreshQueue` (a separate `Dispatchers.IO + SupervisorJob` scope), which caused the wake lock to be released before any bytes were transferred, triggering DNS failures on NVIDIA Shield in Doze mode.
+- **Stale threshold halved:** `staleThresholdMs` is now `interval / 2`. A source is considered stale after half its configured refresh period, giving the auto-refresh coroutine and WorkManager a wide catch-up window when they fire slightly off-schedule. The "Never" fallback remains 24h.
+- **`awaitRefreshOutdatedSources()` made private:** No longer callable from `EpgSyncWorker`. Now calls `processAllSourcesInternal()` directly instead of via `RefreshQueue`, eliminating deferred-cancellation races from competing same-ID task submissions.
+- **`getStaleSources()` extracted:** New `internal suspend fun` that returns the list of enabled sources older than `staleThresholdMs`, allowing `EpgSyncWorker` to query and process stale sources in a single wake-lock-held coroutine.
+
+---
+
 ## Version: EPG Reliability & Customization
 **Release Date:** 2026-04-27
 

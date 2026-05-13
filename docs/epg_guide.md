@@ -111,12 +111,15 @@ Download progress is computed from `downloadedBytes / contentLength`. Ingestion 
 `cancelProcessing()` cancels the coroutine `processJob` and calls `RefreshQueue.cancelAll()`, which cancels the currently executing task and clears all pending tasks. The state is immediately set to `Idle`.
 
 **Lifecycle:**
-- `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, schedules auto-refresh, schedules WorkManager periodic sync based on user-selected interval
-- `launchProcessAllSources()` — process all enabled sources via the pipeline
-- `launchProcessSources(sources, taskId)` — process a pre-filtered list of sources
+- `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, schedules auto-refresh coroutine, schedules WorkManager periodic sync based on user-selected interval
+- `launchRefreshStale()` — refresh all sources older than `staleThresholdMs` (interval/2)
+- `launchRefreshFailed()` — retry sources whose last attempt errored
+- `launchRefreshSelected(selectedIds)` — refresh a user-selected subset of sources
 - `launchProcessSingleSource(sourceId)` — process one source (download then ingest, no pipeline)
 - `launchClearAllData()` — cancel processing, set state to `Clearing`, delegate to `EpgIndexer.clearAll()`
-- Auto-refresh: checks for stale sources (based on user interval) every 4 hours, refreshes only stale ones
+- `cancelProcessing()` — cancel the current processing job and all queued tasks
+- `updateAutoRefreshSchedule()` — cancel and restart the WorkManager periodic sync with the latest interval
+- Auto-refresh: a coroutine loop wakes at the user-configured refresh time, calls `awaitRefreshOutdatedSources()` (direct, bypasses RefreshQueue to avoid wake-lock loss), then retries any failed sources after 1 hour
 
 Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync via `EpgSyncWorker` (WorkManager, periodic interval from settings).
 
@@ -338,11 +341,11 @@ EPG is configured via **Settings -> Manage EPG Data** (`Screen.EpgManagement`). 
 | `lastDownloadBytes` | Long | Download size from last ingest |
 | `ingestMethod` | String | `"DOWNLOADED"`, `"STREAMED"`, or `"XTREAM_API"` |
 
-**Status indicators (UI):** green = ingested < interval, yellow = > interval stale, red = error, gray = disabled.
+**Status indicators (UI):** green = ingested within `staleThresholdMs` (interval/2), yellow = stale (older than `staleThresholdMs`), red = error, gray = disabled.
 
 **Actions:** Refresh All, Refresh Selected, Cleanup Files, Purge >2 days, Clear All Data (with confirmation dialog), Cancel (visible during processing).
 
-**Refresh Interval:** User-selectable interval (4h, 8h, 12h, 24h, 48h) or "Never". Stale threshold and WorkManager schedule automatically adjust to this setting.
+**Refresh Interval:** User-selectable interval (4h, 8h, 12h, 24h, 48h) or "Never". The **stale threshold** (`staleThresholdMs`) is set to **interval/2** — a source is considered stale after half its refresh period has elapsed. This gives the auto-refresh coroutine and WorkManager a wide catch-up window if they fire slightly off-schedule. If the interval is ≤0 ("Never"), the threshold defaults to 24h. The WorkManager periodic schedule also updates to the selected interval.
 
 **Selective refresh:** Checkboxes on each source row allow selecting multiple sources. A "Refresh Selected (N)" button appears when sources are selected, triggering refresh only for chosen sources.
 
@@ -488,7 +491,7 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 | `XmltvEpgService.kt` | Class | XMLTV -> EpgResponse adapter for grid |
 | `XmltvModels.kt` | Data | XMLTV channel/programme/search models |
 | `EpgBrowserModels.kt` | Data | Browser UI models (program + airings) |
-| `EpgSyncWorker.kt` | CoroutineWorker | Mobile background EPG sync (WorkManager) |
+| `EpgSyncWorker.kt` | CoroutineWorker | Mobile background EPG sync (WorkManager); calls `getStaleSources()` + `processAllSources()` directly in `doWork()` to hold the wake lock for the full download + ingestion cycle |
 
 ### Queue (`core/network/.../queue/`)
 
