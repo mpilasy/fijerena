@@ -194,7 +194,7 @@ class EpgFileManager private constructor(
             return if (interval <= 0) {
                 24L * 3600 * 1000 // 24h if disabled or "Never"
             } else {
-                interval.toLong() * 3600 * 1000
+                interval.toLong() * 3600 * 1000 / 2
             }
         }
 
@@ -1049,14 +1049,29 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Submits stale-source processing and suspends until it completes.
-     * If processing is already in progress, waits for it to finish without submitting a duplicate.
-     *
-     * Used by [EpgSyncWorker] so WorkManager holds its wake lock for the full
-     * download + ingestion cycle. Without this, doWork() returns before any bytes
-     * are transferred and the OS can kill the background work before it writes to the DB.
+     * Returns all enabled sources whose data is considered stale.
+     * Used by [EpgSyncWorker] to query which sources to process before calling [processAllSources].
      */
-    internal suspend fun awaitRefreshOutdatedSources() {
+    internal suspend fun getStaleSources(): List<EpgSourceEntity> {
+        val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+        val sources = sourceDao.getEnabledSources()
+        if (sources.isEmpty()) return emptyList()
+        val now = System.currentTimeMillis()
+        return sources.filter { source ->
+            source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > staleThresholdMs
+        }
+    }
+
+    /**
+     * Runs stale-source processing in the caller's coroutine scope and suspends until complete.
+     * If another processing run is already in progress, waits for it to finish and returns.
+     *
+     * Must be called from a scope that holds an appropriate wake lock (e.g. scheduleAutoRefresh).
+     * Does NOT route through RefreshQueue — calling directly avoids Deferred cancellation races
+     * that would occur if a competing submission (same task ID) cancelled the queued deferred
+     * before the download could start.
+     */
+    private suspend fun awaitRefreshOutdatedSources() {
         val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
         val sources = sourceDao.getEnabledSources()
         if (sources.isEmpty()) return
@@ -1080,16 +1095,7 @@ class EpgFileManager private constructor(
             }
         if (staleSources.isEmpty()) return
 
-        val task =
-            object : RefreshTask {
-                override val id = "epg_auto_refresh"
-                override val priority = RefreshPriority.MEDIUM
-
-                override suspend fun execute() {
-                    processAllSourcesInternal(staleSources)
-                }
-            }
-        RefreshQueue.submit(task).await()
+        processAllSourcesInternal(staleSources)
     }
 
     private fun calculateDelayUntil(time: String): Long {

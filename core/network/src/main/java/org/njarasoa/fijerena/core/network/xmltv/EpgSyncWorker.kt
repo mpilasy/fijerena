@@ -18,11 +18,14 @@ class EpgSyncWorker(
         val fileManager = EpgFileManager.getInstance(applicationContext)
 
         return try {
-            // awaitRefreshOutdatedSources() suspends until the full download + ingestion
-            // cycle completes. This keeps WorkManager's wake lock alive for the entire
-            // operation so the OS cannot suspend the process mid-download and silently
-            // drop the work without updating the DB.
-            fileManager.awaitRefreshOutdatedSources()
+            // Call processAllSources directly in this coroutine so WorkManager's wake lock
+            // is held for the full download + ingestion cycle. Routing through RefreshQueue
+            // would transfer work into a separate scope (Dispatchers.IO + SupervisorJob) that
+            // is NOT backed by this wake lock — on Shield in Doze mode that causes DNS failures.
+            val staleSources = fileManager.getStaleSources()
+            if (staleSources.isNotEmpty()) {
+                fileManager.processAllSources(staleSources)
+            }
             Result.success()
         } catch (e: Exception) {
             if (runAttemptCount < 3) Result.retry() else Result.failure()
