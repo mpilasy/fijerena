@@ -14,6 +14,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.PlayableStream
+import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
@@ -435,14 +436,41 @@ class JellyfinMediaProvider(
         }
     }
 
-    override suspend fun getPlaybackPosition(itemId: String): Pair<Long, Long>? {
+    override suspend fun getPlaybackPosition(itemId: String): PlaybackStatus? {
         if (!ensureConnected()) return null
         val item = api.getItemById(itemId).getOrNull() ?: return null
-        val ticks = item.userData?.playbackPositionTicks ?: return null
-        if (ticks <= 0) return null
-        val posMs = ticks / 10_000
+        val ud = item.userData ?: return null
+        val posMs = ud.playbackPositionTicks / 10_000
         val durMs = (item.runTimeTicks ?: 0L) / 10_000
-        return Pair(posMs, durMs)
+        return PlaybackStatus(
+            positionMs = posMs,
+            durationMs = durMs,
+            isCompleted = ud.played,
+            itemName = item.name,
+            categoryId = item.parentId,
+        )
+    }
+
+    override suspend fun getPlaybackPositions(itemIds: List<String>): Result<Map<String, PlaybackStatus>> {
+        if (!ensureConnected()) return Result.failure(Exception("Not connected"))
+        if (itemIds.isEmpty()) return Result.success(emptyMap())
+
+        return withAutoReconnect {
+            api.getItems(ids = itemIds.joinToString(",")).map { items ->
+                items.associate { item ->
+                    val ud = item.userData
+                    val posMs = (ud?.playbackPositionTicks ?: 0L) / 10_000
+                    val durMs = (item.runTimeTicks ?: 0L) / 10_000
+                    item.id to PlaybackStatus(
+                        positionMs = posMs,
+                        durationMs = durMs,
+                        isCompleted = ud?.played ?: false,
+                        itemName = item.name,
+                        categoryId = item.parentId,
+                    )
+                }
+            }
+        }
     }
 
     override suspend fun onPlaybackStarted(itemId: String) {
