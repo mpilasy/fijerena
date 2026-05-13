@@ -148,19 +148,19 @@ class EpgManagementViewModel(
     fun setAutoRefreshEnabled(enabled: Boolean) {
         appSettings.epgAutoRefreshEnabled = enabled
         _epgSettings.value = _epgSettings.value.copy(autoRefreshEnabled = enabled)
-        epgFileManager.updateAutoRefreshSchedule()
+        epgFileManager.updateAutoRefreshSchedule(forceReschedule = true)
     }
 
     fun setEpgRefreshTime(time: String) {
         appSettings.epgRefreshTime = time
         _epgSettings.value = _epgSettings.value.copy(epgRefreshTime = time)
-        epgFileManager.updateAutoRefreshSchedule()
+        epgFileManager.updateAutoRefreshSchedule(forceReschedule = true)
     }
 
     fun setEpgRefreshInterval(interval: Int) {
         appSettings.epgRefreshInterval = interval
         _epgSettings.value = _epgSettings.value.copy(epgRefreshInterval = interval)
-        epgFileManager.updateAutoRefreshSchedule()
+        epgFileManager.updateAutoRefreshSchedule(forceReschedule = true)
     }
 
     data class DbStats(
