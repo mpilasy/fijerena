@@ -75,6 +75,7 @@ class EpgFileManager private constructor(
         private const val RETRY_DELAY_MS = 5000L
         private const val AUTO_REFRESH_CHECK_INTERVAL_MS = 4L * 3600 * 1000 // Check every 4 hours
         private const val RETRY_AFTER_FAILURE_MS = 3_600_000L // 1 hour
+        private const val SCHEDULED_REFRESH_AGE_MS = 3_600_000L // scheduled runs refresh if data is older than 1 hour
 
         @Volatile
         private var instance: EpgFileManager? = null
@@ -194,7 +195,7 @@ class EpgFileManager private constructor(
             return if (interval <= 0) {
                 24L * 3600 * 1000 // 24h if disabled or "Never"
             } else {
-                interval.toLong() * 3600 * 1000 / 2
+                interval.toLong() * 3600 * 1000
             }
         }
 
@@ -1028,7 +1029,7 @@ class EpgFileManager private constructor(
         val now = System.currentTimeMillis()
         val staleSources =
             sources.filter { source ->
-                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > staleThresholdMs
+                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > SCHEDULED_REFRESH_AGE_MS
             }
 
         return if (staleSources.isNotEmpty()) {
@@ -1058,7 +1059,7 @@ class EpgFileManager private constructor(
         if (sources.isEmpty()) return emptyList()
         val now = System.currentTimeMillis()
         return sources.filter { source ->
-            source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > staleThresholdMs
+            source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > SCHEDULED_REFRESH_AGE_MS
         }
     }
 
@@ -1091,7 +1092,7 @@ class EpgFileManager private constructor(
         val now = System.currentTimeMillis()
         val staleSources =
             sources.filter { source ->
-                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > staleThresholdMs
+                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > SCHEDULED_REFRESH_AGE_MS
             }
         if (staleSources.isEmpty()) return
 
@@ -1172,11 +1173,11 @@ class EpgFileManager private constructor(
             }
     }
 
-    fun updateAutoRefreshSchedule() {
+    fun updateAutoRefreshSchedule(forceReschedule: Boolean = false) {
         autoRefreshJob?.cancel()
         scope.launch {
             scheduleAutoRefresh()
-            
+
             val intervalHours = appSettings.epgRefreshInterval
             if (intervalHours == -1) {
                 WorkManager.getInstance(context).cancelUniqueWork("epg_sync")
@@ -1188,15 +1189,15 @@ class EpgFileManager private constructor(
                     .Builder()
                     .setRequiredNetworkType(WorkNetworkType.CONNECTED)
                     .build()
-            val initialDelay = calculateDelayUntil(appSettings.epgRefreshTime)
+            val policy = if (forceReschedule) ExistingPeriodicWorkPolicy.REPLACE else ExistingPeriodicWorkPolicy.KEEP
             val request =
                 PeriodicWorkRequestBuilder<EpgSyncWorker>(intervalHours.toLong(), TimeUnit.HOURS)
                     .setConstraints(constraints)
-                    .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+                    .apply { if (forceReschedule) setInitialDelay(calculateDelayUntil(appSettings.epgRefreshTime), TimeUnit.MILLISECONDS) }
                     .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 "epg_sync",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                policy,
                 request,
             )
         }
