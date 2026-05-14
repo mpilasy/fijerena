@@ -22,8 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
+
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -70,11 +69,10 @@ class EpgFileManager private constructor(
         private const val TAG = "EpgFileManager"
         private const val PREFS_NAME = "epg_file_manager"
         private const val KEY_MIGRATED_TO_SOURCES = "migrated_to_sources_v1"
+        private const val KEY_WM_SCHEDULE_ALIGNED = "wm_schedule_aligned_v1"
         private const val STREAM_BUFFER_SIZE = 131072 // 128KB
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 5000L
-        private const val AUTO_REFRESH_CHECK_INTERVAL_MS = 4L * 3600 * 1000 // Check every 4 hours
-        private const val RETRY_AFTER_FAILURE_MS = 3_600_000L // 1 hour
         private const val SCHEDULED_REFRESH_AGE_MS = 3_600_000L // scheduled runs refresh if data is older than 1 hour
 
         @Volatile
@@ -200,7 +198,6 @@ class EpgFileManager private constructor(
         }
 
     private var processJob: Job? = null
-    private var autoRefreshJob: Job? = null
 
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
     val state: StateFlow<MultiSourceState> = _state.asStateFlow()
@@ -230,7 +227,6 @@ class EpgFileManager private constructor(
             val indexer = EpgIndexer.getInstance(context)
             val ftsWasStale = indexer.initialize()
             cleanupStrayFiles()
-            scheduleAutoRefresh()
 
             // If a previous session was interrupted during background FTS rebuild, resume it.
             if (ftsWasStale) {
@@ -245,8 +241,16 @@ class EpgFileManager private constructor(
                 }
             }
 
-            // Schedule WorkManager periodic sync (Doze-aware, works on both mobile and TV)
-            updateAutoRefreshSchedule()
+            // Schedule WorkManager periodic sync (Doze-aware, works on both mobile and TV).
+            // Force-realign the schedule to the configured refresh time once after this migration,
+            // so that existing installs with drifted timing are corrected automatically.
+            val aligned = prefs.getBoolean(KEY_WM_SCHEDULE_ALIGNED, false)
+            if (!aligned) {
+                prefs.edit { putBoolean(KEY_WM_SCHEDULE_ALIGNED, true) }
+                updateAutoRefreshSchedule(forceReschedule = true)
+            } else {
+                updateAutoRefreshSchedule()
+            }
         }
     }
 
@@ -1063,42 +1067,6 @@ class EpgFileManager private constructor(
         }
     }
 
-    /**
-     * Runs stale-source processing in the caller's coroutine scope and suspends until complete.
-     * If another processing run is already in progress, waits for it to finish and returns.
-     *
-     * Must be called from a scope that holds an appropriate wake lock (e.g. scheduleAutoRefresh).
-     * Does NOT route through RefreshQueue — calling directly avoids Deferred cancellation races
-     * that would occur if a competing submission (same task ID) cancelled the queued deferred
-     * before the download could start.
-     */
-    private suspend fun awaitRefreshOutdatedSources() {
-        val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-        val sources = sourceDao.getEnabledSources()
-        if (sources.isEmpty()) return
-
-        if (_state.value is MultiSourceState.Processing ||
-            _state.value is MultiSourceState.Pending ||
-            _state.value is MultiSourceState.Finalizing
-        ) {
-            _state.filter {
-                it !is MultiSourceState.Processing &&
-                    it !is MultiSourceState.Pending &&
-                    it !is MultiSourceState.Finalizing
-            }.first()
-            return
-        }
-
-        val now = System.currentTimeMillis()
-        val staleSources =
-            sources.filter { source ->
-                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > SCHEDULED_REFRESH_AGE_MS
-            }
-        if (staleSources.isEmpty()) return
-
-        processAllSourcesInternal(staleSources)
-    }
-
     private fun calculateDelayUntil(time: String): Long {
         try {
             val now = java.util.Calendar.getInstance()
@@ -1122,62 +1090,8 @@ class EpgFileManager private constructor(
         }
     }
 
-    private fun scheduleAutoRefresh() {
-        autoRefreshJob?.cancel()
-        autoRefreshJob =
-            scope.launch {
-                val appSettings = AppSettings(context)
-                while (true) {
-                    if (appSettings.epgAutoRefreshEnabled) {
-                        val delayMs = calculateDelayUntil(appSettings.epgRefreshTime)
-                        delay(delayMs)
-                        try {
-                            awaitRefreshOutdatedSources()
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Auto-refresh failed", e)
-                        }
-                        // Wait 1 minute then retry any sources that failed during the scheduled
-                        // refresh. This handles transient server / network unavailability at the
-                        // configured refresh time — without it, a single bad night leaves the EPG
-                        // in a failed state for the next 24 hours.
-                        delay(60_000L)
-                        delay(RETRY_AFTER_FAILURE_MS)
-                        try {
-                            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-                            val failedSources = sourceDao.getFailedSources()
-                            if (failedSources.isNotEmpty()) {
-                                Log.i(TAG, "scheduleAutoRefresh: retrying ${failedSources.size} failed source(s)")
-                                val retryTask =
-                                    object : RefreshTask {
-                                        override val id = "epg_auto_retry"
-                                        override val priority = RefreshPriority.MEDIUM
-
-                                        override suspend fun execute() {
-                                            processAllSourcesInternal(failedSources)
-                                        }
-                                    }
-                                RefreshQueue.submit(retryTask).await()
-                            }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Auto-refresh retry failed", e)
-                        }
-                        delay(60_000L)
-                    } else {
-                        delay(AUTO_REFRESH_CHECK_INTERVAL_MS)
-                    }
-                }
-            }
-    }
-
     fun updateAutoRefreshSchedule(forceReschedule: Boolean = false) {
-        autoRefreshJob?.cancel()
         scope.launch {
-            scheduleAutoRefresh()
-
             val intervalHours = appSettings.epgRefreshInterval
             if (intervalHours == -1) {
                 WorkManager.getInstance(context).cancelUniqueWork("epg_sync")

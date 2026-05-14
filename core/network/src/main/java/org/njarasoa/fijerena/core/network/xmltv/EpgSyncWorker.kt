@@ -1,34 +1,42 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
 import android.content.Context
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 
 /**
- * WorkManager worker for mobile background EPG sync.
+ * WorkManager worker for background EPG sync (all device types).
  *
- * Scheduled as a periodic task on mobile devices based on AppSettings.
- * TV/fixed devices use coroutine-based auto-refresh instead.
+ * WorkManager holds a wake lock for the full duration of doWork(), so DNS and network
+ * remain available even on Shield/TV in Doze. processAllSources is called directly
+ * (not via RefreshQueue) to keep work inside this wake-lock-backed coroutine.
  */
 class EpgSyncWorker(
     context: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
+        Log.i(TAG, "doWork: starting (attempt ${runAttemptCount + 1})")
         val fileManager = EpgFileManager.getInstance(applicationContext)
 
         return try {
-            // Call processAllSources directly in this coroutine so WorkManager's wake lock
-            // is held for the full download + ingestion cycle. Routing through RefreshQueue
-            // would transfer work into a separate scope (Dispatchers.IO + SupervisorJob) that
-            // is NOT backed by this wake lock — on Shield in Doze mode that causes DNS failures.
             val staleSources = fileManager.getStaleSources()
-            if (staleSources.isNotEmpty()) {
+            if (staleSources.isEmpty()) {
+                Log.i(TAG, "doWork: all sources fresh, nothing to do")
+            } else {
+                Log.i(TAG, "doWork: refreshing ${staleSources.size} stale source(s)")
                 fileManager.processAllSources(staleSources)
+                Log.i(TAG, "doWork: refresh complete")
             }
             Result.success()
         } catch (e: Exception) {
+            Log.w(TAG, "doWork: failed — ${e.message}", e)
             if (runAttemptCount < 3) Result.retry() else Result.failure()
         }
+    }
+
+    companion object {
+        private const val TAG = "EpgSyncWorker"
     }
 }
