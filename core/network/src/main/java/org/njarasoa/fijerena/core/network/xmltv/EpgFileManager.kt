@@ -69,7 +69,6 @@ class EpgFileManager private constructor(
         private const val TAG = "EpgFileManager"
         private const val PREFS_NAME = "epg_file_manager"
         private const val KEY_MIGRATED_TO_SOURCES = "migrated_to_sources_v1"
-        private const val KEY_WM_SCHEDULE_ALIGNED = "wm_schedule_aligned_v1"
         private const val STREAM_BUFFER_SIZE = 131072 // 128KB
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 5000L
@@ -241,16 +240,8 @@ class EpgFileManager private constructor(
                 }
             }
 
-            // Schedule WorkManager periodic sync (Doze-aware, works on both mobile and TV).
-            // Force-realign the schedule to the configured refresh time once after this migration,
-            // so that existing installs with drifted timing are corrected automatically.
-            val aligned = prefs.getBoolean(KEY_WM_SCHEDULE_ALIGNED, false)
-            if (!aligned) {
-                prefs.edit { putBoolean(KEY_WM_SCHEDULE_ALIGNED, true) }
-                updateAutoRefreshSchedule(forceReschedule = true)
-            } else {
-                updateAutoRefreshSchedule()
-            }
+            // Schedule WorkManager periodic sync (Doze-aware, works on both mobile and TV)
+            updateAutoRefreshSchedule()
         }
     }
 
