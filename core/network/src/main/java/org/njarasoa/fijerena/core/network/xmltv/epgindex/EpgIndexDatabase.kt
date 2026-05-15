@@ -54,8 +54,10 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                                 db.execSQL("PRAGMA cache_size = -64000") // 64MB cache
                                 db.execSQL("PRAGMA page_size = 4096")
                                 db.execSQL("PRAGMA temp_store = MEMORY")
-                                db.execSQL("PRAGMA mmap_size = 268435456") // 256MB memory mapping for fast index access
-                                db.execSQL("PRAGMA journal_size_limit = 10485760") // 10MB WAL limit
+                                // mmap_size and journal_size_limit echo their new value — Requery
+                                // rejects execSQL for any statement that produces rows, so use query().
+                                db.query("PRAGMA mmap_size = 268435456").close()
+                                db.query("PRAGMA journal_size_limit = 10485760").close()
 
                                 val cursor = db.query("PRAGMA auto_vacuum")
                                 val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
