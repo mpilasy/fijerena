@@ -7,10 +7,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import io.requery.android.database.sqlite.RequerySQLiteOpenHelperFactory
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 @Database(
     entities = [
@@ -19,7 +15,7 @@ import kotlinx.coroutines.launch
         EpgProgrammeFts::class,
         EpgIndexMetadata::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = false,
 )
 abstract class EpgIndexDatabase : RoomDatabase() {
@@ -51,25 +47,24 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                 .fallbackToDestructiveMigration(true)
                 .addCallback(
                     object : RoomDatabase.Callback() {
-                        @OptIn(DelicateCoroutinesApi::class)
                         override fun onOpen(db: SupportSQLiteDatabase) {
-                            GlobalScope.launch(Dispatchers.IO) {
-                                try {
-                                    // Optimize for performance
-                                    db.execSQL("PRAGMA synchronous = NORMAL")
-                                    db.execSQL("PRAGMA cache_size = -64000") // 64MB cache for large EPG datasets
-                                    db.execSQL("PRAGMA page_size = 4096")
-                                    db.execSQL("PRAGMA temp_store = MEMORY")
+                            try {
+                                // Optimize for performance - run directly on the opened connection
+                                db.execSQL("PRAGMA synchronous = NORMAL")
+                                db.execSQL("PRAGMA cache_size = -64000") // 64MB cache
+                                db.execSQL("PRAGMA page_size = 4096")
+                                db.execSQL("PRAGMA temp_store = MEMORY")
+                                db.execSQL("PRAGMA mmap_size = 268435456") // 256MB memory mapping for fast index access
+                                db.execSQL("PRAGMA journal_size_limit = 10485760") // 10MB WAL limit
 
-                                    val cursor = db.query("PRAGMA auto_vacuum")
-                                    val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
-                                    cursor.close()
-                                    if (currentMode != 2) { // 2 = INCREMENTAL
-                                        db.execSQL("PRAGMA auto_vacuum = INCREMENTAL")
-                                    }
-                                } catch (e: Exception) {
-                                    Log.w(TAG, "Failed to run DB maintenance", e)
+                                val cursor = db.query("PRAGMA auto_vacuum")
+                                val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
+                                cursor.close()
+                                if (currentMode != 2) { // 2 = INCREMENTAL
+                                    db.execSQL("PRAGMA auto_vacuum = INCREMENTAL")
                                 }
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Failed to run DB maintenance", e)
                             }
                         }
                     },

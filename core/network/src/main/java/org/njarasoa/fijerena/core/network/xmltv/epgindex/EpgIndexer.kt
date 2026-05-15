@@ -94,7 +94,6 @@ class EpgIndexer private constructor(
                 "idx_programme_end",
                 "idx_programme_time_range",
                 "idx_programme_channel",
-                "idx_programme_title_lower",
                 "idx_programme_source",
                 "idx_programme_channel_source",
             )
@@ -104,7 +103,6 @@ class EpgIndexer private constructor(
                 "CREATE INDEX IF NOT EXISTS `idx_programme_end` ON `epg_programme` (`end_epoch`)",
                 "CREATE INDEX IF NOT EXISTS `idx_programme_time_range` ON `epg_programme` (`start_epoch`, `end_epoch`)",
                 "CREATE INDEX IF NOT EXISTS `idx_programme_channel` ON `epg_programme` (`channel_id`)",
-                "CREATE INDEX IF NOT EXISTS `idx_programme_title_lower` ON `epg_programme` (`title_lowercase`)",
                 "CREATE INDEX IF NOT EXISTS `idx_programme_source` ON `epg_programme` (`source_id`)",
                 "CREATE INDEX IF NOT EXISTS `idx_programme_channel_source` ON `epg_programme` (`channel_id`, `source_id`)",
             )
@@ -230,8 +228,12 @@ class EpgIndexer private constructor(
             var channelCount = 0
             var programmeCount = 0
 
-            // Skip programmes that ended before yesterday
-            val cutoffEpoch = (System.currentTimeMillis() / 1000) - 86400
+            // Keep database size manageable:
+            // 1. Skip programmes that ended more than 12 hours ago
+            // 2. Skip programmes starting more than 7 days in the future
+            val now = System.currentTimeMillis() / 1000
+            val cutoffEpoch = now - 43200 // 12 hours ago
+            val futureLimitEpoch = now + 604800 // 7 days from now
 
             try {
                 val channelBatch = mutableListOf<EpgChannelEntity>()
@@ -277,7 +279,7 @@ class EpgIndexer private constructor(
                                 }
 
                                 XmltvParser.parseProgrammeForIndex(parser, sourceId, timezoneOverrideHours)?.let {
-                                    if (it.endEpoch < cutoffEpoch) return@let
+                                    if (it.endEpoch < cutoffEpoch || it.startEpoch > futureLimitEpoch) return@let
                                     programmeBatch.add(it)
                                     programmeCount++
                                     itemsSinceLastProgressUpdate++
@@ -389,8 +391,12 @@ class EpgIndexer private constructor(
                 dao.deleteBySourceId(sourceId)
             }
 
-            // Skip programmes that ended before yesterday
-            val cutoffEpoch = (System.currentTimeMillis() / 1000) - 86400
+            // Keep database size manageable:
+            // 1. Skip programmes that ended more than 12 hours ago
+            // 2. Skip programmes starting more than 7 days in the future
+            val nowMs = System.currentTimeMillis()
+            val cutoffEpoch = (nowMs / 1000) - 43200
+            val futureLimitEpoch = (nowMs / 1000) + 604800
 
             // Build channels and programmes
             val channelEntities = mutableListOf<EpgChannelEntity>()
@@ -411,7 +417,7 @@ class EpgIndexer private constructor(
                 )
 
                 for (prog in epgResponse.listings) {
-                    if (prog.endTime < cutoffEpoch) continue
+                    if (prog.endTime < cutoffEpoch || prog.startTime > futureLimitEpoch) continue
                     programmeBatch.add(
                         EpgProgrammeEntity(
                             channelId = channelId,
@@ -472,19 +478,22 @@ class EpgIndexer private constructor(
      */
     suspend fun rebuildFtsAndUpdateState() =
         withContext(Dispatchers.IO) {
+            val startMs = System.currentTimeMillis()
+            Log.i(TAG, "rebuildFtsAndUpdateState: starting FTS rebuild")
             try {
                 val db = EpgIndexDatabase.getInstance(context)
                 val dao = db.epgIndexDao()
 
                 writeMutex.withLock {
+                    val sdb = db.openHelper.writableDatabase
                     // Checkpoint WAL to reduce contention during rebuild
-                    db.openHelper.writableDatabase
-                        .query("PRAGMA wal_checkpoint(TRUNCATE)")
-                        .close()
+                    sdb.query("PRAGMA wal_checkpoint(TRUNCATE)").close()
 
-                    db.openHelper.writableDatabase.execSQL(
-                        "INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')",
-                    )
+                    Log.d(TAG, "rebuildFtsAndUpdateState: executing FTS rebuild")
+                    // 'rebuild' scans the content table (epg_programme) and repopulates FTS from
+                    // scratch. Required after bulk ingestion because FTS triggers are dropped during
+                    // bulk — 'optimize' only merges existing segments and cannot restore missing entries.
+                    sdb.execSQL("INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')")
 
                     val now = System.currentTimeMillis()
                     val finalChannelCount = dao.getChannelCount()
@@ -508,6 +517,7 @@ class EpgIndexer private constructor(
                             indexedAtMs = now,
                         )
                 }
+                Log.i(TAG, "rebuildFtsAndUpdateState: FTS complete in ${System.currentTimeMillis() - startMs}ms")
             } catch (e: Exception) {
                 Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild failed")
@@ -526,21 +536,31 @@ class EpgIndexer private constructor(
      */
     suspend fun beginBulkIngestion() =
         withContext(Dispatchers.IO) {
+            Log.i(TAG, "beginBulkIngestion: setting up database for bulk ingest")
+            val startMs = System.currentTimeMillis()
             try {
-                val db = EpgIndexDatabase.getInstance(context)
-                db.openHelper.writableDatabase.apply {
+                writeMutex.withLock {
+                    val db = EpgIndexDatabase.getInstance(context)
+                    // Request writable database explicitly to avoid read-only issues with Requery/Room
+                    val sdb = db.openHelper.writableDatabase
+                    if (sdb.isReadOnly) {
+                        Log.w(TAG, "beginBulkIngestion: connection is read-only, attempting to modify might fail")
+                    }
+
                     FTS_TRIGGER_NAMES.forEach { name ->
-                        execSQL("DROP TRIGGER IF EXISTS `$name`")
+                        sdb.execSQL("DROP TRIGGER IF EXISTS `$name`")
                     }
                     BULK_DROP_INDEX_NAMES.forEach { name ->
-                        execSQL("DROP INDEX IF EXISTS `$name`")
+                        sdb.execSQL("DROP INDEX IF EXISTS `$name`")
                     }
-                    execSQL("PRAGMA synchronous = OFF")
-                    execSQL("PRAGMA temp_store = MEMORY")
-                    execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
+                    sdb.execSQL("PRAGMA synchronous = OFF")
+                    sdb.execSQL("PRAGMA temp_store = MEMORY")
+                    sdb.execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
                 }
+                Log.i(TAG, "beginBulkIngestion: setup complete in ${System.currentTimeMillis() - startMs}ms")
             } catch (e: Exception) {
-                Log.w(TAG, "beginBulkIngestion setup failed (non-fatal): ${e.message}", e)
+                Log.w(TAG, "beginBulkIngestion setup failed: ${e.message}", e)
+                // Non-fatal but will make ingestion much slower as triggers/indexes remain active
             }
         }
 
@@ -554,18 +574,27 @@ class EpgIndexer private constructor(
      */
     suspend fun endBulkIngestion() =
         withContext(Dispatchers.IO) {
+            Log.i(TAG, "endBulkIngestion: restoring database state after bulk ingest")
+            val startMs = System.currentTimeMillis()
             try {
-                val db = EpgIndexDatabase.getInstance(context)
-                db.openHelper.writableDatabase.apply {
+                writeMutex.withLock {
+                    val db = EpgIndexDatabase.getInstance(context)
+                    val sdb = db.openHelper.writableDatabase
+                    
                     // Rebuild query indexes before restoring normal mode
-                    BULK_DROP_INDEX_DDL.forEach { ddl -> execSQL(ddl) }
-                    execSQL("PRAGMA synchronous = NORMAL")
-                    execSQL("PRAGMA temp_store = DEFAULT")
-                    execSQL("PRAGMA cache_size = -8000") // restore 8 MB
-                    FTS_TRIGGER_DDL.forEach { ddl -> execSQL(ddl) }
+                    BULK_DROP_INDEX_DDL.forEach { ddl ->
+                        val indexStart = System.currentTimeMillis()
+                        sdb.execSQL(ddl)
+                        Log.d(TAG, "endBulkIngestion: recreated index in ${System.currentTimeMillis() - indexStart}ms")
+                    }
+                    sdb.execSQL("PRAGMA synchronous = NORMAL")
+                    sdb.execSQL("PRAGMA temp_store = DEFAULT")
+                    sdb.execSQL("PRAGMA cache_size = -8000") // restore 8 MB
+                    FTS_TRIGGER_DDL.forEach { ddl -> sdb.execSQL(ddl) }
                 }
+                Log.i(TAG, "endBulkIngestion: restore complete in ${System.currentTimeMillis() - startMs}ms")
             } catch (e: Exception) {
-                Log.w(TAG, "endBulkIngestion teardown failed (non-fatal): ${e.message}", e)
+                Log.w(TAG, "endBulkIngestion teardown failed: ${e.message}", e)
             }
         }
 
