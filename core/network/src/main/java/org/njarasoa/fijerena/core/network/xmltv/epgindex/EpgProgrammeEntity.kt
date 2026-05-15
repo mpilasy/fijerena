@@ -14,7 +14,6 @@ import androidx.room.PrimaryKey
         Index(value = ["end_epoch"], name = "idx_programme_end"),
         Index(value = ["start_epoch", "end_epoch"], name = "idx_programme_time_range"),
         Index(value = ["channel_id"], name = "idx_programme_channel"),
-        Index(value = ["title_lowercase"], name = "idx_programme_title_lower"),
         Index(value = ["channel_id", "source_id", "start_epoch"], name = "idx_programme_dedup", unique = true),
         Index(value = ["source_id"], name = "idx_programme_source"),
         Index(value = ["channel_id", "source_id"], name = "idx_programme_channel_source"),
