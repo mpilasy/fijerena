@@ -1,0 +1,3 @@
+## 2024-05-15 - [Avoid Tuple Allocations in Hot Paths]
+**Learning:** Using `groupBy { it.a to it.b }` creates a short-lived `Pair` object for every element in the collection. In performance-critical hot paths (like `groupByChannel` in `EpgBrowserViewModel` handling thousands of EPG airings), this causes severe GC thrashing.
+**Action:** Use a custom lightweight, hashable key class or avoid the allocation by grouping by a primary key and then handling secondary grouping if needed, or by introducing a lightweight custom data class that hashes its members efficiently without creating pairs in a tight loop.

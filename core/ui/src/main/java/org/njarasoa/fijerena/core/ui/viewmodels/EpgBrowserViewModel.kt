@@ -575,16 +575,37 @@ class EpgBrowserViewModel(
             }
     }
 
+    /**
+     * Internal key for grouping channels without allocating Pair objects.
+     */
+    private class ChannelGroupKey(
+        val channelId: String,
+        val channelName: String,
+    ) {
+        private val hash = 31 * channelId.hashCode() + channelName.hashCode()
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is ChannelGroupKey) return false
+            if (this.hash != other.hash) return false
+            return this.channelId == other.channelId && this.channelName == other.channelName
+        }
+
+        override fun hashCode(): Int = hash
+    }
+
     private fun groupByChannel(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
         // For "What's on", we group by channel name and reuse EpgBrowserDateGroup
         // with the channel name as the label.
-        val byChannel = airings.groupBy { it.airing.channelId to it.airing.channelName }
+        val byChannel = airings.groupBy { ChannelGroupKey(it.airing.channelId, it.airing.channelName) }
 
         return byChannel.entries
             // Use String.CASE_INSENSITIVE_ORDER to avoid allocating new String objects during sorting
-            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key.second })
-            .mapIndexed { index, (channelKey, channelAirings) ->
-                val (channelId, channelName) = channelKey
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key.channelName })
+            .mapIndexed { index, entry ->
+                val channelId = entry.key.channelId
+                val channelName = entry.key.channelName
+                val channelAirings = entry.value
                 val programs =
                     channelAirings
                         .mapIndexed { progIndex, airingWithProg ->
