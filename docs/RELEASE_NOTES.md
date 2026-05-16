@@ -1,5 +1,17 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: EPG FTS Index Availability During Rebuild
+**Release Date:** 2026-05-15
+
+### FTS Search Continuity
+- **Old FTS index stays live until rebuild starts:** `rebuildFtsAndUpdateState()` now calls `markFtsStale()` at entry rather than callers marking stale at dispatch time. The previous approach marked the index stale as soon as the background coroutine was launched, forcing LIKE fallback during the scheduling gap (time between dispatch and the rebuild actually starting). Now the old index remains valid for that gap — degradation to LIKE only happens during the actual rebuild window.
+- **`markFtsStale()` / `markFtsClean()` internalized:** Callers (`EpgFileManager`, `XmltvSearchService`) no longer manage these flags. Both are now called exclusively inside `rebuildFtsAndUpdateState()`.
+- **`getAllSources()` added to `EpgFileManager`:** Returns all enabled sources regardless of staleness. Used by `EpgSyncWorker` when `force=true`.
+- **Force-refresh flag in `EpgSyncWorker`:** Accepts `force` boolean input data. When `true`, bypasses the stale check and refreshes all enabled sources unconditionally.
+- **`EpgSyncDebugReceiver` (debug builds only):** New broadcast receiver that enqueues an immediate force-refresh `EpgSyncWorker` OneTimeWorkRequest. Used to validate Doze bypass without waiting for the periodic schedule. Trigger: `adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p org.njarasoa.fijerena`.
+
+---
+
 ## Version: EPG Background Sync Reliability
 **Release Date:** 2026-05-12
 
