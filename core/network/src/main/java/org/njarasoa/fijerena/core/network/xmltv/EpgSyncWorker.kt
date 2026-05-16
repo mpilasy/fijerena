@@ -4,12 +4,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ServiceInfo
+import android.net.ConnectivityManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.delay
 
 /**
  * WorkManager worker for background EPG sync (all device types).
@@ -50,6 +52,20 @@ class EpgSyncWorker(
 
     override suspend fun doWork(): Result {
         setForeground(getForegroundInfo())
+
+        // ConnectivityManager.activeNetwork can return null briefly on cold start while
+        // the network stack initialises for the new process. Wait up to 15s before proceeding.
+        val cm = applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val networkDeadline = System.currentTimeMillis() + 15_000L
+        while (cm?.activeNetwork == null && System.currentTimeMillis() < networkDeadline) {
+            Log.d(TAG, "doWork: waiting for active network...")
+            delay(1_000L)
+        }
+        if (cm?.activeNetwork == null) {
+            Log.w(TAG, "doWork: no active network after 15s — returning retry")
+            return if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+        }
+
         Log.i(TAG, "doWork: starting (attempt ${runAttemptCount + 1})")
         val fileManager = EpgFileManager.getInstance(applicationContext)
 
@@ -62,12 +78,10 @@ class EpgSyncWorker(
                 Log.i(TAG, "doWork: refreshing ${staleSources.size} stale source(s)")
                 fileManager.processAllSources(staleSources)
 
-                // If every source failed the worker returns retry so WorkManager backs off
-                // and tries again in minutes rather than waiting the full 4-hour period.
                 val completed = fileManager.state.value as? EpgFileManager.MultiSourceState.Completed
                 if (completed != null && completed.errors == staleSources.size) {
                     Log.w(TAG, "doWork: all ${staleSources.size} source(s) failed, will retry")
-                    if (runAttemptCount < 3) Result.retry() else Result.failure()
+                    if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
                 } else {
                     Log.i(TAG, "doWork: refresh complete")
                     Result.success()
@@ -75,7 +89,7 @@ class EpgSyncWorker(
             }
         } catch (e: Exception) {
             Log.w(TAG, "doWork: failed — ${e.message}", e)
-            if (runAttemptCount < 3) Result.retry() else Result.failure()
+            if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
     }
 
@@ -83,5 +97,6 @@ class EpgSyncWorker(
         private const val TAG = "EpgSyncWorker"
         private const val CHANNEL_ID = "epg_sync"
         private const val NOTIFICATION_ID = 0x4570_0001
+        const val MAX_RETRIES = 5
     }
 }

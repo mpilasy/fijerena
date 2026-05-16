@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.content.edit
 import androidx.media3.common.util.UnstableApi
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -1094,10 +1095,11 @@ class EpgFileManager private constructor(
                     .Builder()
                     .setRequiredNetworkType(WorkNetworkType.CONNECTED)
                     .build()
-            val policy = if (forceReschedule) ExistingPeriodicWorkPolicy.REPLACE else ExistingPeriodicWorkPolicy.KEEP
+            val policy = if (forceReschedule) ExistingPeriodicWorkPolicy.REPLACE else ExistingPeriodicWorkPolicy.UPDATE
             val request =
                 PeriodicWorkRequestBuilder<EpgSyncWorker>(intervalHours.toLong(), TimeUnit.HOURS)
                     .setConstraints(constraints)
+                    .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
                     .apply { if (forceReschedule) setInitialDelay(calculateDelayUntil(appSettings.epgRefreshTime), TimeUnit.MILLISECONDS) }
                     .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(

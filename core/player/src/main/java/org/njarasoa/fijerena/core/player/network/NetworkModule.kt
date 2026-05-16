@@ -52,50 +52,53 @@ object NetworkModule {
             .build()
     }
 
-    /**
-     * A robust DNS resolver that uses Android's [ConnectivityManager.getActiveNetwork] API.
-     * This is significantly more reliable than Java's [InetAddress.getAllByName] on modern
-     * Android devices with Private DNS (DoT) or complex IPv4/IPv6 configurations, as it
-     * leverages the system's current validated network path.
-     */
     private object AndroidAwareDns : Dns {
         override fun lookup(hostname: String): List<InetAddress> {
-            // Optimization: If it's an IP address, return it directly to avoid unnecessary
-            // network-specific resolution which might fail on some devices with VPNs.
             if (isIpAddress(hostname)) {
-                try {
-                    return listOf(InetAddress.getByName(hostname))
-                } catch (_: Exception) {
-                    // Fall back if getByName fails for some reason
-                }
+                try { return listOf(InetAddress.getByName(hostname)) } catch (_: Exception) { }
             }
 
+            // Retry DNS resolution up to 3 times with increasing delays before propagating
+            // failure. Handles brief DNS server unavailability that would otherwise cause all
+            // download retries to exhaust within seconds of each other.
+            var lastException: Exception? = null
+            for (attempt in 1..3) {
+                if (attempt > 1) {
+                    Thread.sleep(2000L * (attempt - 1)) // 2s before attempt 2, 4s before attempt 3
+                }
+                try {
+                    val addresses = resolveOnce(hostname)
+                    if (addresses.isNotEmpty()) return addresses
+                } catch (e: Exception) {
+                    lastException = e
+                    android.util.Log.w(TAG, "DNS attempt $attempt/3 failed for $hostname: ${e.message}")
+                }
+            }
+            throw lastException ?: java.net.UnknownHostException("Could not resolve $hostname")
+        }
+
+        private fun resolveOnce(hostname: String): List<InetAddress> {
             val context = applicationContext
             if (context != null) {
                 try {
-                    val connectivityManager =
-                        context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-                    val activeNetwork = connectivityManager?.activeNetwork
+                    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                    val activeNetwork = cm?.activeNetwork
                     if (activeNetwork != null) {
-                        // Use Android's network-specific resolver (handles Private DNS/DoT correctly)
                         val addresses = activeNetwork.getAllByName(hostname).toList()
                         if (addresses.isNotEmpty()) {
-                            // Prefer IPv4 for better compatibility with IPTV providers
                             return addresses.sortedBy { it is java.net.Inet6Address }
                         }
                     }
                 } catch (e: Exception) {
-                    android.util.Log.w("NetworkModule", "DNS resolution failed via ActiveNetwork, falling back", e)
+                    android.util.Log.w(TAG, "DNS via ActiveNetwork failed for $hostname, trying system resolver", e)
                 }
             }
-
-            // Fallback to standard system resolver
             return Dns.SYSTEM.lookup(hostname).sortedBy { it is java.net.Inet6Address }
         }
 
-        private fun isIpAddress(hostname: String): Boolean {
-            return hostname.matches(Regex("""^(\d{1,3}\.){3}\d{1,3}$""")) ||
-                hostname.contains(":") // Basic IPv6 check
-        }
+        private fun isIpAddress(hostname: String): Boolean =
+            hostname.matches(Regex("""^(\d{1,3}\.){3}\d{1,3}$""")) || hostname.contains(":")
+
+        private const val TAG = "NetworkModule"
     }
 }
