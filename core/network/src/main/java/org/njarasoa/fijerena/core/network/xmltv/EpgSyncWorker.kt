@@ -24,12 +24,22 @@ class EpgSyncWorker(
             val staleSources = fileManager.getStaleSources()
             if (staleSources.isEmpty()) {
                 Log.i(TAG, "doWork: all sources fresh, nothing to do")
+                Result.success()
             } else {
                 Log.i(TAG, "doWork: refreshing ${staleSources.size} stale source(s)")
                 fileManager.processAllSources(staleSources)
-                Log.i(TAG, "doWork: refresh complete")
+
+                // If every source failed the worker returns retry so WorkManager backs off
+                // and tries again in minutes rather than waiting the full 4-hour period.
+                val completed = fileManager.state.value as? EpgFileManager.MultiSourceState.Completed
+                if (completed != null && completed.errors == staleSources.size) {
+                    Log.w(TAG, "doWork: all ${staleSources.size} source(s) failed, will retry")
+                    if (runAttemptCount < 3) Result.retry() else Result.failure()
+                } else {
+                    Log.i(TAG, "doWork: refresh complete")
+                    Result.success()
+                }
             }
-            Result.success()
         } catch (e: Exception) {
             Log.w(TAG, "doWork: failed — ${e.message}", e)
             if (runAttemptCount < 3) Result.retry() else Result.failure()
