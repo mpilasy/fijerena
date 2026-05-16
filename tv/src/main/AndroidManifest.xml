@@ -41,6 +41,14 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver
+            android:name="org.njarasoa.fijerena.core.network.xmltv.EpgSyncDebugReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="org.njarasoa.fijerena.DEBUG_EPG_SYNC" />
+            </intent-filter>
+        </receiver>
         <!-- WorkManager's foreground service — must declare dataSync type for Android 14+ -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

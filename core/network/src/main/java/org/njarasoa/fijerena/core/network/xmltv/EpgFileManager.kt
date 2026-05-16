@@ -1049,6 +1049,10 @@ class EpgFileManager private constructor(
      * Returns all enabled sources whose data is considered stale.
      * Used by [EpgSyncWorker] to query which sources to process before calling [processAllSources].
      */
+    internal suspend fun getAllSources(): List<EpgSourceEntity> {
+        return SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSources()
+    }
+
     internal suspend fun getStaleSources(): List<EpgSourceEntity> {
         val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
         val sources = sourceDao.getEnabledSources()
