@@ -229,7 +229,7 @@ The FTS4 virtual table with `unicode61` tokenizer enables sub-100ms full-text se
 - `setIndexing()` — sets state to `Indexing` if not already `Indexed`. Called once before parallel ingestion begins to coordinate state across concurrent source processing.
 - `ingestFromStream(inputStream, sourceId, timezoneOverrideHours, onProgress)` — returns `IngestionStats(channelsIngested, programmesIngested)`. Uses 500-row batch INSERTs with Room `withTransaction`. Commits per-batch (not one giant transaction). Inserts channels with `IGNORE` conflict strategy, programmes with `REPLACE` on unique `(channel_id, start_epoch)`. Yields CPU between batches (`delay(5)` for channels, `delay(100)` for programmes) to avoid starving video playback. Skips programmes whose end time is before yesterday.
 - `ingestFromXtreamEpg(epgByStreamId, streamInfo, providerId)` — ingests EPG data from the Xtream API. Creates/upserts an `EpgSource` with `ingestMethod=XTREAM_API`, clears old data for that source, then batch-inserts.
-- `rebuildFtsAndUpdateState()` — rebuild FTS index and update metadata after all sources processed. Triggers an update to `EpgPipelineStatsEntity` in `providers.db` with the final run summary.
+- `rebuildFtsAndUpdateState()` — rebuild FTS index and update metadata after all sources processed. Internally calls `markFtsStale()` at entry (so the old index remains valid during the dispatch gap, degrading only for the actual rebuild window) and `markFtsClean()` on success. Callers do not call these flags themselves. Triggers an update to `EpgPipelineStatsEntity` in `providers.db` with the final run summary.
 - `clearAll()` — saves source configs, destroys DB file (instant regardless of data size), Room recreates schema, restores sources with stats reset
 - `purgeOldProgrammes(cutoffEpoch)` — delete old programmes with FTS rebuild and incremental vacuum
 - `incrementalVacuum()` — reclaims free pages via `PRAGMA incremental_vacuum`
@@ -245,7 +245,7 @@ Uses DB destroy+recreate instead of `DELETE FROM` (which takes 10+ minutes on 4M
 
 The ViewModel uses a `_dbGeneration` counter with `flatMapLatest` so the sources `Flow` re-subscribes after DB recreation.
 
-After all sources are ingested, `EpgFileManager` calls `rebuildFtsAndUpdateState()` to rebuild the FTS index:
+After all sources are ingested, `EpgFileManager` launches `rebuildFtsAndUpdateState()` in a background coroutine. The old FTS index remains usable until the rebuild actually starts (stale is set inside the function at entry, not at dispatch time), so searches only degrade to LIKE during the actual rebuild window rather than during the scheduling gap:
 ```sql
 INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')
 ```
@@ -491,7 +491,8 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 | `XmltvEpgService.kt` | Class | XMLTV -> EpgResponse adapter for grid |
 | `XmltvModels.kt` | Data | XMLTV channel/programme/search models |
 | `EpgBrowserModels.kt` | Data | Browser UI models (program + airings) |
-| `EpgSyncWorker.kt` | CoroutineWorker | Mobile background EPG sync (WorkManager); calls `getStaleSources()` + `processAllSources()` directly in `doWork()` to hold the wake lock for the full download + ingestion cycle |
+| `EpgSyncWorker.kt` | CoroutineWorker | Mobile background EPG sync (WorkManager); calls `getStaleSources()` (or `getAllSources()` when `force=true` input data) + `processAllSources()` directly in `doWork()` to hold the wake lock for the full download + ingestion cycle |
+| `EpgSyncDebugReceiver.kt` | BroadcastReceiver | Debug-only receiver (`DEBUG` builds); enqueues an immediate `EpgSyncWorker` OneTimeWorkRequest with `force=true`. Trigger: `adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p org.njarasoa.fijerena` |
 
 ### Queue (`core/network/.../queue/`)
 
