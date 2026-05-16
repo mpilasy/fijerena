@@ -43,7 +43,6 @@ class XmltvSearchService(
             try {
                 Log.i(TAG, "Starting background FTS rebuild...")
                 indexer.rebuildFtsAndUpdateState()
-                indexer.markFtsClean()
                 Log.i(TAG, "Background FTS rebuild completed")
             } catch (e: Exception) {
                 Log.e(TAG, "Background FTS rebuild failed: ${e.message}", e)
