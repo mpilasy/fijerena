@@ -475,11 +475,16 @@ class EpgIndexer private constructor(
 
     /**
      * Rebuild FTS index and update metadata/state from current DB contents.
+     *
+     * Marks FTS stale at entry so the old index is banned only for the duration
+     * of the actual rebuild, not for the scheduling gap before this function runs.
+     * Marks FTS clean on success so callers don't need to.
      */
     suspend fun rebuildFtsAndUpdateState() =
         withContext(Dispatchers.IO) {
             val startMs = System.currentTimeMillis()
             Log.i(TAG, "rebuildFtsAndUpdateState: starting FTS rebuild")
+            markFtsStale()
             try {
                 val db = EpgIndexDatabase.getInstance(context)
                 val dao = db.epgIndexDao()
@@ -517,6 +522,7 @@ class EpgIndexer private constructor(
                             indexedAtMs = now,
                         )
                 }
+                markFtsClean()
                 Log.i(TAG, "rebuildFtsAndUpdateState: FTS complete in ${System.currentTimeMillis() - startMs}ms")
             } catch (e: Exception) {
                 Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
