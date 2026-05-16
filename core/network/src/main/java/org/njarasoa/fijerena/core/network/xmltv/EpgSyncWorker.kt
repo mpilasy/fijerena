@@ -68,9 +68,15 @@ class EpgSyncWorker(
 
         Log.i(TAG, "doWork: starting (attempt ${runAttemptCount + 1})")
         val fileManager = EpgFileManager.getInstance(applicationContext)
+        val force = inputData.getBoolean("force", false)
 
         return try {
-            val staleSources = fileManager.getStaleSources()
+            val staleSources = if (force) {
+                Log.i(TAG, "doWork: force=true, refreshing all sources")
+                fileManager.getAllSources()
+            } else {
+                fileManager.getStaleSources()
+            }
             if (staleSources.isEmpty()) {
                 Log.i(TAG, "doWork: all sources fresh, nothing to do")
                 Result.success()
