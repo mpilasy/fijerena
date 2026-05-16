@@ -1,13 +1,21 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 
 /**
  * WorkManager worker for background EPG sync (all device types).
  *
+ * Runs as a foreground service via setForeground() to bypass Android Doze mode,
+ * which blocks DNS on Ethernet-connected Shield TVs during overnight maintenance windows.
  * WorkManager holds a wake lock for the full duration of doWork(), so DNS and network
  * remain available even on Shield/TV in Doze. processAllSources is called directly
  * (not via RefreshQueue) to keep work inside this wake-lock-backed coroutine.
@@ -16,7 +24,32 @@ class EpgSyncWorker(
     context: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (nm.getNotificationChannel(CHANNEL_ID) == null) {
+            nm.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "EPG Guide Sync", NotificationManager.IMPORTANCE_LOW).apply {
+                    setShowBadge(false)
+                },
+            )
+        }
+        val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+            .setContentTitle("Refreshing TV guide")
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setOngoing(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .build()
+        return if (Build.VERSION.SDK_INT >= 34) {
+            ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            ForegroundInfo(NOTIFICATION_ID, notification)
+        }
+    }
+
     override suspend fun doWork(): Result {
+        setForeground(getForegroundInfo())
         Log.i(TAG, "doWork: starting (attempt ${runAttemptCount + 1})")
         val fileManager = EpgFileManager.getInstance(applicationContext)
 
@@ -48,5 +81,7 @@ class EpgSyncWorker(
 
     companion object {
         private const val TAG = "EpgSyncWorker"
+        private const val CHANNEL_ID = "epg_sync"
+        private const val NOTIFICATION_ID = 0x4570_0001
     }
 }
