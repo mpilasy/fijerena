@@ -535,41 +535,14 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     }
 
     if (showTimePicker) {
-        var timeInput by remember { mutableStateOf(epgSettings.epgRefreshTime) }
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            title = { Text("Set Refresh Time", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
-            text = {
-                androidx.compose.material3.OutlinedTextField(
-                    value = timeInput,
-                    onValueChange = { timeInput = it },
-                    label = { Text("Time (HH:mm)") },
-                    placeholder = { Text("e.g. 04:00") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                        unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                        cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                        focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-                    )
-                )
+        TvTimePickerDialog(
+            initialTime = epgSettings.epgRefreshTime,
+            onDismiss = { showTimePicker = false },
+            onConfirm = { time ->
+                viewModel.setEpgRefreshTime(time)
+                showTimePicker = false
             },
-            confirmButton = {
-                CinemaPrimaryButton(
-                    onClick = {
-                        viewModel.setEpgRefreshTime(timeInput)
-                        showTimePicker = false
-                    },
-                    text = "Save",
-                )
-            },
-            dismissButton = {
-                CinemaSecondaryButton(onClick = { showTimePicker = false }, text = "Cancel")
-            },
-            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
+            scale = scale,
         )
     }
 
@@ -812,4 +785,124 @@ private fun EpgSourceEditDialog(
             }
         },
     )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TvTimePickerDialog(
+    initialTime: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+    scale: Float,
+) {
+    val parts = initialTime.split(":")
+    var hour by remember { mutableStateOf(parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 0) }
+    var minute by remember { mutableStateOf(parts.getOrNull(1)?.toIntOrNull()?.let { (it / 5) * 5 }?.coerceIn(0, 55) ?: 0) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Set Refresh Time", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TimeSpinnerColumn(
+                    value = hour,
+                    label = "Hour",
+                    displayText = "%02d".format(hour),
+                    onIncrement = { hour = (hour + 1) % 24 },
+                    onDecrement = { hour = (hour + 23) % 24 },
+                    scale = scale,
+                )
+
+                Text(
+                    text = ":",
+                    style = MaterialTheme.typography.displayMedium,
+                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                    modifier = Modifier.padding(horizontal = Spacing.md.scaled(scale)),
+                )
+
+                TimeSpinnerColumn(
+                    value = minute,
+                    label = "Minute",
+                    displayText = "%02d".format(minute),
+                    onIncrement = { minute = (minute + 5) % 60 },
+                    onDecrement = { minute = (minute + 55) % 60 },
+                    scale = scale,
+                )
+            }
+        },
+        confirmButton = {
+            CinemaPrimaryButton(
+                onClick = { onConfirm("%02d:%02d".format(hour, minute)) },
+                text = "Save",
+            )
+        },
+        dismissButton = {
+            CinemaSecondaryButton(onClick = onDismiss, text = "Cancel")
+        },
+        containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
+    )
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun TimeSpinnerColumn(
+    value: Int,
+    label: String,
+    displayText: String,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    scale: Float,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+        )
+        androidx.tv.material3.Surface(
+            onClick = onIncrement,
+            colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
+                containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant.copy(alpha = 0.5f),
+                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+            ),
+            scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
+            shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(MaterialTheme.shapes.small),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.KeyboardArrowUp,
+                contentDescription = "Increase $label",
+                modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(28.dp.scaled(scale)),
+            )
+        }
+        Text(
+            text = displayText,
+            style = MaterialTheme.typography.displaySmall,
+            color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+            modifier = Modifier.padding(vertical = Spacing.xs.scaled(scale)),
+        )
+        androidx.tv.material3.Surface(
+            onClick = onDecrement,
+            colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
+                containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant.copy(alpha = 0.5f),
+                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+            ),
+            scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
+            shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(MaterialTheme.shapes.small),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.KeyboardArrowDown,
+                contentDescription = "Decrease $label",
+                modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(28.dp.scaled(scale)),
+            )
+        }
+    }
 }
