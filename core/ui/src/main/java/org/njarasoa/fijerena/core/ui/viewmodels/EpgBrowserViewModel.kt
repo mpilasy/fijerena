@@ -32,6 +32,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -106,6 +107,7 @@ class EpgBrowserViewModel(
             val truncated: Boolean,
             val searchTimeMs: Long,
             val searchedFromIndex: Boolean = false,
+            val searchPath: EpgSearchPath = EpgSearchPath.NONE,
         ) : UiState
 
         data class Error(
@@ -399,6 +401,7 @@ class EpgBrowserViewModel(
                             truncated = result.truncated,
                             searchTimeMs = elapsed,
                             searchedFromIndex = result.searchedFromIndex,
+                            searchPath = result.searchPath,
                         )
 
                     // Also set up paged search results for large datasets

@@ -8,6 +8,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import kotlinx.coroutines.CancellationException
@@ -228,16 +230,16 @@ class EpgFileManager private constructor(
             val ftsWasStale = indexer.initialize()
             cleanupStrayFiles()
 
-            // If a previous session was interrupted during background FTS rebuild, resume it.
+            // If a previous session left fts_stale=true (process killed mid-rebuild by Doze),
+            // schedule rebuild via WorkManager so it runs under a foreground-service wake lock
+            // and survives if the user exits the app before it finishes.
             if (ftsWasStale) {
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        indexer.rebuildFtsAndUpdateState()
-                        indexer.incrementalVacuum()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Resumed FTS rebuild failed: ${e.message}", e)
-                    }
-                }
+                val request = OneTimeWorkRequestBuilder<EpgFtsRebuildWorker>().build()
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                    EpgFtsRebuildWorker.WORK_NAME,
+                    ExistingWorkPolicy.KEEP,
+                    request,
+                )
             }
 
             // Schedule WorkManager periodic sync (Doze-aware, works on both mobile and TV)
@@ -621,17 +623,15 @@ class EpgFileManager private constructor(
             _state.value = finalState
             updateLastPipelineStats(finalState)
 
-            // FTS rebuild + vacuum are the heaviest post-ingestion operations.
-            // Run them in the background so the user sees Completed immediately.
-            // The old FTS index stays usable until rebuildFtsAndUpdateState() actually starts.
+            // FTS rebuild runs in the caller's coroutine so the WorkManager wake lock
+            // covers the full operation. Killing the process mid-rebuild leaves fts_stale=true
+            // persisted to prefs, which on Shield causes permanent LIKE fallback via Doze.
             if (anyIngested) {
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        indexer.rebuildFtsAndUpdateState()
-                        indexer.incrementalVacuum()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Background FTS rebuild failed: ${e.message}", e)
-                    }
+                try {
+                    indexer.rebuildFtsAndUpdateState()
+                    indexer.incrementalVacuum()
+                } catch (e: Exception) {
+                    Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 }
             }
         } catch (e: Exception) {
@@ -771,15 +771,13 @@ class EpgFileManager private constructor(
             _state.value = finalState
             updateLastPipelineStats(finalState)
 
-            // FTS rebuild + vacuum in background — same as processAllSourcesInternal.
+            // Inline — same reasoning as processAllSourcesInternal.
             if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        indexer.rebuildFtsAndUpdateState()
-                        indexer.incrementalVacuum()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Background FTS rebuild failed: ${e.message}", e)
-                    }
+                try {
+                    indexer.rebuildFtsAndUpdateState()
+                    indexer.incrementalVacuum()
+                } catch (e: Exception) {
+                    Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 }
             }
         } catch (e: Exception) {

@@ -131,7 +131,7 @@ class XmltvSearchService(
         val sourceDao = settingsDb.epgSourceDao()
         val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
         val sourceIds = validSources.map { it.id }
-        if (sourceIds.isEmpty()) return rowsToSearchResult(emptyList(), searchedFromIndex = true)
+        if (sourceIds.isEmpty()) return rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
 
         var ftsReturnedEmpty = false
 
@@ -152,7 +152,7 @@ class XmltvSearchService(
                 Log.w(TAG, "FTS query timed out after $FTS_TIMEOUT_MS ms for query: $query")
                 // Don't trigger rebuild on timeout — it makes things slower
             } else if (rows.isNotEmpty()) {
-                return rowsToSearchResult(rows, searchedFromIndex = true)
+                return rowsToSearchResult(rows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_PHRASE)
             } else {
                 ftsReturnedEmpty = true
                 // 2. Try FTS AND match (word1* word2*)
@@ -169,16 +169,16 @@ class XmltvSearchService(
                     if (andRows == null) {
                         Log.w(TAG, "FTS AND query timed out after $FTS_TIMEOUT_MS ms for query: $query")
                     } else if (andRows.isNotEmpty()) {
-                        return rowsToSearchResult(andRows, searchedFromIndex = true)
+                        return rowsToSearchResult(andRows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_AND)
                     }
                 }
             }
-        } else {
-            // FTS index is stale — skip FTS, use LIKE
         }
+        // else: FTS index is stale — skip FTS, use LIKE
 
         // 3. Fall back to LIKE with full query
         val queryLower = query.lowercase(Locale.ROOT)
+        val likePath = if (indexer.isFtsStale()) EpgSearchPath.FTS_SKIPPED_LIKE else EpgSearchPath.LIKE_FULL
         val likeRows = dao.searchByTitleLike(queryLower, sourceIds, windowStart, windowEnd)
         if (likeRows.isNotEmpty()) {
             // If FTS returned 0 but LIKE found results, the FTS index is out of sync
@@ -187,7 +187,7 @@ class XmltvSearchService(
                 indexer.markFtsStale()
                 triggerBackgroundFtsRebuild()
             }
-            return rowsToSearchResult(likeRows, searchedFromIndex = true)
+            return rowsToSearchResult(likeRows, searchedFromIndex = true, searchPath = likePath)
         }
 
         // 4. Fall back to LIKE AND: search by shortest word, then filter for all words in memory
@@ -200,10 +200,10 @@ class XmltvSearchService(
                     val titleLower = row.title.lowercase(Locale.ROOT)
                     words.all { word -> titleLower.contains(word) }
                 }
-            return rowsToSearchResult(filtered, searchedFromIndex = true)
+            return rowsToSearchResult(filtered, searchedFromIndex = true, searchPath = EpgSearchPath.LIKE_AND)
         }
 
-        return rowsToSearchResult(emptyList(), searchedFromIndex = true)
+        return rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
     }
 
     private fun sanitizeQuery(query: String): String =
@@ -236,6 +236,7 @@ class XmltvSearchService(
     private fun rowsToSearchResult(
         rows: List<EpgSearchResultRow>,
         searchedFromIndex: Boolean,
+        searchPath: EpgSearchPath = EpgSearchPath.NONE,
     ): XmltvSearchResult {
         val channels = mutableMapOf<String, XmltvChannel>()
         val programmes = mutableListOf<XmltvProgramme>()
@@ -268,6 +269,7 @@ class XmltvSearchService(
             totalScanned = rows.size,
             truncated = rows.size >= 500,
             searchedFromIndex = searchedFromIndex,
+            searchPath = searchPath,
         )
     }
 }

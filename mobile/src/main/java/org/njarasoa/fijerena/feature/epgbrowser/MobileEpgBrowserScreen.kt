@@ -68,6 +68,7 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -476,7 +477,17 @@ private fun MobileResultsContent(
         // Stats row
         val timeStr = "%.1f".format(results.searchTimeMs / 1000.0)
         val truncatedSuffix = if (results.truncated) " (truncated)" else ""
-        val sourceSuffix = if (results.searchedFromIndex) " [indexed]" else " [XML scan]"
+        val sourceSuffix = when {
+            !results.searchedFromIndex -> " [XML scan]"
+            else -> when (results.searchPath) {
+                EpgSearchPath.FTS_PHRASE -> " [FTS phrase]"
+                EpgSearchPath.FTS_AND -> " [FTS AND]"
+                EpgSearchPath.LIKE_FULL -> " [LIKE]"
+                EpgSearchPath.LIKE_AND -> " [LIKE AND]"
+                EpgSearchPath.FTS_SKIPPED_LIKE -> " [LIKE (FTS stale)]"
+                EpgSearchPath.NONE -> " [indexed]"
+            }
+        }
         Text(
             text = "${results.totalPrograms} programs (${results.totalAirings} airings) — ${timeStr}s$truncatedSuffix$sourceSuffix",
             style = MaterialTheme.typography.bodyMedium,
