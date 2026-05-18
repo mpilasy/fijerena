@@ -342,8 +342,8 @@ class EpgBrowserViewModel(
                 appSettings.addEpgSearchHistory(query)
                 _epgSearchHistory.value = appSettings.getEpgSearchHistory()
                 try {
-                    ensureChannelMatcherCurrent()
                     val startTime = System.currentTimeMillis()
+                    ensureChannelMatcherCurrent()
                     val mode = _searchMode.value
 
                     val result =
