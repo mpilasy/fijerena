@@ -27,10 +27,20 @@ data class XmltvData(
     val programmes: Map<String, List<XmltvProgramme>>,
 )
 
+enum class EpgSearchPath {
+    FTS_PHRASE,
+    FTS_AND,
+    LIKE_FULL,
+    LIKE_AND,
+    FTS_SKIPPED_LIKE,
+    NONE,
+}
+
 data class XmltvSearchResult(
     val channels: Map<String, XmltvChannel>,
     val programmes: List<XmltvProgramme>,
     val totalScanned: Int,
     val truncated: Boolean,
     val searchedFromIndex: Boolean = false,
+    val searchPath: EpgSearchPath = EpgSearchPath.NONE,
 )
