@@ -269,12 +269,16 @@ class EpgBrowserViewModel(
                         .providerDao()
                         .getActiveProvider() ?: return@withContext
                 if (provider.id == lastMatcherProviderId) return@withContext
+                val t0 = System.currentTimeMillis()
                 val liveStreams =
                     XtreamDatabase
                         .getInstance(context)
                         .streamDao()
                         .getAllStreams(provider.id, XtreamStreamEntity.TYPE_LIVE)
+                val t1 = System.currentTimeMillis()
                 channelMatcher = if (liveStreams.isNotEmpty()) EpgChannelMatcher(liveStreams) else null
+                val t2 = System.currentTimeMillis()
+                android.util.Log.d("EpgBrowserViewModel", "ensureChannelMatcher: getAllStreams=${t1 - t0}ms count=${liveStreams.size} matcherInit=${t2 - t1}ms total=${t2 - t0}ms")
                 lastMatcherProviderId = provider.id
             } catch (e: Exception) {
                 android.util.Log.e("EpgBrowserViewModel", "Failed to load live streams for channel matching", e)
