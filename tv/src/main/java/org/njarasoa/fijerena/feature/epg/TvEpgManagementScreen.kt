@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.feature.epg
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.AlertDialog
@@ -199,60 +198,79 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
 
                         // Automation Card
                         GlassPanel(modifier = Modifier.weight(0.6f)) {
-                            Row(
+                            Column(
                                 modifier = Modifier.padding(Spacing.md.scaled(scale)),
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                                verticalAlignment = Alignment.CenterVertically,
+                                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                             ) {
-                                Column(
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .clickable { showIntervalPicker = true },
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium)
-                                    val intervalText = when(val interval = epgSettings.epgRefreshInterval) {
-                                        -1 -> "Disabled"
-                                        else -> {
-                                            val freq = if (interval == 24) "Daily" else "Every $interval hours"
-                                            val timeStr = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(nextRefreshAtMs))
-                                            "$freq. Next refresh at $timeStr"
+                                    Column {
+                                        Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium)
+                                        val intervalText = when (val interval = epgSettings.epgRefreshInterval) {
+                                            -1 -> "Disabled"
+                                            else -> {
+                                                val freq = if (interval == 24) "Daily" else "Every $interval hours"
+                                                val timeStr = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(nextRefreshAtMs))
+                                                "$freq. Next at $timeStr"
+                                            }
                                         }
+                                        Text(
+                                            intervalText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                        )
                                     }
-                                    Text(
-                                        intervalText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                    )
+
+                                    androidx.tv.material3.Surface(
+                                        checked = epgSettings.autoRefreshEnabled,
+                                        onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
+                                        colors =
+                                            androidx.tv.material3.ToggleableSurfaceDefaults.colors(
+                                                containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass),
+                                                contentColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                                                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                                                focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+                                            ),
+                                        scale =
+                                            androidx.tv.material3.ToggleableSurfaceDefaults.scale(
+                                                focusedScale = 1.15f,
+                                            ),
+                                        shape = androidx.tv.material3.ToggleableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+                                    ) {
+                                        androidx.compose.material3.Switch(
+                                            checked = viewModel.autoRefreshEnabled,
+                                            onCheckedChange = null,
+                                            modifier = Modifier.padding(Spacing.xxs.scaled(scale)),
+                                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                                checkedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+                                                checkedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                                                uncheckedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                                                uncheckedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+                                            )
+                                        )
+                                    }
                                 }
 
-                                androidx.tv.material3.Surface(
-                                    checked = epgSettings.autoRefreshEnabled,
-                                    onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
-                                    colors =
-                                        androidx.tv.material3.ToggleableSurfaceDefaults.colors(
-                                            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass),
-                                            contentColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                                            focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                                            focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                                        ),
-                                    scale =
-                                        androidx.tv.material3.ToggleableSurfaceDefaults.scale(
-                                            focusedScale = 1.15f,
-                                        ),
-                                    shape = androidx.tv.material3.ToggleableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                                 ) {
-                                    androidx.compose.material3.Switch(
-                                        checked = viewModel.autoRefreshEnabled,
-                                        onCheckedChange = null, // Handled by Surface
-                                        modifier = Modifier.padding(Spacing.xxs.scaled(scale)),
-                                        colors = androidx.compose.material3.SwitchDefaults.colors(
-                                            checkedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                                            checkedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                                            uncheckedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                                            uncheckedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-                                        )
+                                    CinemaSecondaryButton(
+                                        onClick = { showIntervalPicker = true },
+                                        text = when (val interval = epgSettings.epgRefreshInterval) {
+                                            -1 -> "Frequency: Never"
+                                            24 -> "Frequency: Daily"
+                                            else -> "Frequency: Every $interval hours"
+                                        },
                                     )
+                                    if (epgSettings.epgRefreshInterval != -1) {
+                                        CinemaSecondaryButton(
+                                            onClick = { showTimePicker = true },
+                                            text = "Start: ${epgSettings.epgRefreshTime}",
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -595,16 +613,6 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                 )
                                 Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                                 Text(label)
-                                if (interval > 0) {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                    CinemaSecondaryButton(
-                                        onClick = { 
-                                            showIntervalPicker = false
-                                            showTimePicker = true 
-                                        },
-                                        text = if (interval == 24) "Time: ${epgSettings.epgRefreshTime}" else "Start: ${epgSettings.epgRefreshTime}"
-                                    )
-                                }
                             }
                         }
                     }
