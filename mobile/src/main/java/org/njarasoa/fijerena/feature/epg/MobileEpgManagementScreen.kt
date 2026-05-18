@@ -211,33 +211,46 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
 
                         // Automation Card
                         GlassPanel {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .padding(CinemaSpacing.md)
-                                        .clickable { showIntervalPicker = true },
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
-                                    val intervalText = when(val interval = epgSettings.epgRefreshInterval) {
-                                        -1 -> "Disabled"
-                                        else -> {
-                                            val freq = if (interval == 24) "Daily" else "Every $interval hours"
-                                            val timeStr = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(nextRefreshAtMs))
-                                            "$freq. Next refresh at $timeStr"
+                            Column(modifier = Modifier.padding(CinemaSpacing.md)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                                        val intervalText = when (val interval = epgSettings.epgRefreshInterval) {
+                                            -1 -> "Disabled"
+                                            else -> {
+                                                val freq = if (interval == 24) "Daily" else "Every $interval hours"
+                                                val timeStr = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(nextRefreshAtMs))
+                                                "$freq. Next at $timeStr"
+                                            }
                                         }
+                                        Text(
+                                            intervalText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                        )
                                     }
-                                    Text(
-                                        intervalText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                    Switch(
+                                        checked = epgSettings.autoRefreshEnabled,
+                                        onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
                                     )
                                 }
-                                Switch(
-                                    checked = epgSettings.autoRefreshEnabled,
-                                    onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
-                                )
+                                Row(
+                                    modifier = Modifier.padding(top = CinemaSpacing.sm),
+                                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                                ) {
+                                    OutlinedButton(onClick = { showIntervalPicker = true }) {
+                                        Text(when (val interval = epgSettings.epgRefreshInterval) {
+                                            -1 -> "Frequency: Never"
+                                            24 -> "Frequency: Daily"
+                                            else -> "Frequency: Every $interval hours"
+                                        })
+                                    }
+                                    if (epgSettings.epgRefreshInterval != -1) {
+                                        OutlinedButton(onClick = { showTimePicker = true }) {
+                                            Text("Start: ${epgSettings.epgRefreshTime}")
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -394,17 +407,6 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                             )
                             Spacer(modifier = Modifier.width(CinemaSpacing.sm))
                             Text(label, style = MaterialTheme.typography.bodyLarge)
-                            if (interval > 0) {
-                                Spacer(modifier = Modifier.weight(1f))
-                                TextButton(
-                                    onClick = {
-                                        showIntervalPicker = false
-                                        showTimePicker = true
-                                    }
-                                ) {
-                                    Text(epgSettings.epgRefreshTime)
-                                }
-                            }
                         }
                     }
                 }
