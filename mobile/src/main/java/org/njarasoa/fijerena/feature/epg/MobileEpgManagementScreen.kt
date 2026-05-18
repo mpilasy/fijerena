@@ -341,23 +341,20 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     }
 
     if (showTimePicker) {
-        var timeInput by remember { mutableStateOf(epgSettings.epgRefreshTime) }
+        val parts = epgSettings.epgRefreshTime.split(":")
+        val timePickerState = rememberTimePickerState(
+            initialHour = parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 0,
+            initialMinute = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 0,
+            is24Hour = true,
+        )
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
             title = { Text("Set Refresh Time") },
-            text = {
-                OutlinedTextField(
-                    value = timeInput,
-                    onValueChange = { timeInput = it },
-                    label = { Text("Time (HH:mm)") },
-                    placeholder = { Text("e.g. 04:00") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
+            text = { TimePicker(state = timePickerState) },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.setEpgRefreshTime(timeInput)
+                        viewModel.setEpgRefreshTime("%02d:%02d".format(timePickerState.hour, timePickerState.minute))
                         showTimePicker = false
                     },
                 ) { Text("Save") }
