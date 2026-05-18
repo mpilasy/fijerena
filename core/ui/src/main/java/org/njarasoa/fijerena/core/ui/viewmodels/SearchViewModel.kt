@@ -258,7 +258,7 @@ class SearchViewModel(
             if (serverSearchSuccess) {
                 // Return server results
                 val elapsed = System.currentTimeMillis() - startTime
-                val sortedResults = sortResults(serverResults, query.trim().lowercase(), SearchUtils.getQueryWords(query))
+                val sortedResults = sortResults(serverResults, query.trim().lowercase(), SearchUtils.getQueryWords(query.trim().lowercase()))
                 _uiState.value =
                     UiState.Success(
                         allResults = sortedResults,
@@ -321,7 +321,7 @@ class SearchViewModel(
     private fun sortResults(
         results: List<SearchResult>,
         normalizedQuery: String,
-        queryWords: List<String>,
+        queryWords: ParsedQuery,
     ): List<SearchResult> {
         return results
             .sortedWith(
@@ -329,7 +329,7 @@ class SearchViewModel(
                     when {
                         it.streamName.equals(normalizedQuery, ignoreCase = true) -> 0
                         it.streamName.startsWith(normalizedQuery, ignoreCase = true) -> 1
-                        else -> if (queryWords.isNotEmpty() && queryWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
+                        else -> if (queryWords.positiveWords.isNotEmpty() && queryWords.positiveWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
                     }
                 }.thenBy { it.streamName },
             )

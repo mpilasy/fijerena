@@ -1,7 +1,24 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
+data class ParsedQuery(
+    val positiveWords: List<String>,
+    val negativeWords: List<String>,
+)
+
 object SearchUtils {
-    fun getQueryWords(query: String): List<String> = query.lowercase().split(" ").filter { it.isNotBlank() }
+    fun getQueryWords(query: String): ParsedQuery {
+        val words = query.lowercase().split(" ").filter { it.isNotBlank() }
+        val positive = mutableListOf<String>()
+        val negative = mutableListOf<String>()
+        for (word in words) {
+            if (word.startsWith("-") && word.length > 1) {
+                negative.add(word.substring(1))
+            } else {
+                positive.add(word)
+            }
+        }
+        return ParsedQuery(positive, negative)
+    }
 
     /**
      * Check if text matches all query words. Accepts pre-lowercased text for hot-loop callers
@@ -9,30 +26,32 @@ object SearchUtils {
      */
     fun matchesQuery(
         text: String,
-        queryWords: List<String>,
+        parsedQuery: ParsedQuery,
     ): Boolean {
-        if (queryWords.isEmpty()) return true
-        return queryWords.all { word ->
-            if (word.startsWith("-") && word.length > 1) {
-                !text.contains(word.substring(1), ignoreCase = true)
-            } else {
-                text.contains(word, ignoreCase = true)
-            }
+        if (parsedQuery.positiveWords.isEmpty() && parsedQuery.negativeWords.isEmpty()) return true
+
+        for (word in parsedQuery.positiveWords) {
+            if (!text.contains(word, ignoreCase = true)) return false
         }
+        for (word in parsedQuery.negativeWords) {
+            if (text.contains(word, ignoreCase = true)) return false
+        }
+        return true
     }
 
     /** Fast path for callers that already have lowercased text (query words are already lowercase) */
     fun matchesQueryLower(
         textLower: String,
-        queryWords: List<String>,
+        parsedQuery: ParsedQuery,
     ): Boolean {
-        if (queryWords.isEmpty()) return true
-        return queryWords.all { word ->
-            if (word.startsWith("-") && word.length > 1) {
-                !textLower.contains(word.substring(1))
-            } else {
-                textLower.contains(word)
-            }
+        if (parsedQuery.positiveWords.isEmpty() && parsedQuery.negativeWords.isEmpty()) return true
+
+        for (word in parsedQuery.positiveWords) {
+            if (!textLower.contains(word)) return false
         }
+        for (word in parsedQuery.negativeWords) {
+            if (textLower.contains(word)) return false
+        }
+        return true
     }
 }

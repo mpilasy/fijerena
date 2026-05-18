@@ -1,0 +1,3 @@
+## 2024-05-19 - [Avoid Redundant String Allocations in Hot Filtering Loops]
+**Learning:** Checking string prefixes (e.g., `word.startsWith("-")`) and allocating substrings (`word.substring(1)`) repeatedly inside search filtering hot-loops causes severe GC thrashing and CPU bottlenecks across large collections (like thousands of EPG programs or VOD streams).
+**Action:** Pre-compute parsing logic during the single-execution input phase. Extract negative and positive query terms into a lightweight `ParsedQuery` data class once per user input, ensuring the hot loop only executes pure comparisons without temporary object allocation.
