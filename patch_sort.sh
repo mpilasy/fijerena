@@ -1,0 +1,21 @@
+cat << 'INNER_EOF' > p.diff
+--- core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt
++++ core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt
+@@ -324,13 +324,14 @@
+         normalizedQuery: String,
+         queryWords: List<String>,
+     ): List<SearchResult> {
++        val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
+         return results
+             .sortedWith(
+                 compareBy<SearchResult> {
+                     when {
+                         it.streamName.equals(normalizedQuery, ignoreCase = true) -> 0
+                         it.streamName.startsWith(normalizedQuery, ignoreCase = true) -> 1
+-                        else -> if (queryWords.isNotEmpty() && queryWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
++                        else -> if (parsedQuery.positiveWords.isNotEmpty() && parsedQuery.positiveWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
+                     }
+                 }.thenBy { it.streamName },
+             )
+INNER_EOF
+patch -p0 < p.diff

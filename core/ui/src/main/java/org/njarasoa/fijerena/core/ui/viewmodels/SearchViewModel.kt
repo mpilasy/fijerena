@@ -275,10 +275,11 @@ class SearchViewModel(
             val results = mutableListOf<SearchResult>()
             val normalizedQuery = query.trim().lowercase()
             val queryWords = SearchUtils.getQueryWords(normalizedQuery)
+            val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
 
             val matchingCategories =
                 realCategories
-                    .filter { SearchUtils.matchesQuery(it.category.name, queryWords) }
+                    .filter { SearchUtils.matchesQuery(it.category.name, parsedQuery) }
                     .map { CategorySearchResult(it.category.id, it.category.name, it.contentType) }
 
             // Phase 1: Local cache scan
@@ -287,7 +288,7 @@ class SearchViewModel(
                 val cached = repo.getItemsIfCached(sc.category.id, sc.contentType)
                 if (!cached.isNullOrEmpty()) {
                     results.addAll(
-                        cached.filter { SearchUtils.matchesQuery(it.name, queryWords) }.map { item ->
+                        cached.filter { SearchUtils.matchesQuery(it.name, parsedQuery) }.map { item ->
                             SearchResult(
                                 item.id,
                                 item.name,
@@ -323,13 +324,14 @@ class SearchViewModel(
         normalizedQuery: String,
         queryWords: List<String>,
     ): List<SearchResult> {
+        val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
         return results
             .sortedWith(
                 compareBy<SearchResult> {
                     when {
                         it.streamName.equals(normalizedQuery, ignoreCase = true) -> 0
                         it.streamName.startsWith(normalizedQuery, ignoreCase = true) -> 1
-                        else -> if (queryWords.isNotEmpty() && queryWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
+                        else -> if (parsedQuery.positiveWords.isNotEmpty() && parsedQuery.positiveWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
                     }
                 }.thenBy { it.streamName },
             )

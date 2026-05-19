@@ -1,0 +1,1 @@
+sed -i 's/else -> if (queryWords.isNotEmpty() && queryWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3/else -> if (queryWords.isNotEmpty() \&\& queryWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3/g' ./core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt

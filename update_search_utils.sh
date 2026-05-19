@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > ./core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchUtils.kt
 package org.njarasoa.fijerena.core.ui.viewmodels
 
 object SearchUtils {
@@ -83,3 +84,4 @@ object SearchUtils {
         }
     }
 }
+INNER_EOF

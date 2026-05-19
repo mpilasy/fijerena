@@ -1,0 +1,3 @@
+sed -i 's/val queryWords = SearchUtils.getQueryWords(normalizedQuery)/val queryWords = SearchUtils.getQueryWords(normalizedQuery)\n            val parsedQuery = SearchUtils.parseQuery(normalizedQuery)/g' ./core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt
+sed -i 's/SearchUtils.matchesQuery(it.category.name, queryWords)/SearchUtils.matchesQuery(it.category.name, parsedQuery)/g' ./core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt
+sed -i 's/SearchUtils.matchesQuery(it.name, queryWords)/SearchUtils.matchesQuery(it.name, parsedQuery)/g' ./core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt

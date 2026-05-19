@@ -1,0 +1,27 @@
+cat << 'INNER_EOF' > ptc.diff
+--- core/network/src/test/java/org/njarasoa/fijerena/core/network/PlaybackPositionBenchmarkTest.kt
++++ core/network/src/test/java/org/njarasoa/fijerena/core/network/PlaybackPositionBenchmarkTest.kt
+@@ -44,6 +44,10 @@
+         // Setup provider with server user data capability
+         every { provider.capabilities } returns ProviderCapabilities(
+             supportedContentTypes = setOf(ContentType.TV_SHOWS),
++            supportsEpg = false,
++            supportsSearch = false,
++            supportsAuthentication = false,
++            supportsProgressSync = false,
+             supportsServerUserData = true
+         )
+
+@@ -82,9 +86,9 @@
+         // Verify performance improvement
+         val targetTime = 50L // Sub-50ms target for 10k items using bulk fetch
+         assert(timeElapsed < targetTime) {
+             "Bulk lookup took ${timeElapsed}ms, target is <${targetTime}ms"
+         }
+-        assert(result.success)
++        assert(result.isSuccess)
+
+         val positions = result.getOrNull()
+         assert(positions != null && positions.size == itemCount)
+INNER_EOF
+patch -p0 < ptc.diff

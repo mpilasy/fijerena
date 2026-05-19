@@ -1,0 +1,38 @@
+cat << 'INNER_EOF' > patch_sort.txt
+<<<<<<< SEARCH
+    private fun sortResults(
+        results: List<SearchResult>,
+        normalizedQuery: String,
+        queryWords: List<String>,
+    ): List<SearchResult> {
+        return results
+            .sortedWith(
+                compareBy<SearchResult> {
+                    when {
+                        it.streamName.equals(normalizedQuery, ignoreCase = true) -> 0
+                        it.streamName.startsWith(normalizedQuery, ignoreCase = true) -> 1
+                        else -> if (queryWords.isNotEmpty() && queryWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
+                    }
+                }.thenBy { it.streamName },
+            )
+    }
+=======
+    private fun sortResults(
+        results: List<SearchResult>,
+        normalizedQuery: String,
+        queryWords: List<String>,
+    ): List<SearchResult> {
+        val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
+        return results
+            .sortedWith(
+                compareBy<SearchResult> {
+                    when {
+                        it.streamName.equals(normalizedQuery, ignoreCase = true) -> 0
+                        it.streamName.startsWith(normalizedQuery, ignoreCase = true) -> 1
+                        else -> if (parsedQuery.positiveWords.isNotEmpty() && parsedQuery.positiveWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
+                    }
+                }.thenBy { it.streamName },
+            )
+    }
+>>>>>>> REPLACE
+INNER_EOF
