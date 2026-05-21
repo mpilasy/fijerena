@@ -258,7 +258,7 @@ class SearchViewModel(
             if (serverSearchSuccess) {
                 // Return server results
                 val elapsed = System.currentTimeMillis() - startTime
-                val sortedResults = sortResults(serverResults, query.trim().lowercase(), SearchUtils.getQueryWords(query))
+                val sortedResults = sortResults(serverResults, query.trim().lowercase(), SearchUtils.parseQuery(query))
                 _uiState.value =
                     UiState.Success(
                         allResults = sortedResults,
@@ -274,11 +274,11 @@ class SearchViewModel(
             val realCategories = prefetchedCategories ?: emptyList()
             val results = mutableListOf<SearchResult>()
             val normalizedQuery = query.trim().lowercase()
-            val queryWords = SearchUtils.getQueryWords(normalizedQuery)
+            val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
 
             val matchingCategories =
                 realCategories
-                    .filter { SearchUtils.matchesQuery(it.category.name, queryWords) }
+                    .filter { SearchUtils.matchesQuery(it.category.name, parsedQuery) }
                     .map { CategorySearchResult(it.category.id, it.category.name, it.contentType) }
 
             // Phase 1: Local cache scan
@@ -287,7 +287,7 @@ class SearchViewModel(
                 val cached = repo.getItemsIfCached(sc.category.id, sc.contentType)
                 if (!cached.isNullOrEmpty()) {
                     results.addAll(
-                        cached.filter { SearchUtils.matchesQuery(it.name, queryWords) }.map { item ->
+                        cached.filter { SearchUtils.matchesQuery(it.name, parsedQuery) }.map { item ->
                             SearchResult(
                                 item.id,
                                 item.name,
@@ -302,7 +302,7 @@ class SearchViewModel(
                 }
             }
 
-            val finalResults = sortResults(results, normalizedQuery, queryWords).take(TARGET_RESULTS)
+            val finalResults = sortResults(results, normalizedQuery, parsedQuery).take(TARGET_RESULTS)
             val elapsed = System.currentTimeMillis() - startTime
             _uiState.value =
                 UiState.Success(
@@ -321,7 +321,7 @@ class SearchViewModel(
     private fun sortResults(
         results: List<SearchResult>,
         normalizedQuery: String,
-        queryWords: List<String>,
+        parsedQuery: ParsedQuery,
     ): List<SearchResult> {
         return results
             .sortedWith(
@@ -329,7 +329,7 @@ class SearchViewModel(
                     when {
                         it.streamName.equals(normalizedQuery, ignoreCase = true) -> 0
                         it.streamName.startsWith(normalizedQuery, ignoreCase = true) -> 1
-                        else -> if (queryWords.isNotEmpty() && queryWords.all { w -> it.streamName.contains(w, ignoreCase = true) }) 2 else 3
+                        else -> if (!parsedQuery.isEmpty && SearchUtils.matchesQuery(it.streamName, parsedQuery)) 2 else 3
                     }
                 }.thenBy { it.streamName },
             )

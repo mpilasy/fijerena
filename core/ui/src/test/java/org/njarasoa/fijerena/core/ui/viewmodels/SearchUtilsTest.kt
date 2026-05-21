@@ -7,51 +7,60 @@ import org.junit.Test
 
 class SearchUtilsTest {
     @Test
-    fun getQueryWords_splitsAndFilters() {
+    fun parseQuery_splitsAndFilters() {
         val query = "  Hello   World  "
-        val words = SearchUtils.getQueryWords(query)
-        assertEquals(listOf("hello", "world"), words)
+        val parsed = SearchUtils.parseQuery(query)
+        assertEquals(listOf("hello", "world"), parsed.positiveWords)
+        assertTrue(parsed.negativeWords.isEmpty())
+    }
+
+    @Test
+    fun parseQuery_negativeWords() {
+        val query = "  Hello  -World - -test "
+        val parsed = SearchUtils.parseQuery(query)
+        assertEquals(listOf("hello", "-"), parsed.positiveWords)
+        assertEquals(listOf("world", "test"), parsed.negativeWords)
     }
 
     @Test
     fun matchesQuery_findsMatches() {
         val text = "This is a Hello World example"
-        val queryWords = listOf("hello", "world")
-        assertTrue(SearchUtils.matchesQuery(text, queryWords))
+        val parsedQuery = SearchUtils.parseQuery("hello world")
+        assertTrue(SearchUtils.matchesQuery(text, parsedQuery))
     }
 
     @Test
     fun matchesQuery_failsOnPartialMatch() {
         val text = "This is a Hello example"
-        val queryWords = listOf("hello", "world")
-        assertFalse(SearchUtils.matchesQuery(text, queryWords))
+        val parsedQuery = SearchUtils.parseQuery("hello world")
+        assertFalse(SearchUtils.matchesQuery(text, parsedQuery))
     }
 
     @Test
     fun matchesQuery_emptyQuery_returnsTrue() {
         val text = "Any text"
-        val queryWords = emptyList<String>()
-        assertTrue(SearchUtils.matchesQuery(text, queryWords))
+        val parsedQuery = SearchUtils.parseQuery("")
+        assertTrue(SearchUtils.matchesQuery(text, parsedQuery))
     }
 
     @Test
     fun matchesQuery_negativeSearch_excludesMatch() {
         val text = "This is a Hello World example"
-        val queryWords = listOf("hello", "-world")
-        assertFalse(SearchUtils.matchesQuery(text, queryWords))
+        val parsedQuery = SearchUtils.parseQuery("hello -world")
+        assertFalse(SearchUtils.matchesQuery(text, parsedQuery))
     }
 
     @Test
     fun matchesQuery_negativeSearch_includesNoMatch() {
         val text = "This is a Hello example"
-        val queryWords = listOf("hello", "-world")
-        assertTrue(SearchUtils.matchesQuery(text, queryWords))
+        val parsedQuery = SearchUtils.parseQuery("hello -world")
+        assertTrue(SearchUtils.matchesQuery(text, parsedQuery))
     }
 
     @Test
     fun matchesQuery_negativeSearch_ignoresSingleDash() {
         val text = "This is a Hello - example"
-        val queryWords = listOf("hello", "-")
-        assertTrue(SearchUtils.matchesQuery(text, queryWords))
+        val parsedQuery = SearchUtils.parseQuery("hello -")
+        assertTrue(SearchUtils.matchesQuery(text, parsedQuery))
     }
 }
