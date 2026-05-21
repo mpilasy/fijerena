@@ -259,9 +259,20 @@ class XtreamMediaProvider(
         query: String,
         contentType: String,
     ): kotlin.Result<List<MediaItem>>? {
-        // Xtream has no server-side search — return null to use client-side parallel iteration
-        // (per-category API payloads are cached in SharedPreferences by XtreamRepository)
-        return null
+        val words = query.trim().split("\\s+".toRegex())
+            .filter { it.isNotBlank() && !it.startsWith("-") }
+        return if (words.isEmpty()) {
+            null
+        } else {
+            val ftsQuery = words.joinToString(" ") { "${it}*" }
+            val mediaType = getMediaType(contentType)
+            try {
+                val results = repository.searchByFts(contentType, ftsQuery)
+                kotlin.Result.success(results.map { it.toDomain(mediaType) })
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
 
     override fun getLastSearchDataSize(contentType: String): Long? = searchDataSizes[contentType]
