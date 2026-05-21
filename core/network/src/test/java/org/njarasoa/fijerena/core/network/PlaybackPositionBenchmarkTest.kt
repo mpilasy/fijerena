@@ -40,11 +40,15 @@ class PlaybackPositionBenchmarkTest {
 
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
 
-        // Setup provider with server user data capability
         every { provider.capabilities } returns ProviderCapabilities(
             supportedContentTypes = setOf(ContentType.TV_SHOWS),
+            supportsEpg = false,
+            supportsSearch = false,
+            supportsAuthentication = false,
+            supportsProgressSync = false,
             supportsServerUserData = true
         )
+
 
         repository = MediaRepository(context, 1L)
         repository.setProvider(provider)
@@ -80,10 +84,9 @@ class PlaybackPositionBenchmarkTest {
         val episodeCount = 50
         val episodeIds = (1..episodeCount).map { "ep_$it" }
 
-        // Simulate network latency for bulk call
         coEvery { provider.getPlaybackPositions(any()) } coAnswers {
             kotlinx.coroutines.delay(10) // 10ms latency total for the bulk request
-            Result.success(episodeIds.associateWith { PlaybackStatus(1000L, 2000L, false) })
+            kotlin.Result.success(episodeIds.associateWith { PlaybackStatus(1000L, 2000L, false) })
         }
 
         val time = measureTimeMillis {

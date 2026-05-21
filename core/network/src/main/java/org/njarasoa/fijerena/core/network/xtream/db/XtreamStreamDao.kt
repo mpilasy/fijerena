@@ -62,8 +62,12 @@ interface XtreamStreamDao {
 
     @Query("""
         SELECT s.* FROM xtream_streams s
-        WHERE s.rowid IN (
-            SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
+        LEFT JOIN xtream_categories c ON s.categoryId = c.categoryId AND s.providerId = c.providerId AND c.type = :type
+        WHERE (
+            s.rowid IN (
+                SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
+            )
+            OR (c.categoryName LIKE :categoryQuery)
         )
         AND s.providerId = :providerId AND s.type = :type
         LIMIT 200
@@ -72,6 +76,7 @@ interface XtreamStreamDao {
         providerId: Long,
         type: String,
         query: String,
+        categoryQuery: String,
     ): List<XtreamStreamEntity>
 
     @Query("INSERT INTO xtream_streams_fts(xtream_streams_fts) VALUES('rebuild')")

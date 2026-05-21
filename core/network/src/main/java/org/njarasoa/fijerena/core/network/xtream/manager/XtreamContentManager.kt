@@ -164,7 +164,7 @@ class XtreamContentManager(
                     return@suspendResultOf if (ftsQuery.isEmpty()) {
                         emptyList()
                     } else {
-                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_LIVE, ftsQuery)
+                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_LIVE, ftsQuery, cleanQueryForLike(ftsQuery))
                             .map { mapStreamEntityToModel(it) }
                     }
                 }
@@ -218,7 +218,7 @@ class XtreamContentManager(
                     return@suspendResultOf if (ftsQuery.isEmpty()) {
                         emptyList()
                     } else {
-                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_VOD, ftsQuery)
+                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_VOD, ftsQuery, cleanQueryForLike(ftsQuery))
                             .map { mapStreamEntityToModel(it) }
                     }
                 }
@@ -272,7 +272,7 @@ class XtreamContentManager(
                     return@suspendResultOf if (ftsQuery.isEmpty()) {
                         emptyList()
                     } else {
-                        seriesDao.searchByFts(providerId, ftsQuery).map { mapSeriesEntityToStream(it) }
+                        seriesDao.searchByFts(providerId, ftsQuery, cleanQueryForLike(ftsQuery)).map { mapSeriesEntityToStream(it) }
                     }
                 }
 
@@ -796,10 +796,15 @@ class XtreamContentManager(
         )
 
     fun searchStreams(type: String, query: String): List<XtreamStream> =
-        streamDao.searchByFts(providerId, type, query).map { mapStreamEntityToModel(it) }
+        streamDao.searchByFts(providerId, type, query, cleanQueryForLike(query)).map { mapStreamEntityToModel(it) }
 
     fun searchSeries(query: String): List<XtreamStream> =
-        seriesDao.searchByFts(providerId, query).map { mapSeriesEntityToStream(it) }
+        seriesDao.searchByFts(providerId, query, cleanQueryForLike(query)).map { mapSeriesEntityToStream(it) }
+
+    private fun cleanQueryForLike(query: String): String {
+        val clean = query.replace("*", "").trim().replace("\\s+".toRegex(), "%")
+        return "%$clean%"
+    }
 
     private fun formatFtsQuery(query: String): String {
         val words = query.trim().split("\\s+".toRegex())
