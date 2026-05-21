@@ -16,6 +16,7 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -600,7 +601,7 @@ private fun SeasonHeader(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { onToggle() }
+                .clickable(role = Role.Button) { onToggle() }
                 .padding(vertical = CinemaSpacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
