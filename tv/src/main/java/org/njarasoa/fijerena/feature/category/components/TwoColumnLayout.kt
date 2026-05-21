@@ -99,6 +99,10 @@ internal fun TwoColumnLayout(
     // Long-press favorite menu state
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
 
+    val categoryMap = remember(categories) {
+        categories.associateBy { it.id }
+    }
+
     // Show the context menu dialog when a target is set
     favoriteMenuTarget?.let { target ->
         FavoriteContextMenuDialog(
@@ -155,7 +159,7 @@ internal fun TwoColumnLayout(
                     supportsNativeEpg ||
                         epgIndexState is EpgIndexState.Indexed
                 if (contentType == ContentType.LIVE_TV && selectedCategoryId != null && hasEpgData) {
-                    val selectedCategoryName = categories.find { it.id == selectedCategoryId }?.name
+                    val selectedCategoryName = categoryMap[selectedCategoryId]?.name
                     if (selectedCategoryName != null) {
                         CinemaSecondaryButton(
                             onClick = { onEpgClick(selectedCategoryId, selectedCategoryName) },
@@ -246,11 +250,7 @@ internal fun TwoColumnLayout(
                 streams = streams,
                 streamsLoading = streamsLoading,
                 selectedCategoryId = selectedCategoryId,
-                // Memoize linear search — only recompute when inputs change
-                selectedCategoryName =
-                    remember(categories, selectedCategoryId) {
-                        categories.find { it.id == selectedCategoryId }?.name
-                    },
+                selectedCategoryName = selectedCategoryId?.let { categoryMap[it]?.name },
                 lastPlayedItemId = lastPlayedItemId,
                 nowPlaying = nowPlaying,
                 contentType = contentType,
