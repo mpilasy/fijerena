@@ -184,9 +184,10 @@ class ProviderRepository(
      */
     fun getProviderSettingsSync(providerId: Long): ProviderSettings {
         settingsCache[providerId]?.let { return it }
-        return kotlinx.coroutines.runBlocking {
-            getProviderSettings(providerId)
-        }
+        val entity = dao.getProviderByIdSync(providerId) ?: return ProviderSettings.DEFAULT
+        val settings = parseProviderSettings(entity.providerSettings)
+        settingsCache[providerId] = settings
+        return settings
     }
 
     /**
