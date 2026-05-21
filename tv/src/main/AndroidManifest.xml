@@ -43,7 +43,7 @@
         </activity>
         <receiver
             android:name="org.njarasoa.fijerena.core.network.xmltv.EpgSyncDebugReceiver"
-            android:exported="true"
+            android:exported="false"
             android:enabled="true">
             <intent-filter>
                 <action android:name="org.njarasoa.fijerena.DEBUG_EPG_SYNC" />
