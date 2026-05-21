@@ -60,12 +60,22 @@ interface XtreamStreamDao {
         ids: List<Int>,
     )
 
-    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND name LIKE '%' || :query || '%'")
-    fun searchStreams(
+    @Query("""
+        SELECT s.* FROM xtream_streams s
+        WHERE s.rowid IN (
+            SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
+        )
+        AND s.providerId = :providerId AND s.type = :type
+        LIMIT 200
+    """)
+    fun searchByFts(
         providerId: Long,
         type: String,
         query: String,
     ): List<XtreamStreamEntity>
+
+    @Query("INSERT INTO xtream_streams_fts(xtream_streams_fts) VALUES('rebuild')")
+    fun rebuildFts()
 
     @Query("DELETE FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId")
     fun deleteByCategoryId(

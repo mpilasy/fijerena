@@ -160,12 +160,13 @@ class XtreamContentManager(
         withContext(Dispatchers.IO) {
             suspendResultOf {
                 if (forSearch) {
-                    return@suspendResultOf streamDao
-                        .searchStreams(
-                            providerId,
-                            XtreamStreamEntity.TYPE_LIVE,
-                            categoryId,
-                        ).map { mapStreamEntityToModel(it) }
+                    val ftsQuery = formatFtsQuery(categoryId)
+                    return@suspendResultOf if (ftsQuery.isEmpty()) {
+                        emptyList()
+                    } else {
+                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_LIVE, ftsQuery)
+                            .map { mapStreamEntityToModel(it) }
+                    }
                 }
 
                 val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_LIVE, categoryId)
@@ -213,12 +214,13 @@ class XtreamContentManager(
         withContext(Dispatchers.IO) {
             suspendResultOf {
                 if (forSearch) {
-                    return@suspendResultOf streamDao
-                        .searchStreams(
-                            providerId,
-                            XtreamStreamEntity.TYPE_VOD,
-                            categoryId,
-                        ).map { mapStreamEntityToModel(it) }
+                    val ftsQuery = formatFtsQuery(categoryId)
+                    return@suspendResultOf if (ftsQuery.isEmpty()) {
+                        emptyList()
+                    } else {
+                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_VOD, ftsQuery)
+                            .map { mapStreamEntityToModel(it) }
+                    }
                 }
 
                 val dbEntities = streamDao.getStreamsByCategory(providerId, XtreamStreamEntity.TYPE_VOD, categoryId)
@@ -266,7 +268,12 @@ class XtreamContentManager(
         withContext(Dispatchers.IO) {
             suspendResultOf {
                 if (forSearch) {
-                    return@suspendResultOf seriesDao.searchSeries(providerId, categoryId).map { mapSeriesEntityToStream(it) }
+                    val ftsQuery = formatFtsQuery(categoryId)
+                    return@suspendResultOf if (ftsQuery.isEmpty()) {
+                        emptyList()
+                    } else {
+                        seriesDao.searchByFts(providerId, ftsQuery).map { mapSeriesEntityToStream(it) }
+                    }
                 }
 
                 val dbEntities = seriesDao.getSeriesByCategory(providerId, categoryId)
@@ -476,6 +483,8 @@ class XtreamContentManager(
                                 streamDao.deleteByIds(providerId, type, toDelete)
                             }
 
+                            streamDao.rebuildFts()
+
                             sharedPreferences.edit { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + type, System.currentTimeMillis()) }
                         }
                     } catch (e: Exception) {
@@ -564,6 +573,8 @@ class XtreamContentManager(
                             if (toDelete.isNotEmpty()) {
                                 seriesDao.deleteByIds(providerId, toDelete)
                             }
+
+                            seriesDao.rebuildFts()
 
                             sharedPreferences.edit { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES", System.currentTimeMillis()) }
                         }
@@ -783,4 +794,16 @@ class XtreamContentManager(
             duration = it.episodeRunTime.toJsonPrimitive(),
             youtubeTrailer = it.youtubeTrailer,
         )
+
+    fun searchStreams(type: String, query: String): List<XtreamStream> =
+        streamDao.searchByFts(providerId, type, query).map { mapStreamEntityToModel(it) }
+
+    fun searchSeries(query: String): List<XtreamStream> =
+        seriesDao.searchByFts(providerId, query).map { mapSeriesEntityToStream(it) }
+
+    private fun formatFtsQuery(query: String): String {
+        val words = query.trim().split("\\s+".toRegex())
+            .filter { it.isNotBlank() && !it.startsWith("-") }
+        return if (words.isEmpty()) "" else words.joinToString(" ") { "$it*" }
+    }
 }

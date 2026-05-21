@@ -134,15 +134,17 @@ class SearchViewModel(
                         allCategories.add(SearchableCategory(cat, type))
                     }
 
-                    // Launch prefetch for this batch
-                    realCategories.map { category ->
-                        launch {
-                            if (!repo.getItemsIfCached(category.id, type).isNullOrEmpty()) return@launch
-                            semaphore.withPermit {
-                                try {
-                                    repo.getItemsForSearch(category.id, type)
-                                } catch (e: Exception) {
-                                    android.util.Log.e("SearchViewModel", "Failed to get items for search category ${category.id}", e)
+                    // Launch prefetch for this batch only if search is not supported natively via database/server
+                    if (capabilities?.supportsSearch != true) {
+                        realCategories.map { category ->
+                            launch {
+                                if (!repo.getItemsIfCached(category.id, type).isNullOrEmpty()) return@launch
+                                semaphore.withPermit {
+                                    try {
+                                        repo.getItemsForSearch(category.id, type)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("SearchViewModel", "Failed to get items for search category ${category.id}", e)
+                                    }
                                 }
                             }
                         }

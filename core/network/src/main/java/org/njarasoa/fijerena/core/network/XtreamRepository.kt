@@ -6,6 +6,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.serialization.Serializable
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamContentManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamEpgManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamMetricsManager
@@ -154,6 +155,14 @@ class XtreamRepository(
     fun getVodStreamsCached(categoryId: String): List<XtreamStream>? = contentManager.getVodStreamsCached(categoryId)
 
     fun getSeriesCached(categoryId: String): List<XtreamStream>? = contentManager.getSeriesCached(categoryId)
+
+    fun searchByFts(contentType: String, ftsQuery: String): List<XtreamStream> =
+        when (contentType) {
+            ContentType.LIVE_TV -> contentManager.searchStreams(XtreamStreamEntity.TYPE_LIVE, ftsQuery)
+            ContentType.MOVIES -> contentManager.searchStreams(XtreamStreamEntity.TYPE_VOD, ftsQuery)
+            ContentType.TV_SHOWS -> contentManager.searchSeries(ftsQuery)
+            else -> emptyList()
+        }
 
     fun buildStreamUrl(
         streamId: Int,

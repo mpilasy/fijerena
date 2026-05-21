@@ -48,11 +48,21 @@ interface XtreamSeriesDao {
         ids: List<Int>,
     )
 
-    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND name LIKE '%' || :query || '%'")
-    fun searchSeries(
+    @Query("""
+        SELECT s.* FROM xtream_series s
+        WHERE s.rowid IN (
+            SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
+        )
+        AND s.providerId = :providerId
+        LIMIT 200
+    """)
+    fun searchByFts(
         providerId: Long,
         query: String,
     ): List<XtreamSeriesEntity>
+
+    @Query("INSERT INTO xtream_series_fts(xtream_series_fts) VALUES('rebuild')")
+    fun rebuildFts()
 
     @Query("DELETE FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId")
     fun deleteByCategoryId(

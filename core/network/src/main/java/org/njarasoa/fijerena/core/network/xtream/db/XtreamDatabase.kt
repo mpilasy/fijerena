@@ -13,8 +13,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         XtreamStreamEntity::class,
         XtreamSeriesEntity::class,
         XtreamEpisodeEntity::class,
+        XtreamStreamFts::class,
+        XtreamSeriesFts::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -53,6 +55,17 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /** Migration 9→10: add FTS search virtual tables for streams and series. */
+        private val MIGRATION_9_10 =
+            object : Migration(9, 10) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `xtream_streams_fts` USING fts4(content=`xtream_streams`, tokenizer=unicode61, `name`)")
+                    db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `xtream_series_fts`  USING fts4(content=`xtream_series`,  tokenizer=unicode61, `name`)")
+                    db.execSQL("INSERT INTO `xtream_streams_fts`(`xtream_streams_fts`) VALUES('rebuild')")
+                    db.execSQL("INSERT INTO `xtream_series_fts`(`xtream_series_fts`)   VALUES('rebuild')")
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -60,7 +73,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         context.applicationContext,
                         XtreamDatabase::class.java,
                         "xtream_v2.db",
-                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9)
+                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { INSTANCE = it }
