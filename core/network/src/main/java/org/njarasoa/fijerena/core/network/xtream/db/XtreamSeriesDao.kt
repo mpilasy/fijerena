@@ -50,8 +50,12 @@ interface XtreamSeriesDao {
 
     @Query("""
         SELECT s.* FROM xtream_series s
-        WHERE s.rowid IN (
-            SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
+        LEFT JOIN xtream_categories c ON s.categoryId = c.categoryId AND s.providerId = c.providerId AND c.type = 'SERIES'
+        WHERE (
+            s.rowid IN (
+                SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
+            )
+            OR (c.categoryName LIKE :categoryQuery)
         )
         AND s.providerId = :providerId
         LIMIT 200
@@ -59,6 +63,7 @@ interface XtreamSeriesDao {
     fun searchByFts(
         providerId: Long,
         query: String,
+        categoryQuery: String,
     ): List<XtreamSeriesEntity>
 
     @Query("INSERT INTO xtream_series_fts(xtream_series_fts) VALUES('rebuild')")
