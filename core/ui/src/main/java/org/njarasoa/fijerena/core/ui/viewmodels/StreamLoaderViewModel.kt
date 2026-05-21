@@ -209,7 +209,11 @@ class StreamLoaderViewModel(
                             Log.d("StreamLoader", "Fetching series detail for $seriesId to get episode $episodeId plot")
                             val seriesDetailResult = repo.getSeriesDetail(seriesId)
                             seriesDetailResult.getOrNull()?.let { detail ->
-                                val episode = detail.episodes.values.flatten().find { it.id == episodeId }
+                                // Performance optimization: Use firstNotNullOfOrNull instead of flatten().find()
+                                // to avoid creating an intermediate list of all episodes, reducing GC pressure and lookup time
+                                val episode = detail.episodes.values.firstNotNullOfOrNull { seasonEpisodes ->
+                                    seasonEpisodes.find { it.id == episodeId }
+                                }
                                 Log.d("StreamLoader", "Found episode: ${episode?.title}, plot present: ${episode?.metadata?.plot != null}")
                                 description = episode?.metadata?.plot ?: detail.metadata.plot
                             }
