@@ -277,17 +277,21 @@ class SearchViewModel(
             val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
 
             val matchingCategories =
-                realCategories
-                    .filter { SearchUtils.matchesQuery(it.category.name, parsedQuery) }
-                    .map { CategorySearchResult(it.category.id, it.category.name, it.contentType) }
+                realCategories.mapNotNull {
+                    if (SearchUtils.matchesQuery(it.category.name, parsedQuery)) {
+                        CategorySearchResult(it.category.id, it.category.name, it.contentType)
+                    } else {
+                        null
+                    }
+                }
 
             // Phase 1: Local cache scan
             for (sc in realCategories) {
                 currentCoroutineContext().job.ensureActive()
                 val cached = repo.getItemsIfCached(sc.category.id, sc.contentType)
                 if (!cached.isNullOrEmpty()) {
-                    results.addAll(
-                        cached.filter { SearchUtils.matchesQuery(it.name, parsedQuery) }.map { item ->
+                    cached.mapNotNullTo(results) { item ->
+                        if (SearchUtils.matchesQuery(item.name, parsedQuery)) {
                             SearchResult(
                                 item.id,
                                 item.name,
@@ -297,8 +301,10 @@ class SearchViewModel(
                                 item.thumbnailUrl,
                                 item.mediaType,
                             )
-                        },
-                    )
+                        } else {
+                            null
+                        }
+                    }
                 }
             }
 
