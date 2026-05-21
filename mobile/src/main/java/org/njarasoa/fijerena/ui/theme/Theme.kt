@@ -23,7 +23,6 @@ fun FirstVideoPlayerTheme(
         CinemaThemeHolder.current = palette
     }
 
-    // Build color scheme inside composable — NOT at file level (was a bug)
     val colorScheme = remember(palette) {
         darkColorScheme(
             // Primary - accent color
