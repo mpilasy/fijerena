@@ -1,3 +1,6 @@
 ## 2024-05-20 - Optimize SearchUtils string manipulations in hot loops
 **Learning:** Performing `String.substring` and `String.startsWith` inside hot loops for every item during text filtering causes extreme redundant object allocations and GC thrashing. Using `ParsedQuery` to categorize prefix and exact matches outside the loop dramatically reduces allocations in search.
 **Action:** When filtering across thousands of elements (like EPG or search views), always extract string manipulation out of the iteration bounds and pre-parse criteria into lightweight lookup structures.
+## 2026-05-25 - Optimize Collection Flattening and N+1 Queries
+**Learning:** Using `.flatten().map { it.id }` on nested collections (like `seriesDetail.episodes.values`) creates intermediate lists, leading to unnecessary memory allocation and garbage collection. Also, making sequential database/network calls (like `getPlaybackPositionSuspend`) in a loop inside a `LaunchedEffect` leads to an N+1 query problem, blocking the UI and network.
+**Action:** When extracting properties from a nested collection, use a pre-sized `ArrayList` and nested loops instead of `.flatten().map`. For data retrieval, always prefer bulk fetch methods (e.g., `getPlaybackPositionsSuspend`) over sequential single-item fetches within loops.
