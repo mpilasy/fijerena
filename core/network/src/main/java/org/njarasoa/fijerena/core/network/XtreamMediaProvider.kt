@@ -140,10 +140,23 @@ class XtreamMediaProvider(
         detail: SeriesDetail,
         tmdbSeriesId: Int,
     ): SeriesDetail {
+        // ⚡ Bolt: Performance Optimization
+        // Replace .flatten().mapNotNull { ... }.toSet() with nested loop over HashSet
+        // to avoid allocating multiple intermediate lists.
+        val targetSeasons = HashSet<Int>()
+        for (episodes in detail.episodes.values) {
+            for (ep in episodes) {
+                val season = ep.seasonNumber
+                if (season != null) {
+                    targetSeasons.add(season)
+                }
+            }
+        }
+
         val overviews =
             tmdbOverviewCache[tmdbSeriesId] ?: fetchTmdbOverviews(
                 tmdbSeriesId,
-                detail.episodes.values.flatten().mapNotNull { it.seasonNumber }.toSet(),
+                targetSeasons,
             ).also { tmdbOverviewCache[tmdbSeriesId] = it }
 
         if (overviews.isEmpty()) return detail
