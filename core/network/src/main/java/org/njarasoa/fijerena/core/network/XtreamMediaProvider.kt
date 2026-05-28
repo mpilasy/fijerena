@@ -140,10 +140,18 @@ class XtreamMediaProvider(
         detail: SeriesDetail,
         tmdbSeriesId: Int,
     ): SeriesDetail {
+        // ⚡ Bolt: Avoid flatten().mapNotNull() to prevent intermediate list allocations
+        val seasonNumbers = mutableSetOf<Int>()
+        detail.episodes.values.forEach { episodesList ->
+            episodesList.forEach { ep ->
+                ep.seasonNumber?.let { seasonNumbers.add(it) }
+            }
+        }
+
         val overviews =
             tmdbOverviewCache[tmdbSeriesId] ?: fetchTmdbOverviews(
                 tmdbSeriesId,
-                detail.episodes.values.flatten().mapNotNull { it.seasonNumber }.toSet(),
+                seasonNumbers,
             ).also { tmdbOverviewCache[tmdbSeriesId] = it }
 
         if (overviews.isEmpty()) return detail
