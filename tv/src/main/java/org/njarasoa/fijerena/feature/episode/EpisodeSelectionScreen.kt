@@ -301,8 +301,15 @@ private fun EpisodeListContent(
     // Auto-expand season with next unwatched/in-progress episode
     LaunchedEffect(seriesDetail) {
         if (!hasMultipleSeasons) return@LaunchedEffect
-        val allEpisodes = seriesDetail.episodes.values.flatten()
-        val allEpisodeIds = allEpisodes.map { it.id }
+
+        // ⚡ Bolt: Avoid flatten().map to prevent intermediate list allocations
+        val allEpisodeIds = mutableListOf<String>()
+        for (episodes in seriesDetail.episodes.values) {
+            for (ep in episodes) {
+                allEpisodeIds.add(ep.id)
+            }
+        }
+
         val allWatched = mediaRepository.getPlaybackPositionsSuspend(allEpisodeIds, ContentType.TV_SHOWS)
 
         for (season in sortedSeasons) {
