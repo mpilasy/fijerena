@@ -4,3 +4,6 @@
 ## 2026-05-28 - [Replace .flatten() with nested loops]
 **Learning:** Found two places using chained `.flatten().map()`/`.flatten().mapNotNull()` which create unnecessary intermediate list allocations during heavy processing (e.g. collecting season/episode info).
 **Action:** Replaced these chained operations with standard nested loops over the data structures, directly populating `mutableSetOf` or `mutableListOf` to avoid intermediate allocations and reduce GC overhead.
+## 2026-05-30 - Replace runBlocking with Sync DAO calls
+**Learning:** Found synchronous Room DB operations wrapped in `runBlocking` inside `getProviderSettingsSync` which instantiates coroutines overhead unnecessarily and blocks threads.
+**Action:** Always prefer declaring explicit synchronous DAO queries over using `runBlocking { suspending_query() }` within non-suspending contexts where performance is critical.
