@@ -754,9 +754,15 @@ private fun flattenEpisodes(detail: SeriesDetail): List<DomainEpisodeItem> {
         } else {
             detail.episodes.keys.mapNotNull { it.toIntOrNull() }.sorted()
         }
-    return seasonNumbers.flatMap { num ->
-        detail.episodes[num.toString()]?.sortedBy { it.episodeNumber } ?: emptyList()
+    // ⚡ Bolt: Avoid flatMap to prevent intermediate list allocations
+    val result = mutableListOf<DomainEpisodeItem>()
+    for (num in seasonNumbers) {
+        val episodes = detail.episodes[num.toString()]
+        if (episodes != null) {
+            result.addAll(episodes.sortedBy { it.episodeNumber })
+        }
     }
+    return result
 }
 
 private fun parseDurationToSeconds(duration: String): Long? {

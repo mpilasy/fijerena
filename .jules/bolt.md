@@ -4,3 +4,6 @@
 ## 2026-05-28 - [Replace .flatten() with nested loops]
 **Learning:** Found two places using chained `.flatten().map()`/`.flatten().mapNotNull()` which create unnecessary intermediate list allocations during heavy processing (e.g. collecting season/episode info).
 **Action:** Replaced these chained operations with standard nested loops over the data structures, directly populating `mutableSetOf` or `mutableListOf` to avoid intermediate allocations and reduce GC overhead.
+## 2024-06-03 - [Optimize memory allocations in grouping and mapping]
+**Learning:** Chained operators like `.groupBy { Pair(...) }.entries.sortedWith(...)` allocate numerous intermediate objects (e.g. `Pair` inside the loop). Also `flatMap` creates intermediate lists. By grouping directly by a single property instead of allocating temporary pairs, or replacing `flatMap` with nested loops and a pre-allocated mutable list, GC thrashing is minimized during large operations like filtering EPG guide or parsing Episode info.
+**Action:** When grouping or mapping collections, avoid creating temporary intermediate collections or tuple-like objects in the mapping keys. Group by single primitives or use nested loops with `mutableListOf` directly.
