@@ -4,3 +4,6 @@
 ## 2026-05-28 - [Replace .flatten() with nested loops]
 **Learning:** Found two places using chained `.flatten().map()`/`.flatten().mapNotNull()` which create unnecessary intermediate list allocations during heavy processing (e.g. collecting season/episode info).
 **Action:** Replaced these chained operations with standard nested loops over the data structures, directly populating `mutableSetOf` or `mutableListOf` to avoid intermediate allocations and reduce GC overhead.
+## 2026-05-28 - [Memoize expensive EPG filtering in Compose]
+**Learning:** The `MobileEpgBrowserScreen` and `EpgBrowserScreen` were executing a chained functional pipeline (`mapNotNull`, `filter`, and `.copy()`) over large `dateGroups` datasets directly inside the `@Composable` function body. Since `matchedOnly` is a derived state or parameter, this meant the entire heavy computation was blocking the UI thread on *every* recomposition (e.g., when scrolling or when minor UI state changes).
+**Action:** Wrapped the entire `displayDateGroups` computation in a `remember(results.dateGroups, matchedOnly) { ... }` block to memoize the result, ensuring the expensive O(N) nested filtering is only evaluated when the underlying search results or filter toggle state actually changes.
