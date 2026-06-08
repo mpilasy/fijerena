@@ -585,13 +585,14 @@ class EpgBrowserViewModel(
     private fun groupByChannel(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
         // For "What's on", we group by channel name and reuse EpgBrowserDateGroup
         // with the channel name as the label.
-        val byChannel = airings.groupBy { it.airing.channelId to it.airing.channelName }
+        // ⚡ Bolt: Group by channelId directly to avoid allocating temporary Pair objects for every airing
+        val byChannel = airings.groupBy { it.airing.channelId }
 
         return byChannel.entries
             // Use String.CASE_INSENSITIVE_ORDER to avoid allocating new String objects during sorting
-            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key.second })
-            .mapIndexed { index, (channelKey, channelAirings) ->
-                val (channelId, channelName) = channelKey
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.value.first().airing.channelName })
+            .mapIndexed { index, (_, channelAirings) ->
+                val channelName = channelAirings.first().airing.channelName
                 val programs =
                     channelAirings
                         .mapIndexed { progIndex, airingWithProg ->
@@ -604,6 +605,7 @@ class EpgBrowserViewModel(
                             )
                         }.sortedBy { it.airings.first().startEpoch }
 
+                val channelId = channelAirings.first().airing.channelId
                 EpgBrowserDateGroup(
                     dateLabel = channelName,
                     // Use a unique ID derived from channelId hash or index to avoid collisions

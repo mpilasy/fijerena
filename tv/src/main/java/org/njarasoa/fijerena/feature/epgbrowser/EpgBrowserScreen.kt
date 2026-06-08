@@ -672,25 +672,27 @@ private fun ResultsContent(
 
     // Filter date groups when hiding unmatched channels
     val displayDateGroups =
-        if (matchedOnly) {
-            results.dateGroups.mapNotNull { group ->
-                val filteredPrograms =
-                    group.programs.mapNotNull { program ->
-                        val matchedAirings = program.airings.filter { it.matchedStream != null }
-                        if (matchedAirings.isEmpty()) {
-                            null
-                        } else {
-                            program.copy(airings = matchedAirings)
+        remember(results.dateGroups, matchedOnly) {
+            if (matchedOnly) {
+                results.dateGroups.mapNotNull { group ->
+                    val filteredPrograms =
+                        group.programs.mapNotNull { program ->
+                            val matchedAirings = program.airings.filter { it.matchedStream != null }
+                            if (matchedAirings.isEmpty()) {
+                                null
+                            } else {
+                                program.copy(airings = matchedAirings)
+                            }
                         }
+                    if (filteredPrograms.isEmpty()) {
+                        null
+                    } else {
+                        group.copy(programs = filteredPrograms)
                     }
-                if (filteredPrograms.isEmpty()) {
-                    null
-                } else {
-                    group.copy(programs = filteredPrograms)
                 }
+            } else {
+                results.dateGroups
             }
-        } else {
-            results.dateGroups
         }
 
     Column {
