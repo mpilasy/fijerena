@@ -330,10 +330,16 @@ private fun EpisodeListContent(
 
     // Flat ordered list of all episodes across seasons (for prev/next navigation)
     val flatEpisodes =
-        remember(sortedSeasons, sortedEpisodesBySeason) {
-            sortedSeasons.flatMap { season ->
-                sortedEpisodesBySeason[season.seasonNumber.toString()] ?: emptyList()
+        remember(sortedSeasons, sortedEpisodesBySeason, totalEpisodes) {
+            // ⚡ Bolt: Use a pre-sized ArrayList to avoid intermediate allocations from flatMap
+            val result = ArrayList<DomainEpisodeItem>(totalEpisodes)
+            for (season in sortedSeasons) {
+                val eps = sortedEpisodesBySeason[season.seasonNumber.toString()]
+                if (eps != null) {
+                    result.addAll(eps)
+                }
             }
+            result
         }
 
     if (selectedEpisode != null) {
