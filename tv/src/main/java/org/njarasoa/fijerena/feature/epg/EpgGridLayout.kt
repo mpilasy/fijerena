@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.TimeSlot
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -248,7 +250,7 @@ private fun EpgHeader(
         // Title and date
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "TV Guide - $categoryName",
+                text = stringResource(R.string.epg_guide_title_format, categoryName),
                 style =
                     MaterialTheme.typography.titleLarge.copy(
                         fontSize =
@@ -274,17 +276,17 @@ private fun EpgHeader(
             Button(onClick = onPreviousDay) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                    contentDescription = "Previous Day",
+                    contentDescription = stringResource(R.string.epg_prev_day),
                     tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )
             }
             Button(onClick = onJumpToNow) {
-                Text("Now")
+                Text(stringResource(R.string.epg_jump_to_now))
             }
             Button(onClick = onNextDay) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                    contentDescription = "Next Day",
+                    contentDescription = stringResource(R.string.epg_next_day),
                     tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )
             }
@@ -301,7 +303,7 @@ private fun EpgHeader(
                 } else {
                     Icon(
                         imageVector = Icons.Rounded.Refresh,
-                        contentDescription = "Refresh",
+                        contentDescription = stringResource(R.string.common_refresh),
                         tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                     )
                 }
@@ -309,7 +311,7 @@ private fun EpgHeader(
             Button(onClick = onSearchToggle) {
                 Icon(
                     imageVector = if (isSearchActive) Icons.Rounded.Close else Icons.Rounded.Search,
-                    contentDescription = if (isSearchActive) "Close Search" else "Search",
+                    contentDescription = if (isSearchActive) stringResource(R.string.epg_search_close) else stringResource(R.string.common_search),
                     tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )
             }
@@ -326,7 +328,7 @@ private fun EmptyEpgMessage() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "No EPG data available for these channels",
+            text = stringResource(R.string.epg_no_data),
             style =
                 MaterialTheme.typography.bodyLarge.copy(
                     fontSize =
@@ -578,7 +580,7 @@ private fun EpgSearchContent(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChanged,
-            label = { Text("Search programs") },
+            label = { Text(stringResource(R.string.epg_search_placeholder)) },
             singleLine = true,
             modifier =
                 Modifier
@@ -592,7 +594,7 @@ private fun EpgSearchContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No programs found matching \"$searchQuery\"",
+                    text = stringResource(R.string.epg_no_programs_found_matching, searchQuery),
                     style =
                         MaterialTheme.typography.bodyLarge.copy(
                             fontSize =
@@ -721,7 +723,7 @@ private fun SearchResultItem(
             }
             if (result.isCurrent) {
                 Text(
-                    text = "NOW",
+                    text = stringResource(R.string.epg_now_label),
                     style = scaledStyles.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = org.njarasoa.fijerena.ui.theme.CinemaOrangeLight,

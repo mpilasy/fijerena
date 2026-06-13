@@ -32,6 +32,8 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.ui.res.stringResource
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -146,7 +148,7 @@ fun MetadataOverlay(
                                 .background(org.njarasoa.fijerena.ui.theme.CinemaLive, shape = RoundedCornerShape(6.dp)),
                     )
                     Text(
-                        text = "LIVE",
+                        text = stringResource(R.string.player_live),
                         style = MaterialTheme.typography.titleMedium,
                         color = CinemaTextPrimary,
                     )
@@ -169,7 +171,7 @@ fun MetadataOverlay(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Icon(Icons.Rounded.PlayArrow, contentDescription = null)
-                                    Text("Resume")
+                                    Text(stringResource(R.string.player_resume))
                                 }
                             }
                         } else {
@@ -179,7 +181,7 @@ fun MetadataOverlay(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Icon(Icons.Rounded.Pause, contentDescription = null)
-                                    Text("Pause")
+                                    Text(stringResource(R.string.player_pause))
                                 }
                             }
                         }
@@ -193,7 +195,7 @@ fun MetadataOverlay(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.AutoMirrored.Rounded.VolumeUp, contentDescription = null)
-                            Text("Audio")
+                            Text(stringResource(R.string.player_audio))
                         }
                     }
                 }
@@ -205,7 +207,7 @@ fun MetadataOverlay(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Rounded.Subtitles, contentDescription = null)
-                            Text("Subtitle")
+                            Text(stringResource(R.string.player_subtitles))
                         }
                     }
                 }
@@ -217,7 +219,7 @@ fun MetadataOverlay(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Rounded.Tune, contentDescription = null)
-                            Text("Quality")
+                            Text(stringResource(R.string.player_quality))
                         }
                     }
                 }
@@ -230,7 +232,7 @@ fun MetadataOverlay(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(Icons.Rounded.BarChart, contentDescription = null)
-                                Text("Stats")
+                                Text(stringResource(R.string.player_stats))
                             }
                         }
                     }
@@ -259,7 +261,10 @@ fun MetadataOverlay(
                                     imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                     contentDescription = null,
                                 )
-                                Text(if (isFavorite) "Favorited" else "Favorite")
+                                Text(
+                                    if (isFavorite) stringResource(R.string.player_favorited)
+                                    else stringResource(R.string.player_favorite)
+                                )
                             }
                         }
                     }
@@ -268,7 +273,7 @@ fun MetadataOverlay(
 
             // Hint text
             Text(
-                text = "Press OK to hide controls • Press BACK to exit",
+                text = stringResource(R.string.player_press_back_exit),
                 style = MaterialTheme.typography.bodySmall,
                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
             )

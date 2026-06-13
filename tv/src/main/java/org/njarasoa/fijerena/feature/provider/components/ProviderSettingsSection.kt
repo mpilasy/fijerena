@@ -19,12 +19,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.domain.ProviderType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
@@ -67,7 +69,7 @@ fun ProviderSettingsSection(
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
     Text(
-        text = "Provider Settings",
+        text = stringResource(R.string.provider_settings_title),
         style = styles.titleMedium,
         color = CinemaAccent,
     )
@@ -84,12 +86,12 @@ fun ProviderSettingsSection(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Auto-Resume",
+                text = stringResource(R.string.provider_auto_resume_label),
                 style = styles.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Resume VOD content from where you left off",
+                text = stringResource(R.string.provider_auto_resume_desc),
                 style = styles.bodySmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
@@ -135,19 +137,19 @@ fun ProviderSettingsSection(
     // Clear Favorites
     Column {
         Text(
-            text = "Clear All Favorites",
+            text = stringResource(R.string.provider_clear_favorites_title).removeSuffix("?"),
             style = styles.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "Remove all favorited streams from all content types",
+            text = stringResource(R.string.provider_clear_favorites_message),
             style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
         CinemaDangerButton(
             onClick = onClearFavoritesClick,
-            text = "Clear All Favorites",
+            text = stringResource(R.string.provider_clear_favorites_button),
         )
     }
 
@@ -156,19 +158,19 @@ fun ProviderSettingsSection(
     // Clear Progress
     Column {
         Text(
-            text = "Clear Playback Progress",
+            text = stringResource(R.string.provider_clear_progress_title).removeSuffix("?"),
             style = styles.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "Remove all saved positions (Continue Watching will be empty)",
+            text = stringResource(R.string.provider_clear_progress_message),
             style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
         CinemaDangerButton(
             onClick = onClearProgressClick,
-            text = "Clear All Progress",
+            text = stringResource(R.string.provider_clear_progress_button),
         )
     }
 
@@ -179,12 +181,12 @@ fun ProviderSettingsSection(
         // Stream Output Format
         Column {
             Text(
-                text = "Stream Output Format",
+                text = stringResource(R.string.provider_stream_format_label),
                 style = styles.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Format used for live stream URLs (m3u8 = HLS, ts = MPEG-TS)",
+                text = stringResource(R.string.provider_stream_format_desc),
                 style = styles.bodySmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
@@ -216,12 +218,12 @@ fun ProviderSettingsSection(
         // Playlist Type
         Column {
             Text(
-                text = "Playlist Type",
+                text = stringResource(R.string.provider_playlist_type_label),
                 style = styles.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Playlist format (m3u_plus = extended with EPG, simple = basic)",
+                text = stringResource(R.string.provider_playlist_type_desc),
                 style = styles.bodySmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
@@ -255,52 +257,60 @@ fun ProviderSettingsSection(
 
         Column {
             Text(
-                text = "Category Filters",
+                text = stringResource(R.string.provider_category_filters_title),
                 style = styles.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Hide or show categories based on name prefixes",
+                text = stringResource(R.string.provider_category_filters_desc),
                 style = styles.bodySmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Mode: ${if (providerSettings.categoryFilters.mode == FilterMode.EXCLUDE) "Exclude" else "Include"}",
+                    text = stringResource(
+                        R.string.provider_filter_mode_value,
+                        if (providerSettings.categoryFilters.mode == FilterMode.EXCLUDE) {
+                            stringResource(R.string.provider_filter_exclude)
+                        } else {
+                            stringResource(R.string.provider_filter_include)
+                        },
+                    ),
                     style = styles.bodyMedium,
                     color = CinemaTextPrimary,
                 )
                 Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 Text(
-                    text = "Prefixes: ${if (providerSettings.categoryFilters.prefixes.isEmpty()) {
-                        "None"
+                    text = if (providerSettings.categoryFilters.prefixes.isEmpty()) {
+                        stringResource(R.string.provider_no_filters)
                     } else {
-                        providerSettings.categoryFilters.prefixes
-                            .joinToString(
-                                ", ",
-                            )
-                    }}",
+                        stringResource(
+                            R.string.provider_prefixes_value,
+                            providerSettings.categoryFilters.prefixes.size,
+                            providerSettings.categoryFilters.prefixes.joinToString(", "),
+                        )
+                    },
                     style = styles.bodyMedium,
                     color = CinemaTextSecondary,
                 )
             }
             Text(
-                text = "Scripts: ${if (providerSettings.categoryFilters.allowedScripts.isEmpty()) {
-                    "All"
-                } else {
-                    providerSettings.categoryFilters.allowedScripts
-                        .joinToString(
-                            ", ",
-                        ) { it.displayName }
-                }}",
+                text = stringResource(
+                    R.string.provider_scripts_value,
+                    if (providerSettings.categoryFilters.allowedScripts.isEmpty()) {
+                        stringResource(R.string.common_all)
+                    } else {
+                        providerSettings.categoryFilters.allowedScripts.joinToString(", ") { it.displayName }
+                    },
+                ),
                 style = styles.bodyMedium,
                 color = CinemaTextSecondary,
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             CinemaPrimaryButton(
                 onClick = onManageFiltersClick,
-                text = "Manage Filters",
+                text = stringResource(R.string.provider_manage_filters_button),
             )
         }
 
@@ -317,12 +327,12 @@ fun ProviderSettingsSection(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Enable Caching",
+                    text = stringResource(R.string.provider_enable_caching_label),
                     style = styles.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Cache categories and streams for faster loading",
+                    text = stringResource(R.string.provider_enable_caching_desc),
                     style = styles.bodySmall,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
@@ -365,12 +375,12 @@ private fun WatchHistorySizeSetting(
 
     Column {
         Text(
-            text = "Last Watched Queue Size",
+            text = stringResource(R.string.provider_watch_history_size_label),
             style = styles.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "Items to keep in Last Watched category (1-100)",
+            text = stringResource(R.string.provider_watch_history_size_desc),
             style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )
@@ -392,7 +402,7 @@ private fun WatchHistorySizeSetting(
                         isEditing = true
                         newSize = currentSize.toString()
                     },
-                    text = "Edit",
+                    text = stringResource(R.string.provider_edit_button),
                 )
             }
         } else {
@@ -407,7 +417,7 @@ private fun WatchHistorySizeSetting(
                             newSize = newValue
                         }
                     },
-                    label = { Text("Queue Size") },
+                    label = { Text(stringResource(R.string.provider_queue_size_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale)),
@@ -418,7 +428,7 @@ private fun WatchHistorySizeSetting(
                         isEditing = false
                         newSize = ""
                     },
-                    text = "Cancel",
+                    text = stringResource(R.string.common_cancel),
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                 CinemaPrimaryButton(
@@ -431,7 +441,7 @@ private fun WatchHistorySizeSetting(
                         }
                     },
                     enabled = newSize.toIntOrNull()?.let { it in 1..100 } == true,
-                    text = "Save",
+                    text = stringResource(R.string.provider_save_button),
                 )
             }
         }
@@ -458,12 +468,12 @@ private fun FavoritesMaxSizeSetting(
 
     Column {
         Text(
-            text = "Favorites Max Size",
+            text = stringResource(R.string.provider_favorites_max_size_label),
             style = styles.titleSmall,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "Maximum number of favorites to store (10-500)",
+            text = stringResource(R.string.provider_favorites_max_size_desc),
             style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )
@@ -485,7 +495,7 @@ private fun FavoritesMaxSizeSetting(
                         isEditing = true
                         newSize = currentSize.toString()
                     },
-                    text = "Edit",
+                    text = stringResource(R.string.provider_edit_button),
                 )
             }
         } else {
@@ -500,7 +510,7 @@ private fun FavoritesMaxSizeSetting(
                             newSize = newValue
                         }
                     },
-                    label = { Text("Max Size") },
+                    label = { Text(stringResource(R.string.provider_max_size_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale)),
@@ -511,7 +521,7 @@ private fun FavoritesMaxSizeSetting(
                         isEditing = false
                         newSize = ""
                     },
-                    text = "Cancel",
+                    text = stringResource(R.string.common_cancel),
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                 CinemaPrimaryButton(
@@ -524,7 +534,7 @@ private fun FavoritesMaxSizeSetting(
                         }
                     },
                     enabled = newSize.toIntOrNull()?.let { it in 10..500 } == true,
-                    text = "Save",
+                    text = stringResource(R.string.provider_save_button),
                 )
             }
         }

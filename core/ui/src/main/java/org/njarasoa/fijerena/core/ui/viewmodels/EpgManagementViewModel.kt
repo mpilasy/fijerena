@@ -30,6 +30,9 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import kotlin.coroutines.resume
 
+import org.njarasoa.fijerena.core.ui.utils.UiText
+import org.njarasoa.fijerena.core.ui.R
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class EpgManagementViewModel(
     private val context: Context,
@@ -189,8 +192,8 @@ class EpgManagementViewModel(
     private val _cellularDialog = MutableStateFlow<CellularConfirmDialog>(CellularConfirmDialog.Hidden)
     val cellularDialog: StateFlow<CellularConfirmDialog> = _cellularDialog.asStateFlow()
 
-    private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
+    private val _toastMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
+    val toastMessage: SharedFlow<UiText> = _toastMessage.asSharedFlow()
 
     private val _hasStrayFiles = MutableStateFlow(false)
     val hasStrayFiles: StateFlow<Boolean> = _hasStrayFiles.asStateFlow()
@@ -309,7 +312,7 @@ class EpgManagementViewModel(
                 refreshDbStats()
             }
             _selectedIds.value = emptySet()
-            _toastMessage.tryEmit("Deleted ${selectedIds.size} source(s)")
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_deleted_sources, selectedIds.size))
         }
     }
 
@@ -317,7 +320,7 @@ class EpgManagementViewModel(
         val taskId = "epg_refresh_stale"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
-            _toastMessage.tryEmit("Refresh already in queue...")
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
             return
         }
 
@@ -330,7 +333,7 @@ class EpgManagementViewModel(
                 }.filter { !queued.contains("epg_refresh_source_${it.id}") }
 
             if (sourcesToRefresh.isEmpty()) {
-                _toastMessage.tryEmit("No stale sources need refreshing.")
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stale_sources))
                 return@launch
             }
 
@@ -365,14 +368,14 @@ class EpgManagementViewModel(
         val taskId = "epg_refresh_failed"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
-            _toastMessage.tryEmit("Refresh already in queue...")
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
             return
         }
 
         viewModelScope.launch {
             val sources = withContext(Dispatchers.IO) { settingsDb().epgSourceDao().getFailedSources() }
             if (sources.isEmpty()) {
-                _toastMessage.tryEmit("No failed sources found.")
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_failed_sources))
                 return@launch
             }
 
@@ -407,7 +410,7 @@ class EpgManagementViewModel(
         val taskId = "epg_refresh_selected"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
-            _toastMessage.tryEmit("Refresh already in queue...")
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
             return
         }
 
@@ -444,7 +447,7 @@ class EpgManagementViewModel(
         val taskId = "epg_refresh_source_$sourceId"
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
-            _toastMessage.tryEmit("Refresh already in queue...")
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
             return
         }
 
@@ -484,9 +487,9 @@ class EpgManagementViewModel(
                 }
             _hasStrayFiles.value = false
             if (result.filesDeleted > 0) {
-                _toastMessage.tryEmit("Cleaned up ${result.filesDeleted} file(s), freed ${formatBytes(result.bytesFreed)}")
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_cache_cleaned, result.filesDeleted, formatBytes(result.bytesFreed)))
             } else {
-                _toastMessage.tryEmit("No stray files found")
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stray_files))
             }
         }
     }
@@ -505,7 +508,7 @@ class EpgManagementViewModel(
             _staleProgrammeCount.value = 0
             _hasStrayFiles.value = false
             _taskSourceIds.value = emptyMap()
-            _toastMessage.tryEmit("All EPG data cleared")
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_data_cleared))
         }
     }
 
@@ -519,9 +522,9 @@ class EpgManagementViewModel(
             refreshDbStats()
             refreshMaintenanceState()
             if (deleted > 0) {
-                _toastMessage.tryEmit("Purged ${formatCount(deleted)} programme(s)")
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_purged_programmes, deleted))
             } else {
-                _toastMessage.tryEmit("No old programmes to purge")
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_old_programmes))
             }
         }
     }

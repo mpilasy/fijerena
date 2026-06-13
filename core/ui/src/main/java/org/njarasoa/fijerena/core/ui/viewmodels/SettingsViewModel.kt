@@ -24,6 +24,7 @@ data class SettingsUiState(
     val subscriptionIsTrial: Boolean = false,
     val themeId: String = "deep_night",
     val isDevMode: Boolean = false,
+    val language: String = "en",
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val uiScale: Float = AppSettings.DEFAULT_UI_SCALE,
     val exportImportMessage: String? = null,
@@ -41,6 +42,7 @@ class SettingsViewModel(
             SettingsUiState(
                 themeId = appSettings.themeId,
                 isDevMode = appSettings.isDevMode,
+                language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
                 uiScale = appSettings.uiScale,
             ),
@@ -104,6 +106,11 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(isDevMode = enabled)
     }
 
+    fun updateLanguage(language: String) {
+        org.njarasoa.fijerena.core.ui.utils.LocaleManager.updateLocale(context, language)
+        _uiState.value = _uiState.value.copy(language = language)
+    }
+
     fun updateWatchDelay(seconds: Int) {
         appSettings.watchDelaySeconds = seconds
         _uiState.value = _uiState.value.copy(watchDelaySeconds = seconds)
@@ -136,6 +143,7 @@ class SettingsViewModel(
                         _uiState.value.copy(
                             themeId = appSettings.themeId,
                             isDevMode = appSettings.isDevMode,
+                            language = appSettings.language,
                             watchDelaySeconds = appSettings.watchDelaySeconds,
                             uiScale = appSettings.uiScale,
                         )

@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.data.AuthViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModelFactory
@@ -83,14 +85,14 @@ fun LoginScreen(
         ) {
             // Title
             Text(
-                text = "fijerena",
+                text = stringResource(R.string.login_app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
 
             Text(
-                text = "Sign in to continue",
+                text = stringResource(R.string.login_sign_in_title),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 32.dp),
@@ -100,8 +102,8 @@ fun LoginScreen(
             OutlinedTextField(
                 value = serverUrl,
                 onValueChange = { serverUrl = it },
-                label = { Text("Server URL") },
-                placeholder = { Text("http://example.com:8080") },
+                label = { Text(stringResource(R.string.login_server_url_label)) },
+                placeholder = { Text(stringResource(R.string.login_server_url_placeholder)) },
                 singleLine = true,
                 modifier =
                     Modifier
@@ -137,7 +139,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username") },
+                label = { Text(stringResource(R.string.login_username_label)) },
                 singleLine = true,
                 modifier =
                     Modifier
@@ -170,7 +172,7 @@ fun LoginScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.login_password_label)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier =
@@ -219,7 +221,7 @@ fun LoginScreen(
                     enabled = uiState !is LoginViewModel.UiState.Loading,
                 )
                 Text(
-                    text = "Remember Me",
+                    text = stringResource(R.string.login_remember_me),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(start = 8.dp),
@@ -268,7 +270,7 @@ fun LoginScreen(
                     )
                 } else {
                     Text(
-                        text = "Login",
+                        text = stringResource(R.string.login_button),
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
@@ -277,7 +279,7 @@ fun LoginScreen(
             // Success message
             if (uiState is LoginViewModel.UiState.Success) {
                 Text(
-                    text = "Login successful!",
+                    text = stringResource(R.string.login_success_toast),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(top = 16.dp),
@@ -288,7 +290,7 @@ fun LoginScreen(
 
             // Help text
             Text(
-                text = "Contact your IPTV provider for credentials",
+                text = stringResource(R.string.login_footer_text),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 modifier = Modifier.padding(bottom = 16.dp),

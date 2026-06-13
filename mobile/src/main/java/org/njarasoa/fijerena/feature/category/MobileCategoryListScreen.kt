@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -59,6 +60,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -151,7 +153,7 @@ fun MobileCategoryListScreen(
                 navigationIcon = {
                     CinemaIconButton(onClick = onBack,
                         icon = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = CinemaTextPrimary)
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
                         }
                     )
                 },
@@ -168,7 +170,7 @@ fun MobileCategoryListScreen(
                             if (selectedCatId != null && selectedCatName != null && hasEpgData) {
                                 CinemaIconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) },
                                     icon = {
-                                        Icon(Icons.Rounded.DateRange, "TV Guide", tint = CinemaTextPrimary)
+                                        Icon(Icons.Rounded.DateRange, stringResource(R.string.common_tv_guide), tint = CinemaTextPrimary)
                                     }
                                 )
                             }
@@ -176,7 +178,7 @@ fun MobileCategoryListScreen(
                     }
                     CinemaIconButton(onClick = onSearchClick,
                         icon = {
-                            Icon(Icons.Rounded.Search, "Search", tint = CinemaTextPrimary)
+                            Icon(Icons.Rounded.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
                         }
                     )
                 },
@@ -204,9 +206,9 @@ fun MobileCategoryListScreen(
                         if (contentType == ContentType.LIVE_TV) {
                             val epgMessage =
                                 when (epgIndexState) {
-                                    is EpgIndexState.Failed -> "EPG indexing failed"
+                                    is EpgIndexState.Failed -> stringResource(R.string.epg_indexing_failed)
                                     is EpgIndexState.Indexing ->
-                                        "EPG indexing ${(epgIndexState as EpgIndexState.Indexing).progressPercent}%..."
+                                        stringResource(R.string.epg_indexing_progress, (epgIndexState as EpgIndexState.Indexing).progressPercent)
                                     else -> null
                                 }
                             if (epgMessage != null) {
@@ -318,7 +320,7 @@ fun MobileCategoryListScreen(
                             modifier = Modifier.padding(32.dp),
                         ) {
                             Text(
-                                text = "Error",
+                                text = stringResource(R.string.common_error),
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -327,7 +329,7 @@ fun MobileCategoryListScreen(
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             Button(onClick = { viewModel.retry() }) {
-                                Text("Retry")
+                                Text(stringResource(R.string.common_retry))
                             }
                         }
                     }
@@ -480,7 +482,7 @@ private fun StreamsList(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "Select a category",
+                    text = stringResource(R.string.category_select_category),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -495,7 +497,7 @@ private fun StreamsList(
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Loading streams...",
+                        text = stringResource(R.string.category_loading_streams),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -508,7 +510,7 @@ private fun StreamsList(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No streams in this category",
+                    text = stringResource(R.string.category_no_streams),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -523,7 +525,7 @@ private fun StreamsList(
             ) {
                 item(contentType = "header") {
                     Text(
-                        text = "${items.size} streams",
+                        text = stringResource(R.string.category_streams_count, items.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 4.dp, start = 4.dp),
@@ -579,7 +581,7 @@ private fun MobileFavoriteContextMenuDialog(
             is MobileFavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
         }
 
-    val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+    val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -602,7 +604,7 @@ private fun MobileFavoriteContextMenuDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         },
         shape =
@@ -674,7 +676,7 @@ private fun StreamCard(
                 // "What's On Now" for Live TV
                 nowPlayingProgram?.let { program ->
                     Text(
-                        text = "Now: ${program.title}",
+                        text = stringResource(R.string.epg_now_prefix, program.title),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary,
                         maxLines = 1,

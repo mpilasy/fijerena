@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +48,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
@@ -94,10 +96,10 @@ fun MobileEpgGuideScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("TV Guide - $categoryName$epgDevStats") },
+                title = { Text(stringResource(R.string.epg_guide_title_format, categoryName) + epgDevStats) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.player_back))
                     }
                 },
                 actions = {
@@ -109,7 +111,7 @@ fun MobileEpgGuideScreen(
                     ) {
                         Icon(
                             if (isSearchActive) Icons.Rounded.Close else Icons.Rounded.Search,
-                            if (isSearchActive) "Close Search" else "Search",
+                            if (isSearchActive) stringResource(R.string.epg_search_close) else stringResource(R.string.common_search),
                         )
                     }
                     IconButton(
@@ -122,7 +124,7 @@ fun MobileEpgGuideScreen(
                                 strokeWidth = MobileDimensions.strokeWidth,
                             )
                         } else {
-                            Icon(Icons.Rounded.Refresh, "Refresh")
+                            Icon(Icons.Rounded.Refresh, stringResource(R.string.provider_refresh_button))
                         }
                     }
                 },
@@ -145,7 +147,7 @@ fun MobileEpgGuideScreen(
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(CinemaSpacing.md))
                             Text(
-                                text = "Loading TV Guide...",
+                                text = stringResource(R.string.epg_loading_guide),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -176,7 +178,7 @@ fun MobileEpgGuideScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "No EPG data available",
+                                    text = stringResource(R.string.epg_no_data),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -203,7 +205,7 @@ fun MobileEpgGuideScreen(
                             modifier = Modifier.padding(CinemaSpacing.xl),
                         ) {
                             Text(
-                                text = "Error Loading Guide",
+                                text = stringResource(R.string.epg_error_loading),
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -217,7 +219,7 @@ fun MobileEpgGuideScreen(
                             androidx.compose.material3.Button(
                                 onClick = { viewModel.loadEpgData() },
                             ) {
-                                Text("Retry")
+                                Text(stringResource(R.string.common_retry))
                             }
                         }
                     }
@@ -244,7 +246,7 @@ private fun DateNavigationRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onPreviousDay) {
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Previous Day")
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, stringResource(R.string.epg_prev_day))
         }
         Text(
             text = selectedDate,
@@ -254,10 +256,10 @@ private fun DateNavigationRow(
         FilterChip(
             selected = false,
             onClick = onJumpToNow,
-            label = { Text("Now") },
+            label = { Text(stringResource(R.string.epg_jump_to_now)) },
         )
         IconButton(onClick = onNextDay) {
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Next Day")
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.epg_next_day))
         }
     }
 }
@@ -278,7 +280,7 @@ private fun MobileEpgSearchContent(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChanged,
-            label = { Text("Search programs") },
+            label = { Text(stringResource(R.string.epg_search_placeholder)) },
             singleLine = true,
             modifier =
                 Modifier
@@ -292,7 +294,7 @@ private fun MobileEpgSearchContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No programs found",
+                    text = stringResource(R.string.epg_search_no_results),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -374,7 +376,7 @@ private fun MobileSearchResultCard(
             }
             if (result.isCurrent) {
                 Text(
-                    text = "NOW",
+                    text = stringResource(R.string.epg_now_label),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.tertiary,

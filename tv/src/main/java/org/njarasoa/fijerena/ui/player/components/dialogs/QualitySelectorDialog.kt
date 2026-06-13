@@ -34,6 +34,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -100,7 +102,7 @@ fun QualitySelectorDialog(
             ) {
                 // Header
                 Text(
-                    text = "Select Quality",
+                    text = stringResource(R.string.player_select_quality),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -167,19 +169,19 @@ fun QualitySelectorDialog(
                     ) {
                         Column {
                             Text(
-                                text = "Auto (Adaptive)",
+                                text = stringResource(R.string.player_quality_auto),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = if (isAutoSelected) FontWeight.Bold else FontWeight.Normal,
                             )
                             Text(
-                                text = "Automatically adjust quality based on network",
+                                text = stringResource(R.string.player_quality_auto_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CinemaTextTertiary,
                             )
                         }
                         if (isAutoSelected) {
                             Text(
-                                text = "Active",
+                                text = stringResource(R.string.player_active),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -189,7 +191,7 @@ fun QualitySelectorDialog(
 
                 if (videoQualities.isEmpty()) {
                     Text(
-                        text = "No quality options available",
+                        text = stringResource(R.string.player_no_quality),
                         style = MaterialTheme.typography.bodyLarge,
                         color = CinemaTextSecondary,
                         modifier = Modifier.padding(vertical = Spacing.md),
@@ -266,7 +268,7 @@ fun QualitySelectorDialog(
                                     )
                                     if (quality.isSelected) {
                                         Text(
-                                            text = "Active",
+                                            text = stringResource(R.string.player_active),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary,
                                         )
@@ -292,12 +294,12 @@ fun QualitySelectorDialog(
                             .align(CenterHorizontally)
                             .width(TvDimensions.selectionListWidth),
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
 
                 // Hint text
                 Text(
-                    text = "Use D-pad to navigate • OK to select • BACK to cancel",
+                    text = stringResource(R.string.player_nav_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,

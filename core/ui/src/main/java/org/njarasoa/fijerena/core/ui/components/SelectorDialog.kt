@@ -16,8 +16,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 
 /**
@@ -40,7 +42,7 @@ fun SelectorDialog(
     onDismissRequest: () -> Unit,
     items: List<SelectorItem>,
     modifier: Modifier = Modifier,
-    emptyText: String = "No items available",
+    emptyText: String = stringResource(R.string.common_no_items_available),
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -60,7 +62,7 @@ fun SelectorDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismissRequest) { Text("Close") }
+            TextButton(onClick = onDismissRequest) { Text(stringResource(R.string.common_close)) }
         },
         modifier = modifier,
     )
@@ -92,7 +94,7 @@ private fun SelectorItemRow(item: SelectorItem) {
                 )
                 if (item.isSelected) {
                     Text(
-                        text = "Active",
+                        text = stringResource(R.string.player_active),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                     )

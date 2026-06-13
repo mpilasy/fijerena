@@ -14,9 +14,12 @@ import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.navigation.MobileNavHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 
+import org.njarasoa.fijerena.core.ui.utils.LocaleManager
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        LocaleManager.applyLocale(this)
         enableEdgeToEdge()
 
         // Ensure PiP auto-enter is disabled by default

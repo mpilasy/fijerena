@@ -227,6 +227,19 @@ class SearchViewModel(
 
             _uiState.value = UiState.Loading
 
+            val realCategories = prefetchedCategories ?: emptyList()
+            val normalizedQuery = query.trim().lowercase()
+            val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
+
+            val matchingCategories =
+                realCategories.mapNotNull {
+                    if (SearchUtils.matchesQuery(it.category.name, parsedQuery)) {
+                        CategorySearchResult(it.category.id, it.category.name, it.contentType)
+                    } else {
+                        null
+                    }
+                }
+
             // Try server-side search first (e.g., Jellyfin)
             val serverResults = mutableListOf<SearchResult>()
             var serverSearchSuccess = false
@@ -260,9 +273,10 @@ class SearchViewModel(
             if (serverSearchSuccess) {
                 // Return server results
                 val elapsed = System.currentTimeMillis() - startTime
-                val sortedResults = sortResults(serverResults, query.trim().lowercase(), SearchUtils.parseQuery(query))
+                val sortedResults = sortResults(serverResults, normalizedQuery, parsedQuery)
                 _uiState.value =
                     UiState.Success(
+                        categoryResults = matchingCategories,
                         allResults = sortedResults,
                         filteredResults = sortedResults,
                         query = query,
@@ -273,27 +287,16 @@ class SearchViewModel(
             }
 
             // Fall back to client-side search
-            val realCategories = prefetchedCategories ?: emptyList()
             val results = mutableListOf<SearchResult>()
-            val normalizedQuery = query.trim().lowercase()
-            val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
-
-            val matchingCategories =
-                realCategories.mapNotNull {
-                    if (SearchUtils.matchesQuery(it.category.name, parsedQuery)) {
-                        CategorySearchResult(it.category.id, it.category.name, it.contentType)
-                    } else {
-                        null
-                    }
-                }
 
             // Phase 1: Local cache scan
             for (sc in realCategories) {
                 currentCoroutineContext().job.ensureActive()
                 val cached = repo.getItemsIfCached(sc.category.id, sc.contentType)
                 if (!cached.isNullOrEmpty()) {
+                    val categoryMatches = SearchUtils.matchesQuery(sc.category.name, parsedQuery)
                     cached.mapNotNullTo(results) { item ->
-                        if (SearchUtils.matchesQuery(item.name, parsedQuery)) {
+                        if (categoryMatches || SearchUtils.matchesQuery(item.name, parsedQuery)) {
                             SearchResult(
                                 item.id,
                                 item.name,

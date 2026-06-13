@@ -4,34 +4,27 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.AllPalettes
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.ImportConflictDialog
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
+import org.njarasoa.fijerena.feature.settings.components.LanguageSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.PlaybackSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.AboutSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.CloudSyncSettingsCard
@@ -39,10 +32,7 @@ import org.njarasoa.fijerena.feature.settings.components.DeveloperSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.EpgSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ExportImportSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ProviderSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.SettingsSection
 import org.njarasoa.fijerena.feature.settings.components.ThemeSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.formatProgrammeCount
-import org.njarasoa.fijerena.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +78,10 @@ fun MobileSettingsScreen(
     LaunchedEffect(pendingExportUri) {
         val uri = pendingExportUri ?: return@LaunchedEffect
         val success = exportManager.exportToUri(uri)
-        viewModel.setExportImportMessage(if (success) "Settings exported successfully" else "Export failed")
+        viewModel.setExportImportMessage(
+            if (success) context.getString(R.string.settings_export_success)
+            else context.getString(R.string.settings_export_failed)
+        )
         pendingExportUri = null
     }
 
@@ -102,7 +95,7 @@ fun MobileSettingsScreen(
                 pendingImportOptions = SettingsExportManager.ImportOptions()
                 showImportOptionsDialog = true
             }.onFailure { e ->
-                viewModel.setExportImportMessage("Import failed: ${e.message}")
+                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message ?: ""))
             }
         pendingImportUri = null
     }
@@ -117,7 +110,7 @@ fun MobileSettingsScreen(
                 pendingImportOptions = SettingsExportManager.ImportOptions()
                 showImportOptionsDialog = true
             }.onFailure { e ->
-                viewModel.setExportImportMessage("Import failed: ${e.message}")
+                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message ?: ""))
             }
         pendingImportPath = null
     }
@@ -193,7 +186,7 @@ fun MobileSettingsScreen(
             coroutineScope.launch {
                 val success = syncManager.handleSignInResult(result.data)
                 if (!success) {
-                    signInError = "Sign-in failed. Check Google Play Services."
+                    signInError = context.getString(R.string.settings_google_signin_failed)
                 } else {
                     signInError = null
                 }
@@ -208,10 +201,10 @@ fun MobileSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.player_back))
                     }
                 },
             )
@@ -243,6 +236,12 @@ fun MobileSettingsScreen(
                 uiState = uiState,
                 viewModel = viewModel,
                 onThemeChanged = onThemeChanged,
+            )
+
+            // === Language ===
+            LanguageSettingsCard(
+                uiState = uiState,
+                viewModel = viewModel,
             )
 
             // === EPG Data ===

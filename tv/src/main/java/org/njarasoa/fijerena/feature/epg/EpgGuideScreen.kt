@@ -19,11 +19,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -114,7 +116,7 @@ private fun LoadingScreen() {
             )
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
-                text = "Loading TV Guide...",
+                text = stringResource(R.string.epg_loading_guide),
                 style =
                     MaterialTheme.typography.titleLarge.copy(
                         fontSize =
@@ -141,7 +143,7 @@ private fun ErrorScreen(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "Error Loading Guide",
+                text = stringResource(R.string.epg_error_loading),
                 style =
                     MaterialTheme.typography.displayMedium.copy(
                         fontSize =
@@ -165,12 +167,12 @@ private fun ErrorScreen(
             Row {
                 CinemaSecondaryButton(
                     onClick = onBack,
-                    text = "Back",
+                    text = stringResource(R.string.common_back),
                 )
                 Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 CinemaPrimaryButton(
                     onClick = onRetry,
-                    text = "Retry",
+                    text = stringResource(R.string.common_retry),
                 )
             }
         }
