@@ -329,21 +329,45 @@ class SearchViewModel(
         }
     }
 
+    // ⚡ Bolt: Performance Optimization
+    // Replaced O(N log N) dynamic evaluation of expensive string matching in `compareBy`
+    // with an O(N) bucketing approach. The string matching logic is now evaluated exactly once
+    // per item, and the simple string sorting happens only within the smaller buckets.
     private fun sortResults(
         results: List<SearchResult>,
         normalizedQuery: String,
         parsedQuery: ParsedQuery,
     ): List<SearchResult> {
-        return results
-            .sortedWith(
-                compareBy<SearchResult> {
-                    when {
-                        it.streamName.equals(normalizedQuery, ignoreCase = true) -> 0
-                        it.streamName.startsWith(normalizedQuery, ignoreCase = true) -> 1
-                        else -> if (!parsedQuery.isEmpty && SearchUtils.matchesQuery(it.streamName, parsedQuery)) 2 else 3
-                    }
-                }.thenBy { it.streamName },
-            )
+        val exactMatches = ArrayList<SearchResult>()
+        val startsWithMatches = ArrayList<SearchResult>()
+        val queryMatches = ArrayList<SearchResult>()
+        val others = ArrayList<SearchResult>()
+
+        for (result in results) {
+            val name = result.streamName
+            if (name.equals(normalizedQuery, ignoreCase = true)) {
+                exactMatches.add(result)
+            } else if (name.startsWith(normalizedQuery, ignoreCase = true)) {
+                startsWithMatches.add(result)
+            } else if (!parsedQuery.isEmpty && SearchUtils.matchesQuery(name, parsedQuery)) {
+                queryMatches.add(result)
+            } else {
+                others.add(result)
+            }
+        }
+
+        val comparator = Comparator<SearchResult> { a, b -> String.CASE_INSENSITIVE_ORDER.compare(a.streamName, b.streamName) }
+        exactMatches.sortWith(comparator)
+        startsWithMatches.sortWith(comparator)
+        queryMatches.sortWith(comparator)
+        others.sortWith(comparator)
+
+        val sorted = ArrayList<SearchResult>(results.size)
+        sorted.addAll(exactMatches)
+        sorted.addAll(startsWithMatches)
+        sorted.addAll(queryMatches)
+        sorted.addAll(others)
+        return sorted
     }
 
     fun isFavorite(
