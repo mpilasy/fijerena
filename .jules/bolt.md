@@ -10,3 +10,7 @@
 ## 2026-05-28 - [Memoize expensive EPG filtering in Compose]
 **Learning:** The `MobileEpgBrowserScreen` and `EpgBrowserScreen` were executing a chained functional pipeline (`mapNotNull`, `filter`, and `.copy()`) over large `dateGroups` datasets directly inside the `@Composable` function body. Since `matchedOnly` is a derived state or parameter, this meant the entire heavy computation was blocking the UI thread on *every* recomposition (e.g., when scrolling or when minor UI state changes).
 **Action:** Wrapped the entire `displayDateGroups` computation in a `remember(results.dateGroups, matchedOnly) { ... }` block to memoize the result, ensuring the expensive O(N) nested filtering is only evaluated when the underlying search results or filter toggle state actually changes.
+
+## 2024-05-18 - Avoid dynamic evaluation in `sortedWith(compareBy { ... })` for expensive operations
+**Learning:** In Kotlin, using `sortedWith(compareBy { ... })` dynamically evaluates the lambda expression for every comparison step (O(N log N)). When the lambda contains expensive operations, such as string matching or `ignoreCase` validation, the redundant evaluations cause substantial CPU overhead.
+**Action:** For categorization-based sorting, implement an O(N) bucketing approach instead. Iterate through the collection exactly once to bucket items, then sort the individual buckets. This ensures expensive checks are evaluated only once per item.
