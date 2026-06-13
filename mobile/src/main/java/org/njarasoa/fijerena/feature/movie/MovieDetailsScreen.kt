@@ -12,12 +12,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -77,7 +79,7 @@ fun MobileMovieDetailsScreen(
                 isLoading = false
             },
             onFailure = { e ->
-                error = e.message ?: "Failed to load movie info"
+                error = e.message ?: context.getString(R.string.movie_error_loading)
                 isLoading = false
             },
         )
@@ -96,11 +98,11 @@ fun MobileMovieDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Movie Details") },
+                title = { Text(stringResource(R.string.movie_details_title)) },
                 navigationIcon = {
                     CinemaIconButton(onClick = onBack,
                         icon = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = CinemaTextPrimary)
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.common_back), tint = CinemaTextPrimary)
                         }
                     )
                 },
@@ -118,7 +120,7 @@ fun MobileMovieDetailsScreen(
                         icon = {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                                contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                                contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
                                 tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                             )
                         }
@@ -139,7 +141,7 @@ fun MobileMovieDetailsScreen(
                 }
                 error != null -> {
                     ErrorScreen(
-                        message = error ?: "Unknown error",
+                        message = error ?: stringResource(R.string.common_error),
                         onBack = onBack,
                     )
                 }
@@ -237,7 +239,7 @@ private fun MovieDetailsContent(
                     }
                 if (endsAtText != null) {
                     Text(
-                        text = "Ends at $endsAtText",
+                        text = stringResource(R.string.movie_ends_at_format, endsAtText),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                         maxLines = 1,
@@ -258,7 +260,7 @@ private fun MovieDetailsContent(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("▶ Resume from $resumeTimeText")
+                Text(stringResource(R.string.movie_resume_from_format, resumeTimeText))
             }
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             OutlinedButton(
@@ -267,7 +269,7 @@ private fun MovieDetailsContent(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Start from Beginning")
+                Text(stringResource(R.string.movie_start_beginning))
             }
         } else {
             Button(
@@ -276,7 +278,7 @@ private fun MovieDetailsContent(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("▶ Play Movie")
+                Text(stringResource(R.string.movie_play_action))
             }
         }
 
@@ -294,7 +296,7 @@ private fun MovieDetailsContent(
         // Release date
         movieDetail.metadata.releaseDate?.let { releaseDate ->
             Text(
-                text = "Released: $releaseDate",
+                text = stringResource(R.string.movie_released_format, releaseDate),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
             )
@@ -304,7 +306,7 @@ private fun MovieDetailsContent(
         // Cast
         movieDetail.metadata.cast?.let { cast ->
             Text(
-                text = "Cast: $cast",
+                text = stringResource(R.string.movie_cast_format, cast),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
                 maxLines = 3,
@@ -316,7 +318,7 @@ private fun MovieDetailsContent(
         // Director
         movieDetail.metadata.director?.let { director ->
             Text(
-                text = "Director: $director",
+                text = stringResource(R.string.movie_director_format, director),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
             )
@@ -351,7 +353,7 @@ private fun MovieDetailsContent(
                         parts.joinToString(" · ")
                     }
                 if (videoText.isNotBlank()) {
-                    MobileTechInfoRow(label = "Video:", value = videoText)
+                    MobileTechInfoRow(label = stringResource(R.string.tech_video_label), value = videoText)
                 }
             }
             if (movieDetail.audioTracks.isNotEmpty()) {
@@ -363,13 +365,13 @@ private fun MovieDetailsContent(
                                 audio.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
                                 audio.codecName?.let { codec -> parts.add(codec.uppercase()) }
                                 audio.channels?.let { ch -> parts.add(channelLabel(ch)) }
-                                if (audio.isDefault) parts.add("Default")
+                                if (audio.isDefault) parts.add(stringResource(R.string.tech_default_label))
                                 parts.joinToString(" · ")
                             }
                         text.ifBlank { null }
                     }
                 if (audioTexts.isNotEmpty()) {
-                    MobileTechInfoRow(label = "Audio:", value = audioTexts.joinToString("\n"))
+                    MobileTechInfoRow(label = stringResource(R.string.tech_audio_label), value = audioTexts.joinToString("\n"))
                 }
             }
             if (movieDetail.subtitleTracks.isNotEmpty()) {
@@ -380,17 +382,17 @@ private fun MovieDetailsContent(
                                 val parts = mutableListOf<String>()
                                 sub.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
                                 sub.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                                if (sub.isDefault) parts.add("Default")
+                                if (sub.isDefault) parts.add(stringResource(R.string.tech_default_label))
                                 parts.joinToString(" · ")
                             }
                         text.ifBlank { null }
                     }
                 if (subTexts.isNotEmpty()) {
-                    MobileTechInfoRow(label = "Subtitle:", value = subTexts.joinToString("\n"))
+                    MobileTechInfoRow(label = stringResource(R.string.tech_subtitle_label), value = subTexts.joinToString("\n"))
                 }
             }
             movieDetail.extension?.let { ext ->
-                MobileTechInfoRow(label = "Container:", value = ext.uppercase())
+                MobileTechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
             }
         }
     }

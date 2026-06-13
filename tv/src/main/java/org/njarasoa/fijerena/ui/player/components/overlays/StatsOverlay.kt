@@ -35,7 +35,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -59,6 +62,7 @@ fun StatsOverlay(
     onHide: () -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
+    val context = LocalContext.current
 
     // Handle Back button to close overlay
     BackHandler(enabled = true) {
@@ -149,9 +153,9 @@ fun StatsOverlay(
                                     val mFps = serviceMeasuredFps
                                     videoFrameRate =
                                         if (format.frameRate > 0) {
-                                            "${format.frameRate.toInt()} fps"
+                                            context.getString(R.string.player_stats_fps_unit, format.frameRate.toInt())
                                         } else if (mFps > 0) {
-                                            String.format("%.1f fps (measured)", mFps)
+                                            context.getString(R.string.player_stats_measured_fps, mFps)
                                         } else {
                                             "N/A"
                                         }
@@ -166,11 +170,11 @@ fun StatsOverlay(
                                     audioChannels =
                                         if (format.channelCount > 0) {
                                             when (format.channelCount) {
-                                                1 -> "Mono"
-                                                2 -> "Stereo"
-                                                6 -> "5.1"
-                                                8 -> "7.1"
-                                                else -> "${format.channelCount}ch"
+                                                1 -> context.getString(R.string.audio_channel_mono)
+                                                2 -> context.getString(R.string.audio_channel_stereo)
+                                                6 -> context.getString(R.string.audio_channel_5_1)
+                                                8 -> context.getString(R.string.audio_channel_7_1)
+                                                else -> context.getString(R.string.audio_channel_custom, format.channelCount)
                                             }
                                         } else {
                                             "N/A"
@@ -263,7 +267,7 @@ fun StatsOverlay(
                 ) {
                     // Header
                     Text(
-                        text = "📊 Stats for Nerds",
+                        text = "📊 " + stringResource(R.string.player_stats_title),
                         style =
                             MaterialTheme.typography.titleMedium.copy(
                                 fontSize = 14.sp,
@@ -298,26 +302,26 @@ fun StatsOverlay(
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             // Video stats
-                            SectionHeader("VIDEO")
-                            CompactStatRow("Codec", videoCodec)
-                            CompactStatRow("Res", videoResolution)
-                            CompactStatRow("FPS", videoFrameRate)
-                            CompactStatRow("Bitrate", videoBitrate)
+                            SectionHeader(stringResource(R.string.player_stats_video))
+                            CompactStatRow(stringResource(R.string.player_stats_codec), videoCodec)
+                            CompactStatRow(stringResource(R.string.player_stats_res), videoResolution)
+                            CompactStatRow(stringResource(R.string.player_stats_fps), videoFrameRate)
+                            CompactStatRow(stringResource(R.string.player_stats_bitrate), videoBitrate)
 
                             // Audio stats
-                            SectionHeader("AUDIO")
-                            CompactStatRow("Codec", audioCodec)
-                            CompactStatRow("Rate", audioSampleRate)
-                            CompactStatRow("Ch", audioChannels)
-                            CompactStatRow("Bitrate", audioBitrate)
+                            SectionHeader(stringResource(R.string.player_stats_audio))
+                            CompactStatRow(stringResource(R.string.player_stats_codec), audioCodec)
+                            CompactStatRow(stringResource(R.string.player_stats_rate), audioSampleRate)
+                            CompactStatRow(stringResource(R.string.player_stats_ch), audioChannels)
+                            CompactStatRow(stringResource(R.string.player_stats_bitrate), audioBitrate)
 
                             // Network stats
-                            SectionHeader("NETWORK")
-                            CompactStatRow("Speed", networkSpeed)
+                            SectionHeader(stringResource(R.string.player_stats_network))
+                            CompactStatRow(stringResource(R.string.player_stats_speed), networkSpeed)
                             val bwEstimate = serviceBandwidth
-                            CompactStatRow("Bandwidth", if (bwEstimate > 0) formatBitrate(bwEstimate.toInt()) else "N/A")
-                            CompactStatRow("Buffer", "${bufferHealth}s")
-                            CompactStatRow("Buffered", formatTime(bufferedPosition))
+                            CompactStatRow(stringResource(R.string.player_stats_bandwidth), if (bwEstimate > 0) formatBitrate(bwEstimate.toInt()) else "N/A")
+                            CompactStatRow(stringResource(R.string.player_stats_buffer), stringResource(R.string.player_stats_seconds_unit, bufferHealth))
+                            CompactStatRow(stringResource(R.string.player_stats_buffered), formatTime(bufferedPosition))
                             val rebuffers = serviceRebufferCount
                             val rebufferTimeMs = serviceRebufferTimeMs
                             val rebufferColor =
@@ -326,17 +330,17 @@ fun StatsOverlay(
                                     rebuffers <= 3 -> CinemaWarning
                                     else -> CinemaError
                                 }
-                            CompactStatRowColored("Rebuffers", "$rebuffers", rebufferColor)
+                            CompactStatRowColored(stringResource(R.string.player_stats_rebuffers), "$rebuffers", rebufferColor)
                             if (rebufferTimeMs > 0) {
                                 CompactStatRowColored(
-                                    "Rebuf Time",
-                                    "${rebufferTimeMs / 1000}.${(rebufferTimeMs % 1000) / 100}s",
+                                    stringResource(R.string.player_stats_rebuf_time),
+                                    stringResource(R.string.player_stats_rebuf_time_format, rebufferTimeMs / 1000, (rebufferTimeMs % 1000) / 100),
                                     rebufferColor,
                                 )
                             }
                             val qSwitches = serviceQualitySwitches
                             if (qSwitches > 0) {
-                                CompactStatRow("ABR Switches", "$qSwitches")
+                                CompactStatRow(stringResource(R.string.player_stats_abr_switches), "$qSwitches")
                             }
                         }
 
@@ -346,12 +350,15 @@ fun StatsOverlay(
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             // Playback stats
-                            SectionHeader("PLAYBACK")
-                            CompactStatRow("Pos", formatTime(position))
-                            CompactStatRow("Dur", if (duration > 0) formatTime(duration) else "Live")
+                            SectionHeader(stringResource(R.string.player_stats_playback))
+                            CompactStatRow(stringResource(R.string.player_stats_pos), formatTime(position))
+                            CompactStatRow(
+                                stringResource(R.string.player_stats_dur),
+                                if (duration > 0) formatTime(duration) else stringResource(R.string.player_live)
+                            )
 
                             // Performance metrics with color coding
-                            SectionHeader("PERFORMANCE")
+                            SectionHeader(stringResource(R.string.player_stats_performance))
                             val totalFrames = serviceTotalFrames
                             val dropRate =
                                 if (totalFrames > 0) {
@@ -368,32 +375,35 @@ fun StatsOverlay(
                                 }
 
                             CompactStatRowColored(
-                                "Dropped",
-                                "$droppedFrames / $totalFrames",
+                                stringResource(R.string.player_stats_dropped),
+                                stringResource(R.string.player_stats_dropped_format, droppedFrames, totalFrames),
                                 dropColor,
                             )
                             if (totalFrames > 0) {
                                 CompactStatRowColored(
-                                    "Drop Rate",
+                                    stringResource(R.string.player_stats_drop_rate),
                                     String.format("%.2f%%", dropRate),
                                     dropColor,
                                 )
                             }
 
                             // Stream info
-                            SectionHeader("STREAM")
-                            CompactStatRow("Type", if (metadata.isLive) "Live" else "VOD")
-                            CompactStatRow("Retries", "$serviceRetryCount")
-                            CompactStatRow("Uptime", streamElapsed)
-                            CompactStatRow("URL", metadata.streamUrl.substringAfterLast("/").take(20))
-
-                            SectionHeader("DEVICE")
+                            SectionHeader(stringResource(R.string.player_stats_stream))
                             CompactStatRow(
-                                "Model",
+                                stringResource(R.string.player_stats_type),
+                                if (metadata.isLive) stringResource(R.string.player_live) else "VOD"
+                            )
+                            CompactStatRow(stringResource(R.string.player_stats_retries), "$serviceRetryCount")
+                            CompactStatRow(stringResource(R.string.player_stats_uptime), streamElapsed)
+                            CompactStatRow(stringResource(R.string.player_stats_url), metadata.streamUrl.substringAfterLast("/").take(20))
+
+                            SectionHeader(stringResource(R.string.player_stats_device))
+                            CompactStatRow(
+                                stringResource(R.string.player_stats_model),
                                 android.os.Build.MODEL
                                     .take(15),
                             )
-                            CompactStatRow("API", "${android.os.Build.VERSION.SDK_INT}")
+                            CompactStatRow(stringResource(R.string.player_stats_api), "${android.os.Build.VERSION.SDK_INT}")
                         }
                     }
 
@@ -401,7 +411,7 @@ fun StatsOverlay(
 
                     Column {
                         Text(
-                            text = "Double-tap OK to hide • BACK to exit stats",
+                            text = stringResource(R.string.player_stats_hint),
                             style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
                             fontWeight = FontWeight.Medium,

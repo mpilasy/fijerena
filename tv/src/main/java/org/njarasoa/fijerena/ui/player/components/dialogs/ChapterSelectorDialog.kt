@@ -34,6 +34,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -108,7 +110,7 @@ fun ChapterSelectorDialog(
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 Text(
-                    text = "Chapters",
+                    text = stringResource(R.string.player_chapters),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -116,7 +118,7 @@ fun ChapterSelectorDialog(
 
                 if (chapters.isEmpty()) {
                     Text(
-                        text = "No chapters available",
+                        text = stringResource(R.string.player_no_chapters),
                         style = MaterialTheme.typography.bodyLarge,
                         color = CinemaTextSecondary,
                         modifier = Modifier.padding(vertical = Spacing.md),
@@ -125,7 +127,7 @@ fun ChapterSelectorDialog(
                         onClick = onDismiss,
                         modifier = Modifier.align(CenterHorizontally),
                     ) {
-                        Text("Close")
+                        Text(stringResource(R.string.common_close))
                     }
                 } else {
                     chapters.forEachIndexed { index, chapter ->
@@ -203,7 +205,7 @@ fun ChapterSelectorDialog(
                                 }
                                 if (isCurrent) {
                                     Text(
-                                        text = "Now",
+                                        text = stringResource(R.string.common_now),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
@@ -221,12 +223,12 @@ fun ChapterSelectorDialog(
                                 .align(CenterHorizontally)
                                 .width(TvDimensions.selectionListWidth),
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.common_cancel))
                     }
                 }
 
                 Text(
-                    text = "Use D-pad to navigate • OK to select • BACK to cancel",
+                    text = stringResource(R.string.player_nav_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,

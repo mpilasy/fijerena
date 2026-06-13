@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -26,8 +28,8 @@ fun RemoteM3uForm(
             onUrlChange(it)
             onErrorChange(null)
         },
-        label = "M3U Playlist URL",
-        placeholder = "https://example.com/playlist.m3u",
+        label = stringResource(R.string.provider_m3u_url_label),
+        placeholder = stringResource(R.string.provider_m3u_url_placeholder),
         keyboardType = KeyboardType.Uri,
     )
 }

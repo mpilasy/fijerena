@@ -33,6 +33,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +43,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -99,7 +101,7 @@ fun SubtitleSelectorDialog(
             ) {
                 // Header
                 Text(
-                    text = "Select Subtitles",
+                    text = stringResource(R.string.player_select_subtitles),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -182,13 +184,13 @@ fun SubtitleSelectorDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Off",
+                            text = stringResource(R.string.player_subtitles_off),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = if (isOffSelected) FontWeight.Bold else FontWeight.Normal,
                         )
                         if (isOffSelected) {
                             Text(
-                                text = "Active",
+                                text = stringResource(R.string.player_active),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -198,7 +200,7 @@ fun SubtitleSelectorDialog(
 
                 if (subtitleTracks.isEmpty()) {
                     Text(
-                        text = "No subtitle tracks available",
+                        text = stringResource(R.string.player_no_subtitles),
                         style = MaterialTheme.typography.bodyLarge,
                         color = CinemaTextSecondary,
                         modifier = Modifier.padding(vertical = Spacing.md),
@@ -244,7 +246,7 @@ fun SubtitleSelectorDialog(
                                     )
                                     if (track.isSelected) {
                                         Text(
-                                            text = "Active",
+                                            text = stringResource(R.string.player_active),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary,
                                         )
@@ -270,12 +272,12 @@ fun SubtitleSelectorDialog(
                             .align(CenterHorizontally)
                             .width(TvDimensions.selectionListWidth),
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
 
                 // Hint text
                 Text(
-                    text = "Use D-pad to navigate • OK to select • BACK to cancel",
+                    text = stringResource(R.string.player_nav_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,

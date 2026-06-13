@@ -17,12 +17,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
@@ -59,7 +61,7 @@ fun ControlHintsOverlay(
             ) {
                 // Header
                 Text(
-                    text = "🎮 Player Controls",
+                    text = stringResource(R.string.player_controls_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -68,15 +70,15 @@ fun ControlHintsOverlay(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    ControlHint("OK Button", "Show/hide controls")
-                    ControlHint("Double-tap OK", "Toggle stats overlay")
-                    ControlHint("BACK Button", "Exit player")
-                    ControlHint("D-pad Up/Down", "Change channel (Live TV)")
-                    ControlHint("Pause/Resume", "Control playback")
-                    ControlHint("Audio Button", "Select audio track")
-                    ControlHint("Subtitle Button", "Enable/disable subtitles")
-                    ControlHint("Quality Button", "Select video quality")
-                    ControlHint("Favorite Button", "Add/remove from favorites")
+                    ControlHint(stringResource(R.string.player_hint_ok_button), stringResource(R.string.player_hint_ok_description))
+                    ControlHint(stringResource(R.string.player_hint_double_ok_button), stringResource(R.string.player_hint_double_ok_description))
+                    ControlHint(stringResource(R.string.player_hint_back_button), stringResource(R.string.player_hint_back_description))
+                    ControlHint(stringResource(R.string.player_hint_dpad_button), stringResource(R.string.player_hint_dpad_description))
+                    ControlHint(stringResource(R.string.player_hint_pause_resume_button), stringResource(R.string.player_hint_pause_resume_description))
+                    ControlHint(stringResource(R.string.player_hint_audio_button), stringResource(R.string.player_hint_audio_description))
+                    ControlHint(stringResource(R.string.player_hint_subtitle_button), stringResource(R.string.player_hint_subtitle_description))
+                    ControlHint(stringResource(R.string.player_hint_quality_button), stringResource(R.string.player_hint_quality_description))
+                    ControlHint(stringResource(R.string.player_hint_favorite_button), stringResource(R.string.player_hint_favorite_description))
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -91,7 +93,7 @@ fun ControlHintsOverlay(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text("Got it!")
+                        Text(stringResource(R.string.common_got_it))
                     }
                     Button(
                         onClick = onDontShowAgain,
@@ -101,13 +103,13 @@ fun ControlHintsOverlay(
                                 containerColor = CinemaSurfaceVariant,
                             ),
                     ) {
-                        Text("Don't show again")
+                        Text(stringResource(R.string.common_dont_show_again))
                     }
                 }
 
                 // Auto-dismiss info
                 Text(
-                    text = "This message will auto-dismiss in 7 seconds",
+                    text = stringResource(R.string.player_hint_dismiss_format, 7),
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textDisabled),
                     textAlign = TextAlign.Center,

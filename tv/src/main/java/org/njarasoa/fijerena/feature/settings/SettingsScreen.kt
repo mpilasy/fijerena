@@ -4,23 +4,8 @@ package org.njarasoa.fijerena.feature.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -30,26 +15,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
+import androidx.tv.material3.*
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
+import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.feature.settings.components.AboutSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.CloudSyncSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.ConflictResolutionDialog
-import org.njarasoa.fijerena.feature.settings.components.DeveloperSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.EpgSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.ExportImportSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
-import org.njarasoa.fijerena.feature.settings.components.PlaybackSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.ProviderSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.ThemeSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.UiScaleSettingsCard
+import org.njarasoa.fijerena.feature.settings.components.*
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -247,6 +221,18 @@ fun SettingsScreen(
                         onThemeSelected = { newThemeId ->
                             viewModel.updateTheme(newThemeId)
                             onThemeChanged(newThemeId)
+                        },
+                        scale = scale,
+                    )
+                }
+
+                // Language Selection
+                item {
+                    LanguageSettingsCard(
+                        selectedLanguage = uiState.language,
+                        onLanguageSelected = { newLang ->
+                            viewModel.updateLanguage(newLang)
+                            (context as? android.app.Activity)?.recreate()
                         },
                         scale = scale,
                     )

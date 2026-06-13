@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -35,6 +36,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModel
@@ -117,7 +119,7 @@ fun LoginScreenTv(
         ) {
             // Title
             Text(
-                text = "Xtream Login",
+                text = stringResource(R.string.login_xtream_title),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 48.dp),
@@ -127,8 +129,8 @@ fun LoginScreenTv(
             OutlinedTextField(
                 value = serverUrl,
                 onValueChange = { serverUrl = it },
-                label = { Text("Server URL") },
-                placeholder = { Text("http://example.com:8080") },
+                label = { Text(stringResource(R.string.login_server_url_label)) },
+                placeholder = { Text(stringResource(R.string.login_server_url_placeholder)) },
                 singleLine = true,
                 modifier =
                     Modifier
@@ -166,7 +168,7 @@ fun LoginScreenTv(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username") },
+                label = { Text(stringResource(R.string.login_username_label)) },
                 singleLine = true,
                 modifier =
                     Modifier
@@ -202,7 +204,7 @@ fun LoginScreenTv(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.login_password_label)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier =
@@ -279,7 +281,7 @@ fun LoginScreenTv(
                     )
                 } else {
                     Text(
-                        text = "Login",
+                        text = stringResource(R.string.login_button),
                         style = MaterialTheme.typography.titleLarge,
                     )
                 }
@@ -288,7 +290,7 @@ fun LoginScreenTv(
             // Success message
             if (uiState is LoginViewModel.UiState.Success) {
                 Text(
-                    text = "Login successful!",
+                    text = stringResource(R.string.login_success_toast),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(top = 24.dp),

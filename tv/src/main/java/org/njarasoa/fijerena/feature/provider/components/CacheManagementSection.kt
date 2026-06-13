@@ -11,9 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -59,13 +61,13 @@ fun CacheManagementSection(
     Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
     Text(
-        text = "Cache Management",
+        text = stringResource(R.string.provider_data_management_title),
         style = styles.titleMedium,
         color = CinemaAccent,
     )
     Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
     Text(
-        text = "Clear cached data to free up storage space",
+        text = stringResource(R.string.provider_data_management_desc),
         style = styles.bodySmall,
         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
     )
@@ -76,7 +78,11 @@ fun CacheManagementSection(
         if (isXtream) {
             CinemaPrimaryButton(
                 onClick = onSyncClick,
-                text = if (syncState is SyncState.Syncing) "Syncing..." else "Sync Data Now",
+                text = if (syncState is SyncState.Syncing) {
+                    stringResource(R.string.provider_syncing)
+                } else {
+                    stringResource(R.string.provider_sync_now_button)
+                },
                 enabled = syncState !is SyncState.Syncing,
             )
 
@@ -87,7 +93,7 @@ fun CacheManagementSection(
                 val time = NumberUtils.formatTimestamp(context, lastSyncedAtMs)
                 val duration = NumberUtils.formatDuration(lastSyncDurationMs)
                 Text(
-                    text = "Last Sync: Finished at $time • Took $duration",
+                    text = stringResource(R.string.provider_last_sync_status, time, duration),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 )
@@ -107,7 +113,7 @@ fun CacheManagementSection(
             if (syncState is SyncState.Success) {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 Text(
-                    text = "Sync completed successfully",
+                    text = stringResource(R.string.provider_sync_success),
                     style = styles.bodySmall,
                     color = CinemaAccent,
                 )
@@ -125,19 +131,19 @@ fun CacheManagementSection(
         ) {
             Column {
                 Text(
-                    text = "Total Database Items",
+                    text = stringResource(R.string.provider_total_db_items_label),
                     style = styles.bodyLarge,
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = "${NumberUtils.formatCount(totalItems)} Items",
+                    text = stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
                     style = styles.headlineSmall,
                     color = CinemaAccent,
                 )
             }
             CinemaDangerButton(
                 onClick = onClearAllClick,
-                text = "Clear All",
+                text = stringResource(R.string.provider_clear_all_button),
             )
         }
 
@@ -153,19 +159,23 @@ fun CacheManagementSection(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Live TV",
+                    text = stringResource(R.string.provider_live_tv_label),
                     style = styles.titleSmall,
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = "${NumberUtils.formatCount(stats.liveTv.categoryCount)} Categories · ${NumberUtils.formatCount(stats.liveTv.itemsCount)} Channels",
+                    text = stringResource(
+                        R.string.provider_live_tv_stats,
+                        NumberUtils.formatCount(stats.liveTv.categoryCount),
+                        NumberUtils.formatCount(stats.liveTv.itemsCount),
+                    ),
                     style = styles.bodyMedium,
                     color = CinemaAccent,
                 )
             }
             CinemaSecondaryButton(
                 onClick = onClearLiveTvClick,
-                text = "Clear",
+                text = stringResource(R.string.provider_clear_button),
                 enabled = stats.liveTv.itemsCount > 0,
             )
         }
@@ -180,19 +190,23 @@ fun CacheManagementSection(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Movies",
+                    text = stringResource(R.string.provider_movies_label),
                     style = styles.titleSmall,
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = "${NumberUtils.formatCount(stats.movies.categoryCount)} Categories · ${NumberUtils.formatCount(stats.movies.itemsCount)} Movies",
+                    text = stringResource(
+                        R.string.provider_movies_stats,
+                        NumberUtils.formatCount(stats.movies.categoryCount),
+                        NumberUtils.formatCount(stats.movies.itemsCount),
+                    ),
                     style = styles.bodyMedium,
                     color = CinemaAccent,
                 )
             }
             CinemaSecondaryButton(
                 onClick = onClearMoviesClick,
-                text = "Clear",
+                text = stringResource(R.string.provider_clear_button),
                 enabled = stats.movies.itemsCount > 0,
             )
         }
@@ -207,19 +221,24 @@ fun CacheManagementSection(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "TV Shows",
+                    text = stringResource(R.string.provider_tv_shows_label),
                     style = styles.titleSmall,
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = "${NumberUtils.formatCount(stats.tvShows.categoryCount)} Categories · ${NumberUtils.formatCount(stats.tvShows.itemsCount)} Series · ${NumberUtils.formatCount(stats.tvShows.episodesCount)} Episodes",
+                    text = stringResource(
+                        R.string.provider_tv_shows_stats,
+                        NumberUtils.formatCount(stats.tvShows.categoryCount),
+                        NumberUtils.formatCount(stats.tvShows.itemsCount),
+                        NumberUtils.formatCount(stats.tvShows.episodesCount),
+                    ),
                     style = styles.bodyMedium,
                     color = CinemaAccent,
                 )
             }
             CinemaSecondaryButton(
                 onClick = onClearTvShowsClick,
-                text = "Clear",
+                text = stringResource(R.string.provider_clear_button),
                 enabled = stats.tvShows.itemsCount > 0,
             )
         }
@@ -228,7 +247,7 @@ fun CacheManagementSection(
 
         // EPG & Other
         Text(
-            text = "EPG Data: ${NumberUtils.formatCount(stats.epgCount)} channels",
+            text = stringResource(R.string.provider_epg_stats, NumberUtils.formatCount(stats.epgCount)),
             style = styles.bodySmall,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )

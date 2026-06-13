@@ -37,6 +37,7 @@ class AppSettings(
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
+        private const val KEY_LANGUAGE = "app_language"
         private const val MAX_SEARCH_HISTORY = 20
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_WATCH_DELAY_SECONDS = 10
@@ -127,6 +128,15 @@ class AppSettings(
     var themeId: String
         get() = prefs.getString(KEY_THEME_ID, "deep_night") ?: "deep_night"
         set(value) = prefs.edit { putString(KEY_THEME_ID, value) }
+
+    /**
+     * Get or set application language (ISO 639-1 code).
+     * Supported: "en", "mg"
+     * Default: "en"
+     */
+    var language: String
+        get() = prefs.getString(KEY_LANGUAGE, "en") ?: "en"
+        set(value) = prefs.edit { putString(KEY_LANGUAGE, value) }
 
     /**
      * Get or set the external XMLTV EPG URL (global setting, applies to all providers).

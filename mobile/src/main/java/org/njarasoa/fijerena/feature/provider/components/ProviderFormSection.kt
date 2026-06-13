@@ -17,10 +17,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import org.njarasoa.fijerena.core.player.domain.ProviderType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 
@@ -49,6 +51,7 @@ fun ColumnScope.ProviderFormSection(
     onQcSecretChange: (String) -> Unit,
     onQcErrorChange: (String?) -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     // Type-specific fields
     when (selectedType) {
         ProviderType.XTREAM -> {
@@ -69,8 +72,8 @@ fun ColumnScope.ProviderFormSection(
                     }
                     onErrorChange(null)
                 },
-                label = { Text("Server URL") },
-                placeholder = { Text("http://provider.example.com") },
+                label = { Text(stringResource(R.string.provider_url_label)) },
+                placeholder = { Text(stringResource(R.string.provider_url_placeholder_xtream)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
@@ -84,7 +87,7 @@ fun ColumnScope.ProviderFormSection(
                     onUsernameChange(it)
                     onErrorChange(null)
                 },
-                label = { Text("Username") },
+                label = { Text(stringResource(R.string.provider_username_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -97,12 +100,12 @@ fun ColumnScope.ProviderFormSection(
                     onPasswordChange(it)
                     onErrorChange(null)
                 },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.provider_password_label)) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     val image = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility
-                    val description = if (passwordVisible) "Hide password" else "Show password"
+                    val description = if (passwordVisible) stringResource(R.string.provider_hide_password) else stringResource(R.string.provider_show_password)
                     IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
                         Icon(imageVector = image, contentDescription = description)
                     }
@@ -128,8 +131,8 @@ fun ColumnScope.ProviderFormSection(
                     }
                     onErrorChange(null)
                 },
-                label = { Text("Server URL") },
-                placeholder = { Text("http://192.168.1.100:8096") },
+                label = { Text(stringResource(R.string.provider_url_label)) },
+                placeholder = { Text(stringResource(R.string.provider_url_placeholder_jellyfin)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
@@ -143,7 +146,7 @@ fun ColumnScope.ProviderFormSection(
                     onUsernameChange(it)
                     onErrorChange(null)
                 },
-                label = { Text("Username") },
+                label = { Text(stringResource(R.string.provider_username_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -156,12 +159,12 @@ fun ColumnScope.ProviderFormSection(
                     onPasswordChange(it)
                     onErrorChange(null)
                 },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.provider_password_label)) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     val image = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility
-                    val description = if (passwordVisible) "Hide password" else "Show password"
+                    val description = if (passwordVisible) stringResource(R.string.provider_hide_password) else stringResource(R.string.provider_show_password)
                     IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
                         Icon(imageVector = image, contentDescription = description)
                     }
@@ -173,7 +176,7 @@ fun ColumnScope.ProviderFormSection(
             if (!isEditMode) {
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Text(
-                    text = "— or —",
+                    text = stringResource(R.string.provider_or_separator),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -182,7 +185,7 @@ fun ColumnScope.ProviderFormSection(
                 OutlinedButton(
                     onClick = {
                         if (url.isBlank()) {
-                            onErrorChange("Enter the Jellyfin server URL first")
+                            onErrorChange(context.getString(R.string.provider_enter_jellyfin_url_first))
                         } else {
                             onQcCodeChange("")
                             onQcSecretChange("")
@@ -193,7 +196,7 @@ fun ColumnScope.ProviderFormSection(
                     enabled = !isBusy,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Use Quick Connect")
+                    Text(stringResource(R.string.provider_use_quick_connect))
                 }
             }
         }
@@ -207,8 +210,8 @@ fun ColumnScope.ProviderFormSection(
                     onHostChange(it)
                     onErrorChange(null)
                 },
-                label = { Text("Host / IP") },
-                placeholder = { Text("192.168.1.100") },
+                label = { Text(stringResource(R.string.provider_host_label)) },
+                placeholder = { Text(stringResource(R.string.provider_host_placeholder)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -221,8 +224,8 @@ fun ColumnScope.ProviderFormSection(
                     onShareNameChange(it)
                     onErrorChange(null)
                 },
-                label = { Text("Share Name") },
-                placeholder = { Text("media") },
+                label = { Text(stringResource(R.string.provider_share_label)) },
+                placeholder = { Text(stringResource(R.string.provider_share_placeholder)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -235,7 +238,7 @@ fun ColumnScope.ProviderFormSection(
                     onUsernameChange(it)
                     onErrorChange(null)
                 },
-                label = { Text("Username (optional)") },
+                label = { Text(stringResource(R.string.provider_username_optional_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -248,12 +251,12 @@ fun ColumnScope.ProviderFormSection(
                     onPasswordChange(it)
                     onErrorChange(null)
                 },
-                label = { Text("Password (optional)") },
+                label = { Text(stringResource(R.string.provider_password_optional_label)) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     val image = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility
-                    val description = if (passwordVisible) "Hide password" else "Show password"
+                    val description = if (passwordVisible) stringResource(R.string.provider_hide_password) else stringResource(R.string.provider_show_password)
                     IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
                         Icon(imageVector = image, contentDescription = description)
                     }
@@ -276,8 +279,8 @@ fun ColumnScope.ProviderFormSection(
                     onUrlChange(it)
                     onErrorChange(null)
                 },
-                label = { Text("M3U Playlist URL") },
-                placeholder = { Text("https://example.com/playlist.m3u") },
+                label = { Text(stringResource(R.string.provider_m3u_url_label)) },
+                placeholder = { Text(stringResource(R.string.provider_m3u_url_placeholder)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),

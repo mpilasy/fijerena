@@ -42,6 +42,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import java.util.Date
 import java.util.Locale
+import org.njarasoa.fijerena.core.ui.utils.UiText
+import org.njarasoa.fijerena.core.ui.R
 
 class EpgBrowserViewModel(
     private val context: Context,
@@ -190,13 +192,13 @@ class EpgBrowserViewModel(
                 list.count { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    private val _toastMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
+    private val _toastMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
+    val toastMessage: SharedFlow<UiText> = _toastMessage.asSharedFlow()
 
     fun refreshStale() {
         val taskId = "epg_refresh_stale"
         if (RefreshQueue.queuedTaskIds.value.contains(taskId)) {
-            _toastMessage.tryEmit("Refresh already in queue...")
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
             return
         }
         viewModelScope.launch {
@@ -208,10 +210,10 @@ class EpgBrowserViewModel(
                     SettingsDatabase.getInstance(context).epgSourceDao().getStaleSources(thresholdMs)
                 }
             if (stale.isEmpty()) {
-                _toastMessage.tryEmit("EPG is up to date.")
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
                 return@launch
             }
-            _toastMessage.tryEmit("Refreshing ${stale.size} stale source(s)...")
+            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refreshing_stale, stale.size))
             epgFileManager.launchRefreshStale()
         }
     }
@@ -585,13 +587,14 @@ class EpgBrowserViewModel(
     private fun groupByChannel(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
         // For "What's on", we group by channel name and reuse EpgBrowserDateGroup
         // with the channel name as the label.
-        val byChannel = airings.groupBy { it.airing.channelId to it.airing.channelName }
+        // ⚡ Bolt: Group by channelId directly to avoid allocating temporary Pair objects for every airing
+        val byChannel = airings.groupBy { it.airing.channelId }
 
         return byChannel.entries
             // Use String.CASE_INSENSITIVE_ORDER to avoid allocating new String objects during sorting
-            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.key.second })
-            .mapIndexed { index, (channelKey, channelAirings) ->
-                val (channelId, channelName) = channelKey
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.value.first().airing.channelName })
+            .mapIndexed { index, (_, channelAirings) ->
+                val channelName = channelAirings.first().airing.channelName
                 val programs =
                     channelAirings
                         .mapIndexed { progIndex, airingWithProg ->
@@ -604,6 +607,7 @@ class EpgBrowserViewModel(
                             )
                         }.sortedBy { it.airings.first().startEpoch }
 
+                val channelId = channelAirings.first().airing.channelId
                 EpgBrowserDateGroup(
                     dateLabel = channelName,
                     // Use a unique ID derived from channelId hash or index to avoid collisions
