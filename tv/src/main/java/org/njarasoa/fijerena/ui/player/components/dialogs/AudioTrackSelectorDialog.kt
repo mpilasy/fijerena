@@ -33,6 +33,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +43,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -98,7 +100,7 @@ fun AudioTrackSelectorDialog(
             ) {
                 // Header
                 Text(
-                    text = "Select Audio Track",
+                    text = stringResource(R.string.player_select_audio),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -106,7 +108,7 @@ fun AudioTrackSelectorDialog(
 
                 if (audioTracks.isEmpty()) {
                     Text(
-                        text = "No audio tracks available",
+                        text = stringResource(R.string.player_no_audio),
                         style = MaterialTheme.typography.bodyLarge,
                         color = CinemaTextSecondary,
                         modifier = Modifier.padding(vertical = Spacing.md),
@@ -115,7 +117,7 @@ fun AudioTrackSelectorDialog(
                         onClick = onDismiss,
                         modifier = Modifier.align(CenterHorizontally),
                     ) {
-                        Text("Close")
+                        Text(stringResource(R.string.common_close))
                     }
                 } else {
                     val defaultColors =

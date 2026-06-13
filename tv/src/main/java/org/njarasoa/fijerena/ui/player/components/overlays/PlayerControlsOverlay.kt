@@ -53,6 +53,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,6 +68,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -260,7 +262,7 @@ fun PlayerControlsOverlay(
             ) {
                 Icon(
                     imageVector = if (isPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-                    contentDescription = if (isPaused) "Play" else "Pause",
+                    contentDescription = if (isPaused) stringResource(R.string.player_resume) else stringResource(R.string.player_pause),
                     modifier = Modifier.size(TvDimensions.iconXLarge),
                 )
             }
@@ -386,9 +388,11 @@ fun PlayerControlsOverlay(
                             horizontalArrangement = Arrangement.End,
                         ) {
                             Text(
-                                text = "Remaining: ${formatTime(remainingTime)}  •  Ends at ${
+                                text = stringResource(
+                                    R.string.player_remaining_ends_at_format,
+                                    formatTime(remainingTime),
                                     TimeFormat.formatClockTime(Date(estimatedEndTimeMillis))
-                                }",
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CinemaAccent,
                             )
@@ -396,7 +400,7 @@ fun PlayerControlsOverlay(
 
                         if (isScrubbing) {
                             Text(
-                                text = "Press OK to seek • Back to cancel",
+                                text = stringResource(R.string.player_seek_hint),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                 modifier = Modifier
@@ -427,7 +431,7 @@ fun PlayerControlsOverlay(
                                         ),
                             )
                             Text(
-                                text = "LIVE",
+                                text = stringResource(R.string.player_live),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = CinemaTextPrimary,
                             )
@@ -437,7 +441,12 @@ fun PlayerControlsOverlay(
                             val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
                             val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
                             Text(
-                                text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
+                                text = stringResource(
+                                    R.string.player_now_playing_format,
+                                    currentEpgProgram.title,
+                                    nowStart,
+                                    nowEnd
+                                ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                 modifier = Modifier.padding(top = Spacing.xxs),
@@ -465,7 +474,11 @@ fun PlayerControlsOverlay(
                             )
                             if (nextEpgProgram != null) {
                                 Text(
-                                    text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(epgContext, nextEpgProgram.startTime)})",
+                                    text = stringResource(
+                                        R.string.player_up_next_format,
+                                        nextEpgProgram.title,
+                                        formatEpochTime(epgContext, nextEpgProgram.startTime)
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                                     modifier = Modifier.padding(top = Spacing.xxs),
@@ -495,7 +508,7 @@ fun PlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.AutoMirrored.Rounded.List, "Chapters")
+                                Icon(Icons.AutoMirrored.Rounded.List, stringResource(R.string.player_chapters))
                             }
                         }
 
@@ -511,7 +524,7 @@ fun PlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Audio")
+                                Icon(Icons.AutoMirrored.Rounded.VolumeUp, stringResource(R.string.player_audio))
                             }
                         }
 
@@ -527,7 +540,7 @@ fun PlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.Rounded.Subtitles, "Subtitles")
+                                Icon(Icons.Rounded.Subtitles, stringResource(R.string.player_subtitles))
                             }
                         }
 
@@ -543,7 +556,7 @@ fun PlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.Rounded.Tune, "Quality")
+                                Icon(Icons.Rounded.Tune, stringResource(R.string.player_quality))
                             }
                         }
 
@@ -566,7 +579,7 @@ fun PlayerControlsOverlay(
                             ) {
                                 Icon(
                                     imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                                    contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
+                                    contentDescription = if (isFavorite) stringResource(R.string.player_remove_favorite) else stringResource(R.string.player_add_favorite),
                                     tint =
                                         if (isFavorite &&
                                             !isProgressBarFocused
@@ -590,7 +603,7 @@ fun PlayerControlsOverlay(
                                     focusedContentColor = CinemaBackground,
                                 ),
                         ) {
-                            Icon(Icons.Rounded.BarChart, "Stats")
+                            Icon(Icons.Rounded.BarChart, stringResource(R.string.player_stats))
                         }
                     }
                 }

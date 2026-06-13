@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -53,14 +55,14 @@ fun IdleContent(onBack: () -> Unit) {
         modifier = Modifier.padding(Spacing.xl),
     ) {
         Text(
-            text = "Ready to play",
+            text = stringResource(R.string.player_ready_to_play),
             color = CinemaTextPrimary,
             style = MaterialTheme.typography.headlineSmall,
         )
         Spacer(modifier = Modifier.height(Spacing.md))
         CinemaSecondaryButton(
             onClick = onBack,
-            text = "Back",
+            text = stringResource(R.string.player_back),
             modifier = Modifier.padding(Spacing.xs),
         )
     }
@@ -81,14 +83,14 @@ fun EndedContent(onBack: () -> Unit) {
         modifier = Modifier.padding(Spacing.xl),
     ) {
         Text(
-            text = "Playback ended",
+            text = stringResource(R.string.player_playback_ended),
             color = CinemaTextPrimary,
             style = MaterialTheme.typography.headlineSmall,
         )
         Spacer(modifier = Modifier.height(Spacing.md))
         CinemaSecondaryButton(
             onClick = onBack,
-            text = "Back",
+            text = stringResource(R.string.player_back),
         )
     }
 }

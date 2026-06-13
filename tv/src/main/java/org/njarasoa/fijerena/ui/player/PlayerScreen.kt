@@ -36,7 +36,9 @@ import androidx.media3.ui.PlayerView
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -298,7 +300,7 @@ fun PlayerScreen(
             exit = slideOutHorizontally { -it },
         ) {
             ChannelListOverlay(
-                title = "Category Channels",
+                title = stringResource(R.string.player_category_channels),
                 streams = categoryStreams,
                 panelAlignment = Alignment.CenterStart,
                 currentStreamId = currentStreamId,
@@ -317,10 +319,10 @@ fun PlayerScreen(
             exit = slideOutHorizontally { it },
         ) {
             ChannelListOverlay(
-                title = "Last Watched",
+                title = stringResource(R.string.player_last_watched),
                 streams = lastWatchedStreams,
                 panelAlignment = Alignment.CenterEnd,
-                emptyMessage = "No recently watched channels yet",
+                emptyMessage = stringResource(R.string.player_no_last_watched),
                 onSelect = { item ->
                     state.showLastWatchedOverlay = false
                     onStreamSelected?.invoke(item)

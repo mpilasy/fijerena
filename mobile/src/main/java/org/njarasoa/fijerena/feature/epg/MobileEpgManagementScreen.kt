@@ -23,6 +23,8 @@ import org.njarasoa.fijerena.core.ui.theme.*
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.core.ui.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -50,7 +52,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
             android.widget.Toast
-                .makeText(context, message, android.widget.Toast.LENGTH_SHORT)
+                .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
                 .show()
         }
     }
@@ -75,7 +77,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("EPG Management") },
+                title = { Text(stringResource(R.string.epg_management_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
@@ -83,7 +85,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                 },
                 actions = {
                     IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Rounded.Add, contentDescription = "Add Source")
+                        Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.epg_add_source))
                     }
                 },
             )
@@ -113,7 +115,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     ) {
                                         Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                        Text("Refresh (${selectedIds.size})")
+                                        Text(stringResource(R.string.epg_refresh_selected_btn, selectedIds.size))
                                     }
 
                                     Button(
@@ -123,7 +125,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     ) {
                                         Icon(Icons.Rounded.Delete, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                        Text("Delete (${selectedIds.size})")
+                                        Text(stringResource(R.string.epg_delete_selected_btn, selectedIds.size))
                                     }
                                 }
                             }
@@ -137,7 +139,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         onClick = { viewModel.refreshStale() },
                                         modifier = Modifier.weight(1f),
                                     ) {
-                                        Text("Refresh Stale ($staleSourceCount)")
+                                        Text(stringResource(R.string.epg_refresh_stale_btn, staleSourceCount))
                                     }
                                 }
                                 if (failedSourceCount > 0) {
@@ -145,7 +147,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         onClick = { viewModel.refreshFailed() },
                                         modifier = Modifier.weight(1f),
                                     ) {
-                                        Text("Retry Failed ($failedSourceCount)")
+                                        Text(stringResource(R.string.epg_retry_failed_btn, failedSourceCount))
                                     }
                                 }
                             }
@@ -164,7 +166,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                         // Maintenance Card
                         GlassPanel {
                             Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-                                Text("Maintenance", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                                Text(stringResource(R.string.epg_maintenance_title), style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
                                 Text(
                                     "Manage local database and temporary files.",
                                     style = MaterialTheme.typography.bodySmall,
@@ -181,13 +183,13 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         onClick = { viewModel.cleanupFiles() },
                                         modifier = Modifier.weight(1f),
                                     ) {
-                                        Text("Cleanup")
+                                        Text(stringResource(R.string.epg_cleanup_btn))
                                     }
                                     OutlinedButton(
                                         onClick = { viewModel.purgeOldProgrammes() },
                                         modifier = Modifier.weight(1f),
                                     ) {
-                                        Text("Purge")
+                                        Text(stringResource(R.string.epg_purge_btn))
                                     }
                                 }
 
@@ -204,7 +206,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         modifier = Modifier.size(ButtonDefaults.IconSize),
                                     )
                                     Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                                    Text("Clear All Data")
+                                    Text(stringResource(R.string.epg_clear_all_data_btn))
                                 }
                             }
                         }
@@ -214,7 +216,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                             Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                                        Text(stringResource(R.string.epg_auto_refresh_title), style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
                                         val intervalText = when (val interval = epgSettings.epgRefreshInterval) {
                                             -1 -> "Disabled"
                                             else -> {
@@ -258,7 +260,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
 
                 // Source rows
                 item {
-                    Text("Sources", style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                    Text(stringResource(R.string.epg_sources_header), style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
                 }
 
                 items(sources, key = { it.id }) { source ->

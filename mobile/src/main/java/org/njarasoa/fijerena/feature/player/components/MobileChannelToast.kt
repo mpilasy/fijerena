@@ -15,6 +15,9 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 
+import androidx.compose.ui.res.stringResource
+import org.njarasoa.fijerena.core.ui.R
+
 @Composable
 fun ChannelToast(
     channelName: String,
@@ -35,7 +38,7 @@ fun ChannelToast(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Now Playing",
+                text = stringResource(R.string.player_now_playing),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
             )

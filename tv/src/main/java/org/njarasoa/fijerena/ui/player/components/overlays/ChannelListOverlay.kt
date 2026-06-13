@@ -22,6 +22,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
@@ -31,6 +32,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
@@ -44,7 +46,7 @@ fun ChannelListOverlay(
     onSelect: (MediaItem) -> Unit,
     onDismiss: () -> Unit,
     panelAlignment: Alignment = Alignment.CenterStart,
-    emptyMessage: String = "No channels",
+    emptyMessage: String = stringResource(R.string.player_no_channels),
     currentStreamId: String? = null,
 ) {
     val targetFocusRequester = remember { FocusRequester() }

@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -39,6 +40,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -213,7 +215,7 @@ fun TvAddProviderScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = if (isEditMode) "Edit Provider" else "Add Provider",
+                            text = if (isEditMode) stringResource(R.string.provider_edit_title) else stringResource(R.string.provider_add_title),
                             style = scaledDisplaySmall,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -235,8 +237,8 @@ fun TvAddProviderScreen(
                                 name = it
                                 error = null
                             },
-                            label = "Provider Name",
-                            placeholder = "e.g. My IPTV",
+                            label = stringResource(R.string.provider_name_label),
+                            placeholder = stringResource(R.string.provider_name_placeholder_xtream),
                         )
 
                         // Type-specific fields
@@ -356,7 +358,7 @@ fun TvAddProviderScreen(
                             CinemaSecondaryButton(
                                 onClick = onBack,
                                 enabled = !isBusy,
-                                text = "Cancel",
+                                text = stringResource(R.string.common_cancel),
                             )
 
                             CinemaPrimaryButton(
@@ -366,36 +368,36 @@ fun TvAddProviderScreen(
                                         when (selectedType) {
                                             ProviderType.XTREAM ->
                                                 when {
-                                                    name.isBlank() -> "Provider name is required"
-                                                    url.isBlank() -> "Server URL is required"
-                                                    username.isBlank() -> "Username is required"
-                                                    password.isBlank() -> "Password is required"
+                                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
+                                                    url.isBlank() -> context.getString(R.string.provider_error_url_required)
+                                                    username.isBlank() -> context.getString(R.string.provider_error_username_required)
+                                                    password.isBlank() -> context.getString(R.string.provider_error_password_required)
                                                     else -> null
                                                 }
                                             ProviderType.JELLYFIN ->
                                                 when {
-                                                    name.isBlank() -> "Provider name is required"
-                                                    url.isBlank() -> "Server URL is required"
-                                                    username.isBlank() -> "Username is required"
-                                                    password.isBlank() -> "Password is required"
+                                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
+                                                    url.isBlank() -> context.getString(R.string.provider_error_url_required)
+                                                    username.isBlank() -> context.getString(R.string.provider_error_username_required)
+                                                    password.isBlank() -> context.getString(R.string.provider_error_password_required)
                                                     else -> null
                                                 }
                                             ProviderType.SMB ->
                                                 when {
-                                                    name.isBlank() -> "Provider name is required"
-                                                    host.isBlank() -> "Host / IP is required"
-                                                    shareName.isBlank() -> "Share name is required"
+                                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
+                                                    host.isBlank() -> context.getString(R.string.provider_error_host_required)
+                                                    shareName.isBlank() -> context.getString(R.string.provider_error_share_required)
                                                     else -> null
                                                 }
                                             ProviderType.LOCAL ->
                                                 when {
-                                                    name.isBlank() -> "Provider name is required"
+                                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
                                                     else -> null
                                                 }
                                             ProviderType.REMOTE_M3U ->
                                                 when {
-                                                    name.isBlank() -> "Provider name is required"
-                                                    url.isBlank() -> "M3U Playlist URL is required"
+                                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
+                                                    url.isBlank() -> context.getString(R.string.provider_error_m3u_url_required)
                                                     else -> null
                                                 }
                                         }

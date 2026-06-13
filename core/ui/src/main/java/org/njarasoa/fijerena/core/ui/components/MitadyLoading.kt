@@ -12,6 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import kotlinx.coroutines.delay
 
+import androidx.compose.ui.res.stringResource
+import org.njarasoa.fijerena.core.ui.R
+
 @Composable
 fun MitadyLoading(
     modifier: Modifier = Modifier,
@@ -29,7 +32,7 @@ fun MitadyLoading(
 
     val dots = ".".repeat(dotCount)
     Text(
-        text = "Mitady$dots",
+        text = stringResource(R.string.loading_searching) + dots,
         modifier = modifier,
         style = style,
         color = color,

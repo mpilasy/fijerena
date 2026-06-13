@@ -58,6 +58,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -71,6 +72,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -154,13 +156,14 @@ fun EpisodeSelectionScreen(
             }
 
         val result = repo.getSeriesDetail(seriesId)
+        val defaultError = context.getString(R.string.series_error_load_failed)
         result.fold(
             onSuccess = { detail ->
                 seriesDetail = detail
                 isLoading = false
             },
             onFailure = { e ->
-                error = e.message ?: "Failed to load series info"
+                error = e.message ?: defaultError
                 isLoading = false
             },
         )
@@ -174,7 +177,7 @@ fun EpisodeSelectionScreen(
             }
             error != null -> {
                 ErrorScreen(
-                    message = error ?: "Unknown error",
+                    message = error ?: stringResource(R.string.common_error),
                     onBack = onBack,
                 )
             }
@@ -272,7 +275,7 @@ private fun EpisodeListContent(
                     .map { num ->
                         SeasonInfo(
                             seasonNumber = num,
-                            name = "Season $num",
+                            name = context.getString(R.string.series_season_name_format, num),
                             episodeCount =
                                 seriesDetail.episodes[num.toString()]?.size ?: 0,
                         )
@@ -396,7 +399,7 @@ private fun EpisodeListContent(
                             icon = {
                                 Icon(
                                     imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                    contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
                                     tint = if (isFavorite) CinemaAccent else CinemaTextPrimary
                                 )
                             }
@@ -412,7 +415,7 @@ private fun EpisodeListContent(
                             icon = {
                                 Icon(
                                     imageVector = Icons.Rounded.Refresh,
-                                    contentDescription = "Refresh series info",
+                                    contentDescription = stringResource(R.string.series_refresh_info),
                                     modifier =
                                         Modifier
                                             .size(TvDimensions.iconSmall.scaled(scale))
@@ -423,7 +426,7 @@ private fun EpisodeListContent(
                     }
                     // Show episode count
                     Text(
-                        text = "$totalEpisodes episodes",
+                        text = stringResource(R.string.series_total_episodes_format, totalEpisodes),
                         style = scaledStyles.labelSmall,
                         color = CinemaTextSecondary,
                     )
@@ -442,8 +445,8 @@ private fun EpisodeListContent(
                         remember(seriesDetail) {
                             listOfNotNull(
                                 seriesDetail.metadata.genre,
-                                seriesDetail.metadata.rating?.let { "Rating: $it" },
-                                seriesDetail.metadata.cast?.let { "Cast: $it" },
+                                seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, it) },
+                                seriesDetail.metadata.cast?.let { context.getString(R.string.movie_cast_format, it) },
                             )
                         }
                     if (metadataParts.isNotEmpty()) {
@@ -597,8 +600,8 @@ private fun EpisodeDetailPanel(
                     color = CinemaTextPrimary,
                 )
                 // Season / episode label
-                val seasonLabel = episode.seasonNumber?.let { "Season $it" } ?: ""
-                val episodeLabel = "Episode ${episode.episodeNumber}"
+                val seasonLabel = episode.seasonNumber?.let { stringResource(R.string.series_season_label, it) } ?: ""
+                val episodeLabel = stringResource(R.string.series_episode_label, episode.episodeNumber)
                 val subLabel =
                     listOfNotNull(
                         seasonLabel.ifEmpty { null },
@@ -677,7 +680,7 @@ private fun EpisodeDetailPanel(
                             }
                         if (endsAtText != null) {
                             Text(
-                                text = "Ends at $endsAtText",
+                                text = stringResource(R.string.movie_ends_at_format, endsAtText),
                                 style = detailScaledStyles.titleMedium,
                                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
                             )
@@ -708,21 +711,21 @@ private fun EpisodeDetailPanel(
                                 onClick = {
                                     onPlay(episode.id, episode.title, extension, false)
                                 },
-                                text = "▶ Resume from $resumeTimeText",
+                                text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
                                 modifier = Modifier.focusRequester(playButtonFocusRequester),
                             )
                             CinemaSecondaryButton(
                                 onClick = {
                                     onPlay(episode.id, episode.title, extension, true)
                                 },
-                                text = "Start from Beginning",
+                                text = stringResource(R.string.movie_start_beginning),
                             )
                         } else {
                             CinemaPrimaryButton(
                                 onClick = {
                                     onPlay(episode.id, episode.title, extension, false)
                                 },
-                                text = "▶ Play Episode",
+                                text = stringResource(R.string.series_play_episode_action),
                                 modifier = Modifier.focusRequester(playButtonFocusRequester),
                             )
                         }
@@ -733,9 +736,9 @@ private fun EpisodeDetailPanel(
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         val hint =
                             buildString {
-                                if (previousEpisode != null) append("⏮ Previous")
+                                if (previousEpisode != null) append(stringResource(R.string.player_prev_episode))
                                 if (previousEpisode != null && nextEpisode != null) append("   ")
-                                if (nextEpisode != null) append("Next ⏭")
+                                if (nextEpisode != null) append(stringResource(R.string.player_next_episode))
                             }
                         Text(
                             text = hint,
@@ -762,7 +765,7 @@ private fun EpisodeDetailPanel(
                     val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
                     cast?.let {
                         Text(
-                            text = "Cast: $it",
+                            text = stringResource(R.string.movie_cast_format, it),
                             style = detailScaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             maxLines = 2,
@@ -775,7 +778,7 @@ private fun EpisodeDetailPanel(
                     val director = episode.metadata.director ?: seriesDetail.metadata.director
                     director?.let {
                         Text(
-                            text = "Director: $it",
+                            text = stringResource(R.string.movie_director_format, it),
                             style = detailScaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         )
@@ -785,7 +788,7 @@ private fun EpisodeDetailPanel(
                     episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {
                         Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                         Text(
-                            text = "Aired: $it",
+                            text = stringResource(R.string.series_aired_format, it),
                             style = detailScaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         )
@@ -795,7 +798,7 @@ private fun EpisodeDetailPanel(
                     episode.metadata.bitrate?.takeIf { it > 0 }?.let {
                         Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                         Text(
-                            text = "Bitrate: $it kbps",
+                            text = stringResource(R.string.series_bitrate_format, it),
                             style = detailScaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         )
@@ -851,7 +854,7 @@ private fun SeasonHeader(
     ) {
         Icon(
             imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-            contentDescription = if (isExpanded) "Collapse" else "Expand",
+            contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
             tint = CinemaAccentLight,
             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
         )
@@ -869,7 +872,7 @@ private fun SeasonHeader(
             )
         }
         Text(
-            text = "Season ${season.seasonNumber}",
+            text = stringResource(R.string.series_season_label, season.seasonNumber),
             style =
                 MaterialTheme.typography.headlineSmall.copy(
                     fontSize =
@@ -879,7 +882,7 @@ private fun SeasonHeader(
             color = CinemaAccentLight,
         )
         Text(
-            text = "$episodeCount episodes",
+            text = stringResource(R.string.series_total_episodes_format, episodeCount),
             style =
                 MaterialTheme.typography.labelMedium.copy(
                     fontSize =
@@ -954,7 +957,7 @@ private fun EpisodeCard(
 
             // Episode number
             Text(
-                text = "E${episode.episodeNumber}",
+                text = stringResource(R.string.series_episode_number_short, episode.episodeNumber),
                 style = cardScaledStyles.titleMedium,
                 color = CinemaAccentLight,
                 modifier = Modifier.width(Spacing.xxl.scaled(scale)),
@@ -1013,7 +1016,7 @@ private fun LoadingScreen() {
             )
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
-                text = "Loading episodes...",
+                text = stringResource(R.string.series_loading_episodes),
                 style =
                     MaterialTheme.typography.titleLarge.copy(
                         fontSize =
@@ -1041,7 +1044,7 @@ private fun ErrorScreen(
             modifier = Modifier.padding(Spacing.xl.scaled(scale)),
         ) {
             Text(
-                text = "Error Loading Episodes",
+                text = stringResource(R.string.series_error_loading),
                 style =
                     MaterialTheme.typography.displayMedium.copy(
                         fontSize =
@@ -1064,7 +1067,7 @@ private fun ErrorScreen(
             Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onBack,
-                text = "Back to Series List",
+                text = stringResource(R.string.series_back_to_list),
             )
         }
     }

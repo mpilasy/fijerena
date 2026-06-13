@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
@@ -49,6 +50,7 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -119,13 +121,14 @@ fun MovieDetailsScreen(
         mediaRepository = repo
 
         val result = repo.getMovieDetail(movieId)
+        val defaultError = context.getString(R.string.movie_error_loading)
         result.fold(
             onSuccess = { detail ->
                 movieDetail = detail
                 isLoading = false
             },
             onFailure = { e ->
-                error = e.message ?: "Failed to load movie info"
+                error = e.message ?: defaultError
                 isLoading = false
             },
         )
@@ -272,7 +275,7 @@ private fun MovieDetailsContent(
                         icon = {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                                contentDescription = if (isFavorite) "Remove from Favorites" else "Add to Favorites",
+                                contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
                                 tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
@@ -289,7 +292,7 @@ private fun MovieDetailsContent(
                         icon = {
                             Icon(
                                 imageVector = Icons.Rounded.Refresh,
-                                contentDescription = "Refresh movie info",
+                                contentDescription = stringResource(R.string.movie_refresh_info),
                                 modifier =
                                     Modifier
                                         .size(TvDimensions.iconSmall.scaled(scale))
@@ -349,7 +352,7 @@ private fun MovieDetailsContent(
                         }
                         movieDetail.metadata.duration?.let { duration ->
                             Text(
-                                text = formatDuration(duration),
+                                text = formatDuration(duration, context),
                                 style = scaledStyles.titleMedium,
                                 color = CinemaTextSecondary,
                             )
@@ -362,7 +365,7 @@ private fun MovieDetailsContent(
                             }
                         if (endsAtText != null) {
                             Text(
-                                text = "Ends at $endsAtText",
+                                text = stringResource(R.string.movie_ends_at_format, endsAtText),
                                 style = scaledStyles.titleMedium,
                                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
                             )
@@ -393,7 +396,7 @@ private fun MovieDetailsContent(
                                 onClick = {
                                     onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
                                 },
-                                text = "▶ Resume from $resumeTimeText",
+                                text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
                                 modifier =
                                     Modifier
                                         .focusRequester(playButtonFocusRequester),
@@ -402,14 +405,14 @@ private fun MovieDetailsContent(
                                 onClick = {
                                     onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true)
                                 },
-                                text = "Start from Beginning",
+                                text = stringResource(R.string.movie_start_beginning),
                             )
                         } else {
                             CinemaPrimaryButton(
                                 onClick = {
                                     onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
                                 },
-                                text = "▶ Play Movie",
+                                text = stringResource(R.string.movie_play_action),
                                 modifier =
                                     Modifier
                                         .focusRequester(playButtonFocusRequester),
@@ -434,7 +437,7 @@ private fun MovieDetailsContent(
                     // Cast, Director
                     movieDetail.metadata.cast?.let { cast ->
                         Text(
-                            text = "Cast: $cast",
+                            text = stringResource(R.string.movie_cast_format, cast),
                             style = scaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             maxLines = 2,
@@ -444,7 +447,7 @@ private fun MovieDetailsContent(
                     }
                     movieDetail.metadata.director?.let { director ->
                         Text(
-                            text = "Director: $director",
+                            text = stringResource(R.string.movie_director_format, director),
                             style = scaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         )
@@ -480,7 +483,7 @@ private fun MovieDetailsContent(
                                     parts.joinToString(" · ")
                                 }
                             if (videoText.isNotBlank()) {
-                                TechInfoRow(label = "Video:", value = videoText)
+                                TechInfoRow(label = stringResource(R.string.tech_video_label), value = videoText)
                             }
                         }
                         if (movieDetail.audioTracks.isNotEmpty()) {
@@ -491,14 +494,14 @@ private fun MovieDetailsContent(
                                             val parts = mutableListOf<String>()
                                             audio.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
                                             audio.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                                            audio.channels?.let { ch -> parts.add(channelLabel(ch)) }
-                                            if (audio.isDefault) parts.add("Default")
+                                            audio.channels?.let { ch -> parts.add(channelLabel(ch, context)) }
+                                            if (audio.isDefault) parts.add(stringResource(R.string.tech_default_label))
                                             parts.joinToString(" · ")
                                         }
                                     text.ifBlank { null }
                                 }
                             if (audioTexts.isNotEmpty()) {
-                                TechInfoRow(label = "Audio:", value = audioTexts.joinToString("\n"))
+                                TechInfoRow(label = stringResource(R.string.tech_audio_label), value = audioTexts.joinToString("\n"))
                             }
                         }
                         if (movieDetail.subtitleTracks.isNotEmpty()) {
@@ -509,17 +512,17 @@ private fun MovieDetailsContent(
                                             val parts = mutableListOf<String>()
                                             sub.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
                                             sub.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                                            if (sub.isDefault) parts.add("Default")
+                                            if (sub.isDefault) parts.add(stringResource(R.string.tech_default_label))
                                             parts.joinToString(" · ")
                                         }
                                     text.ifBlank { null }
                                 }
                             if (subTexts.isNotEmpty()) {
-                                TechInfoRow(label = "Subtitle:", value = subTexts.joinToString("\n"))
+                                TechInfoRow(label = stringResource(R.string.tech_subtitle_label), value = subTexts.joinToString("\n"))
                             }
                         }
                         movieDetail.extension?.let { ext ->
-                            TechInfoRow(label = "Container:", value = ext.uppercase())
+                            TechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
                         }
                     }
                 } // GlassPanel Column
@@ -544,7 +547,7 @@ private fun LoadingScreen() {
             )
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
-                text = "Loading movie details...",
+                text = stringResource(R.string.movie_loading_details),
                 style =
                     MaterialTheme.typography.titleLarge.copy(
                         fontSize =
@@ -572,7 +575,7 @@ private fun ErrorScreen(
             modifier = Modifier.padding(Spacing.xl.scaled(scale)),
         ) {
             Text(
-                text = "Error Loading Movie",
+                text = stringResource(R.string.movie_error_loading),
                 style =
                     MaterialTheme.typography.displayMedium.copy(
                         fontSize =
@@ -595,7 +598,7 @@ private fun ErrorScreen(
             Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onBack,
-                text = "Back to Movies",
+                text = stringResource(R.string.movie_back_to_movies),
             )
         }
     }
@@ -637,13 +640,13 @@ private fun TechInfoRow(
 /**
  * Returns a human-readable channel layout label (e.g., "5.1", "7.1", "Stereo")
  */
-private fun channelLabel(channels: Int): String =
+private fun channelLabel(channels: Int, context: android.content.Context): String =
     when (channels) {
-        1 -> "Mono"
-        2 -> "Stereo"
-        6 -> "5.1"
-        8 -> "7.1"
-        else -> "${channels}ch"
+        1 -> context.getString(R.string.audio_channel_mono)
+        2 -> context.getString(R.string.audio_channel_stereo)
+        6 -> context.getString(R.string.audio_channel_5_1)
+        8 -> context.getString(R.string.audio_channel_7_1)
+        else -> context.getString(R.string.audio_channel_custom, channels)
     }
 
 /**
@@ -726,7 +729,7 @@ private fun formatMillis(ms: Long): String {
  * Formats duration string to human-readable "2h 0m" form.
  * Accepts raw seconds ("7200") or h:mm:ss / m:ss format ("1:23:45").
  */
-private fun formatDuration(duration: String): String {
+private fun formatDuration(duration: String, context: android.content.Context): String {
     val seconds = parseDurationToSeconds(duration) ?: return duration
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60

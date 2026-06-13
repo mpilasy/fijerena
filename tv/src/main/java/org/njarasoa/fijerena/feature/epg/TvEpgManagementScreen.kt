@@ -29,6 +29,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.core.ui.R
+import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -62,7 +64,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
             android.widget.Toast
-                .makeText(context, message, android.widget.Toast.LENGTH_SHORT)
+                .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
                 .show()
         }
     }
@@ -98,7 +100,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                     ),
         ) {
             Text(
-                text = "EPG Management",
+                text = stringResource(R.string.epg_management_title),
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -118,7 +120,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                     ) {
                         CinemaPrimaryButton(
                             onClick = { showAddDialog = true },
-                            text = "Add Source",
+                            text = stringResource(R.string.epg_add_source),
                         )
 
                         if (selectedIds.isNotEmpty()) {
@@ -127,26 +129,26 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     viewModel.refreshSelected(selectedIds)
                                     viewModel.clearSelection()
                                 },
-                                text = "Refresh Selected (${selectedIds.size})",
+                                text = stringResource(R.string.epg_refresh_selected_btn, selectedIds.size),
                             )
 
                             CinemaDangerButton(
                                 onClick = { deleteSelectedIds = selectedIds },
-                                text = "Delete Selected (${selectedIds.size})",
+                                text = stringResource(R.string.epg_delete_selected_btn, selectedIds.size),
                             )
                         }
 
                         if (staleSourceCount > 0) {
                             CinemaSecondaryButton(
                                 onClick = { viewModel.refreshStale() },
-                                text = "Refresh Stale ($staleSourceCount)",
+                                text = stringResource(R.string.epg_refresh_stale_btn, staleSourceCount),
                             )
                         }
 
                         if (failedSourceCount > 0) {
                             CinemaSecondaryButton(
                                 onClick = { viewModel.refreshFailed() },
-                                text = "Retry Failed ($failedSourceCount)",
+                                text = stringResource(R.string.epg_retry_failed_btn, failedSourceCount),
                             )
                         }
                     }
@@ -171,7 +173,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Maintenance", style = MaterialTheme.typography.titleMedium)
+                                    Text(stringResource(R.string.epg_maintenance_title), style = MaterialTheme.typography.titleMedium)
                                     Text(
                                         "Clean up temporary files and old programmes.",
                                         style = MaterialTheme.typography.bodySmall,
@@ -181,17 +183,17 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
 
                                 CinemaSecondaryButton(
                                     onClick = { viewModel.cleanupFiles() },
-                                    text = "Cleanup",
+                                    text = stringResource(R.string.epg_cleanup_btn),
                                 )
 
                                 CinemaSecondaryButton(
                                     onClick = { viewModel.purgeOldProgrammes() },
-                                    text = "Purge",
+                                    text = stringResource(R.string.epg_purge_btn),
                                 )
 
                                 CinemaDangerButton(
                                     onClick = { showClearConfirm = true },
-                                    text = "Clear All",
+                                    text = stringResource(R.string.epg_clear_all_data_btn),
                                 )
                             }
                         }
@@ -208,7 +210,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column {
-                                        Text("Auto-Refresh", style = MaterialTheme.typography.titleMedium)
+                                        Text(stringResource(R.string.epg_auto_refresh_title), style = MaterialTheme.typography.titleMedium)
                                         val intervalText = when (val interval = epgSettings.epgRefreshInterval) {
                                             -1 -> "Disabled"
                                             else -> {

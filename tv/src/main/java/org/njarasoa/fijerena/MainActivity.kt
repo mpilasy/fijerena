@@ -16,9 +16,12 @@ import org.njarasoa.fijerena.navigation.TvNavHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 
+import org.njarasoa.fijerena.core.ui.utils.LocaleManager
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        LocaleManager.applyLocale(this)
 
         val appSettings = AppSettings(applicationContext)
         var themeId by mutableStateOf(appSettings.themeId)

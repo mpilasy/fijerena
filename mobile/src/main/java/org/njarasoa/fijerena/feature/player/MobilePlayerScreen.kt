@@ -184,7 +184,7 @@ fun MobilePlayerScreen(
                 if (exhaustionTimestamps.size >= 3) {
                     android.widget.Toast.makeText(
                         context,
-                        "Excessive buffering is happening",
+                        context.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
                         android.widget.Toast.LENGTH_LONG
                     ).show()
                     exhaustionTimestamps.clear()

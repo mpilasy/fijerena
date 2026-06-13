@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -55,6 +56,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -211,11 +213,11 @@ fun MobileAddProviderScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(if (isEditMode) "Edit Provider" else "Add Provider")
+                    Text(if (isEditMode) stringResource(R.string.provider_edit_title) else stringResource(R.string.provider_add_title))
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.player_back))
                     }
                 },
             )
@@ -240,7 +242,7 @@ fun MobileAddProviderScreen(
                     value = selectedType.displayName,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Provider Type") },
+                    label = { Text(stringResource(R.string.provider_type_label)) },
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeDropdownExpanded)
                     },
@@ -275,15 +277,15 @@ fun MobileAddProviderScreen(
                     name = it
                     error = null
                 },
-                label = { Text("Provider Name") },
+                label = { Text(stringResource(R.string.provider_name_label)) },
                 placeholder = {
                     Text(
                         when (selectedType) {
-                            ProviderType.XTREAM -> "e.g. My IPTV"
-                            ProviderType.JELLYFIN -> "e.g. My Jellyfin Server"
-                            ProviderType.SMB -> "e.g. NAS Media"
-                            ProviderType.LOCAL -> "e.g. Local Videos"
-                            ProviderType.REMOTE_M3U -> "e.g. My M3U Playlist"
+                            ProviderType.XTREAM -> stringResource(R.string.provider_name_placeholder_xtream)
+                            ProviderType.JELLYFIN -> stringResource(R.string.provider_name_placeholder_jellyfin)
+                            ProviderType.SMB -> stringResource(R.string.provider_name_placeholder_smb)
+                            ProviderType.LOCAL -> stringResource(R.string.provider_name_placeholder_local)
+                            ProviderType.REMOTE_M3U -> stringResource(R.string.provider_name_placeholder_remote_m3u)
                         },
                     )
                 },
@@ -382,36 +384,36 @@ fun MobileAddProviderScreen(
                         when (selectedType) {
                             ProviderType.XTREAM ->
                                 when {
-                                    name.isBlank() -> "Provider name is required"
-                                    url.isBlank() -> "Server URL is required"
-                                    username.isBlank() -> "Username is required"
-                                    password.isBlank() -> "Password is required"
+                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
+                                    url.isBlank() -> context.getString(R.string.provider_error_url_required)
+                                    username.isBlank() -> context.getString(R.string.provider_error_username_required)
+                                    password.isBlank() -> context.getString(R.string.provider_error_password_required)
                                     else -> null
                                 }
                             ProviderType.JELLYFIN ->
                                 when {
-                                    name.isBlank() -> "Provider name is required"
-                                    url.isBlank() -> "Server URL is required"
-                                    username.isBlank() -> "Username is required"
-                                    password.isBlank() -> "Password is required"
+                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
+                                    url.isBlank() -> context.getString(R.string.provider_error_url_required)
+                                    username.isBlank() -> context.getString(R.string.provider_error_username_required)
+                                    password.isBlank() -> context.getString(R.string.provider_error_password_required)
                                     else -> null
                                 }
                             ProviderType.SMB ->
                                 when {
-                                    name.isBlank() -> "Provider name is required"
-                                    host.isBlank() -> "Host / IP is required"
-                                    shareName.isBlank() -> "Share name is required"
+                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
+                                    host.isBlank() -> context.getString(R.string.provider_error_host_required)
+                                    shareName.isBlank() -> context.getString(R.string.provider_error_share_required)
                                     else -> null
                                 }
                             ProviderType.LOCAL ->
                                 when {
-                                    name.isBlank() -> "Provider name is required"
+                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
                                     else -> null
                                 }
                             ProviderType.REMOTE_M3U ->
                                 when {
-                                    name.isBlank() -> "Provider name is required"
-                                    url.isBlank() -> "M3U Playlist URL is required"
+                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
+                                    url.isBlank() -> context.getString(R.string.provider_error_m3u_url_required)
                                     else -> null
                                 }
                         }
@@ -448,9 +450,9 @@ fun MobileAddProviderScreen(
             ) {
                 Text(
                     when (saveState) {
-                        is SaveState.Validating -> "Connecting..."
-                        is SaveState.Saving -> "Saving..."
-                        else -> if (isEditMode) "Update Provider" else "Add Provider"
+                        is SaveState.Validating -> stringResource(R.string.provider_connecting)
+                        is SaveState.Saving -> stringResource(R.string.provider_saving)
+                        else -> if (isEditMode) stringResource(R.string.provider_update_button) else stringResource(R.string.provider_add_title)
                     },
                 )
             }
@@ -471,7 +473,7 @@ fun MobileAddProviderScreen(
 
                 androidx.compose.material3.AlertDialog(
                     onDismissRequest = { viewModel.resetSaveState() },
-                    title = { Text("Connection Failed") },
+                    title = { Text(stringResource(R.string.provider_connection_failed)) },
                     text = { Text(failedState.errorMessage) },
                     confirmButton = {
                         Button(
@@ -493,14 +495,14 @@ fun MobileAddProviderScreen(
                                 )
                             },
                         ) {
-                            Text("Save Anyway")
+                            Text(stringResource(R.string.provider_save_anyway))
                         }
                     },
                     dismissButton = {
                         androidx.compose.material3.TextButton(
                             onClick = { viewModel.resetSaveState() },
                         ) {
-                            Text("Go Back")
+                            Text(stringResource(R.string.provider_go_back))
                         }
                     },
                 )
@@ -510,11 +512,9 @@ fun MobileAddProviderScreen(
             if (showClearCacheDialog) {
                 AlertDialog(
                     onDismissRequest = { showClearCacheDialog = false },
-                    title = { Text("Clear All Cache?") },
+                    title = { Text(stringResource(R.string.provider_clear_cache_all_title)) },
                     text = {
-                        Text(
-                            "This will remove all cached data (Live TV, Movies, TV Shows, EPG). The app will need to re-download data from the server.",
-                        )
+                        Text(stringResource(R.string.provider_clear_cache_all_message))
                     },
                     confirmButton = {
                         Button(
@@ -526,10 +526,10 @@ fun MobileAddProviderScreen(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                        ) { Text("Clear All") }
+                        ) { Text(stringResource(R.string.provider_clear_all_button)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearCacheDialog = false }) { Text("Cancel") }
+                        OutlinedButton(onClick = { showClearCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -537,8 +537,8 @@ fun MobileAddProviderScreen(
             if (showClearLiveTvCacheDialog) {
                 AlertDialog(
                     onDismissRequest = { showClearLiveTvCacheDialog = false },
-                    title = { Text("Clear Live TV Cache?") },
-                    text = { Text("This will remove all cached Live TV data (categories and streams).") },
+                    title = { Text(stringResource(R.string.provider_clear_cache_live_title)) },
+                    text = { Text(stringResource(R.string.provider_clear_cache_live_message)) },
                     confirmButton = {
                         Button(
                             onClick = {
@@ -549,10 +549,10 @@ fun MobileAddProviderScreen(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                        ) { Text("Clear") }
+                        ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearLiveTvCacheDialog = false }) { Text("Cancel") }
+                        OutlinedButton(onClick = { showClearLiveTvCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -560,8 +560,8 @@ fun MobileAddProviderScreen(
             if (showClearMoviesCacheDialog) {
                 AlertDialog(
                     onDismissRequest = { showClearMoviesCacheDialog = false },
-                    title = { Text("Clear Movies Cache?") },
-                    text = { Text("This will remove all cached Movies data (categories and streams).") },
+                    title = { Text(stringResource(R.string.provider_clear_cache_movies_title)) },
+                    text = { Text(stringResource(R.string.provider_clear_cache_movies_message)) },
                     confirmButton = {
                         Button(
                             onClick = {
@@ -572,10 +572,10 @@ fun MobileAddProviderScreen(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                        ) { Text("Clear") }
+                        ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearMoviesCacheDialog = false }) { Text("Cancel") }
+                        OutlinedButton(onClick = { showClearMoviesCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -583,8 +583,8 @@ fun MobileAddProviderScreen(
             if (showClearTvShowsCacheDialog) {
                 AlertDialog(
                     onDismissRequest = { showClearTvShowsCacheDialog = false },
-                    title = { Text("Clear TV Shows Cache?") },
-                    text = { Text("This will remove all cached TV Shows data (categories and streams).") },
+                    title = { Text(stringResource(R.string.provider_clear_cache_tvshows_title)) },
+                    text = { Text(stringResource(R.string.provider_clear_cache_tvshows_message)) },
                     confirmButton = {
                         Button(
                             onClick = {
@@ -595,10 +595,10 @@ fun MobileAddProviderScreen(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                        ) { Text("Clear") }
+                        ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearTvShowsCacheDialog = false }) { Text("Cancel") }
+                        OutlinedButton(onClick = { showClearTvShowsCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -606,11 +606,9 @@ fun MobileAddProviderScreen(
             if (showClearFavoritesDialog) {
                 AlertDialog(
                     onDismissRequest = { showClearFavoritesDialog = false },
-                    title = { Text("Clear All Favorites?") },
+                    title = { Text(stringResource(R.string.provider_clear_favorites_title)) },
                     text = {
-                        Text(
-                            "This will remove all favorited streams from all content types (Live TV, Movies, TV Shows). This action cannot be undone.",
-                        )
+                        Text(stringResource(R.string.provider_clear_favorites_message))
                     },
                     confirmButton = {
                         Button(
@@ -619,10 +617,10 @@ fun MobileAddProviderScreen(
                                 showClearFavoritesDialog = false
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                        ) { Text("Confirm") }
+                        ) { Text(stringResource(R.string.common_ok)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearFavoritesDialog = false }) { Text("Cancel") }
+                        OutlinedButton(onClick = { showClearFavoritesDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -631,11 +629,9 @@ fun MobileAddProviderScreen(
             if (showClearProgressDialog) {
                 AlertDialog(
                     onDismissRequest = { showClearProgressDialog = false },
-                    title = { Text("Clear All Playback Progress?") },
+                    title = { Text(stringResource(R.string.provider_clear_progress_title)) },
                     text = {
-                        Text(
-                            "This will remove all saved playback positions. You will start from the beginning when playing any VOD content.",
-                        )
+                        Text(stringResource(R.string.provider_clear_progress_message))
                     },
                     confirmButton = {
                         Button(
@@ -644,10 +640,10 @@ fun MobileAddProviderScreen(
                                 showClearProgressDialog = false
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                        ) { Text("Confirm") }
+                        ) { Text(stringResource(R.string.common_ok)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearProgressDialog = false }) { Text("Cancel") }
+                        OutlinedButton(onClick = { showClearProgressDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -660,31 +656,31 @@ fun MobileAddProviderScreen(
 
                 AlertDialog(
                     onDismissRequest = { showCategoryFilterDialog = false },
-                    title = { Text("Category Filters") },
+                    title = { Text(stringResource(R.string.provider_category_filters_title)) },
                     text = {
                         Column(
                             modifier = Modifier.verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                         ) {
-                            Text(text = "Filter mode:", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = stringResource(R.string.provider_filter_mode_label), style = MaterialTheme.typography.bodyMedium)
                             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
                                 FilterChip(
                                     selected = filterMode == FilterMode.EXCLUDE,
                                     onClick = { filterMode = FilterMode.EXCLUDE },
-                                    label = { Text("Exclude") },
+                                    label = { Text(stringResource(R.string.provider_filter_exclude)) },
                                 )
                                 FilterChip(
                                     selected = filterMode == FilterMode.INCLUDE,
                                     onClick = { filterMode = FilterMode.INCLUDE },
-                                    label = { Text("Include Only") },
+                                    label = { Text(stringResource(R.string.provider_filter_include)) },
                                 )
                             }
                             Text(
                                 text =
                                     if (filterMode == FilterMode.EXCLUDE) {
-                                        "Categories starting with these prefixes will be hidden"
+                                        stringResource(R.string.provider_filter_exclude_desc)
                                     } else {
-                                        "Only categories starting with these prefixes will be shown"
+                                        stringResource(R.string.provider_filter_include_desc)
                                     },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
@@ -692,15 +688,15 @@ fun MobileAddProviderScreen(
                             OutlinedTextField(
                                 value = prefixesText,
                                 onValueChange = { prefixesText = it },
-                                label = { Text("Prefixes (comma-separated)") },
-                                placeholder = { Text("Adult, XXX, 18+") },
+                                label = { Text(stringResource(R.string.provider_filter_prefixes_label)) },
+                                placeholder = { Text(stringResource(R.string.provider_filter_prefixes_placeholder)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = false,
                                 minLines = 2,
                             )
-                            Text(text = "Language Script Filter:", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = stringResource(R.string.provider_filter_script_title), style = MaterialTheme.typography.bodyMedium)
                             Text(
-                                text = "Show only categories in selected scripts (none = show all)",
+                                text = stringResource(R.string.provider_filter_script_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                             )

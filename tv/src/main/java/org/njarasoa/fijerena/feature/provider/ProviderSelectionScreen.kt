@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
@@ -36,6 +37,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
@@ -88,7 +90,7 @@ fun TvProviderSelectionScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Providers",
+                text = stringResource(R.string.provider_selection_title),
                 style =
                     MaterialTheme.typography.displaySmall.copy(
                         fontSize =
@@ -100,7 +102,11 @@ fun TvProviderSelectionScreen(
             CinemaIconButton(
                 onClick = onAddProvider,
                 icon = {
-                    Icon(Icons.Rounded.Add, contentDescription = "Add Provider", tint = CinemaAccent)
+                    Icon(
+                        Icons.Rounded.Add,
+                        contentDescription = stringResource(R.string.provider_add_title),
+                        tint = CinemaAccent
+                    )
                 },
             )
         }
@@ -110,14 +116,14 @@ fun TvProviderSelectionScreen(
         when (val state = uiState) {
             is ProviderUiState.Loading -> {
                 Text(
-                    text = "Loading providers...",
+                    text = stringResource(R.string.provider_loading),
                     style = MaterialTheme.typography.bodyLarge,
                     color = CinemaTextSecondary,
                 )
             }
             is ProviderUiState.NoProviders -> {
                 Text(
-                    text = "No providers configured",
+                    text = stringResource(R.string.provider_no_providers),
                     style = MaterialTheme.typography.bodyLarge,
                     color = CinemaTextSecondary,
                 )
@@ -154,13 +160,13 @@ fun TvProviderSelectionScreen(
             onDismissRequest = { deleteConfirmProvider = null },
             title = {
                 Text(
-                    "Delete Provider?",
+                    stringResource(R.string.provider_delete_confirm_title),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             },
             text = {
                 Text(
-                    "Delete \"${provider.name}\"? All cached data for this provider will be removed.",
+                    stringResource(R.string.provider_delete_confirm_message, provider.name),
                     color = CinemaTextSecondary,
                 )
             },
@@ -176,7 +182,7 @@ fun TvProviderSelectionScreen(
                             contentColor = CinemaTextPrimary,
                         ),
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.provider_delete_button))
                 }
             },
             dismissButton = {
@@ -188,7 +194,7 @@ fun TvProviderSelectionScreen(
                             contentColor = CinemaTextPrimary,
                         ),
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
             containerColor = CinemaSurface,
@@ -225,7 +231,7 @@ private fun ProviderList(
                         if (provider.isActive) {
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text(
-                                text = "Active",
+                                text = stringResource(R.string.provider_active_label),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh),
                             )
@@ -247,20 +253,31 @@ private fun ProviderList(
                         CinemaIconButton(
                             onClick = { onSelect(provider) },
                             icon = {
-                                Icon(Icons.Rounded.CheckCircle, contentDescription = "Select", tint = CinemaAccent)
+                                Icon(
+                                    Icons.Rounded.CheckCircle,
+                                    contentDescription = stringResource(R.string.common_select),
+                                    tint = CinemaAccent
+                                )
                             },
                         )
                     }
                     CinemaIconButton(
                         onClick = { onEdit(provider.id) },
                         icon = {
-                            Icon(Icons.Rounded.Edit, contentDescription = "Edit", tint = CinemaAccent)
+                            Icon(
+                                Icons.Rounded.Edit,
+                                contentDescription = stringResource(R.string.provider_edit_button),
+                                tint = CinemaAccent
+                            )
                         },
                     )
                     CinemaDangerIconButton(
                         onClick = { onDelete(provider) },
                         icon = {
-                            Icon(Icons.Rounded.Delete, contentDescription = "Delete")
+                            Icon(
+                                Icons.Rounded.Delete,
+                                contentDescription = stringResource(R.string.provider_delete_button)
+                            )
                         },
                     )
                 }
