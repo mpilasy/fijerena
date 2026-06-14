@@ -17,3 +17,6 @@
 ## 2024-05-18 - Avoid dynamic evaluation in `sortedWith(compareBy { ... })` for expensive operations
 **Learning:** In Kotlin, using `sortedWith(compareBy { ... })` dynamically evaluates the lambda expression for every comparison step (O(N log N)). When the lambda contains expensive operations, such as string matching or `ignoreCase` validation, the redundant evaluations cause substantial CPU overhead.
 **Action:** For categorization-based sorting, implement an O(N) bucketing approach instead. Iterate through the collection exactly once to bucket items, then sort the individual buckets. This ensures expensive checks are evaluated only once per item.
+## 2026-06-08 - Use stable partitioning instead of sortedWith for bucketing
+**Learning:** Found an (N \log N)$ `sortedWith(compareByDescending {}.thenBy {})` operation being used inside a hot `map` pipeline just to float "matched" EPG airings to the top while preserving their original `startEpoch` order. Since the source was already sorted, sorting it again was pure overhead.
+**Action:** Replaced it with an (N)$ stable bucketing approach: single pass over the loop to separate into a `matched` and `unmatched` list, then combined them. Always use linear partitioning over sorting when bucketing by a boolean condition on pre-sorted data.

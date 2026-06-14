@@ -506,17 +506,25 @@ class EpgBrowserViewModel(
             group.copy(
                 programs =
                     group.programs.map { program ->
-                        val annotatedAirings =
-                            program.airings.map { airing ->
-                                val matched = matcher.match(airing.channelId, airing.channelName)
-                                if (matched != null) airing.copy(matchedStream = matched) else airing
+                        // ⚡ Bolt: Replace map + sortedWith with an O(N) stable bucketing approach.
+                        // The original airings are already sorted by startEpoch. Partitioning them into
+                        // matched and unmatched buckets avoids the O(N log N) sorting cost and redundant allocations.
+                        val matchedList = ArrayList<EpgBrowserAiring>()
+                        val unmatchedList = ArrayList<EpgBrowserAiring>()
+
+                        for (airing in program.airings) {
+                            val matched = matcher.match(airing.channelId, airing.channelName)
+                            if (matched != null) {
+                                matchedList.add(airing.copy(matchedStream = matched))
+                            } else {
+                                unmatchedList.add(airing)
                             }
-                        // Sort matched-first, preserving startEpoch order within each group
-                        val sorted =
-                            annotatedAirings.sortedWith(
-                                compareByDescending<EpgBrowserAiring> { it.matchedStream != null }
-                                    .thenBy { it.startEpoch },
-                            )
+                        }
+
+                        val sorted = ArrayList<EpgBrowserAiring>(matchedList.size + unmatchedList.size)
+                        sorted.addAll(matchedList)
+                        sorted.addAll(unmatchedList)
+
                         program.copy(airings = sorted)
                     },
             )
