@@ -270,7 +270,7 @@ fun PlayerScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(Spacing.xl),
-                contentAlignment = Alignment.TopEnd,
+                contentAlignment = Alignment.TopStart,
             ) {
                 Text(
                     text = TimeFormat.formatClockTime(Date(tick)),
