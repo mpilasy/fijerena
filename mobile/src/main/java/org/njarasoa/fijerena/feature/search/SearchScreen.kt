@@ -153,7 +153,7 @@ fun MobileSearchScreen(
                     )
                 },
                 trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
+                    if (searchQuery.isNotEmpty() || uiState is SearchViewModel.UiState.Success) {
                         CinemaIconButton(
                             onClick = {
                                 searchQuery = ""

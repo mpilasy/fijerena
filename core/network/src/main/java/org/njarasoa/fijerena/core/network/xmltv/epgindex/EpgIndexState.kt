@@ -9,6 +9,11 @@ sealed interface EpgIndexState {
         val programmesIndexed: Int,
     ) : EpgIndexState
 
+    data class Optimizing(
+        val channelCount: Int,
+        val programmeCount: Int,
+    ) : EpgIndexState
+
     data class Indexed(
         val channelCount: Int,
         val programmeCount: Int,

@@ -316,6 +316,7 @@ private fun EpgBrowserContent(
     var localQuery by remember { mutableStateOf("") }
     var matchedOnly by remember { mutableStateOf(true) }
     val scale = LocalUiScale.current
+    val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
 
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
     LaunchedEffect(uiState) {
@@ -414,6 +415,7 @@ private fun EpgBrowserContent(
                         EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
                     },
                     focusRequester = searchFocusRequester,
+                    showClearButton = localQuery.isNotEmpty() || hasResults,
                 )
             }
         }
@@ -443,15 +445,22 @@ private fun EpgBrowserContent(
 
         // Indexing progress banner
         val currentIndexState = indexState
-        if (currentIndexState is EpgIndexState.Indexing) {
+        if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
             val idx = currentIndexState
+            val progressText = if (idx is EpgIndexState.Indexing) {
+                "${idx.progressPercent}% (${formatCount(idx.programmesIndexed)} programmes)"
+            } else {
+                "finalizing... (${formatCount((idx as EpgIndexState.Optimizing).programmeCount)} programmes)"
+            }
+            val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f
+
             Column(modifier = Modifier.padding(top = Spacing.sm.scaled(scale))) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Building search index...",
+                        text = if (idx is EpgIndexState.Indexing) "Building search index..." else "Optimizing search index...",
                         style =
                             MaterialTheme.typography.labelMedium.copy(
                                 fontSize =
@@ -461,7 +470,7 @@ private fun EpgBrowserContent(
                         color = CinemaAccentLight,
                     )
                     Text(
-                        text = "${idx.progressPercent}% (${formatCount(idx.programmesIndexed)} programmes)",
+                        text = progressText,
                         style =
                             MaterialTheme.typography.labelMedium.copy(
                                 fontSize =
@@ -472,7 +481,7 @@ private fun EpgBrowserContent(
                     )
                 }
                 LinearProgressIndicator(
-                    progress = { idx.progressPercent / 100f },
+                    progress = { progressValue },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -704,9 +713,6 @@ private fun ResultsContent(
             else -> when (results.searchPath) {
                 EpgSearchPath.FTS_PHRASE -> " [FTS phrase]"
                 EpgSearchPath.FTS_AND -> " [FTS AND]"
-                EpgSearchPath.LIKE_FULL -> " [LIKE]"
-                EpgSearchPath.LIKE_AND -> " [LIKE AND]"
-                EpgSearchPath.FTS_SKIPPED_LIKE -> " [LIKE (FTS stale)]"
                 EpgSearchPath.NONE -> " [indexed]"
             }
         }

@@ -657,8 +657,9 @@ private fun EpgStatusCard(
             // Indexer State
             val indexText =
                 when (indexState) {
-                    is EpgIndexState.Indexed -> "Database: ${NumberUtils.formatCount(indexState.programmeCount)} programmes indexed"
+                    is EpgIndexState.Indexed -> "Database: Ready (${NumberUtils.formatCount(indexState.programmeCount)} programmes)"
                     is EpgIndexState.Indexing -> "Database: Indexing in progress..."
+                    is EpgIndexState.Optimizing -> "Database: Optimizing search index..."
                     is EpgIndexState.NotIndexed -> "Database: Empty"
                     is EpgIndexState.Failed -> "Database Error: ${indexState.reason}"
                 }

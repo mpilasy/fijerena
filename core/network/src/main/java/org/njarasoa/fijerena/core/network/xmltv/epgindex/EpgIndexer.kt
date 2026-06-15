@@ -81,8 +81,8 @@ class EpgIndexer private constructor(
             listOf(
                 "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_UPDATE` BEFORE UPDATE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `docid`=OLD.`id`; END",
                 "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_BEFORE_DELETE` BEFORE DELETE ON `epg_programme` BEGIN DELETE FROM `epg_programme_fts` WHERE `docid`=OLD.`id`; END",
-                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`id`,NEW.`title`); END",
-                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`) VALUES (NEW.`id`,NEW.`title`); END",
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_UPDATE` AFTER UPDATE ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`,`description`) VALUES (NEW.`id`,NEW.`title`,NEW.`description`); END",
+                "CREATE TRIGGER IF NOT EXISTS `room_fts_content_sync_epg_programme_fts_AFTER_INSERT` AFTER INSERT ON `epg_programme` BEGIN INSERT INTO `epg_programme_fts`(`docid`,`title`,`description`) VALUES (NEW.`id`,NEW.`title`,NEW.`description`); END",
             )
 
         // Query-only indexes on epg_programme that are dropped during bulk
@@ -491,14 +491,26 @@ class EpgIndexer private constructor(
 
                 writeMutex.withLock {
                     val sdb = db.openHelper.writableDatabase
+
+                    val currentChannelCount = dao.getChannelCount()
+                    val currentProgrammeCount = dao.getProgrammeCount()
+                    _state.value = EpgIndexState.Optimizing(currentChannelCount, currentProgrammeCount)
+
                     // Checkpoint WAL to reduce contention during rebuild
                     sdb.query("PRAGMA wal_checkpoint(TRUNCATE)").close()
+
+                    // Optimize rebuild speed
+                    sdb.execSQL("PRAGMA synchronous = OFF")
+                    sdb.execSQL("PRAGMA temp_store = MEMORY")
+                    sdb.execSQL("PRAGMA cache_size = -64000")
 
                     Log.d(TAG, "rebuildFtsAndUpdateState: executing FTS rebuild")
                     // 'rebuild' scans the content table (epg_programme) and repopulates FTS from
                     // scratch. Required after bulk ingestion because FTS triggers are dropped during
                     // bulk — 'optimize' only merges existing segments and cannot restore missing entries.
                     sdb.execSQL("INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')")
+
+                    sdb.execSQL("PRAGMA synchronous = NORMAL")
 
                     val now = System.currentTimeMillis()
                     val finalChannelCount = dao.getChannelCount()

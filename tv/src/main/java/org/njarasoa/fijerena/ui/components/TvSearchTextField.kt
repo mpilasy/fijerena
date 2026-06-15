@@ -47,6 +47,7 @@ fun TvSearchTextField(
     placeholder: String,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
+    showClearButton: Boolean = query.isNotEmpty(),
 ) {
     val clearFocusRequester = remember { FocusRequester() }
     val submitFocusRequester = remember { FocusRequester() }
@@ -72,7 +73,7 @@ fun TvSearchTextField(
                         if (event.type == KeyEventType.KeyDown) {
                             when (event.nativeKeyEvent.keyCode) {
                                 android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                    if (query.isNotEmpty()) {
+                                    if (showClearButton) {
                                         clearFocusRequester.requestFocus()
                                     } else {
                                         submitFocusRequester.requestFocus()
@@ -113,7 +114,7 @@ fun TvSearchTextField(
                 ),
         )
 
-        if (query.isNotEmpty()) {
+        if (showClearButton) {
             CinemaIconButton(
                 onClick = onClear,
                 modifier = Modifier

@@ -354,6 +354,7 @@ private fun SearchContent(
             },
             placeholder = "Enter stream name...",
             focusRequester = searchFocusRequester,
+            showClearButton = localQuery.isNotEmpty() || results.isNotEmpty() || categoryResults.isNotEmpty(),
         )
 
         Spacer(modifier = Modifier.height(Spacing.lg))

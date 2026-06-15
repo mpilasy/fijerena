@@ -30,9 +30,6 @@ data class XmltvData(
 enum class EpgSearchPath {
     FTS_PHRASE,
     FTS_AND,
-    LIKE_FULL,
-    LIKE_AND,
-    FTS_SKIPPED_LIKE,
     NONE,
 }
 

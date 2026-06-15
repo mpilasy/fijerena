@@ -135,72 +135,46 @@ class XmltvSearchService(
 
         var ftsReturnedEmpty = false
 
-        // Skip FTS entirely when the index is being rebuilt in the background.
-        if (!indexer.isFtsStale()) {
-            // 1. Try FTS phrase match ("word1 word2"*) with timeout
-            val ftsQuery = buildFtsQuery(query)
-            val rows =
-                try {
-                    withTimeoutOrNull(FTS_TIMEOUT_MS) {
-                        dao.searchByTitleFts(ftsQuery, sourceIds, windowStart, windowEnd)
-                    }
-                } catch (e: Exception) {
-                    null
-                }
+        // 1. Skip FTS entirely when the index is being rebuilt in the background.
+        if (indexer.isFtsStale()) {
+            throw IllegalStateException("Index optimizing, please wait...")
+        }
 
-            if (rows == null) {
-                Log.w(TAG, "FTS query timed out after $FTS_TIMEOUT_MS ms for query: $query")
-                // Don't trigger rebuild on timeout — it makes things slower
-            } else if (rows.isNotEmpty()) {
-                return rowsToSearchResult(rows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_PHRASE)
-            } else {
-                ftsReturnedEmpty = true
-                // 2. Try FTS AND match (word1* word2*)
-                val andFtsQuery = buildFtsAndQuery(query)
-                if (andFtsQuery != null) {
-                    val andRows =
-                        try {
-                            withTimeoutOrNull(FTS_TIMEOUT_MS) {
-                                dao.searchByTitleFts(andFtsQuery, sourceIds, windowStart, windowEnd)
-                            }
-                        } catch (e: Exception) {
-                            null
+        // 2. Try FTS phrase match ("word1 word2"*) with timeout
+        val ftsQuery = buildFtsQuery(query)
+        val rows =
+            try {
+                withTimeoutOrNull(FTS_TIMEOUT_MS) {
+                    dao.searchByTitleFts(ftsQuery, sourceIds, windowStart, windowEnd)
+                }
+            } catch (e: Exception) {
+                null
+            }
+
+        if (rows == null) {
+            Log.w(TAG, "FTS query timed out after $FTS_TIMEOUT_MS ms for query: $query")
+            // Don't trigger rebuild on timeout — it makes things slower
+        } else if (rows.isNotEmpty()) {
+            return rowsToSearchResult(rows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_PHRASE)
+        } else {
+            ftsReturnedEmpty = true
+            // 3. Try FTS AND match (word1* word2*)
+            val andFtsQuery = buildFtsAndQuery(query)
+            if (andFtsQuery != null) {
+                val andRows =
+                    try {
+                        withTimeoutOrNull(FTS_TIMEOUT_MS) {
+                            dao.searchByTitleFts(andFtsQuery, sourceIds, windowStart, windowEnd)
                         }
-                    if (andRows == null) {
-                        Log.w(TAG, "FTS AND query timed out after $FTS_TIMEOUT_MS ms for query: $query")
-                    } else if (andRows.isNotEmpty()) {
-                        return rowsToSearchResult(andRows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_AND)
+                    } catch (e: Exception) {
+                        null
                     }
+                if (andRows == null) {
+                    Log.w(TAG, "FTS AND query timed out after $FTS_TIMEOUT_MS ms for query: $query")
+                } else if (andRows.isNotEmpty()) {
+                    return rowsToSearchResult(andRows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_AND)
                 }
             }
-        }
-        // else: FTS index is stale — skip FTS, use LIKE
-
-        // 3. Fall back to LIKE with full query
-        val queryLower = query.lowercase(Locale.ROOT)
-        val likePath = if (indexer.isFtsStale()) EpgSearchPath.FTS_SKIPPED_LIKE else EpgSearchPath.LIKE_FULL
-        val likeRows = dao.searchByTitleLike(queryLower, sourceIds, windowStart, windowEnd)
-        if (likeRows.isNotEmpty()) {
-            // If FTS returned 0 but LIKE found results, the FTS index is out of sync
-            if (ftsReturnedEmpty && !indexer.isFtsStale()) {
-                Log.w(TAG, "FTS returned 0 rows but LIKE found ${likeRows.size} — FTS index corrupted, triggering rebuild")
-                indexer.markFtsStale()
-                triggerBackgroundFtsRebuild()
-            }
-            return rowsToSearchResult(likeRows, searchedFromIndex = true, searchPath = likePath)
-        }
-
-        // 4. Fall back to LIKE AND: search by shortest word, then filter for all words in memory
-        val words = queryLower.split(WHITESPACE_REGEX).filter { it.length >= 2 }
-        if (words.size >= 2) {
-            val shortestWord = words.minBy { it.length }
-            val broadRows = dao.searchByTitleLike(shortestWord, sourceIds, windowStart, windowEnd)
-            val filtered =
-                broadRows.filter { row ->
-                    val titleLower = row.title.lowercase(Locale.ROOT)
-                    words.all { word -> titleLower.contains(word) }
-                }
-            return rowsToSearchResult(filtered, searchedFromIndex = true, searchPath = EpgSearchPath.LIKE_AND)
         }
 
         return rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
