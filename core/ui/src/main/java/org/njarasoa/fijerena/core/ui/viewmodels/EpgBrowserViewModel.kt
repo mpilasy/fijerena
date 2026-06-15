@@ -416,6 +416,7 @@ class EpgBrowserViewModel(
                     System.gc()
                     _uiState.value = UiState.Error("EPG file too large for search. Try a more specific query.")
                 } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     _uiState.value = UiState.Error(e.message ?: "Search failed")
                 }
             }

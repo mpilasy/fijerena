@@ -41,4 +41,5 @@ data class EpgProgrammeEntity(
 @Entity(tableName = "epg_programme_fts")
 data class EpgProgrammeFts(
     val title: String,
+    val description: String?,
 )

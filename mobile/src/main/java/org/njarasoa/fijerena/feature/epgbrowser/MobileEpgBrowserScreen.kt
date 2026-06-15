@@ -286,7 +286,8 @@ fun MobileEpgBrowserScreen(
                     )
                 },
                 trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
+                    val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
+                    if (searchQuery.isNotEmpty() || hasResults) {
                         IconButton(onClick = {
                             searchQuery = ""
                             viewModel.clearSearch()
@@ -315,8 +316,15 @@ fun MobileEpgBrowserScreen(
 
             // Indexing progress banner
             val currentIndexState = indexState
-            if (currentIndexState is EpgIndexState.Indexing) {
+            if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
                 val idx = currentIndexState
+                val progressText = if (idx is EpgIndexState.Indexing) {
+                    "${idx.progressPercent}% (${formatCount(idx.programmesIndexed)})"
+                } else {
+                    "finalizing... (${formatCount((idx as EpgIndexState.Optimizing).programmeCount)})"
+                }
+                val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f
+
                 Column(
                     modifier =
                         Modifier.padding(
@@ -329,18 +337,18 @@ fun MobileEpgBrowserScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = "Indexing...",
+                            text = if (idx is EpgIndexState.Indexing) "Indexing..." else "Optimizing...",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            text = "${idx.progressPercent}% (${formatCount(idx.programmesIndexed)})",
+                            text = progressText,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     LinearProgressIndicator(
-                        progress = { idx.progressPercent / 100f },
+                        progress = { progressValue },
                         modifier =
                             Modifier
                                 .fillMaxWidth()
@@ -484,9 +492,6 @@ private fun MobileResultsContent(
             else -> when (results.searchPath) {
                 EpgSearchPath.FTS_PHRASE -> " [FTS phrase]"
                 EpgSearchPath.FTS_AND -> " [FTS AND]"
-                EpgSearchPath.LIKE_FULL -> " [LIKE]"
-                EpgSearchPath.LIKE_AND -> " [LIKE AND]"
-                EpgSearchPath.FTS_SKIPPED_LIKE -> " [LIKE (FTS stale)]"
                 EpgSearchPath.NONE -> " [indexed]"
             }
         }

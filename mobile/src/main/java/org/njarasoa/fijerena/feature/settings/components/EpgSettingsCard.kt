@@ -40,6 +40,7 @@ fun EpgSettingsCard(
                     idx.channelCount,
                 )} channels, ${formatProgrammeCount(idx.programmeCount)} programmes"
                 is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
+                is EpgIndexState.Optimizing -> "Optimizing search index..."
                 is EpgIndexState.NotIndexed ->
                     if (sourceCount >
                         0
