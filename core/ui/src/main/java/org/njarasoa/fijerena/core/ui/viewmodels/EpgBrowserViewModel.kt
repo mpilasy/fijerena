@@ -259,8 +259,7 @@ class EpgBrowserViewModel(
 
     /**
      * Loads (or refreshes) [channelMatcher] for the currently active provider.
-     * If the active provider hasn't changed since the last load, this is a no-op.
-     * Must be called from a coroutine; runs its DB work on [Dispatchers.IO].
+     * Uses the global cache in [EpgChannelMatcher] to avoid redundant DB queries.
      */
     private suspend fun ensureChannelMatcherCurrent() {
         withContext(Dispatchers.IO) {
@@ -270,20 +269,19 @@ class EpgBrowserViewModel(
                         .getInstance(context)
                         .providerDao()
                         .getActiveProvider() ?: return@withContext
-                if (provider.id == lastMatcherProviderId) return@withContext
-                val t0 = System.currentTimeMillis()
-                val liveStreams =
-                    XtreamDatabase
+                
+                channelMatcher = EpgChannelMatcher.getOrCreate(provider.id) {
+                    val t0 = System.currentTimeMillis()
+                    val streams = XtreamDatabase
                         .getInstance(context)
                         .streamDao()
                         .getAllStreams(provider.id, XtreamStreamEntity.TYPE_LIVE)
-                val t1 = System.currentTimeMillis()
-                channelMatcher = if (liveStreams.isNotEmpty()) EpgChannelMatcher(liveStreams) else null
-                val t2 = System.currentTimeMillis()
-                android.util.Log.d("EpgBrowserViewModel", "ensureChannelMatcher: getAllStreams=${t1 - t0}ms count=${liveStreams.size} matcherInit=${t2 - t1}ms total=${t2 - t0}ms")
-                lastMatcherProviderId = provider.id
+                    val t1 = System.currentTimeMillis()
+                    android.util.Log.d("EpgBrowserViewModel", "Fetched ${streams.size} streams in ${t1 - t0}ms for new matcher")
+                    streams
+                }
             } catch (e: Exception) {
-                android.util.Log.e("EpgBrowserViewModel", "Failed to load live streams for channel matching", e)
+                android.util.Log.e("EpgBrowserViewModel", "Failed to ensure channel matcher", e)
             }
         }
     }

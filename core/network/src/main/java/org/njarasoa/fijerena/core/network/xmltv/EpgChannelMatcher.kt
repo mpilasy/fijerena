@@ -11,6 +11,48 @@ import java.util.concurrent.ConcurrentHashMap
 class EpgChannelMatcher(
     streams: List<XtreamStreamEntity>,
 ) {
+    companion object {
+        private var cachedInstance: EpgChannelMatcher? = null
+        private var cachedProviderId: Long? = null
+
+        /**
+         * Returns a cached matcher for the given providerId, or creates a new one
+         * and updates the cache. Thread-safe via synchronized.
+         */
+        @Synchronized
+        fun getOrCreate(providerId: Long, fetchStreams: () -> List<XtreamStreamEntity>): EpgChannelMatcher {
+            if (providerId == cachedProviderId) {
+                cachedInstance?.let { return it }
+            }
+
+            val streams = fetchStreams()
+            val matcher = EpgChannelMatcher(streams)
+            cachedProviderId = providerId
+            cachedInstance = matcher
+            return matcher
+        }
+
+        /**
+         * Explicitly clear the cache (e.g., when a provider's streams are refreshed).
+         */
+        @Synchronized
+        fun clearCache() {
+            cachedInstance = null
+            cachedProviderId = null
+        }
+
+        /**
+         * Proactively populates the cache for a specific provider.
+         * Useful after a background sync to avoid I/O on the next user search.
+         */
+        @Synchronized
+        fun warmCache(providerId: Long, streams: List<XtreamStreamEntity>) {
+            val matcher = EpgChannelMatcher(streams)
+            cachedProviderId = providerId
+            cachedInstance = matcher
+        }
+    }
+
     // Level 1: exact epgChannelId -> stream
     private val byEpgId = mutableMapOf<String, XtreamStreamEntity>()
 
