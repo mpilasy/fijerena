@@ -216,6 +216,33 @@ class EpgFileManager private constructor(
         return type != DeviceType.GENERIC_MOBILE
     }
 
+    /**
+     * Checks if the device has enough free space to safely perform staged ingestion.
+     * Staging temporarily doubles the storage used by epg_programme.
+     * Requires at least 1.5x the current DB size in free space.
+     */
+    private fun shouldUseStaging(): Boolean {
+        return try {
+            val dbFile = context.getDatabasePath("epg_index.db")
+            if (!dbFile.exists()) return true // Fresh install, staging is safe
+
+            val dbSize = dbFile.length()
+            val availableSpace = context.dataDir.usableSpace
+            
+            // Allow staging only if we have 1.5x the DB size free.
+            // Example: 1.5GB DB requires 2.25GB free space.
+            val isSafe = availableSpace > (dbSize * 1.5).toLong()
+            
+            if (!isSafe) {
+                Log.w(TAG, "Low storage detected: available=${availableSpace/1024/1024}MB, db=${dbSize/1024/1024}MB. Falling back to blocking sync.")
+            }
+            isSafe
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to check storage for staging, defaulting to false", e)
+            false
+        }
+    }
+
     @OptIn(UnstableApi::class)
     private fun isPlaybackActive(): Boolean {
         val svc = StreamingPlaybackService.getInstance() ?: return false
@@ -483,8 +510,11 @@ class EpgFileManager private constructor(
             val ingestionQueue = Channel<DownloadedSource>(Channel.UNLIMITED)
             val sourceStartTimeMap = ConcurrentHashMap<Long, Long>()
 
+            val useStaging = shouldUseStaging()
             indexer.setIndexing()
-            indexer.clearStaging()
+            if (useStaging) {
+                indexer.clearStaging()
+            }
 
             _state.value =
                 MultiSourceState.Processing(
@@ -523,7 +553,7 @@ class EpgFileManager private constructor(
                                             indexer,
                                             activeProgress,
                                             batchSize = batchSize,
-                                            useStaging = true,
+                                            useStaging = useStaging,
                                             isPlaybackActive = ::isPlaybackActive,
                                         ) {
                                             updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
@@ -611,7 +641,7 @@ class EpgFileManager private constructor(
             val anyIngested = allStats.any { it.error == null && (it.channelsIngested > 0 || it.programmesIngested > 0) }
 
             // Perform Atomic Swap before FTS rebuild
-            if (anyIngested) {
+            if (anyIngested && useStaging) {
                 _state.value = MultiSourceState.Finalizing(
                     phase = "Swapping to primary guide\u2026",
                     totalChannels = totalChannels,
@@ -687,8 +717,11 @@ class EpgFileManager private constructor(
             val indexer = EpgIndexer.getInstance(context)
             val label = source.label.ifBlank { extractLabel(source.url) }
 
+            val useStaging = shouldUseStaging()
             indexer.setIndexing()
-            indexer.clearStaging()
+            if (useStaging) {
+                indexer.clearStaging()
+            }
             val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
             _state.value =
                 MultiSourceState.Processing(
@@ -751,7 +784,7 @@ class EpgFileManager private constructor(
                         indexer,
                         activeProgress,
                         batchSize = batchSize,
-                        useStaging = true,
+                        useStaging = useStaging,
                         isPlaybackActive = ::isPlaybackActive,
                     ) { updateSingleProgress() }
                 } else {
@@ -769,8 +802,8 @@ class EpgFileManager private constructor(
                 )
             indexer.endBulkIngestion()
 
-            // Perform Atomic Swap before FTS rebuild
-            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+            // Perform Atomic Swap before FTS rebuild (only if staging was used)
+            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0) && useStaging) {
                 _state.value = MultiSourceState.Finalizing(
                     phase = "Swapping to primary guide\u2026",
                     totalChannels = stats.channelsIngested,
