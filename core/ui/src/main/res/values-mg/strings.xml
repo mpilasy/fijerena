@@ -33,6 +33,8 @@
     <!-- Loading Indicators -->
     <string name="loading_buffering">Mitohana</string>
     <string name="loading_searching">Mitady</string>
+    <string name="search_fallback_local">Mitady eto an-toerana…</string>
+    <string name="search_loading_categories">Maka ireo sokajy…</string>
 
     <!-- Player Common -->
     <string name="player_select_audio">Resaka</string>

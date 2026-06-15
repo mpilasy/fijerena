@@ -202,7 +202,7 @@ fun MobileSearchScreen(
             ) {
                 when (val state = uiState) {
                     is SearchViewModel.UiState.Loading -> {
-                        LoadingView()
+                        LoadingView(message = state.message)
                     }
                     is SearchViewModel.UiState.Error -> {
                         ErrorView(message = state.message)
@@ -271,7 +271,7 @@ fun MobileSearchScreen(
 }
 
 @Composable
-private fun LoadingView() {
+private fun LoadingView(message: String? = null) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -279,6 +279,7 @@ private fun LoadingView() {
         MitadyLoading(
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.primary,
+            overrideText = message,
         )
     }
 }
