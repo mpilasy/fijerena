@@ -8,6 +8,8 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
 import java.util.*
@@ -98,6 +100,13 @@ class ProviderSyncManager private constructor(private val context: Context) {
                         }
                         if (mediaProvider.isConnected()) {
                             mediaProvider.syncAll()
+                            
+                            // Proactively warm the cache for the provider that was just synced
+                            val streams = XtreamDatabase.getInstance(context)
+                                .streamDao()
+                                .getAllStreams(provider.id, org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity.TYPE_LIVE)
+                            EpgChannelMatcher.warmCache(provider.id, streams)
+                            
                             Log.d(TAG, "Sync completed for provider: ${provider.name}")
                         } else {
                             syncError = "Failed to connect"
@@ -189,6 +198,13 @@ class ProviderSyncManager private constructor(private val context: Context) {
                     }
                     if (mediaProvider.isConnected()) {
                         mediaProvider.syncAll()
+                        
+                        // Proactively warm the cache for the provider that was just synced
+                        val streams = XtreamDatabase.getInstance(context)
+                            .streamDao()
+                            .getAllStreams(provider.id, org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity.TYPE_LIVE)
+                        org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher.warmCache(provider.id, streams)
+                        
                         Log.d(TAG, "Manual sync completed for provider: ${provider.name}")
                     } else {
                         syncError = "Failed to connect"
