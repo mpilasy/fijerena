@@ -324,11 +324,12 @@ class MediaRepository(
     /**
      * Check whether the SQLite EPG index has data available for search/display.
      */
-    fun hasIndexedEpgData(): Boolean =
-        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+    fun hasIndexedEpgData(): Boolean {
+        val state = org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
             .getInstance(context)
-            .state.value is
-            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
+            .state.value
+        return state !is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.NotIndexed
+    }
 
     // --- Progress sync hook ---
 

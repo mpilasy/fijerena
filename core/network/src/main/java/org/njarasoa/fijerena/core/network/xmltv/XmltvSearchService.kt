@@ -59,7 +59,8 @@ class XmltvSearchService(
      */
     suspend fun searchByChannel(query: String): XmltvSearchResult? {
         val indexer = EpgIndexer.getInstance(context)
-        if (indexer.state.value !is EpgIndexState.Indexed) {
+        val state = indexer.state.value
+        if (state is EpgIndexState.NotIndexed) {
             return null
         }
 
@@ -101,7 +102,8 @@ class XmltvSearchService(
      */
     suspend fun search(query: String): XmltvSearchResult? {
         val indexer = EpgIndexer.getInstance(context)
-        if (indexer.state.value !is EpgIndexState.Indexed) {
+        val state = indexer.state.value
+        if (state is EpgIndexState.NotIndexed) {
             return null
         }
 

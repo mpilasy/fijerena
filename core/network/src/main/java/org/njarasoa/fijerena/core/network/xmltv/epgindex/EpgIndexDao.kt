@@ -15,11 +15,51 @@ interface EpgIndexDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertChannelsIgnore(channels: List<EpgChannelEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertChannelsStagingIgnore(channels: List<EpgChannelStagingEntity>)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProgrammes(programmes: List<EpgProgrammeEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProgrammesStaging(programmes: List<EpgProgrammeStagingEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMetadata(metadata: EpgIndexMetadata)
+
+    // --------------- Staging management & Atomic Swap ---------------
+
+    @Query("DELETE FROM epg_programme_staging")
+    suspend fun clearStagingProgrammes()
+
+    @Query("DELETE FROM epg_channel_staging")
+    suspend fun clearStagingChannels()
+
+    @Transaction
+    suspend fun clearStaging() {
+        clearStagingProgrammes()
+        clearStagingChannels()
+    }
+
+    @Query("INSERT INTO epg_channel (xmltv_id, display_name, icon_url, source_id) SELECT xmltv_id, display_name, icon_url, source_id FROM epg_channel_staging")
+    suspend fun transferChannelsFromStaging()
+
+    @Query("INSERT INTO epg_programme (channel_id, title, title_lowercase, description, category, start_epoch, end_epoch, source_id) SELECT channel_id, title, title_lowercase, description, category, start_epoch, end_epoch, source_id FROM epg_programme_staging")
+    suspend fun transferProgrammesFromStaging()
+
+    /**
+     * Performs the atomic swap:
+     * 1. Deletes existing data for the specified sources in the primary tables.
+     * 2. Moves everything from staging to primary.
+     * 3. Clears staging.
+     */
+    @Transaction
+    suspend fun executeSwap(sourceIds: List<Long>) {
+        deleteBySourceIds(sourceIds)
+        transferChannelsFromStaging()
+        transferProgrammesFromStaging()
+        clearStaging()
+    }
 
     // --------------- Stale data cleanup (Clear and Load strategy) ---------------
 

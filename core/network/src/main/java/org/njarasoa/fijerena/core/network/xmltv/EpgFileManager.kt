@@ -484,6 +484,7 @@ class EpgFileManager private constructor(
             val sourceStartTimeMap = ConcurrentHashMap<Long, Long>()
 
             indexer.setIndexing()
+            indexer.clearStaging()
 
             _state.value =
                 MultiSourceState.Processing(
@@ -522,6 +523,7 @@ class EpgFileManager private constructor(
                                             indexer,
                                             activeProgress,
                                             batchSize = batchSize,
+                                            useStaging = true,
                                             isPlaybackActive = ::isPlaybackActive,
                                         ) {
                                             updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
@@ -608,6 +610,18 @@ class EpgFileManager private constructor(
 
             val anyIngested = allStats.any { it.error == null && (it.channelsIngested > 0 || it.programmesIngested > 0) }
 
+            // Perform Atomic Swap before FTS rebuild
+            if (anyIngested) {
+                _state.value = MultiSourceState.Finalizing(
+                    phase = "Swapping to primary guide\u2026",
+                    totalChannels = totalChannels,
+                    totalProgrammes = totalProgrammes,
+                    totalDownloadBytes = totalBytes,
+                )
+                val syncedIds = allStats.filter { it.error == null }.map { it.sourceId }
+                indexer.executeSwapToMain(syncedIds)
+            }
+
             val endTime = System.currentTimeMillis()
             val finalState =
                 MultiSourceState.Completed(
@@ -674,6 +688,7 @@ class EpgFileManager private constructor(
             val label = source.label.ifBlank { extractLabel(source.url) }
 
             indexer.setIndexing()
+            indexer.clearStaging()
             val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
             _state.value =
                 MultiSourceState.Processing(
@@ -736,6 +751,7 @@ class EpgFileManager private constructor(
                         indexer,
                         activeProgress,
                         batchSize = batchSize,
+                        useStaging = true,
                         isPlaybackActive = ::isPlaybackActive,
                     ) { updateSingleProgress() }
                 } else {
@@ -752,6 +768,17 @@ class EpgFileManager private constructor(
                     totalDownloadBytes = stats.downloadBytes,
                 )
             indexer.endBulkIngestion()
+
+            // Perform Atomic Swap before FTS rebuild
+            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+                _state.value = MultiSourceState.Finalizing(
+                    phase = "Swapping to primary guide\u2026",
+                    totalChannels = stats.channelsIngested,
+                    totalProgrammes = stats.programmesIngested,
+                    totalDownloadBytes = stats.downloadBytes,
+                )
+                indexer.executeSwapToMain(listOf(sourceId))
+            }
 
             val endTime = System.currentTimeMillis()
             val finalState =
@@ -936,6 +963,7 @@ class EpgFileManager private constructor(
         indexer: EpgIndexer,
         activeProgress: ConcurrentHashMap<Long, ActiveSourceProgress>,
         batchSize: Int = EpgIndexer.BATCH_SIZE_MOBILE,
+        useStaging: Boolean = false,
         isPlaybackActive: () -> Boolean = { false },
         onProgressUpdate: () -> Unit,
     ): SourceStats {
@@ -957,6 +985,7 @@ class EpgFileManager private constructor(
                         sourceId = source.id,
                         timezoneOverrideHours = source.timezoneOffsetHours,
                         batchSize = batchSize,
+                        useStaging = useStaging,
                         isPlaybackActive = isPlaybackActive,
                     ) { channels, programmes ->
                         val pct = if (fileSize > 0) ((countingStream.bytesRead * 100) / fileSize).toInt().coerceIn(0, 100) else -1
