@@ -219,6 +219,7 @@ class EpgIndexer private constructor(
         sourceId: Long = 0,
         timezoneOverrideHours: Int = 0,
         batchSize: Int = getBatchSize(context),
+        useStaging: Boolean = false,
         isPlaybackActive: () -> Boolean = { false },
         onProgress: ((channels: Int, programmes: Int) -> Unit)? = null,
     ): IngestionStats =
@@ -238,6 +239,8 @@ class EpgIndexer private constructor(
             try {
                 val channelBatch = mutableListOf<EpgChannelEntity>()
                 val programmeBatch = mutableListOf<EpgProgrammeEntity>()
+                val channelStagingBatch = mutableListOf<EpgChannelStagingEntity>()
+                val programmeStagingBatch = mutableListOf<EpgProgrammeStagingEntity>()
                 var itemsSinceLastProgressUpdate = 0
 
                 val factory = XmlPullParserFactory.newInstance()
@@ -252,16 +255,17 @@ class EpgIndexer private constructor(
                         when (parser.name) {
                             "channel" -> {
                                 XmltvParser.parseChannelForIndex(parser, sourceId)?.let {
-                                    channelBatch.add(it)
+                                    if (useStaging) channelStagingBatch.add(it.toStaging()) else channelBatch.add(it)
                                     channelCount++
 
-                                    if (channelBatch.size >= batchSize) {
+                                    if (channelBatch.size >= batchSize || channelStagingBatch.size >= batchSize) {
                                         writeMutex.withLock {
                                             db.withTransaction {
-                                                dao.insertChannelsIgnore(channelBatch)
+                                                if (useStaging) dao.insertChannelsStagingIgnore(channelStagingBatch) else dao.insertChannelsIgnore(channelBatch)
                                             }
                                         }
                                         channelBatch.clear()
+                                        channelStagingBatch.clear()
                                         // Yield CPU briefly only when video is actively decoding
                                         if (isPlaybackActive()) delay(5)
                                     }
@@ -269,28 +273,30 @@ class EpgIndexer private constructor(
                             }
                             "programme" -> {
                                 // Flush any remaining channels before starting programmes
-                                if (channelBatch.isNotEmpty()) {
+                                if (channelBatch.isNotEmpty() || channelStagingBatch.isNotEmpty()) {
                                     writeMutex.withLock {
                                         db.withTransaction {
-                                            dao.insertChannelsIgnore(channelBatch)
+                                            if (useStaging) dao.insertChannelsStagingIgnore(channelStagingBatch) else dao.insertChannelsIgnore(channelBatch)
                                         }
                                     }
                                     channelBatch.clear()
+                                    channelStagingBatch.clear()
                                 }
 
                                 XmltvParser.parseProgrammeForIndex(parser, sourceId, timezoneOverrideHours)?.let {
                                     if (it.endEpoch < cutoffEpoch || it.startEpoch > futureLimitEpoch) return@let
-                                    programmeBatch.add(it)
+                                    if (useStaging) programmeStagingBatch.add(it.toStaging()) else programmeBatch.add(it)
                                     programmeCount++
                                     itemsSinceLastProgressUpdate++
 
-                                    if (programmeBatch.size >= batchSize) {
+                                    if (programmeBatch.size >= batchSize || programmeStagingBatch.size >= batchSize) {
                                         writeMutex.withLock {
                                             db.withTransaction {
-                                                dao.insertProgrammes(programmeBatch)
+                                                if (useStaging) dao.insertProgrammesStaging(programmeStagingBatch) else dao.insertProgrammes(programmeBatch)
                                             }
                                         }
                                         programmeBatch.clear()
+                                        programmeStagingBatch.clear()
 
                                         // Throttled UI updates to reduce main thread pressure during playback
                                         if (itemsSinceLastProgressUpdate >= 50000) {
@@ -311,14 +317,18 @@ class EpgIndexer private constructor(
                 }
 
                 // Flush remaining
-                if (channelBatch.isNotEmpty()) {
+                if (channelBatch.isNotEmpty() || channelStagingBatch.isNotEmpty()) {
                     writeMutex.withLock {
-                        db.withTransaction { dao.insertChannelsIgnore(channelBatch) }
+                        db.withTransaction {
+                            if (useStaging) dao.insertChannelsStagingIgnore(channelStagingBatch) else dao.insertChannelsIgnore(channelBatch)
+                        }
                     }
                 }
-                if (programmeBatch.isNotEmpty()) {
+                if (programmeBatch.isNotEmpty() || programmeStagingBatch.isNotEmpty()) {
                     writeMutex.withLock {
-                        db.withTransaction { dao.insertProgrammes(programmeBatch) }
+                        db.withTransaction {
+                            if (useStaging) dao.insertProgrammesStaging(programmeStagingBatch) else dao.insertProgrammes(programmeBatch)
+                        }
                     }
                 }
 
@@ -484,12 +494,12 @@ class EpgIndexer private constructor(
         withContext(Dispatchers.IO) {
             val startMs = System.currentTimeMillis()
             Log.i(TAG, "rebuildFtsAndUpdateState: starting FTS rebuild")
-            markFtsStale()
             try {
                 val db = EpgIndexDatabase.getInstance(context)
                 val dao = db.epgIndexDao()
 
                 writeMutex.withLock {
+                    markFtsStale() // Only mark stale when actually starting the FTS rebuild
                     val sdb = db.openHelper.writableDatabase
 
                     val currentChannelCount = dao.getChannelCount()
@@ -541,6 +551,30 @@ class EpgIndexer private constructor(
                 _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild failed")
             }
         }
+
+    /**
+     * Perform the atomic swap from staging to primary tables.
+     */
+    suspend fun executeSwapToMain(sourceIds: List<Long>) = withContext(Dispatchers.IO) {
+        val db = EpgIndexDatabase.getInstance(context)
+        val dao = db.epgIndexDao()
+        writeMutex.withLock {
+            Log.i(TAG, "executeSwapToMain: swapping staging to primary for sources: $sourceIds")
+            dao.executeSwap(sourceIds)
+            Log.i(TAG, "executeSwapToMain: swap complete")
+        }
+    }
+
+    /**
+     * Clear all staging tables.
+     */
+    suspend fun clearStaging() = withContext(Dispatchers.IO) {
+        val db = EpgIndexDatabase.getInstance(context)
+        val dao = db.epgIndexDao()
+        writeMutex.withLock {
+            dao.clearStaging()
+        }
+    }
 
     /**
      * Prepare the database for a bulk ingestion session:

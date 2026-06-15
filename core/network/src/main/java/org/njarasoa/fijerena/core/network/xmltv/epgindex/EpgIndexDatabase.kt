@@ -11,11 +11,13 @@ import io.requery.android.database.sqlite.RequerySQLiteOpenHelperFactory
 @Database(
     entities = [
         EpgChannelEntity::class,
+        EpgChannelStagingEntity::class,
         EpgProgrammeEntity::class,
+        EpgProgrammeStagingEntity::class,
         EpgProgrammeFts::class,
         EpgIndexMetadata::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = false,
 )
 abstract class EpgIndexDatabase : RoomDatabase() {
