@@ -52,6 +52,14 @@ object NetworkModule {
             .build()
     }
 
+    /**
+     * Explicitly clear all connections in the pool.
+     * Used by the stream health system to bypass ISP/CDN shaping by forcing fresh sockets.
+     */
+    fun evictConnectionPool() {
+        okHttpClient.connectionPool.evictAll()
+    }
+
     private object AndroidAwareDns : Dns {
         override fun lookup(hostname: String): List<InetAddress> {
             if (isIpAddress(hostname)) {

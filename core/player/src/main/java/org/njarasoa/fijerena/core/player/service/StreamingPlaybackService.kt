@@ -81,6 +81,25 @@ class StreamingPlaybackService : MediaSessionService() {
     private var adaptiveLoadControl: AdaptiveLoadControl? = null
     private var bandwidthMeter: androidx.media3.exoplayer.upstream.DefaultBandwidthMeter? = null
     private var serviceScope: CoroutineScope? = null
+    private var healthMonitor: org.njarasoa.fijerena.core.player.network.StreamHealthMonitor? = null
+
+    private val recycleHandler = Runnable {
+        val metadata = _currentMetadata.value
+        val player = getPlayer()
+        if (metadata.isLive && player != null) {
+            val currentPos = player.currentPosition
+            Log.i(TAG, "Executing silent stream recycle at position: $currentPos")
+
+            // 1. Evict network connection pool to bypass ISP/CDN shaping
+            org.njarasoa.fijerena.core.player.network.NetworkModule.evictConnectionPool()
+
+            // 2. Restart stream seamlessly
+            playStream(metadata, currentPos)
+
+            // 3. Reset monitor for the fresh connection
+            healthMonitor?.reset()
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -88,6 +107,10 @@ class StreamingPlaybackService : MediaSessionService() {
         instanceReady.complete(this)
         NetworkMonitor.init(this)
         mediaSourceFactory = StreamingMediaSourceFactory(this)
+
+        healthMonitor = org.njarasoa.fijerena.core.player.network.StreamHealthMonitor {
+            mainHandler.post(recycleHandler)
+        }
 
         initializePlayer()
         acquireWakeLock()
@@ -834,6 +857,17 @@ class StreamingPlaybackService : MediaSessionService() {
                     seekPending = false
                     rebufferStartTimeMs = 0L
                 }
+            }
+            
+            // Feed health monitor on every state change
+            val service = instance
+            val player = service?.getPlayer()
+            if (service != null && player != null) {
+                service.healthMonitor?.updateMetrics(
+                    bufferedDurationMs = player.bufferedPosition - player.currentPosition,
+                    droppedFramesPerSecond = service._measuredFps.value, 
+                    hasReadTimeout = false // ExoPlayer reports timeouts via exceptions
+                )
             }
         }
 
