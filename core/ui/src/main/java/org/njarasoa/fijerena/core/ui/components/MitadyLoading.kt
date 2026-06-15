@@ -20,6 +20,7 @@ fun MitadyLoading(
     modifier: Modifier = Modifier,
     style: TextStyle = TextStyle.Default,
     color: Color = Color.Unspecified,
+    overrideText: String? = null,
 ) {
     var dotCount by remember { mutableIntStateOf(1) }
 
@@ -31,8 +32,9 @@ fun MitadyLoading(
     }
 
     val dots = ".".repeat(dotCount)
+    val baseText = overrideText ?: stringResource(R.string.loading_searching)
     Text(
-        text = stringResource(R.string.loading_searching) + dots,
+        text = baseText + dots,
         modifier = modifier,
         style = style,
         color = color,

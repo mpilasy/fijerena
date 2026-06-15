@@ -31,7 +31,7 @@ class SearchViewModel(
     }
 
     sealed class UiState {
-        data object Loading : UiState()
+        data class Loading(val message: String? = null) : UiState()
 
         data class Success(
             val categoryResults: List<CategorySearchResult> = emptyList(),
@@ -75,7 +75,7 @@ class SearchViewModel(
         val contentType: String,
     )
 
-    private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
+    private val _uiState = MutableStateFlow<UiState>(UiState.Loading())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private val appSettings = org.njarasoa.fijerena.core.network.AppSettings(context)
@@ -225,7 +225,7 @@ class SearchViewModel(
                     listOf(contentType)
                 }
 
-            _uiState.value = UiState.Loading
+            _uiState.value = UiState.Loading()
 
             val realCategories = prefetchedCategories ?: emptyList()
             val normalizedQuery = query.trim().lowercase()
@@ -287,6 +287,9 @@ class SearchViewModel(
             }
 
             // Fall back to client-side search
+            _uiState.value = UiState.Loading(context.getString(org.njarasoa.fijerena.core.ui.R.string.search_fallback_local))
+            kotlinx.coroutines.delay(50) // Allow UI to render the new loading message
+            
             val results = mutableListOf<SearchResult>()
 
             // Phase 1: Local cache scan

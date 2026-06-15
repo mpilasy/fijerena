@@ -809,6 +809,10 @@ class XtreamContentManager(
     private fun formatFtsQuery(query: String): String {
         val words = query.trim().split("\\s+".toRegex())
             .filter { it.isNotBlank() && !it.startsWith("-") }
-        return if (words.isEmpty()) "" else words.joinToString(" ") { "$it*" }
+        // Sanitize input to prevent SQLite FTS syntax errors (like **) that trigger fallback hangs
+        val ftsQuery = words.map { it.replace(Regex("[*\"'()\\^]"), "") }
+            .filter { it.isNotBlank() }
+            .joinToString(" ") { "$it*" }
+        return ftsQuery
     }
 }

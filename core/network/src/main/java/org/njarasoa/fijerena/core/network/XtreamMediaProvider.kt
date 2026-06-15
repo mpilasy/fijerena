@@ -272,7 +272,13 @@ class XtreamMediaProvider(
         return if (words.isEmpty()) {
             null
         } else {
-            val ftsQuery = words.joinToString(" ") { "${it}*" }
+            // Sanitize input to prevent SQLite FTS syntax errors (like **) that trigger fallback hangs
+            val ftsQuery = words.map { it.replace(Regex("[*\"'()\\^]"), "") }
+                .filter { it.isNotBlank() }
+                .joinToString(" ") { "${it}*" }
+            
+            if (ftsQuery.isBlank()) return null
+
             val mediaType = getMediaType(contentType)
             try {
                 val results = repository.searchByFts(contentType, ftsQuery)

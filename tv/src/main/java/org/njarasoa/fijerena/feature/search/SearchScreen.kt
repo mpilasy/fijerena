@@ -177,11 +177,11 @@ fun SearchScreen(
 
                 Spacer(modifier = Modifier.height(Spacing.lg))
 
-                when (uiState) {
-                    is SearchViewModel.UiState.Loading -> LoadingView()
-                    is SearchViewModel.UiState.Error -> ErrorView((uiState as SearchViewModel.UiState.Error).message)
+                when (val state = uiState) {
+                    is SearchViewModel.UiState.Loading -> LoadingView(message = state.message)
+                    is SearchViewModel.UiState.Error -> ErrorView(state.message)
                     is SearchViewModel.UiState.Success -> {
-                        val successState = uiState as SearchViewModel.UiState.Success
+                        val successState = state
                         val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
                         val errorSuffix = if (successState.firstError != null) "\n${successState.firstError}" else ""
                         val devStats =
@@ -264,7 +264,7 @@ private fun HeaderRow(contentType: String) {
 }
 
 @Composable
-private fun LoadingView() {
+private fun LoadingView(message: String? = null) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -278,7 +278,7 @@ private fun LoadingView() {
                 color = CinemaAccent,
             )
             Text(
-                text = "Loading categories...",
+                text = message ?: androidx.compose.ui.res.stringResource(org.njarasoa.fijerena.core.ui.R.string.search_loading_categories),
                 style = MaterialTheme.typography.titleLarge,
                 color = CinemaTextSecondary,
             )
