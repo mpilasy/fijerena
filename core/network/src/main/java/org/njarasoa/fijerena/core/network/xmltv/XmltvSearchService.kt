@@ -133,53 +133,82 @@ class XmltvSearchService(
         val sourceDao = settingsDb.epgSourceDao()
         val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
         val sourceIds = validSources.map { it.id }
-        if (sourceIds.isEmpty()) return rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
 
-        var ftsReturnedEmpty = false
+        var result: XmltvSearchResult? = null
 
-        // 1. Skip FTS entirely when the index is being rebuilt in the background.
-        if (indexer.isFtsStale()) {
+        if (sourceIds.isEmpty()) {
+            result = rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
+        } else if (indexer.isFtsStale()) {
             throw IllegalStateException("Index optimizing, please wait...")
-        }
-
-        // 2. Try FTS phrase match ("word1 word2"*) with timeout
-        val ftsQuery = buildFtsQuery(query)
-        val rows =
-            try {
+        } else {
+            // 1. Try Raw FTS Query (Supports OR, NEAR, etc.)
+            val rawFtsQuery = buildRawFtsQuery(query)
+            val rawRows = try {
                 withTimeoutOrNull(FTS_TIMEOUT_MS) {
-                    dao.searchByTitleFts(ftsQuery, sourceIds, windowStart, windowEnd)
+                    dao.searchByTitleFts(rawFtsQuery, sourceIds, windowStart, windowEnd)
                 }
             } catch (e: Exception) {
+                // Catches SQLite syntax errors if user provided malformed FTS tokens
                 null
             }
 
-        if (rows == null) {
-            Log.w(TAG, "FTS query timed out after $FTS_TIMEOUT_MS ms for query: $query")
-            // Don't trigger rebuild on timeout — it makes things slower
-        } else if (rows.isNotEmpty()) {
-            return rowsToSearchResult(rows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_PHRASE)
-        } else {
-            ftsReturnedEmpty = true
-            // 3. Try FTS AND match (word1* word2*)
-            val andFtsQuery = buildFtsAndQuery(query)
-            if (andFtsQuery != null) {
-                val andRows =
-                    try {
-                        withTimeoutOrNull(FTS_TIMEOUT_MS) {
-                            dao.searchByTitleFts(andFtsQuery, sourceIds, windowStart, windowEnd)
-                        }
-                    } catch (e: Exception) {
-                        null
+            if (rawRows != null && rawRows.isNotEmpty()) {
+                result = rowsToSearchResult(rawRows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_PHRASE)
+            } else {
+                // 2. Fallback to Safe Phrase/AND matching if raw FTS returned nothing or failed
+                val safeFtsQuery = buildSafeFtsQuery(query)
+                val safeRows = try {
+                    withTimeoutOrNull(FTS_TIMEOUT_MS) {
+                        dao.searchByTitleFts(safeFtsQuery, sourceIds, windowStart, windowEnd)
                     }
-                if (andRows == null) {
-                    Log.w(TAG, "FTS AND query timed out after $FTS_TIMEOUT_MS ms for query: $query")
-                } else if (andRows.isNotEmpty()) {
-                    return rowsToSearchResult(andRows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_AND)
+                } catch (e: Exception) {
+                    null
+                }
+
+                if (safeRows != null && safeRows.isNotEmpty()) {
+                    result = rowsToSearchResult(safeRows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_AND)
+                } else {
+                    result = rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
                 }
             }
         }
 
-        return rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
+        return result
+    }
+
+    /**
+     * Builds a query that preserves FTS operators like OR, NEAR, and NOT.
+     * Appends a prefix wildcard * to the last word if it's not a reserved token.
+     */
+    private fun buildRawFtsQuery(query: String): String {
+        val trimmed = query.trim()
+        val finalQuery = if (trimmed.contains(Regex("[A-Z]+")) || trimmed.contains("\"")) {
+            // User likely provided manual FTS syntax
+            trimmed
+        } else {
+            // Standard query: append wildcard to end for prefix matching
+            "$trimmed*"
+        }
+        return finalQuery
+    }
+
+    /**
+     * Builds a safe "fallback" query by stripping operators and wrapping in quotes.
+     */
+    private fun buildSafeFtsQuery(query: String): String {
+        val sanitized = query
+            .replace("\"", "")
+            .replace("*", "")
+            .replace("(", "")
+            .replace(")", "")
+            .replace(":", "")
+            .trim()
+        
+        return if (sanitized.isBlank()) {
+            "*"
+        } else {
+            "\"$sanitized\"*"
+        }
     }
 
     private fun sanitizeQuery(query: String): String =
