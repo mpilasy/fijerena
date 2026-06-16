@@ -17,3 +17,6 @@
 ## 2024-05-18 - Avoid dynamic evaluation in `sortedWith(compareBy { ... })` for expensive operations
 **Learning:** In Kotlin, using `sortedWith(compareBy { ... })` dynamically evaluates the lambda expression for every comparison step (O(N log N)). When the lambda contains expensive operations, such as string matching or `ignoreCase` validation, the redundant evaluations cause substantial CPU overhead.
 **Action:** For categorization-based sorting, implement an O(N) bucketing approach instead. Iterate through the collection exactly once to bucket items, then sort the individual buckets. This ensures expensive checks are evaluated only once per item.
+## 2026-06-09 - [Avoid .flatMap with chunked database calls]
+**Learning:** Using `.chunked(N).flatMap { dao.get...() }` followed by `.groupBy` or `.associateBy` creates multiple intermediate list allocations per chunk, a final flattened list, and Map.Entry allocations which is inefficient when querying massive EPG index datasets.
+**Action:** Replace chunked `.flatMap` and subsequent grouping with standard `for` loops iterating over `.chunked(N)` results and directly populating a `mutableMapOf`.
