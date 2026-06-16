@@ -11,6 +11,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
@@ -161,11 +162,18 @@ class XmltvEpgService(
                 val windowEnd = nowSeconds + 24 * 3600
 
                 val uniqueXmltvIds = matchedIds.values.distinct()
-                val allProgrammes =
-                    uniqueXmltvIds.chunked(500).flatMap { chunk ->
-                        dao.getProgrammesForChannels(chunk, windowStart, windowEnd)
+
+                // ⚡ Bolt: Performance Optimization
+                // Replaced chunked().flatMap() and .groupBy() with explicit loops to avoid
+                // intermediate list and Map.Entry allocations.
+                val programmesByChannel = mutableMapOf<String, MutableList<EpgSearchResultRow>>()
+                for (chunk in uniqueXmltvIds.chunked(500)) {
+                    val rows = dao.getProgrammesForChannels(chunk, windowStart, windowEnd)
+                    for (row in rows) {
+                        val list = programmesByChannel.getOrPut(row.channelId) { ArrayList() }
+                        list.add(row)
                     }
-                val programmesByChannel = allProgrammes.groupBy { it.channelId }
+                }
 
                 val result = mutableMapOf<String, EpgResponse>()
                 for ((itemId, xmltvId) in matchedIds) {
@@ -219,11 +227,17 @@ class XmltvEpgService(
                 val nowEpoch = System.currentTimeMillis() / 1000
 
                 val uniqueXmltvIds = matchedIds.values.distinct()
-                val nowPlayingRows =
-                    uniqueXmltvIds.chunked(500).flatMap { chunk ->
-                        dao.getNowPlayingForChannels(chunk, nowEpoch)
+
+                // ⚡ Bolt: Performance Optimization
+                // Replaced chunked().flatMap() and .associateBy() with explicit loops to avoid
+                // intermediate list and Map.Entry allocations.
+                val nowPlayingByChannel = mutableMapOf<String, EpgSearchResultRow>()
+                for (chunk in uniqueXmltvIds.chunked(500)) {
+                    val rows = dao.getNowPlayingForChannels(chunk, nowEpoch)
+                    for (row in rows) {
+                        nowPlayingByChannel[row.channelId] = row
                     }
-                val nowPlayingByChannel = nowPlayingRows.associateBy { it.channelId }
+                }
 
                 val result = mutableMapOf<String, EpgProgram>()
                 for ((itemId, xmltvId) in matchedIds) {
