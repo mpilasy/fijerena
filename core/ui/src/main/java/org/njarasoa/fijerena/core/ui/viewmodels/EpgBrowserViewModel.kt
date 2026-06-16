@@ -505,17 +505,27 @@ class EpgBrowserViewModel(
             group.copy(
                 programs =
                     group.programs.map { program ->
-                        val annotatedAirings =
-                            program.airings.map { airing ->
-                                val matched = matcher.match(airing.channelId, airing.channelName)
-                                if (matched != null) airing.copy(matchedStream = matched) else airing
+                        // ⚡ Bolt: Performance Optimization
+                        // Replaced O(N log N) `sortedWith` with an O(N) stable bucketing approach.
+                        // `program.airings` is already sorted by `startEpoch`. By accumulating
+                        // matches and non-matches separately and concatenating, we preserve
+                        // the initial chronological ordering natively without redundant allocations.
+                        val matchedList = ArrayList<EpgBrowserAiring>()
+                        val unmatchedList = ArrayList<EpgBrowserAiring>()
+
+                        for (airing in program.airings) {
+                            val matched = matcher.match(airing.channelId, airing.channelName)
+                            if (matched != null) {
+                                matchedList.add(airing.copy(matchedStream = matched))
+                            } else {
+                                unmatchedList.add(airing)
                             }
-                        // Sort matched-first, preserving startEpoch order within each group
-                        val sorted =
-                            annotatedAirings.sortedWith(
-                                compareByDescending<EpgBrowserAiring> { it.matchedStream != null }
-                                    .thenBy { it.startEpoch },
-                            )
+                        }
+
+                        val sorted = ArrayList<EpgBrowserAiring>(matchedList.size + unmatchedList.size)
+                        sorted.addAll(matchedList)
+                        sorted.addAll(unmatchedList)
+
                         program.copy(airings = sorted)
                     },
             )
