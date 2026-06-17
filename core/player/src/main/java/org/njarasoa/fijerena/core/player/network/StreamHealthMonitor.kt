@@ -13,8 +13,8 @@ class StreamHealthMonitor(
 ) {
 
     data class Config(
-        val minBufferMs: Long = 3000L,
-        val sustainedDegradationWindowMs: Long = 45000L,
+        val minBufferMs: Long = 8000L,
+        val sustainedDegradationWindowMs: Long = 20000L,
         val maxFrameDropRate: Float = 15.0f,
         val evaluationIntervalMs: Long = 5000L
     )

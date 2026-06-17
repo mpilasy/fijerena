@@ -14,12 +14,15 @@ enum class NetworkType {
  * All magic numbers live here — logic files reference these only.
  */
 object NetworkBufferProfile {
-    // ── WiFi Live TV (aggressive low-latency for fast startup) ─────
-    const val WIFI_LIVE_MIN_BUFFER_MS = 2_000
-    const val WIFI_LIVE_MAX_BUFFER_MS = 8_000
+    // ── WiFi Live TV (optimized for fast start + proactive recycle bridge) ─────
+    const val WIFI_LIVE_MIN_BUFFER_MS = 15_000
+    const val WIFI_LIVE_MAX_BUFFER_MS = 30_000
     const val WIFI_LIVE_PLAYBACK_MS = 500
-    const val WIFI_LIVE_REBUFFER_MS = 500
+    const val WIFI_LIVE_REBUFFER_MS = 1_000
     const val WIFI_LIVE_BACK_BUFFER_MS = 0
+
+    // Targeted buffer for the background seamless recycle
+    const val LIVE_RECYCLE_MIN_READY_MS = 3_000
 
     // ── WiFi VOD (reduced for faster startup) ────────────────────────
     const val WIFI_VOD_MIN_BUFFER_MS = 5_000
