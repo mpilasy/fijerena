@@ -384,6 +384,11 @@ class StreamingPlaybackService : MediaSessionService() {
 
     fun stop() {
         cancelPendingRetry()
+        // A pending autonomous recycle (StreamHealthMonitor) must not be allowed to silently
+        // resurrect playback right after a deliberate stop.
+        mainHandler.removeCallbacks(recycleHandler)
+        setRecycling(false)
+        healthMonitor?.reset()
         mediaSession?.player?.stop()
         _playbackState.value = PlaybackState.Idle
         releaseWakeLock()
