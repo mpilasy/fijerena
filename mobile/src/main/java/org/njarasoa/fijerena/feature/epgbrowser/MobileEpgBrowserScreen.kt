@@ -106,7 +106,6 @@ fun MobileEpgBrowserScreen(
 
     val keyboardController = LocalSoftwareKeyboardController.current
     val isDevMode = viewModel.isDevMode
-    val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
     val oldestIngestedAtMs by viewModel.oldestEnabledIngestedAtMs.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
@@ -421,8 +420,6 @@ fun MobileEpgBrowserScreen(
                     MobileResultsContent(
                         results = state,
                         nowEpoch = nowEpoch,
-                        isDevMode = isDevMode,
-                        sourceLabels = sourceLabels,
                         searchMode = searchMode,
                         matchedOnly = matchedOnly,
                         onMatchedOnlyChange = { matchedOnly = it },
@@ -451,8 +448,6 @@ fun MobileEpgBrowserScreen(
 private fun MobileResultsContent(
     results: EpgBrowserViewModel.UiState.Results,
     nowEpoch: Long,
-    isDevMode: Boolean = false,
-    sourceLabels: Map<Long, String> = emptyMap(),
     searchMode: EpgBrowserViewModel.SearchMode = EpgBrowserViewModel.SearchMode.PROGRAMME,
     matchedOnly: Boolean = true,
     onMatchedOnlyChange: (Boolean) -> Unit = {},
@@ -542,8 +537,6 @@ private fun MobileResultsContent(
                         MobileProgramCard(
                             program = program,
                             nowEpoch = nowEpoch,
-                            isDevMode = isDevMode,
-                            sourceLabels = sourceLabels,
                             onNavigateToPlayer = onNavigateToPlayer,
                         )
                     }
@@ -571,8 +564,6 @@ private fun MobileDateHeader(dateLabel: String) {
 private fun MobileProgramCard(
     program: EpgBrowserProgram,
     nowEpoch: Long,
-    isDevMode: Boolean = false,
-    sourceLabels: Map<Long, String> = emptyMap(),
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -640,8 +631,6 @@ private fun MobileProgramCard(
                 MobileAiringRow(
                     airing = airing,
                     nowEpoch = nowEpoch,
-                    isDevMode = isDevMode,
-                    sourceLabels = sourceLabels,
                     onNavigateToPlayer = onNavigateToPlayer,
                     onRequestConfirmation = { pendingConfirmAiring = it },
                 )
@@ -708,8 +697,6 @@ private fun MobileProgramCard(
 private fun MobileAiringRow(
     airing: EpgBrowserAiring,
     nowEpoch: Long,
-    isDevMode: Boolean = false,
-    sourceLabels: Map<Long, String> = emptyMap(),
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
     onRequestConfirmation: (EpgBrowserAiring) -> Unit = {},
 ) {
@@ -760,16 +747,6 @@ private fun MobileAiringRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).bounceMarquee(),
         )
-        if (isDevMode && airing.sourceId > 0) {
-            val sourceName = sourceLabels[airing.sourceId]
-            if (sourceName != null) {
-                Text(
-                    text = sourceName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = CinemaAlpha.textLow),
-                )
-            }
-        }
         if (isOnAir || isSoon) {
             val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
             val badgeLabel = if (isOnAir) "ON AIR" else "SOON"
