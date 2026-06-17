@@ -20,3 +20,6 @@
 ## 2026-06-09 - [Avoid .flatMap with chunked database calls]
 **Learning:** Using `.chunked(N).flatMap { dao.get...() }` followed by `.groupBy` or `.associateBy` creates multiple intermediate list allocations per chunk, a final flattened list, and Map.Entry allocations which is inefficient when querying massive EPG index datasets.
 **Action:** Replace chunked `.flatMap` and subsequent grouping with standard `for` loops iterating over `.chunked(N)` results and directly populating a `mutableMapOf`.
+## 2026-06-17 - Optimize sequential DB calls in Mobile Episode Selection
+**Learning:** Found sequential suspend calls to `mediaRepository.getPlaybackPositionSuspend` inside a loop iterating through episodes in `EpisodeSelectionScreen.kt`. This N+1 query problem caused unnecessary network/database overhead and UI thread blocking.
+**Action:** Replaced sequential DB calls with bulk retrieval method `mediaRepository.getPlaybackPositionsSuspend` before the loop, caching the watched statuses into a map. Iteration now does an O(1) map lookup instead of a DB call. Always batch fetches before loop iterations if possible.
