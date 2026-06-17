@@ -74,11 +74,12 @@ class PlaybackViewModel(
         }
 
     init {
-        viewModelScope.launch {
-            startService()
-            connectToService()
-            observeServiceState()
-        }
+        // connectToService() never returns (it collects a connection flow that stays open
+        // for the life of the controller), so it must run in its own coroutine. Otherwise it
+        // blocks observeServiceState() from ever starting, leaving playbackState stuck at Idle.
+        startService()
+        viewModelScope.launch { connectToService() }
+        viewModelScope.launch { observeServiceState() }
     }
 
     private suspend fun observeServiceState() {
@@ -435,11 +436,14 @@ class PlaybackViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        _controller.value?.removeListener(playerListener)
-        serviceConnection.disconnect()
-        viewModelScope.launch {
-            _controller.value?.stop()
-            _controller.value?.release()
+        // viewModelScope is already cancelled by the time onCleared() runs, so cleanup
+        // must happen synchronously here rather than via viewModelScope.launch.
+        _controller.value?.let {
+            it.removeListener(playerListener)
+            it.stop()
+            it.release()
         }
+        StreamingPlaybackService.getInstance()?.stop()
+        serviceConnection.disconnect()
     }
 }
