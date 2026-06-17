@@ -9,9 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
-import androidx.lifecycle.ViewModelProvider
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.navigation.TvNavHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -56,5 +54,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        android.util.Log.i("MainActivity", "dispatchKeyEvent: action=${event.action}, code=${event.keyCode}")
+        return super.dispatchKeyEvent(event)
     }
 }

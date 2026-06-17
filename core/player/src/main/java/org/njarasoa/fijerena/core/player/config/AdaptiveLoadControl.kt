@@ -25,66 +25,38 @@ class AdaptiveLoadControl(
 ) : LoadControl {
     private val sharedAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
 
-    @Volatile
-    private var delegate: DefaultLoadControl = buildDelegate(NetworkMonitor.currentNetworkType)
+    // Persistent delegate to avoid race conditions during rebuilds
+    private val delegate: DefaultLoadControl = buildStaticDelegate()
+
+    // No longer used, but kept for API compatibility during refactor
+    private var isRecycling: Boolean = false
 
     fun updateForNetwork(networkType: NetworkType) {
-        delegate = buildDelegate(networkType)
+        // Shared allocator and static settings handle this automatically
     }
 
     fun updateContentType(contentType: PlayerConfigFactory.ContentType) {
-        this.contentType = contentType
-        delegate = buildDelegate(NetworkMonitor.currentNetworkType)
+        // Shared allocator and static settings handle this automatically
     }
 
-    private fun buildDelegate(networkType: NetworkType): DefaultLoadControl {
-        val isWifi = networkType != NetworkType.CELLULAR
-        val isLive = contentType == PlayerConfigFactory.ContentType.LIVE_TV
+    fun setRecycling(recycling: Boolean) {
+        this.isRecycling = recycling
+    }
 
-        val minBuffer: Int
-        val maxBuffer: Int
-        val playback: Int
-        val rebuffer: Int
-        val backBuffer: Int
-        val retainKeyframe: Boolean
+    fun isRecycling(): Boolean = isRecycling
 
-        if (isLive) {
-            if (isWifi) {
-                minBuffer = NetworkBufferProfile.WIFI_LIVE_MIN_BUFFER_MS
-                maxBuffer = NetworkBufferProfile.WIFI_LIVE_MAX_BUFFER_MS
-                playback = NetworkBufferProfile.WIFI_LIVE_PLAYBACK_MS
-                rebuffer = NetworkBufferProfile.WIFI_LIVE_REBUFFER_MS
-                backBuffer = NetworkBufferProfile.WIFI_LIVE_BACK_BUFFER_MS
-            } else {
-                minBuffer = NetworkBufferProfile.getCellularLiveMinBuffer(cellularLiveMultiplier)
-                maxBuffer = NetworkBufferProfile.getCellularLiveMaxBuffer(cellularLiveMultiplier)
-                playback = NetworkBufferProfile.getCellularLivePlayback(cellularLiveMultiplier)
-                rebuffer = NetworkBufferProfile.getCellularLiveRebuffer(cellularLiveMultiplier)
-                backBuffer = NetworkBufferProfile.CELLULAR_LIVE_BACK_BUFFER_MS
-            }
-            retainKeyframe = false
-        } else {
-            if (isWifi) {
-                minBuffer = NetworkBufferProfile.WIFI_VOD_MIN_BUFFER_MS
-                maxBuffer = NetworkBufferProfile.WIFI_VOD_MAX_BUFFER_MS
-                playback = NetworkBufferProfile.WIFI_VOD_PLAYBACK_MS
-                rebuffer = NetworkBufferProfile.WIFI_VOD_REBUFFER_MS
-                backBuffer = NetworkBufferProfile.WIFI_VOD_BACK_BUFFER_MS
-            } else {
-                minBuffer = NetworkBufferProfile.getCellularVodMinBuffer(cellularVodMultiplier)
-                maxBuffer = NetworkBufferProfile.getCellularVodMaxBuffer(cellularVodMultiplier)
-                playback = NetworkBufferProfile.getCellularVodPlayback(cellularVodMultiplier)
-                rebuffer = NetworkBufferProfile.getCellularVodRebuffer(cellularVodMultiplier)
-                backBuffer = NetworkBufferProfile.CELLULAR_VOD_BACK_BUFFER_MS
-            }
-            retainKeyframe = true
-        }
-
-        return DefaultLoadControl
-            .Builder()
+    private fun buildStaticDelegate(): DefaultLoadControl {
+        // Use the most accommodating values for both WiFi and Cellular.
+        // The allocator and prioritizations handle the rest.
+        return DefaultLoadControl.Builder()
             .setAllocator(sharedAllocator)
-            .setBufferDurationsMs(minBuffer, maxBuffer, playback, rebuffer)
-            .setBackBuffer(backBuffer, retainKeyframe)
+            .setBufferDurationsMs(
+                NetworkBufferProfile.WIFI_LIVE_MIN_BUFFER_MS, // 15s
+                NetworkBufferProfile.CELLULAR_VOD_MAX_BUFFER_MS, // 100s
+                NetworkBufferProfile.WIFI_LIVE_PLAYBACK_MS, // 500ms
+                NetworkBufferProfile.WIFI_LIVE_REBUFFER_MS // 1000ms
+            )
+            .setBackBuffer(NetworkBufferProfile.WIFI_VOD_BACK_BUFFER_MS, true)
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
     }

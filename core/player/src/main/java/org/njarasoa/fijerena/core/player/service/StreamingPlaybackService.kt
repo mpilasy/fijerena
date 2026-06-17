@@ -83,6 +83,16 @@ class StreamingPlaybackService : MediaSessionService() {
     private var serviceScope: CoroutineScope? = null
     private var healthMonitor: org.njarasoa.fijerena.core.player.network.StreamHealthMonitor? = null
 
+    private val _isRecycling = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isRecyclingFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = _isRecycling.asStateFlow()
+
+    fun isRecycling(): Boolean = _isRecycling.value
+
+    private fun setRecycling(recycling: Boolean) {
+        _isRecycling.value = recycling
+        adaptiveLoadControl?.setRecycling(recycling)
+    }
+
     private val recycleHandler = Runnable {
         val metadata = _currentMetadata.value
         val player = getPlayer()
@@ -93,12 +103,33 @@ class StreamingPlaybackService : MediaSessionService() {
             // 1. Evict network connection pool to bypass ISP/CDN shaping
             org.njarasoa.fijerena.core.player.network.NetworkModule.evictConnectionPool()
 
-            // 2. Restart stream seamlessly
-            playStream(metadata, currentPos)
+            // 2. Restart stream seamlessly without clearing the screen
+            performSeamlessRecycle(metadata, currentPos)
 
             // 3. Reset monitor for the fresh connection
             healthMonitor?.reset()
         }
+    }
+
+    private fun performSeamlessRecycle(metadata: PlayerMetadata, currentPos: Long) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        
+        // Temporarily increase buffer requirement for recycling to ensure a 100% smooth handover
+        setRecycling(true)
+
+        val mediaSource = mediaSourceFactory?.createMediaSource(
+            streamUrl = metadata.streamUrl,
+            headers = metadata.headers,
+            isLive = metadata.isLive,
+            onRetry = { _streamRetryCount.value++ },
+            transferListener = bandwidthMeter,
+        ) ?: return
+
+        // setMediaSource(source, resetPosition=false) keeps the current frame on screen
+        // while the new source prepares in the background.
+        player.setMediaSource(mediaSource, false)
+        player.prepare()
+        player.playWhenReady = true
     }
 
     override fun onCreate() {
@@ -175,9 +206,24 @@ class StreamingPlaybackService : MediaSessionService() {
         playerListener =
             PlayerListener(
                 onStateChanged = { newState ->
+                    val isRecycling = isRecycling()
+                    Log.d(TAG, "onStateChanged: newState=$newState, isRecycling=$isRecycling")
+                    
                     if (newState is PlaybackState.Playing) {
                         liveRetryCount = 0
+                        // Reset recycling mode once we are successfully playing the new stream
+                        if (isRecycling) {
+                            Log.i(TAG, "Successfully resumed after recycle. Resetting recycling flag.")
+                            setRecycling(false)
+                        }
                     }
+
+                    // Suppress 'Buffering' state updates during a silent recycle to keep it seamless
+                    if (isRecycling && newState is PlaybackState.Buffering) {
+                        Log.d(TAG, "Suppressing Buffering state during silent recycle.")
+                        return@PlayerListener
+                    }
+
                     _playbackState.value = newState
                 },
                 onWakeLockRequired = {
@@ -246,6 +292,9 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
 
+        // Ensure we are in fast-startup mode
+        setRecycling(false)
+
         val mediaSource =
             mediaSourceFactory?.createMediaSource(
                 streamUrl = metadata.streamUrl,
@@ -261,7 +310,6 @@ class StreamingPlaybackService : MediaSessionService() {
         }
         player.playWhenReady = true
         player.prepare()
-        _playbackState.value = PlaybackState.Buffering
     }
 
     private fun attemptLiveRetry() {
@@ -277,12 +325,13 @@ class StreamingPlaybackService : MediaSessionService() {
             return
         }
 
+        // Hard retry should use fast-startup settings
+        setRecycling(false)
+
         liveRetryCount++
         _streamRetryCount.value++
         val delayMs = LIVE_RETRY_BASE_DELAY_MS * liveRetryCount
         Log.i(TAG, "Live stream retry $liveRetryCount/$MAX_LIVE_RETRIES in ${delayMs}ms")
-
-        _playbackState.value = PlaybackState.Buffering
 
         val retryRunnable =
             Runnable {

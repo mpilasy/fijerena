@@ -19,11 +19,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -78,6 +81,7 @@ fun PlayerScreen(
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
+    val controller by viewModel.controller.collectAsStateWithLifecycle()
 
     // Capture delegated properties into local variables for stable smart casting
     val currentPs = playbackState
@@ -94,22 +98,33 @@ fun PlayerScreen(
         viewModel = viewModel,
     )
 
+    // Ensure focus is requested when no overlays are visible
+    LaunchedEffect(state.showControls, state.showCategoryOverlay, state.showLastWatchedOverlay) {
+        val noOverlays = !state.showControls && !state.showCategoryOverlay && !state.showLastWatchedOverlay
+        if (noOverlays) {
+            android.util.Log.i("PlayerScreen", "Requesting focus for main Box")
+            state.focusRequester.requestFocus()
+        }
+    }
+
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .background(CinemaBackground)
                 .then(
-                    // Only make the player box focusable when controls are not visible
-                    // Stats overlay is now non-focusable and survives channel switches
-                    if (!state.showControls) {
+                    // Only make the player box focusable when controls and menus are NOT visible.
+                    // This allows focus to pass to the active overlay (e.g. Category List).
+                    if (!state.showControls && !state.showCategoryOverlay && !state.showLastWatchedOverlay) {
                         Modifier
                             .focusRequester(state.focusRequester)
                             .focusable()
                     } else {
                         Modifier
-                    },
-                ).onKeyEvent { keyEvent ->
+                    }
+                )
+                .onKeyEvent { keyEvent ->
+                    android.util.Log.i("PlayerScreen", "onKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}")
                     handlePlayerKeyEvent(
                         keyEvent = keyEvent,
                         state = state,
@@ -122,7 +137,7 @@ fun PlayerScreen(
                     )
                 },
     ) {
-        // Use metadata title as key to force AndroidView recreation on stream change
+        // Use metadata title as key to identify stream changes without recreating view
         val streamKey = currentMetadata.title + currentMetadata.streamUrl
 
         AndroidView(
@@ -132,21 +147,20 @@ fun PlayerScreen(
                     keepScreenOn = true
                     setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    // CRITICAL: Block all native focus
+                    isFocusable = false
+                    isFocusableInTouchMode = false
+                    descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
                 }
             },
             modifier = Modifier.fillMaxSize(),
             update = { view ->
-                // Capture stream key to trigger re-creation when it changes
-                @Suppress("UNUSED_VARIABLE")
-                val capturedStreamKey = streamKey
-
-                // Ensure resize mode is set
                 view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-
-                // Bind player
+                // Bind player directly from service for zero-lag visibility
                 val service = StreamingPlaybackService.getInstance()
-                if (view.player == null) {
-                    view.player = service?.getPlayer()
+                val player = service?.getPlayer()
+                if (view.player != player) {
+                    view.player = player
                 }
             },
         )
@@ -156,9 +170,36 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Center,
         ) {
+            val service = StreamingPlaybackService.getInstance()
+            val isRecycling by (service?.isRecyclingFlow ?: kotlinx.coroutines.flow.MutableStateFlow(false))
+                .collectAsStateWithLifecycle()
+
+            // Failsafe Truth: High-frequency poll of player status to clear stuck UI
+            var isActuallyMoving by remember { mutableStateOf(false) }
+            LaunchedEffect(currentPs, isRecycling) {
+                if (currentPs is PlaybackState.Buffering && !isRecycling) {
+                    while (true) {
+                        val player = StreamingPlaybackService.getInstance()?.getPlayer()
+                        val pos = player?.currentPosition ?: 0L
+                        val playing = player?.isPlaying == true
+                        if (playing || pos > 0L) {
+                            isActuallyMoving = true
+                            break
+                        }
+                        delay(1000)
+                    }
+                } else {
+                    isActuallyMoving = false
+                }
+            }
+
             when (val ps = currentPs) {
-                PlaybackState.Idle -> { /* Silent - no UI flash before stream loads */ }
-                PlaybackState.Buffering -> BufferingContent()
+                PlaybackState.Idle -> { /* Silent */ }
+                PlaybackState.Buffering -> {
+                    if (!isRecycling && !isActuallyMoving) {
+                        BufferingContent()
+                    }
+                }
                 is PlaybackState.Ended -> EndedContent(onBack)
                 is PlaybackState.Error ->
                     ErrorContent(

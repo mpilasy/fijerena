@@ -48,18 +48,18 @@ class PlaybackViewModel(
     private val playerListener =
         object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                updatePlaybackState()
+                // Rely on service.playbackState Flow for state updates
             }
 
             override fun onPlayWhenReadyChanged(
                 playWhenReady: Boolean,
                 reason: Int,
             ) {
-                updatePlaybackState()
+                // Rely on service.playbackState Flow for state updates
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                updatePlaybackState()
+                // Rely on service.playbackState Flow for state updates
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -70,34 +70,6 @@ class PlaybackViewModel(
                 if (StreamingPlaybackService.getInstance() == null) {
                     _playbackState.value = PlaybackState.Error("Playback error occurred", error)
                 }
-            }
-
-            private fun updatePlaybackState() {
-                // Don't overwrite error state
-                if (isInErrorState) return
-
-                val controller = _controller.value ?: return
-                val state =
-                    when (controller.playbackState) {
-                        Player.STATE_IDLE -> PlaybackState.Idle
-                        Player.STATE_BUFFERING -> PlaybackState.Buffering
-                        Player.STATE_READY -> {
-                            if (controller.playWhenReady) {
-                                PlaybackState.Playing(
-                                    position = controller.currentPosition,
-                                    duration = controller.duration.coerceAtLeast(0L),
-                                )
-                            } else {
-                                PlaybackState.Paused(
-                                    position = controller.currentPosition,
-                                    duration = controller.duration.coerceAtLeast(0L),
-                                )
-                            }
-                        }
-                        Player.STATE_ENDED -> PlaybackState.Ended
-                        else -> PlaybackState.Idle
-                    }
-                _playbackState.value = state
             }
         }
 
@@ -114,6 +86,7 @@ class PlaybackViewModel(
 
         viewModelScope.launch {
             service.playbackState.collect { state ->
+                android.util.Log.d("PlaybackViewModel", "observeServiceState: received state=$state")
                 _playbackState.value = state
             }
         }
@@ -150,11 +123,12 @@ class PlaybackViewModel(
         isInErrorState = false
         onFocusRegained()
         _currentMetadata.value = metadata
-        _playbackState.value = PlaybackState.Buffering
+        // DO NOT set _playbackState.value = Buffering here! 
+        // Let the service handle the state transitions.
 
         viewModelScope.launch {
-            val service = StreamingPlaybackService.getInstance()
-            service?.playStream(metadata, resumeFromPosition)
+            val service = StreamingPlaybackService.awaitInstance()
+            service.playStream(metadata, resumeFromPosition)
         }
     }
 
