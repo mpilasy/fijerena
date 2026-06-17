@@ -40,6 +40,11 @@ class XtreamContentManager(
         private const val KEY_SERIES_CATEGORIES_TIMESTAMP = "series_categories_ts"
         private const val KEY_STREAMS_TIMESTAMP_PREFIX = "streams_ts_"
         private const val CACHE_EXPIRATION_MS = 24 * 3600 * 1000L // 24 hours
+
+        // SQLite caps bound variables per statement (historically 999 on Android); chunk large
+        // DELETE ... IN (...) batches well under that so deletes don't fail outright on
+        // providers with very large catalogs.
+        private const val SQLITE_DELETE_BATCH_SIZE = 900
     }
 
     suspend fun getCategories(): Result<List<XtreamCategory>> =
@@ -377,7 +382,9 @@ class XtreamContentManager(
                             }
 
                         if (toDeleteIds.isNotEmpty()) {
-                            categoryDao.deleteByIds(providerId, type, toDeleteIds.toList())
+                            toDeleteIds.toList().chunked(SQLITE_DELETE_BATCH_SIZE).forEach { chunk ->
+                                categoryDao.deleteByIds(providerId, type, chunk)
+                            }
                         }
                         if (toInsert.isNotEmpty()) {
                             categoryDao.insertAll(toInsert)
@@ -480,7 +487,9 @@ class XtreamContentManager(
                             val allIds = streamDao.getStreamIds(providerId, type)
                             val toDelete = allIds.filter { it !in seenIds }
                             if (toDelete.isNotEmpty()) {
-                                streamDao.deleteByIds(providerId, type, toDelete)
+                                toDelete.chunked(SQLITE_DELETE_BATCH_SIZE).forEach { chunk ->
+                                    streamDao.deleteByIds(providerId, type, chunk)
+                                }
                             }
 
                             streamDao.rebuildFts()
@@ -571,7 +580,9 @@ class XtreamContentManager(
                             val allIds = seriesDao.getSeriesIds(providerId)
                             val toDelete = allIds.filter { it !in seenIds }
                             if (toDelete.isNotEmpty()) {
-                                seriesDao.deleteByIds(providerId, toDelete)
+                                toDelete.chunked(SQLITE_DELETE_BATCH_SIZE).forEach { chunk ->
+                                    seriesDao.deleteByIds(providerId, chunk)
+                                }
                             }
 
                             seriesDao.rebuildFts()
