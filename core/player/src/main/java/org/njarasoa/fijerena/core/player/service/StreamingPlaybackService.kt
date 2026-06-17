@@ -113,7 +113,11 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private fun performSeamlessRecycle(metadata: PlayerMetadata, currentPos: Long) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
-        
+
+        // A hard retry scheduled for the same underlying error must not be allowed to fire
+        // later with a screen-clearing setMediaSource() call on top of this seamless swap.
+        cancelPendingRetry()
+
         // Temporarily increase buffer requirement for recycling to ensure a 100% smooth handover
         setRecycling(true)
 
@@ -322,6 +326,13 @@ class StreamingPlaybackService : MediaSessionService() {
                             "The channel may be offline.",
                     )
             }
+            return
+        }
+
+        // A seamless recycle is already handling recovery for this disruption; don't race it
+        // with a hard, screen-clearing retry.
+        if (isRecycling()) {
+            Log.i(TAG, "Skipping hard retry: seamless recycle already in progress.")
             return
         }
 
