@@ -42,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -372,7 +371,6 @@ private fun SearchContent(
                     },
                     onItemRemove = onHistoryItemRemove,
                     onClearAll = onClearHistory,
-                    modifier = Modifier.focusProperties { enter = { historyFocusRequester } },
                     firstItemFocusRequester = historyFocusRequester,
                 )
             } else {
