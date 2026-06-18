@@ -9,18 +9,25 @@ import android.util.Log
  */
 class StreamHealthMonitor(
     private val config: Config = Config(),
-    private val onStreamRecycleRequired: () -> Unit
+    private val onStreamRecycleRequired: () -> Unit,
+    private val onRecoveryExhausted: () -> Unit = {},
 ) {
 
     data class Config(
         val minBufferMs: Long = 8000L,
         val sustainedDegradationWindowMs: Long = 20000L,
         val maxFrameDropRate: Float = 15.0f,
-        val evaluationIntervalMs: Long = 5000L
+        val evaluationIntervalMs: Long = 5000L,
+        val maxRecycleAttempts: Int = 3,
     )
 
     private var firstFailureTimestamp: Long = 0L
     private var isRecycleTriggered: Boolean = false
+
+    // Counts recycles since the last confirmed stable playback. Without a cap, a sustained
+    // real outage (e.g. packet loss) makes this recycle forever in silence with no feedback
+    // that anything is wrong, unlike the hard-retry path which gives up after MAX_LIVE_RETRIES.
+    private var recycleAttempts: Int = 0
 
     /**
      * Accepts a tick of performance metrics from the active media engine.
@@ -59,7 +66,9 @@ class StreamHealthMonitor(
     }
 
     /**
-     * Resets the monitor state after a successful connection recycle.
+     * Resets the monitor state after a connection recycle attempt so the next degradation
+     * window can be evaluated. Does not clear the recycle-attempt count — see
+     * [notifyStablePlayback] for that.
      */
     fun reset() {
         firstFailureTimestamp = 0L
@@ -67,7 +76,22 @@ class StreamHealthMonitor(
         Log.d(TAG, "Health monitor reset.")
     }
 
+    /**
+     * Call once playback is confirmed actually playing again, to clear the recycle-attempt
+     * count built up while recovering. A genuinely stable stream should never approach the cap.
+     */
+    fun notifyStablePlayback() {
+        recycleAttempts = 0
+    }
+
     private fun triggerRecycle() {
+        recycleAttempts++
+        if (recycleAttempts > config.maxRecycleAttempts) {
+            Log.w(TAG, "Giving up after $recycleAttempts recycle attempts without stable playback.")
+            isRecycleTriggered = true
+            onRecoveryExhausted.invoke()
+            return
+        }
         isRecycleTriggered = true
         onStreamRecycleRequired.invoke()
     }

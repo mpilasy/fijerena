@@ -143,9 +143,22 @@ class StreamingPlaybackService : MediaSessionService() {
         NetworkMonitor.init(this)
         mediaSourceFactory = StreamingMediaSourceFactory(this)
 
-        healthMonitor = org.njarasoa.fijerena.core.player.network.StreamHealthMonitor {
-            mainHandler.post(recycleHandler)
-        }
+        healthMonitor = org.njarasoa.fijerena.core.player.network.StreamHealthMonitor(
+            onStreamRecycleRequired = {
+                mainHandler.post(recycleHandler)
+            },
+            onRecoveryExhausted = {
+                mainHandler.post {
+                    Log.w(TAG, "Recovery exhausted: giving up after repeated recycle attempts.")
+                    stop()
+                    _playbackState.value =
+                        PlaybackState.Error(
+                            "Live stream unavailable after repeated recovery attempts. " +
+                                "Check your connection and try again.",
+                        )
+                }
+            },
+        )
 
         initializePlayer()
         acquireWakeLock()
@@ -215,6 +228,7 @@ class StreamingPlaybackService : MediaSessionService() {
                     
                     if (newState is PlaybackState.Playing) {
                         liveRetryCount = 0
+                        healthMonitor?.notifyStablePlayback()
                         // Reset recycling mode once we are successfully playing the new stream
                         if (isRecycling) {
                             Log.i(TAG, "Successfully resumed after recycle. Resetting recycling flag.")
@@ -287,6 +301,7 @@ class StreamingPlaybackService : MediaSessionService() {
         cancelPendingRetry()
         playerListener?.resetErrorState()
         liveRetryCount = 0
+        healthMonitor?.notifyStablePlayback()
         _streamRetryCount.value = 0
         _rebufferCount.value = 0
         _exhaustionRebufferCount.value = 0
