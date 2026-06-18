@@ -43,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -509,7 +508,6 @@ private fun EpgBrowserContent(
                             },
                             onItemRemove = onRemoveHistoryEntry,
                             onClearAll = onClearHistory,
-                            modifier = Modifier.focusProperties { enter = { historyFocusRequester } },
                             firstItemFocusRequester = historyFocusRequester,
                         )
                         Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
