@@ -27,6 +27,15 @@ class AdaptiveLoadControl(
 
     private var networkType: NetworkType = NetworkMonitor.currentNetworkType
 
+    // DefaultLoadControl is stateful across its lifecycle: shouldContinueLoading()/
+    // shouldStartPlayback() rely on internal state that onTracksSelected() sets up. A freshly
+    // built delegate hasn't seen that call, so swapping mid-playback used to crash the very
+    // next shouldContinueLoading() with a NullPointerException. Caching the most recent
+    // onPrepared/onTracksSelected calls lets a new delegate be brought up to the same state
+    // immediately after a swap.
+    private var lastPreparedPlayerId: PlayerId? = null
+    private var lastTracksSelected: TracksSelectedCall? = null
+
     // Swapped on network/content-type changes; LoadControl methods below always read through
     // this reference, so a swap takes effect on the very next call. Rebuilding just constructs
     // a fresh value object — it doesn't touch the player, the allocator, or buffered data — so
@@ -36,13 +45,26 @@ class AdaptiveLoadControl(
 
     fun updateForNetwork(networkType: NetworkType) {
         this.networkType = networkType
-        delegate = buildDelegate(networkType, contentType)
+        delegate = buildDelegate(networkType, contentType).also(::replayLifecycle)
     }
 
     fun updateContentType(contentType: PlayerConfigFactory.ContentType) {
         this.contentType = contentType
-        delegate = buildDelegate(networkType, contentType)
+        delegate = buildDelegate(networkType, contentType).also(::replayLifecycle)
     }
+
+    private fun replayLifecycle(newDelegate: DefaultLoadControl) {
+        lastPreparedPlayerId?.let { newDelegate.onPrepared(it) }
+        lastTracksSelected?.let { (parameters, trackGroups, trackSelections) ->
+            newDelegate.onTracksSelected(parameters, trackGroups, trackSelections)
+        }
+    }
+
+    private data class TracksSelectedCall(
+        val parameters: LoadControl.Parameters,
+        val trackGroups: TrackGroupArray,
+        val trackSelections: Array<out ExoTrackSelection?>,
+    )
 
     private fun buildDelegate(networkType: NetworkType, contentType: PlayerConfigFactory.ContentType): DefaultLoadControl {
         // WIFI and UNKNOWN both use the WiFi profile, matching NetworkMonitor's own default
@@ -127,6 +149,7 @@ class AdaptiveLoadControl(
 
     // Analytics-aware lifecycle methods (often used by 1.7.1+ internal logic)
     override fun onPrepared(playerId: PlayerId) {
+        lastPreparedPlayerId = playerId
         delegate.onPrepared(playerId)
     }
 
@@ -160,6 +183,7 @@ class AdaptiveLoadControl(
         trackGroups: TrackGroupArray,
         trackSelections: Array<out ExoTrackSelection?>,
     ) {
+        lastTracksSelected = TracksSelectedCall(parameters, trackGroups, trackSelections)
         delegate.onTracksSelected(parameters, trackGroups, trackSelections)
     }
 }
