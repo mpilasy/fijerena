@@ -240,9 +240,12 @@ class StreamingPlaybackService : MediaSessionService() {
                         }
                     }
 
-                    // Suppress 'Buffering' state updates during a silent recycle to keep it seamless
-                    if (isRecycling && newState is PlaybackState.Buffering) {
-                        Log.d(TAG, "Suppressing Buffering state during silent recycle.")
+                    // Suppress any non-final state during a silent recycle to keep it seamless.
+                    // The player can pass through Buffering/Paused/Idle with not-yet-valid
+                    // (e.g. negative) position data while the new source's timeline resolves;
+                    // only a confirmed Playing or a terminal Error should reach the UI.
+                    if (isRecycling && newState !is PlaybackState.Playing && newState !is PlaybackState.Error) {
+                        Log.d(TAG, "Suppressing $newState during silent recycle.")
                         return@PlayerListener
                     }
 
