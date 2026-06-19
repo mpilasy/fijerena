@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -148,6 +149,19 @@ internal fun CategoryList(
             typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
         }
 
+    val palette = LocalCinemaTheme.current
+    val borderBrush =
+        remember(palette) {
+            androidx.compose.ui.graphics.Brush.verticalGradient(
+                colors =
+                    listOf(
+                        CinemaGlassBorder,
+                        Color.White.copy(alpha = CinemaAlpha.ghost),
+                        CinemaGlassBorder,
+                    ),
+            )
+        }
+
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.padding(bottom = Spacing.md.scaled(scale)),
@@ -186,15 +200,7 @@ internal fun CategoryList(
                         shape = RoundedCornerShape(CornerRadius.small),
                     ).border(
                         width = TvDimensions.borderDefault,
-                        brush =
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors =
-                                    listOf(
-                                        CinemaGlassBorder,
-                                        Color.White.copy(alpha = CinemaAlpha.ghost),
-                                        CinemaGlassBorder,
-                                    ),
-                            ),
+                        brush = borderBrush,
                         shape = RoundedCornerShape(CornerRadius.small),
                     ),
         ) {
