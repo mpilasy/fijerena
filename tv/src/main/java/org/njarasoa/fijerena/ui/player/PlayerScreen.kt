@@ -361,6 +361,7 @@ fun PlayerScreen(
                 isFavorite = isFavorite,
                 onToggleFavorite = onToggleFavorite,
                 showFullControls = state.showControls,
+                hideTopBars = state.showCategoryOverlay || state.showLastWatchedOverlay,
                 onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
                 onShowSubtitleSelector = { state.showSubtitleSelector = true },
                 onShowQualitySelector = { state.showQualitySelector = true },

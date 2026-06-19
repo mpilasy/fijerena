@@ -95,6 +95,7 @@ fun PlayerControlsOverlay(
     isFavorite: Boolean,
     onToggleFavorite: (() -> Unit)?,
     showFullControls: Boolean,
+    hideTopBars: Boolean = false,
     onShowAudioTrackSelector: () -> Unit,
     onShowSubtitleSelector: () -> Unit,
     onShowQualitySelector: () -> Unit,
@@ -169,63 +170,71 @@ fun PlayerControlsOverlay(
                 .fillMaxSize()
                 .background(CinemaBackground.copy(alpha = CinemaAlpha.focusedTint)),
     ) {
-        // Clock in top-right corner — self-ticking so only this leaf recomposes each second
-        ClockDisplay(
-            modifier =
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
-        )
-
-        // Top bar with channel name and title
-        Column(
-            modifier =
-                Modifier
-                    .align(Alignment.TopStart)
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
-        ) {
-            Text(
-                text = metadata.channelName,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                modifier = Modifier.bounceMarquee(),
+        // Clock in top-right corner — self-ticking so only this leaf recomposes each second.
+        // Hidden while a side panel is open since it would collide with the last-watched
+        // panel's own top-right-ish title.
+        if (!hideTopBars) {
+            ClockDisplay(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
             )
-            Text(
-                text = metadata.title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = CinemaTextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.bounceMarquee(),
-            )
+        }
 
-            // Resolution and Codec Info
-            if (videoResolution != null || videoCodec != null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = Spacing.xs),
-                ) {
-                    if (videoResolution != null) {
-                        Text(
-                            text = videoResolution!!,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = CinemaAccent,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    if (videoCodec != null) {
-                        Text(
-                            text = videoCodec!!,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                            modifier =
-                                Modifier
-                                    .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(4.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                        )
+        // Top bar with channel name and title. Hidden while a side panel is open since it
+        // would collide with the category panel's own title — the bottom program-info bar
+        // already covers channel/program context in that case.
+        if (!hideTopBars) {
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
+            ) {
+                Text(
+                    text = metadata.channelName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    modifier = Modifier.bounceMarquee(),
+                )
+                Text(
+                    text = metadata.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = CinemaTextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.bounceMarquee(),
+                )
+
+                // Resolution and Codec Info
+                if (videoResolution != null || videoCodec != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = Spacing.xs),
+                    ) {
+                        if (videoResolution != null) {
+                            Text(
+                                text = videoResolution!!,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = CinemaAccent,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        if (videoCodec != null) {
+                            Text(
+                                text = videoCodec!!,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                                modifier =
+                                    Modifier
+                                        .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -268,13 +277,15 @@ fun PlayerControlsOverlay(
             }
         }
 
-        // Bottom section: progress/EPG info + icon controls
+        // Bottom section: progress/EPG info + icon controls. Spans full width, so when a side
+        // panel is open this needs to be opaque enough to fully mask its channel list rather
+        // than letting it ghost through at the usual, lighter glass alpha.
         TvGlassPanel(
             modifier =
                 Modifier
                     .align(BottomCenter)
                     .fillMaxWidth(),
-            backgroundAlpha = 0.6f,
+            backgroundAlpha = if (hideTopBars) 0.92f else 0.6f,
         ) {
             Column(
                 modifier =
