@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,10 @@ class PlayerScreenState(
     // Scrub cursor position for VOD: non-null while user is scrubbing with D-pad.
     // OK/Center commits the seek; Back cancels.
     var scrubPositionMs by mutableStateOf<Long?>(null)
+
+    // Net channel hops accumulated from D-pad auto-repeat ticks (repeatCount >= 1) while a
+    // direction key is held. The first tap/tick of every press fires immediately instead.
+    var pendingChannelDelta by mutableIntStateOf(0)
 
     // Data states
     var livePosition by mutableLongStateOf(0L)

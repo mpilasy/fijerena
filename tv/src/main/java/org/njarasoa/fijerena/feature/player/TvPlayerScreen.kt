@@ -13,8 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -108,6 +110,14 @@ fun TvPlayerScreen(
     val currentStreamState by androidx.compose.runtime.rememberUpdatedState(streamState)
     val playbackState by playbackViewModel.playbackState.collectAsStateWithLifecycle()
 
+    // Remember the last successful stream so a channel change can keep PlayerScreen mounted
+    // (and the old video visible) through the Loading window instead of unmounting to a
+    // full-screen spinner. The LaunchedEffect below still checks live streamState, not this.
+    var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
+    if (streamState is StreamLoaderViewModel.StreamState.Success) {
+        lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
+    }
+
     // Stop playback when leaving the player screen
     DisposableEffect(Unit) {
         onDispose {
@@ -155,7 +165,7 @@ fun TvPlayerScreen(
 
     // Playback Trigger
     // Use derived state or specific key to avoid re-triggering on EPG updates
-    val currentStreamId = (streamState as? StreamLoaderViewModel.StreamState.Success)?.streamId
+    val currentStreamId = lastSuccessState?.streamId
 
     LaunchedEffect(currentStreamId) {
         val state = streamState
@@ -192,7 +202,12 @@ fun TvPlayerScreen(
 
     when (val state = streamState) {
         is StreamLoaderViewModel.StreamState.Loading -> {
-            LoadingScreen()
+            val previous = lastSuccessState
+            if (previous == null) {
+                LoadingScreen()
+            } else {
+                PlayerContent(previous, playbackViewModel, loaderViewModel, onBack)
+            }
         }
         is StreamLoaderViewModel.StreamState.Error -> {
             ErrorScreen(
@@ -201,70 +216,80 @@ fun TvPlayerScreen(
             )
         }
         is StreamLoaderViewModel.StreamState.Success -> {
-            PlayerScreen(
-                viewModel = playbackViewModel,
-                currentStreamId = state.streamId,
-                onBack = {
-                    // Finalize session before stopping
-                    val ps = playbackViewModel.playbackState.value
-                    val pos =
-                        when (ps) {
-                            is PlaybackState.Playing -> ps.position
-                            is PlaybackState.Paused -> ps.position
-                            else -> 0L
-                        }
-                    val dur =
-                        when (ps) {
-                            is PlaybackState.Playing -> ps.duration
-                            is PlaybackState.Paused -> ps.duration
-                            else -> 0L
-                        }
-                    val service = StreamingPlaybackService.getInstance()
-                    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
-                    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
-                    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
-
-                    playbackViewModel.stop()
-                    onBack()
-                },
-                onNextChannel = { loaderViewModel.nextChannel() },
-                onPreviousChannel = { loaderViewModel.prevChannel() },
-                isFavorite = state.isFavorite,
-                currentEpgProgram = state.currentEpgProgram,
-                nextEpgProgram = state.nextEpgProgram,
-                categoryStreams = ImmutableMediaList(state.categoryStreams),
-                lastWatchedStreams =
-                    remember(state.lastWatchedStreams, state.streamId) {
-                        ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })
-                    },
-                onStreamSelected = { item ->
-                    // Finalize current session properly before starting new one
-                    val ps = playbackViewModel.playbackState.value
-                    val pos =
-                        when (ps) {
-                            is PlaybackState.Playing -> ps.position
-                            is PlaybackState.Paused -> ps.position
-                            else -> 0L
-                        }
-                    val dur =
-                        when (ps) {
-                            is PlaybackState.Playing -> ps.duration
-                            is PlaybackState.Paused -> ps.duration
-                            else -> 0L
-                        }
-                    val service = StreamingPlaybackService.getInstance()
-                    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
-                    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
-                    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
-
-                    loaderViewModel.loadStream(item)
-                },
-                onToggleFavorite = {
-                    loaderViewModel.toggleFavorite()
-                },
-            )
+            PlayerContent(state, playbackViewModel, loaderViewModel, onBack)
         }
     }
+}
+
+@Composable
+private fun PlayerContent(
+    data: StreamLoaderViewModel.StreamState.Success,
+    playbackViewModel: PlaybackViewModel,
+    loaderViewModel: StreamLoaderViewModel,
+    onBack: () -> Unit,
+) {
+    PlayerScreen(
+        viewModel = playbackViewModel,
+        currentStreamId = data.streamId,
+        onBack = {
+            // Finalize session before stopping
+            val ps = playbackViewModel.playbackState.value
+            val pos =
+                when (ps) {
+                    is PlaybackState.Playing -> ps.position
+                    is PlaybackState.Paused -> ps.position
+                    else -> 0L
+                }
+            val dur =
+                when (ps) {
+                    is PlaybackState.Playing -> ps.duration
+                    is PlaybackState.Paused -> ps.duration
+                    else -> 0L
+                }
+            val service = StreamingPlaybackService.getInstance()
+            val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+            val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+            loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+
+            playbackViewModel.stop()
+            onBack()
+        },
+        onNextChannel = { loaderViewModel.nextChannel() },
+        onPreviousChannel = { loaderViewModel.prevChannel() },
+        isFavorite = data.isFavorite,
+        currentEpgProgram = data.currentEpgProgram,
+        nextEpgProgram = data.nextEpgProgram,
+        categoryStreams = ImmutableMediaList(data.categoryStreams),
+        lastWatchedStreams =
+            remember(data.lastWatchedStreams, data.streamId) {
+                ImmutableMediaList(data.lastWatchedStreams.filter { it.id != data.streamId })
+            },
+        onStreamSelected = { item ->
+            // Finalize current session properly before starting new one
+            val ps = playbackViewModel.playbackState.value
+            val pos =
+                when (ps) {
+                    is PlaybackState.Playing -> ps.position
+                    is PlaybackState.Paused -> ps.position
+                    else -> 0L
+                }
+            val dur =
+                when (ps) {
+                    is PlaybackState.Playing -> ps.duration
+                    is PlaybackState.Paused -> ps.duration
+                    else -> 0L
+                }
+            val service = StreamingPlaybackService.getInstance()
+            val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+            val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+            loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+
+            loaderViewModel.loadStream(item)
+        },
+        onToggleFavorite = {
+            loaderViewModel.toggleFavorite()
+        },
+    )
 }
 
 @Composable

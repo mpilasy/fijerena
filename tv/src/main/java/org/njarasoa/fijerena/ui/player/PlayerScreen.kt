@@ -96,6 +96,8 @@ fun PlayerScreen(
         playbackState = playbackState,
         currentMetadata = currentMetadata,
         viewModel = viewModel,
+        onNextChannel = onNextChannel,
+        onPreviousChannel = onPreviousChannel,
     )
 
     // Ensure focus is requested when no overlays are visible
@@ -196,7 +198,7 @@ fun PlayerScreen(
             when (val ps = currentPs) {
                 PlaybackState.Idle -> { /* Silent */ }
                 PlaybackState.Buffering -> {
-                    if (!isRecycling && !isActuallyMoving) {
+                    if (!isActuallyMoving) {
                         BufferingContent()
                     }
                 }

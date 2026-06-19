@@ -24,6 +24,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
+import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -80,6 +81,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private var onPositionSaveListener: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null
 
     private var liveRetryCount = 0
+    private var autoRetryAttempted = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingRetry: Runnable? = null
 
@@ -189,8 +191,23 @@ class StreamingPlaybackService : MediaSessionService() {
         val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         serviceScope = scope
         scope.launch {
+            var previousNetworkType = NetworkMonitor.currentNetworkType
             NetworkMonitor.networkType.collect { networkType ->
                 adaptiveLoadControl?.updateForNetwork(networkType)
+
+                val connectivityRestored =
+                    previousNetworkType == NetworkType.UNKNOWN && networkType != NetworkType.UNKNOWN
+                previousNetworkType = networkType
+
+                if (connectivityRestored &&
+                    !autoRetryAttempted &&
+                    _currentMetadata.value.isLive &&
+                    _playbackState.value is PlaybackState.Error
+                ) {
+                    autoRetryAttempted = true
+                    Log.i(TAG, "Connectivity restored after recovery exhaustion — auto-retrying once.")
+                    playStream(_currentMetadata.value)
+                }
             }
         }
         startHealthMonitorLoop(scope)
@@ -351,6 +368,7 @@ class StreamingPlaybackService : MediaSessionService() {
         cancelPendingRetry()
         playerListener?.resetErrorState()
         liveRetryCount = 0
+        autoRetryAttempted = false
         healthMonitor?.notifyStablePlayback()
         healthMonitor?.reset()
         _streamRetryCount.value = 0
