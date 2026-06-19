@@ -114,27 +114,32 @@ fun StatsOverlay(
 
     // Update stats periodically
     LaunchedEffect(Unit) {
+        // Persisted across ticks so an unchanged Tracks instance (no track/quality switch)
+        // skips the O(N) group/track scan entirely instead of repeating it every tick.
+        var lastTracks: androidx.media3.common.Tracks? = null
+        var selectedVideoFormat: androidx.media3.common.Format? = null
+        var currentVideoBitrate = 0
+        var currentAudioBitrate = 0
+
         while (true) {
             StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
                 // Update buffered position
                 bufferedPosition = p.bufferedPosition
 
                 // Get dropped frames from analytics
-                droppedFrames = serviceDroppedFrames
+                val newDroppedFrames = serviceDroppedFrames
+                if (newDroppedFrames != droppedFrames) droppedFrames = newDroppedFrames
 
                 // Calculate buffer health (percentage of buffer vs target)
                 val currentPos = p.currentPosition
                 val buffered = p.bufferedPosition
-                bufferHealth =
+                val newBufferHealth =
                     if (buffered > currentPos) {
                         ((buffered - currentPos) / 1000).toInt().coerceIn(0, 100)
                     } else {
                         0
                     }
-
-                val tracks = p.currentTracks
-                var currentVideoBitrate = 0
-                var currentAudioBitrate = 0
+                if (newBufferHealth != bufferHealth) bufferHealth = newBufferHealth
 
                 // Fallback resolution from videoSize
                 if (videoResolution == "N/A" || videoResolution == "0 × 0") {
@@ -144,64 +149,85 @@ fun StatsOverlay(
                     }
                 }
 
-                for (i in 0 until tracks.groups.size) {
-                    val group = tracks.groups[i]
-                    if (group.isSelected) {
-                        for (j in 0 until group.length) {
-                            if (group.isTrackSelected(j)) {
-                                val format = group.getTrackFormat(j)
-                                if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
-                                    videoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
-                                    videoResolution = "${format.width} × ${format.height}"
+                val tracks = p.currentTracks
+                if (tracks !== lastTracks) {
+                    lastTracks = tracks
+                    selectedVideoFormat = null
+                    currentVideoBitrate = 0
+                    currentAudioBitrate = 0
 
-                                    val mFps = serviceMeasuredFps
-                                    videoFrameRate =
-                                        if (format.frameRate > 0) {
-                                            context.getString(R.string.player_stats_fps_unit, format.frameRate.toInt())
-                                        } else if (mFps > 0) {
-                                            context.getString(R.string.player_stats_measured_fps, mFps)
-                                        } else {
-                                            "N/A"
-                                        }
+                    for (i in 0 until tracks.groups.size) {
+                        val group = tracks.groups[i]
+                        if (group.isSelected) {
+                            for (j in 0 until group.length) {
+                                if (group.isTrackSelected(j)) {
+                                    val format = group.getTrackFormat(j)
+                                    if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
+                                        selectedVideoFormat = format
+                                        val newCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
+                                        if (newCodec != videoCodec) videoCodec = newCodec
+                                        val newResolution = "${format.width} × ${format.height}"
+                                        if (newResolution != videoResolution) videoResolution = newResolution
 
-                                    currentVideoBitrate = format.bitrate
-                                    videoBitrate = if (currentVideoBitrate > 0) formatBitrate(currentVideoBitrate) else "Unknown"
-                                    currentVideoBitrate = format.bitrate
-                                }
-                                if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
-                                    audioCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
-                                    audioSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else "N/A"
-                                    audioChannels =
-                                        if (format.channelCount > 0) {
-                                            when (format.channelCount) {
-                                                1 -> context.getString(R.string.audio_channel_mono)
-                                                2 -> context.getString(R.string.audio_channel_stereo)
-                                                6 -> context.getString(R.string.audio_channel_5_1)
-                                                8 -> context.getString(R.string.audio_channel_7_1)
-                                                else -> context.getString(R.string.audio_channel_custom, format.channelCount)
+                                        currentVideoBitrate = format.bitrate
+                                        val newVideoBitrate = if (currentVideoBitrate > 0) formatBitrate(currentVideoBitrate) else "Unknown"
+                                        if (newVideoBitrate != videoBitrate) videoBitrate = newVideoBitrate
+                                    }
+                                    if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
+                                        val newAudioCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: "Unknown"
+                                        if (newAudioCodec != audioCodec) audioCodec = newAudioCodec
+                                        val newSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else "N/A"
+                                        if (newSampleRate != audioSampleRate) audioSampleRate = newSampleRate
+                                        val newChannels =
+                                            if (format.channelCount > 0) {
+                                                when (format.channelCount) {
+                                                    1 -> context.getString(R.string.audio_channel_mono)
+                                                    2 -> context.getString(R.string.audio_channel_stereo)
+                                                    6 -> context.getString(R.string.audio_channel_5_1)
+                                                    8 -> context.getString(R.string.audio_channel_7_1)
+                                                    else -> context.getString(R.string.audio_channel_custom, format.channelCount)
+                                                }
+                                            } else {
+                                                "N/A"
                                             }
-                                        } else {
-                                            "N/A"
-                                        }
-                                    currentAudioBitrate = format.bitrate
-                                    audioBitrate = if (currentAudioBitrate > 0) formatBitrate(currentAudioBitrate) else "Unknown"
-                                    currentAudioBitrate = format.bitrate
+                                        if (newChannels != audioChannels) audioChannels = newChannels
+
+                                        currentAudioBitrate = format.bitrate
+                                        val newAudioBitrate = if (currentAudioBitrate > 0) formatBitrate(currentAudioBitrate) else "Unknown"
+                                        if (newAudioBitrate != audioBitrate) audioBitrate = newAudioBitrate
+                                    }
+                                    break // Found the selected track in this group
                                 }
-                                break // Found the selected track in this group
                             }
                         }
                     }
                 }
 
+                // Frame rate depends on the live measured-fps signal too (common fallback for
+                // streams whose container doesn't report a static rate), so it's recomputed
+                // every tick rather than gated behind the tracks-changed check above.
+                val fmt = selectedVideoFormat
+                val mFps = serviceMeasuredFps
+                val newFrameRate =
+                    if (fmt != null && fmt.frameRate > 0) {
+                        context.getString(R.string.player_stats_fps_unit, fmt.frameRate.toInt())
+                    } else if (mFps > 0) {
+                        context.getString(R.string.player_stats_measured_fps, mFps)
+                    } else {
+                        "N/A"
+                    }
+                if (newFrameRate != videoFrameRate) videoFrameRate = newFrameRate
+
                 // If bitrate is still unknown for video but we have a bandwidth estimate, use a portion of it as a guess
                 val bw = serviceBandwidth
                 if (currentVideoBitrate <= 0 && bw > 0) {
                     val estimatedBitrate = (bw * 0.9).toInt()
-                    videoBitrate = "~" + formatBitrate(estimatedBitrate)
+                    val newVideoBitrate = "~" + formatBitrate(estimatedBitrate)
+                    if (newVideoBitrate != videoBitrate) videoBitrate = newVideoBitrate
                 }
 
                 // Use bandwidth estimate for network speed
-                networkSpeed =
+                val newNetworkSpeed =
                     if (bw > 0) {
                         formatBitrate(bw.toInt())
                     } else {
@@ -210,6 +236,7 @@ fun StatsOverlay(
                                 (if (currentAudioBitrate > 0) currentAudioBitrate else 0)
                         if (totalBitrate > 0) formatBitrate(totalBitrate) else "N/A"
                     }
+                if (newNetworkSpeed != networkSpeed) networkSpeed = newNetworkSpeed
             }
 
             // Update stream elapsed time

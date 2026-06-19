@@ -108,7 +108,8 @@ class MediaRepository(
     private var favoriteCategoryIdSet: Set<Pair<String, String>>? = null
     private val watchHistoryLock = Any()
     private var watchHistoryDirty = false
-    private val watchHistoryWriteHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val watchHistoryWriteThread = android.os.HandlerThread("WatchHistoryWriter").apply { start() }
+    private val watchHistoryWriteHandler = android.os.Handler(watchHistoryWriteThread.looper)
     private val watchHistoryWriteRunnable = Runnable { flushWatchHistory() }
 
     companion object {
