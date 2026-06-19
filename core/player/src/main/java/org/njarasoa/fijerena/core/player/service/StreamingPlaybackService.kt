@@ -78,6 +78,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _measuredDroppedFps = MutableStateFlow(0f)
     val measuredDroppedFps: StateFlow<Float> = _measuredDroppedFps.asStateFlow()
 
+    private val _streamHealthState = MutableStateFlow(org.njarasoa.fijerena.core.player.network.StreamHealthState())
+    val streamHealthState: StateFlow<org.njarasoa.fijerena.core.player.network.StreamHealthState> = _streamHealthState.asStateFlow()
+
     private var onPositionSaveListener: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null
 
     private var liveRetryCount = 0
@@ -190,6 +193,11 @@ class StreamingPlaybackService : MediaSessionService() {
     private fun observeNetworkChanges() {
         val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         serviceScope = scope
+        scope.launch {
+            healthMonitor?.state?.collect {
+                _streamHealthState.value = it
+            }
+        }
         scope.launch {
             var previousNetworkType = NetworkMonitor.currentNetworkType
             NetworkMonitor.networkType.collect { networkType ->

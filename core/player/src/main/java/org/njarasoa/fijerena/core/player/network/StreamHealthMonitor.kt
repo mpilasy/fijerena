@@ -2,6 +2,18 @@ package org.njarasoa.fijerena.core.player.network
 
 import android.util.Log
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+data class StreamHealthState(
+    val isDegraded: Boolean = false,
+    val recycleAttempts: Int = 0,
+    val degradedAttempts: Int = 0,
+    val firstFailureTimestamp: Long = 0L,
+    val isHealthy: Boolean = true
+)
+
 /**
  * An engine-agnostic monitor that tracks live stream performance metrics.
  * It identifies terminal degradation (ISP throttling, CDN fatigue) and
@@ -12,6 +24,19 @@ class StreamHealthMonitor(
     private val onStreamRecycleRequired: () -> Unit,
     private val onRecoveryExhausted: () -> Unit = {},
 ) {
+
+    private val _state = MutableStateFlow(StreamHealthState())
+    val state: StateFlow<StreamHealthState> = _state.asStateFlow()
+
+    private fun updateStateFlow() {
+        _state.value = StreamHealthState(
+            isDegraded = isDegraded,
+            recycleAttempts = recycleAttempts,
+            degradedAttempts = degradedAttempts,
+            firstFailureTimestamp = firstFailureTimestamp,
+            isHealthy = !isDegraded && firstFailureTimestamp == 0L && recycleAttempts == 0
+        )
+    }
 
     data class Config(
         val minBufferMs: Long = 8000L,
@@ -73,6 +98,7 @@ class StreamHealthMonitor(
                 triggerRecycle()
             }
         }
+        updateStateFlow()
     }
 
     /**
@@ -83,6 +109,7 @@ class StreamHealthMonitor(
     fun reset() {
         firstFailureTimestamp = 0L
         isRecycleTriggered = false
+        updateStateFlow()
         Log.d(TAG, "Health monitor reset.")
     }
 
@@ -94,6 +121,7 @@ class StreamHealthMonitor(
         recycleAttempts = 0
         isDegraded = false
         degradedAttempts = 0
+        updateStateFlow()
     }
 
     private fun triggerRecycle() {
@@ -110,6 +138,7 @@ class StreamHealthMonitor(
             return
         }
         isRecycleTriggered = true
+        updateStateFlow()
         onStreamRecycleRequired.invoke()
     }
 
@@ -131,17 +160,20 @@ class StreamHealthMonitor(
         if (now - lastDegradedRecycleTimestamp < config.degradedRecycleIntervalMs) {
             // Not time for the next slow-cadence attempt yet. Leave isRecycleTriggered false
             // so updateMetrics() keeps evaluating and calls back in once the interval elapses.
+            updateStateFlow()
             return
         }
         degradedAttempts++
         if (degradedAttempts > config.maxDegradedAttempts) {
             Log.w(TAG, "Giving up after $recycleAttempts fast + $degradedAttempts degraded recycle attempts.")
             isRecycleTriggered = true
+            updateStateFlow()
             onRecoveryExhausted.invoke()
             return
         }
         lastDegradedRecycleTimestamp = now
         isRecycleTriggered = true
+        updateStateFlow()
         onStreamRecycleRequired.invoke()
     }
 
