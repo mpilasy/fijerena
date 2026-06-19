@@ -68,6 +68,9 @@ class StreamLoaderViewModel(
     // Avoid re-fetching EPG too often
     private var lastEpgFetchTime = 0L
 
+    // Retain last request for error retry
+    private var lastLoadRequest: MediaItem? = null
+
     // Job to handle delayed history saving (mimics original 5s delay)
     private var historyJob: Job? = null
     private var loadJob: Job? = null
@@ -286,6 +289,7 @@ class StreamLoaderViewModel(
     }
 
     fun loadStream(item: MediaItem) {
+        lastLoadRequest = item
         loadJob?.cancel()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
             val repo = mediaRepository ?: return@launch
@@ -315,6 +319,15 @@ class StreamLoaderViewModel(
             val lastWatched = repo.getWatchHistoryForContentTypeSuspend(contentType)
 
             loadStreamInternal(item.id, item.name, currentStreams, lastWatched)
+        }
+    }
+
+    fun retryLastLoad() {
+        if (lastLoadRequest != null) {
+            loadStream(lastLoadRequest!!)
+        } else {
+            // Failed on the very first load before a stream was selected
+            initializeAndLoad()
         }
     }
 

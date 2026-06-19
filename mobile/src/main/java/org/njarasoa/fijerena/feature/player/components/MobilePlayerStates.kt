@@ -42,6 +42,7 @@ fun LoadingScreen() {
 @Composable
 fun ErrorScreen(
     message: String,
+    onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
     Box(
@@ -63,8 +64,13 @@ fun ErrorScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Button(onClick = onBack) {
-                Text("Back")
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(onClick = onRetry) {
+                    Text("Retry")
+                }
+                Button(onClick = onBack) {
+                    Text("Back")
+                }
             }
         }
     }
