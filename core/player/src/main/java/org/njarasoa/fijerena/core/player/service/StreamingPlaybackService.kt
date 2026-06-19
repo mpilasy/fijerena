@@ -100,8 +100,12 @@ class StreamingPlaybackService : MediaSessionService() {
             val currentPos = player.currentPosition
             Log.i(TAG, "Executing silent stream recycle at position: $currentPos")
 
-            // 1. Evict network connection pool to bypass ISP/CDN shaping
-            org.njarasoa.fijerena.core.player.network.NetworkModule.evictConnectionPool()
+            // 1. Evict network connection pool to bypass ISP/CDN shaping.
+            // Closing pooled connections can block on socket I/O, so this must not run on
+            // the main thread (recycleHandler is posted via mainHandler.post).
+            serviceScope?.launch(Dispatchers.IO) {
+                org.njarasoa.fijerena.core.player.network.NetworkModule.evictConnectionPool()
+            }
 
             // 2. Restart stream seamlessly without clearing the screen
             performSeamlessRecycle(metadata, currentPos)
