@@ -67,6 +67,8 @@ import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
  * favorites, playback resume, and Stats for Nerds overlay.
  * Refactored to use StreamLoaderViewModel.
  */
+private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
+
 @Composable
 fun MobilePlayerScreen(
     streamId: String,
@@ -137,6 +139,7 @@ fun MobilePlayerScreen(
     var showControls by remember { mutableStateOf(true) }
     var showStats by remember { mutableStateOf(false) }
     var hasStartedPlaying by remember { mutableStateOf(false) }
+    var showRecoverySpinner by remember { mutableStateOf(false) }
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
@@ -226,6 +229,13 @@ fun MobilePlayerScreen(
         if (currentPs is PlaybackState.Playing) {
             hasStartedPlaying = true
         }
+
+        if (currentPs is PlaybackState.Buffering) {
+            delay(POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS)
+            showRecoverySpinner = true
+        } else {
+            showRecoverySpinner = false
+        }
     }
 
     // Set up auto-save listener for playback position and track settings
@@ -297,7 +307,11 @@ fun MobilePlayerScreen(
             LoadingScreen()
         }
         is StreamLoaderViewModel.StreamState.Error -> {
-            ErrorScreen(message = state.message, onBack = onBack)
+            ErrorScreen(
+                message = state.message,
+                onRetry = { loaderViewModel.retryLastLoad() },
+                onBack = onBack
+            )
         }
         is StreamLoaderViewModel.StreamState.Success -> {
             val isLiveContent = state.isLive
@@ -329,18 +343,23 @@ fun MobilePlayerScreen(
                             Modifier.pointerInput(state.categoryStreams, showCategoryOverlay, showLastWatchedOverlay, showStats) {
                                 var verticalAccumulator = 0f
                                 var horizontalAccumulator = 0f
+                                var hasFiredThisGesture = false
                                 detectDragGestures(
                                     onDragStart = {
                                         verticalAccumulator = 0f
                                         horizontalAccumulator = 0f
+                                        hasFiredThisGesture = false
                                     },
+                                    onDragEnd = { hasFiredThisGesture = false },
+                                    onDragCancel = { hasFiredThisGesture = false },
                                     onDrag = { change, dragAmount ->
                                         if (showStats) return@detectDragGestures
                                         change.consume()
                                         verticalAccumulator += dragAmount.y
                                         horizontalAccumulator += dragAmount.x
                                         // Vertical: channel switching
-                                        if (kotlin.math.abs(verticalAccumulator) > 100f) {
+                                        if (!hasFiredThisGesture && kotlin.math.abs(verticalAccumulator) > 100f) {
+                                            hasFiredThisGesture = true
                                             if (verticalAccumulator < 0) {
                                                 loaderViewModel.nextChannel()
                                             } else {
@@ -415,7 +434,7 @@ fun MobilePlayerScreen(
                 ) {
                     when (currentPs) {
                         PlaybackState.Buffering -> {
-                            if (!hasStartedPlaying) {
+                            if (!hasStartedPlaying || showRecoverySpinner) {
                                 org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
                                     style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
                                     color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary

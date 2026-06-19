@@ -212,6 +212,7 @@ fun TvPlayerScreen(
         is StreamLoaderViewModel.StreamState.Error -> {
             ErrorScreen(
                 message = state.message,
+                onRetry = { loaderViewModel.retryLastLoad() },
                 onBack = onBack,
             )
         }
@@ -308,6 +309,7 @@ private fun LoadingScreen() {
 @Composable
 private fun ErrorScreen(
     message: String,
+    onRetry: () -> Unit,
     onBack: () -> Unit,
 ) {
     Box(
@@ -330,6 +332,11 @@ private fun ErrorScreen(
                 color = CinemaTextSecondary,
             )
             Spacer(modifier = Modifier.padding(Spacing.lg))
+            CinemaSecondaryButton(
+                onClick = onRetry,
+                text = "Retry",
+            )
+            Spacer(modifier = Modifier.padding(Spacing.sm))
             CinemaSecondaryButton(
                 onClick = onBack,
                 text = "Back to Categories",
