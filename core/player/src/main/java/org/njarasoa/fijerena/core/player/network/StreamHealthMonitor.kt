@@ -8,7 +8,7 @@ import android.util.Log
  * triggers a connection recycle.
  */
 class StreamHealthMonitor(
-    private val config: Config = Config(),
+    val config: Config = Config(),
     private val onStreamRecycleRequired: () -> Unit,
     private val onRecoveryExhausted: () -> Unit = {},
 ) {
@@ -19,6 +19,8 @@ class StreamHealthMonitor(
         val maxFrameDropRate: Float = 15.0f,
         val evaluationIntervalMs: Long = 5000L,
         val maxRecycleAttempts: Int = 3,
+        val degradedRecycleIntervalMs: Long = 30_000L,
+        val maxDegradedAttempts: Int = 5,
     )
 
     private var firstFailureTimestamp: Long = 0L
@@ -28,6 +30,14 @@ class StreamHealthMonitor(
     // real outage (e.g. packet loss) makes this recycle forever in silence with no feedback
     // that anything is wrong, unlike the hard-retry path which gives up after MAX_LIVE_RETRIES.
     private var recycleAttempts: Int = 0
+
+    // Once the fast tier is exhausted, keep trying on a slower cadence for a while longer
+    // before truly giving up — a connection bad enough to need >maxRecycleAttempts fast
+    // recycles can still self-heal given more time, and the old "spin forever" behavior at
+    // least never dead-ended the user at a manual-retry error like onRecoveryExhausted does.
+    private var isDegraded: Boolean = false
+    private var degradedAttempts: Int = 0
+    private var lastDegradedRecycleTimestamp: Long = 0L
 
     /**
      * Accepts a tick of performance metrics from the active media engine.
@@ -82,16 +92,55 @@ class StreamHealthMonitor(
      */
     fun notifyStablePlayback() {
         recycleAttempts = 0
+        isDegraded = false
+        degradedAttempts = 0
     }
 
     private fun triggerRecycle() {
+        // Once degraded, stay degraded — recycleAttempts must not keep incrementing on every
+        // re-check while triggerDegradedRecycle() is just waiting for its own interval to
+        // elapse (updateMetrics() calls back in on every evaluation tick until it fires).
+        if (isDegraded) {
+            triggerDegradedRecycle()
+            return
+        }
         recycleAttempts++
         if (recycleAttempts > config.maxRecycleAttempts) {
-            Log.w(TAG, "Giving up after $recycleAttempts recycle attempts without stable playback.")
+            triggerDegradedRecycle()
+            return
+        }
+        isRecycleTriggered = true
+        onStreamRecycleRequired.invoke()
+    }
+
+    /**
+     * Slower-cadence fallback once the fast tier is exhausted. Keeps recycling on
+     * [Config.degradedRecycleIntervalMs] spacing for up to [Config.maxDegradedAttempts] more
+     * attempts before calling [onRecoveryExhausted]. isDegraded/degradedAttempts are
+     * deliberately NOT cleared by [reset] (only by [notifyStablePlayback]) — reset() runs
+     * after every single recycle attempt, so clearing the degraded budget there would mean
+     * this cap could never bite.
+     */
+    private fun triggerDegradedRecycle() {
+        val now = System.currentTimeMillis()
+        if (!isDegraded) {
+            isDegraded = true
+            degradedAttempts = 0
+            lastDegradedRecycleTimestamp = 0L
+        }
+        if (now - lastDegradedRecycleTimestamp < config.degradedRecycleIntervalMs) {
+            // Not time for the next slow-cadence attempt yet. Leave isRecycleTriggered false
+            // so updateMetrics() keeps evaluating and calls back in once the interval elapses.
+            return
+        }
+        degradedAttempts++
+        if (degradedAttempts > config.maxDegradedAttempts) {
+            Log.w(TAG, "Giving up after $recycleAttempts fast + $degradedAttempts degraded recycle attempts.")
             isRecycleTriggered = true
             onRecoveryExhausted.invoke()
             return
         }
+        lastDegradedRecycleTimestamp = now
         isRecycleTriggered = true
         onStreamRecycleRequired.invoke()
     }

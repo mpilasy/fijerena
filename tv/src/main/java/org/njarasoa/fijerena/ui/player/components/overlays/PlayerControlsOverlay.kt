@@ -423,11 +423,22 @@ fun PlayerControlsOverlay(
                         Spacer(modifier = Modifier.height(Spacing.sm))
                     }
                 } else {
-                    // Live indicator with EPG info
+                    // Live indicator with channel + EPG info. Channel name lives here (rather
+                    // than only in the top bar) so it's still visible when hideTopBars is set —
+                    // this bottom section is the only thing shown while a side panel is open.
                     Column(modifier = Modifier.padding(bottom = Spacing.sm)) {
+                        Text(
+                            text = metadata.channelName,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.bounceMarquee(),
+                        )
                         Row(
                             verticalAlignment = CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            modifier = Modifier.padding(top = Spacing.xxs),
                         ) {
                             Box(
                                 modifier =

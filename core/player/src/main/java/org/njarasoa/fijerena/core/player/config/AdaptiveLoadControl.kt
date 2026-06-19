@@ -25,41 +25,87 @@ class AdaptiveLoadControl(
 ) : LoadControl {
     private val sharedAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
 
-    // Persistent delegate to avoid race conditions during rebuilds
-    private val delegate: DefaultLoadControl = buildStaticDelegate()
+    private var networkType: NetworkType = NetworkMonitor.currentNetworkType
 
-    // No longer used, but kept for API compatibility during refactor
-    private var isRecycling: Boolean = false
+    // Swapped on network/content-type changes; LoadControl methods below always read through
+    // this reference, so a swap takes effect on the very next call. Rebuilding just constructs
+    // a fresh value object — it doesn't touch the player, the allocator, or buffered data — so
+    // this is safe to do immediately rather than deferring to the next prepare()/recycle.
+    @Volatile
+    private var delegate: DefaultLoadControl = buildDelegate(networkType, contentType)
 
     fun updateForNetwork(networkType: NetworkType) {
-        // Shared allocator and static settings handle this automatically
+        this.networkType = networkType
+        delegate = buildDelegate(networkType, contentType)
     }
 
     fun updateContentType(contentType: PlayerConfigFactory.ContentType) {
-        // Shared allocator and static settings handle this automatically
+        this.contentType = contentType
+        delegate = buildDelegate(networkType, contentType)
     }
 
-    fun setRecycling(recycling: Boolean) {
-        this.isRecycling = recycling
-    }
+    private fun buildDelegate(networkType: NetworkType, contentType: PlayerConfigFactory.ContentType): DefaultLoadControl {
+        // WIFI and UNKNOWN both use the WiFi profile, matching NetworkMonitor's own default
+        // (currentNetworkType starts as WIFI; UNKNOWN only follows an explicit network loss,
+        // not a degraded-but-present connection) — written explicitly per branch rather than
+        // an `else` fallthrough so the mapping stays obvious to the next reader.
+        val durations =
+            when (networkType) {
+                NetworkType.CELLULAR ->
+                    when (contentType) {
+                        PlayerConfigFactory.ContentType.LIVE_TV ->
+                            BufferDurations(
+                                NetworkBufferProfile.getCellularLiveMinBuffer(cellularLiveMultiplier),
+                                NetworkBufferProfile.getCellularLiveMaxBuffer(cellularLiveMultiplier),
+                                NetworkBufferProfile.getCellularLivePlayback(cellularLiveMultiplier),
+                                NetworkBufferProfile.getCellularLiveRebuffer(cellularLiveMultiplier),
+                                NetworkBufferProfile.CELLULAR_LIVE_BACK_BUFFER_MS,
+                            )
+                        PlayerConfigFactory.ContentType.VOD ->
+                            BufferDurations(
+                                NetworkBufferProfile.getCellularVodMinBuffer(cellularVodMultiplier),
+                                NetworkBufferProfile.getCellularVodMaxBuffer(cellularVodMultiplier),
+                                NetworkBufferProfile.getCellularVodPlayback(cellularVodMultiplier),
+                                NetworkBufferProfile.getCellularVodRebuffer(cellularVodMultiplier),
+                                NetworkBufferProfile.CELLULAR_VOD_BACK_BUFFER_MS,
+                            )
+                    }
+                NetworkType.WIFI, NetworkType.UNKNOWN ->
+                    when (contentType) {
+                        PlayerConfigFactory.ContentType.LIVE_TV ->
+                            BufferDurations(
+                                NetworkBufferProfile.WIFI_LIVE_MIN_BUFFER_MS,
+                                NetworkBufferProfile.WIFI_LIVE_MAX_BUFFER_MS,
+                                NetworkBufferProfile.WIFI_LIVE_PLAYBACK_MS,
+                                NetworkBufferProfile.WIFI_LIVE_REBUFFER_MS,
+                                NetworkBufferProfile.WIFI_LIVE_BACK_BUFFER_MS,
+                            )
+                        PlayerConfigFactory.ContentType.VOD ->
+                            BufferDurations(
+                                NetworkBufferProfile.WIFI_VOD_MIN_BUFFER_MS,
+                                NetworkBufferProfile.WIFI_VOD_MAX_BUFFER_MS,
+                                NetworkBufferProfile.WIFI_VOD_PLAYBACK_MS,
+                                NetworkBufferProfile.WIFI_VOD_REBUFFER_MS,
+                                NetworkBufferProfile.WIFI_VOD_BACK_BUFFER_MS,
+                            )
+                    }
+            }
 
-    fun isRecycling(): Boolean = isRecycling
-
-    private fun buildStaticDelegate(): DefaultLoadControl {
-        // Use the most accommodating values for both WiFi and Cellular.
-        // The allocator and prioritizations handle the rest.
         return DefaultLoadControl.Builder()
             .setAllocator(sharedAllocator)
-            .setBufferDurationsMs(
-                NetworkBufferProfile.WIFI_LIVE_MIN_BUFFER_MS, // 15s
-                NetworkBufferProfile.CELLULAR_VOD_MAX_BUFFER_MS, // 100s
-                NetworkBufferProfile.WIFI_LIVE_PLAYBACK_MS, // 500ms
-                NetworkBufferProfile.WIFI_LIVE_REBUFFER_MS // 1000ms
-            )
-            .setBackBuffer(NetworkBufferProfile.WIFI_VOD_BACK_BUFFER_MS, true)
+            .setBufferDurationsMs(durations.minBufferMs, durations.maxBufferMs, durations.playbackMs, durations.rebufferMs)
+            .setBackBuffer(durations.backBufferMs, true)
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
     }
+
+    private data class BufferDurations(
+        val minBufferMs: Int,
+        val maxBufferMs: Int,
+        val playbackMs: Int,
+        val rebufferMs: Int,
+        val backBufferMs: Int,
+    )
 
     // ── LoadControl implementation (FULL DELEGATION TO SATISFY 1.5.1 / 1.7.1 RUNTIME) ──
 
