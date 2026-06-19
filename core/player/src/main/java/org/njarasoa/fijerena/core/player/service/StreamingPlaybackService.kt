@@ -86,11 +86,23 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _isRecycling = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isRecyclingFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = _isRecycling.asStateFlow()
 
+    private var recycleStartTimeMs: Long = 0L
+
     fun isRecycling(): Boolean = _isRecycling.value
+
+    // While a recycle is in flight, non-Playing states are suppressed to keep it seamless.
+    // On a healthy connection that gap is a few seconds; on a degraded one it can run much
+    // longer, so the suppression only holds for this long before a real Buffering state is
+    // allowed through instead of leaving the screen black with no indicator.
+    private fun isWithinSeamlessGrace(): Boolean =
+        isRecycling() && (SystemClock.elapsedRealtime() - recycleStartTimeMs) < SEAMLESS_RECYCLE_GRACE_MS
 
     private fun setRecycling(recycling: Boolean) {
         _isRecycling.value = recycling
         adaptiveLoadControl?.setRecycling(recycling)
+        if (recycling) {
+            recycleStartTimeMs = SystemClock.elapsedRealtime()
+        }
     }
 
     private val recycleHandler = Runnable {
@@ -243,8 +255,11 @@ class StreamingPlaybackService : MediaSessionService() {
                     // Suppress any non-final state during a silent recycle to keep it seamless.
                     // The player can pass through Buffering/Paused/Idle with not-yet-valid
                     // (e.g. negative) position data while the new source's timeline resolves;
-                    // only a confirmed Playing or a terminal Error should reach the UI.
-                    if (isRecycling && newState !is PlaybackState.Playing && newState !is PlaybackState.Error) {
+                    // only a confirmed Playing or a terminal Error should reach the UI. This
+                    // only holds for SEAMLESS_RECYCLE_GRACE_MS — past that, let the real state
+                    // (almost always Buffering) through so a slow recovery shows a spinner
+                    // instead of leaving the screen black with no indicator at all.
+                    if (isWithinSeamlessGrace() && newState !is PlaybackState.Playing && newState !is PlaybackState.Error) {
                         Log.d(TAG, "Suppressing $newState during silent recycle.")
                         return@PlayerListener
                     }
@@ -986,6 +1001,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private const val TAG = "StreamingPlaybackService"
         private const val MAX_LIVE_RETRIES = 3
         private const val LIVE_RETRY_BASE_DELAY_MS = 2000L
+        private const val SEAMLESS_RECYCLE_GRACE_MS = 7000L
 
         @Volatile
         private var instance: StreamingPlaybackService? = null
