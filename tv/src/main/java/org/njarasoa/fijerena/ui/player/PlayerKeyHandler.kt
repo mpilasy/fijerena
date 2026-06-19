@@ -72,7 +72,12 @@ fun handlePlayerKeyEvent(
             if (state.showCategoryOverlay || state.showLastWatchedOverlay) {
                 false
             } else if (!state.showControls && currentMetadata.isLive) {
-                onPreviousChannel()
+                // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
+                if (keyEvent.nativeKeyEvent.repeatCount == 0) {
+                    onPreviousChannel()
+                } else {
+                    state.pendingChannelDelta -= 1
+                }
                 state.showStreamInfo = true
                 true
             } else if (!state.showControls && !currentMetadata.isLive) {
@@ -89,7 +94,12 @@ fun handlePlayerKeyEvent(
                 false
             } else if (!state.showControls) {
                 if (currentMetadata.isLive) {
-                    onNextChannel()
+                    // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
+                    if (keyEvent.nativeKeyEvent.repeatCount == 0) {
+                        onNextChannel()
+                    } else {
+                        state.pendingChannelDelta += 1
+                    }
                     state.showStreamInfo = true
                     true
                 } else {

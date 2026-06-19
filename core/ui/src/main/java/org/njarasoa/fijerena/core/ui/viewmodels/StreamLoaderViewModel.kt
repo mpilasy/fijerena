@@ -70,6 +70,7 @@ class StreamLoaderViewModel(
 
     // Job to handle delayed history saving (mimics original 5s delay)
     private var historyJob: Job? = null
+    private var loadJob: Job? = null
 
     init {
         currentCategoryId = categoryId
@@ -285,7 +286,8 @@ class StreamLoaderViewModel(
     }
 
     fun loadStream(item: MediaItem) {
-        viewModelScope.launch(Dispatchers.IO) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch(Dispatchers.IO) {
             val repo = mediaRepository ?: return@launch
 
             // Capture current state before setting Loading, so we preserve categoryStreams
@@ -318,16 +320,14 @@ class StreamLoaderViewModel(
 
     fun nextChannel() {
         if (streamList.isEmpty()) return
-        val nextIndex = (currentStreamIndex + 1) % streamList.size
-        val nextItem = streamList[nextIndex]
-        loadStream(nextItem)
+        currentStreamIndex = (currentStreamIndex + 1) % streamList.size
+        loadStream(streamList[currentStreamIndex])
     }
 
     fun prevChannel() {
         if (streamList.isEmpty()) return
-        val prevIndex = if (currentStreamIndex <= 0) streamList.size - 1 else currentStreamIndex - 1
-        val prevItem = streamList[prevIndex]
-        loadStream(prevItem)
+        currentStreamIndex = if (currentStreamIndex <= 0) streamList.size - 1 else currentStreamIndex - 1
+        loadStream(streamList[currentStreamIndex])
     }
 
     fun toggleFavorite() {

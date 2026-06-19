@@ -5,6 +5,8 @@ import android.net.ConnectivityManager
 import okhttp3.Dns
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
+import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
+import org.njarasoa.fijerena.core.player.config.NetworkType
 import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
@@ -59,6 +61,35 @@ object NetworkModule {
     fun evictConnectionPool() {
         okHttpClient.connectionPool.evictAll()
     }
+
+    /**
+     * Per-network-type OkHttp clients for streaming, derived from [okHttpClient] via
+     * [OkHttpClient.newBuilder] (shares connection pool, dispatcher, DNS, and redirect settings).
+     * Connect/read timeouts are baked in at construction since OkHttpDataSource has no per-call
+     * timeout setters (unlike DefaultHttpDataSource.Factory) — timeouts must be chosen at the
+     * client level, hence one client per network type rather than one mutable shared client.
+     */
+    private val wifiStreamingClient: OkHttpClient by lazy {
+        okHttpClient
+            .newBuilder()
+            .retryOnConnectionFailure(false)
+            .connectTimeout(NetworkBufferProfile.WIFI_CONNECT_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+            .readTimeout(NetworkBufferProfile.WIFI_READ_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+            .build()
+    }
+
+    private val cellularStreamingClient: OkHttpClient by lazy {
+        okHttpClient
+            .newBuilder()
+            .retryOnConnectionFailure(false)
+            .connectTimeout(NetworkBufferProfile.CELLULAR_CONNECT_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+            .readTimeout(NetworkBufferProfile.CELLULAR_READ_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+            .build()
+    }
+
+    /** Returns the pre-built streaming client whose timeouts match [networkType]. */
+    fun streamingClientFor(networkType: NetworkType): OkHttpClient =
+        if (networkType == NetworkType.CELLULAR) cellularStreamingClient else wifiStreamingClient
 
     private object AndroidAwareDns : Dns {
         override fun lookup(hostname: String): List<InetAddress> {

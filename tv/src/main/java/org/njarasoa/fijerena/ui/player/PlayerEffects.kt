@@ -16,6 +16,8 @@ fun PlayerEffects(
     playbackState: PlaybackState,
     currentMetadata: PlayerMetadata,
     viewModel: PlaybackViewModel? = null,
+    onNextChannel: () -> Unit = {},
+    onPreviousChannel: () -> Unit = {},
 ) {
     val isDeveloperMode = state.isDeveloperMode
 
@@ -152,6 +154,19 @@ fun PlayerEffects(
             }
             // Note: Channel switching sets showStreamInfo directly in key handler
             state.previousMetadataTitle = currentMetadata.title
+        }
+    }
+
+    // Coalesce auto-repeat D-pad zap ticks (repeatCount >= 1) accumulated while the key was
+    // held. The first tap/tick of every press already fired immediately in PlayerKeyHandler
+    // (repeatCount == 0); this only ever applies the *extra* hops beyond that first one.
+    LaunchedEffect(state.pendingChannelDelta) {
+        if (state.pendingChannelDelta == 0) return@LaunchedEffect
+        delay(300)
+        val delta = state.pendingChannelDelta
+        state.pendingChannelDelta = 0
+        repeat(kotlin.math.abs(delta)) {
+            if (delta > 0) onNextChannel() else onPreviousChannel()
         }
     }
 }
