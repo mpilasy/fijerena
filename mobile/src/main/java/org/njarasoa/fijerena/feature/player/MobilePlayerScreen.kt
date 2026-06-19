@@ -129,6 +129,16 @@ fun MobilePlayerScreen(
         }
     }
 
+    // Force sensor-based rotation while in the player screen so the video
+    // rotates when the device rotates, even if system auto-rotate is off.
+    DisposableEffect(activity) {
+        val originalOrientation = activity?.requestedOrientation ?: android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR
+        onDispose {
+            activity?.requestedOrientation = originalOrientation
+        }
+    }
+
     val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
     val currentStreamState by rememberUpdatedState(streamState)
 
