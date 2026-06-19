@@ -84,14 +84,8 @@ Originally scoped to ride along with P0-1/P0-2's hoisted `ButtonColors` objects 
 
 ## P2 — Low effort, do opportunistically
 
-### P2-1. `CategoryList.kt:190` — hoist border `Brush.verticalGradient`
-```diff
-+    val palette = org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme.current
-+    val borderBrush = remember(palette) {
-+        Brush.verticalGradient(listOf(CinemaGlassBorder, Color.White.copy(alpha = CinemaAlpha.ghost), CinemaGlassBorder))
-+    }
-     // ...border(brush = borderBrush, ...)
-```
+### P2-1. `CategoryList.kt:190` — hoist border `Brush.verticalGradient` — DONE
+`Brush.verticalGradient()` is a plain, non-`@Composable` factory (no `Composer` injection in its compiled signature), so this one didn't hit the P0-1/P0-2/P2-2 issue. Landed as proposed: `val palette = LocalCinemaTheme.current` + `val borderBrush = remember(palette) { Brush.verticalGradient(listOf(CinemaGlassBorder, Color.White.copy(alpha = CinemaAlpha.ghost), CinemaGlassBorder)) }`, with the `.border(brush = ...)` call site updated to `brush = borderBrush`. `:tv:compileDebugKotlin` passes.
 
 ### P2-2. ~~`MobileControlsOverlay.kt:327` — hoist `SliderDefaults.colors()`~~ — RETRACTED, same issue as P0-1/P0-2
 Decompiling `material3-android 1.4.0` confirms `SliderDefaults.colors()` is also `@Composable` (`colors-q0g_0yA(..., Composer, int, int, int)`), so `remember { SliderDefaults.colors(...) }` is a compile error here too, and there's only one call site to begin with (nothing to consolidate). Recommend leaving `MobileControlsOverlay.kt:327` untouched — not attempted.
@@ -110,7 +104,7 @@ Decompiling `material3-android 1.4.0` confirms `SliderDefaults.colors()` is also
 | P0-3 | `flushWatchHistory()` → background `HandlerThread` | Medium | Low | **Done** — `core/network/.../MediaRepository.kt:111`, `:core:network:compileDebugKotlin` passes |
 | P1-1 | Stats overlays: skip-unchanged-tracks + diff writes | Medium | Medium | **Done** — `StatsOverlay.kt` + `MobileStatsOverlay.kt`, `:tv:compileDebugKotlin`/`:mobile:compileDebugKotlin` pass. statsUpdateMs was already 1000ms, no interval change needed |
 | P1-2 | Color.copy hoisting, scoped to P0-1/P0-2 only | — | — | **Moot** — nothing to fold into once P0-1/P0-2 were retracted |
-| P2-1 | `CategoryList.kt` border `Brush.verticalGradient` hoist | Low | Low | Not yet attempted — `Brush.verticalGradient()` is a plain (non-composable) factory, this one should hold up |
+| P2-1 | `CategoryList.kt` border `Brush.verticalGradient` hoist | Low | Low | **Done** — `Brush.verticalGradient()` is a plain (non-composable) factory, `:tv:compileDebugKotlin` passes |
 | P2-2 | `MobileControlsOverlay.kt` `SliderDefaults.colors()` hoist | — | — | **Retracted** — `SliderDefaults.colors()` is also `@Composable`, same issue as P0-1/P0-2 |
 | P2-3 | `ContentTypeSelectionScreen.kt` gradient — already safe | — | — | No change needed, confirmed safe as originally proposed |
 
@@ -120,4 +114,4 @@ Decompiling `material3-android 1.4.0` confirms `SliderDefaults.colors()` is also
 
 ## Implementation Status
 
-Landed (2026-06-19): **P0-3**, **P1-1**. Compile-verified via `./gradlew :core:network:compileDebugKotlin :tv:compileDebugKotlin :mobile:compileDebugKotlin`; manual on-device verification (watch history persistence, stats overlay live updates) still outstanding. Retracted: P0-1, P0-2, P2-2 (see Summary Matrix). Not yet attempted: P2-1, P2-3.
+Landed (2026-06-19): **P0-3**, **P1-1**, **P2-1**. Compile-verified via `./gradlew :core:network:compileDebugKotlin :tv:compileDebugKotlin :mobile:compileDebugKotlin`; manual on-device verification (watch history persistence, stats overlay live updates, theme switch on the category list border) still outstanding. Retracted: P0-1, P0-2, P2-2 (see Summary Matrix). P2-3 needed no change. **All items in this plan are now resolved** (landed, retracted-as-not-applicable, or already-safe).
