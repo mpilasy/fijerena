@@ -21,9 +21,6 @@ object NetworkBufferProfile {
     const val WIFI_LIVE_REBUFFER_MS = 1_000
     const val WIFI_LIVE_BACK_BUFFER_MS = 0
 
-    // Targeted buffer for the background seamless recycle
-    const val LIVE_RECYCLE_MIN_READY_MS = 3_000
-
     // ── WiFi VOD (reduced for faster startup) ────────────────────────
     const val WIFI_VOD_MIN_BUFFER_MS = 5_000
     const val WIFI_VOD_MAX_BUFFER_MS = 50_000

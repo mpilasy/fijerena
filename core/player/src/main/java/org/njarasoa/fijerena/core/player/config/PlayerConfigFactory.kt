@@ -3,7 +3,6 @@ package org.njarasoa.fijerena.core.player.config
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
@@ -14,38 +13,6 @@ object PlayerConfigFactory {
         LIVE_TV,
         VOD,
     }
-
-    fun createLoadControl(contentType: ContentType = ContentType.VOD): DefaultLoadControl =
-        when (contentType) {
-            ContentType.LIVE_TV -> {
-                // IPTV optimized - fast zapping, minimal latency
-                DefaultLoadControl
-                    .Builder()
-                    .setBufferDurationsMs(
-                        2000, // minBufferMs - 2s for live streams
-                        5000, // maxBufferMs - 5s max to avoid over-buffering
-                        250, // bufferForPlaybackMs - fast startup
-                        500, // bufferForPlaybackAfterRebufferMs - quick recovery
-                    ).setBackBuffer(
-                        0, // backBufferDurationMs - no back buffer for live
-                        false, // retainBackBufferFromKeyframe
-                    ).build()
-            }
-            ContentType.VOD -> {
-                // VOD optimized - smooth playback during network fluctuations
-                DefaultLoadControl
-                    .Builder()
-                    .setBufferDurationsMs(
-                        15000, // minBufferMs - 15s buffer for smooth playback
-                        50000, // maxBufferMs - 50s max buffer for network fluctuations
-                        2500, // bufferForPlaybackMs - 2.5s before starting playback
-                        5000, // bufferForPlaybackAfterRebufferMs - 5s to recover from buffering
-                    ).setBackBuffer(
-                        10000, // backBufferDurationMs - 10s back buffer for seeking
-                        true, // retainBackBufferFromKeyframe
-                    ).build()
-            }
-        }
 
     fun createTrackSelector(context: Context): DefaultTrackSelector {
         val capabilities = DeviceDetector.detect()

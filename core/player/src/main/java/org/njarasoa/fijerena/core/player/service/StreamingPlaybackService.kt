@@ -20,6 +20,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
@@ -72,6 +74,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _measuredFps = MutableStateFlow(0f)
     val measuredFps: StateFlow<Float> = _measuredFps.asStateFlow()
 
+    private val _measuredDroppedFps = MutableStateFlow(0f)
+    val measuredDroppedFps: StateFlow<Float> = _measuredDroppedFps.asStateFlow()
+
     private var onPositionSaveListener: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null
 
     private var liveRetryCount = 0
@@ -99,7 +104,6 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private fun setRecycling(recycling: Boolean) {
         _isRecycling.value = recycling
-        adaptiveLoadControl?.setRecycling(recycling)
         if (recycling) {
             recycleStartTimeMs = SystemClock.elapsedRealtime()
         }
@@ -187,6 +191,27 @@ class StreamingPlaybackService : MediaSessionService() {
         scope.launch {
             NetworkMonitor.networkType.collect { networkType ->
                 adaptiveLoadControl?.updateForNetwork(networkType)
+            }
+        }
+        startHealthMonitorLoop(scope)
+    }
+
+    private fun startHealthMonitorLoop(scope: CoroutineScope) {
+        scope.launch {
+            while (isActive) {
+                delay(healthMonitor?.config?.evaluationIntervalMs ?: 5000L)
+                val player = getPlayer()
+                val metadata = _currentMetadata.value
+                if (player != null && metadata.isLive) {
+                    val state = player.playbackState
+                    if (state == Player.STATE_READY || state == Player.STATE_BUFFERING) {
+                        healthMonitor?.updateMetrics(
+                            bufferedDurationMs = player.bufferedPosition - player.currentPosition,
+                            droppedFramesPerSecond = _measuredDroppedFps.value,
+                            hasReadTimeout = false
+                        )
+                    }
+                }
             }
         }
     }
@@ -301,6 +326,9 @@ class StreamingPlaybackService : MediaSessionService() {
                 onFpsUpdate = { fps ->
                     _measuredFps.value = fps
                 },
+                onDroppedFpsUpdate = { droppedFps ->
+                    _measuredDroppedFps.value = droppedFps
+                },
             )
         player.addAnalyticsListener(analyticsListener!!)
     }
@@ -324,6 +352,7 @@ class StreamingPlaybackService : MediaSessionService() {
         playerListener?.resetErrorState()
         liveRetryCount = 0
         healthMonitor?.notifyStablePlayback()
+        healthMonitor?.reset()
         _streamRetryCount.value = 0
         _rebufferCount.value = 0
         _exhaustionRebufferCount.value = 0
@@ -385,6 +414,7 @@ class StreamingPlaybackService : MediaSessionService() {
             Runnable {
                 val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@Runnable
                 playerListener?.resetErrorState()
+                healthMonitor?.reset()
 
                 val mediaSource =
                     mediaSourceFactory?.createMediaSource(
@@ -872,6 +902,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onBandwidthUpdate: (bitrateEstimate: Long) -> Unit,
         private val onQualitySwitch: (count: Int) -> Unit,
         private val onFpsUpdate: (fps: Float) -> Unit,
+        private val onDroppedFpsUpdate: (droppedFps: Float) -> Unit,
     ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
         private var droppedFrames = 0L
         private var totalFrames = 0L
@@ -886,6 +917,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
         private var fpsLastTimeMs = 0L
         private var fpsLastFrameCount = 0L
+        private var fpsLastDroppedFrameCount = 0L
 
         override fun onVideoFrameProcessingOffset(
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
@@ -897,14 +929,21 @@ class StreamingPlaybackService : MediaSessionService() {
             if (fpsLastTimeMs == 0L) {
                 fpsLastTimeMs = currentTime
                 fpsLastFrameCount = totalFrames
+                fpsLastDroppedFrameCount = droppedFrames
             } else {
                 val delta = currentTime - fpsLastTimeMs
                 if (delta >= 1000) {
                     val frames = totalFrames - fpsLastFrameCount
                     val fps = (frames * 1000f) / delta
                     onFpsUpdate(fps)
+                    
+                    val dropped = droppedFrames - fpsLastDroppedFrameCount
+                    val droppedFps = (dropped * 1000f) / delta
+                    onDroppedFpsUpdate(droppedFps)
+                    
                     fpsLastTimeMs = currentTime
                     fpsLastFrameCount = totalFrames
+                    fpsLastDroppedFrameCount = droppedFrames
                 }
             }
         }
@@ -967,7 +1006,7 @@ class StreamingPlaybackService : MediaSessionService() {
             if (service != null && player != null) {
                 service.healthMonitor?.updateMetrics(
                     bufferedDurationMs = player.bufferedPosition - player.currentPosition,
-                    droppedFramesPerSecond = service._measuredFps.value, 
+                    droppedFramesPerSecond = service._measuredDroppedFps.value, 
                     hasReadTimeout = false // ExoPlayer reports timeouts via exceptions
                 )
             }
