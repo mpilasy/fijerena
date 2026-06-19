@@ -228,37 +228,6 @@ fun PlayerScreen(
             )
         }
 
-        // Modern unified controls overlay (mobile-style)
-        AnimatedVisibility(
-            visible = state.showControls || state.showStreamInfo,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
-            PlayerControlsOverlay(
-                playbackState = currentPs,
-                metadata = state.displayedMetadata,
-                viewModel = viewModel,
-                livePosition = state.livePosition,
-                liveDuration = state.liveDuration,
-                currentEpgProgram = currentEpgProgram,
-                nextEpgProgram = nextEpgProgram,
-                isFavorite = isFavorite,
-                onToggleFavorite = onToggleFavorite,
-                showFullControls = state.showControls,
-                onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
-                onShowSubtitleSelector = { state.showSubtitleSelector = true },
-                onShowQualitySelector = { state.showQualitySelector = true },
-                onShowChapterSelector = { state.showChapterSelector = true },
-                onShowStats = { state.showStats = !state.showStats },
-                seekSpeedLabel = state.seekSpeedLabel,
-                scrubPositionMs = state.scrubPositionMs,
-                onCommitScrub = { target ->
-                    viewModel.seekTo(target)
-                    state.scrubPositionMs = null
-                },
-            )
-        }
-
         // Audio track selector dialog
         if (state.showAudioTrackSelector) {
             AudioTrackSelectorDialog(
@@ -369,6 +338,40 @@ fun PlayerScreen(
                     onStreamSelected?.invoke(item)
                 },
                 onDismiss = { state.showLastWatchedOverlay = false },
+            )
+        }
+
+        // Modern unified controls overlay (mobile-style). Also shown (in compact info-only
+        // mode, since showFullControls stays tied to state.showControls) while the category or
+        // last-watched overlay is open — and declared after them so it renders on top, since
+        // both overlays are full-height and would otherwise cover the channel/program info.
+        AnimatedVisibility(
+            visible = state.showControls || state.showStreamInfo || state.showCategoryOverlay || state.showLastWatchedOverlay,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            PlayerControlsOverlay(
+                playbackState = currentPs,
+                metadata = state.displayedMetadata,
+                viewModel = viewModel,
+                livePosition = state.livePosition,
+                liveDuration = state.liveDuration,
+                currentEpgProgram = currentEpgProgram,
+                nextEpgProgram = nextEpgProgram,
+                isFavorite = isFavorite,
+                onToggleFavorite = onToggleFavorite,
+                showFullControls = state.showControls,
+                onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
+                onShowSubtitleSelector = { state.showSubtitleSelector = true },
+                onShowQualitySelector = { state.showQualitySelector = true },
+                onShowChapterSelector = { state.showChapterSelector = true },
+                onShowStats = { state.showStats = !state.showStats },
+                seekSpeedLabel = state.seekSpeedLabel,
+                scrubPositionMs = state.scrubPositionMs,
+                onCommitScrub = { target ->
+                    viewModel.seekTo(target)
+                    state.scrubPositionMs = null
+                },
             )
         }
     }

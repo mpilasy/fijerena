@@ -489,18 +489,6 @@ fun MobilePlayerScreen(
                     )
                 }
 
-                // Channel switch toast (Live TV only)
-                AnimatedVisibility(
-                    visible = !isInPipMode && showChannelToast,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.TopCenter),
-                ) {
-                    ChannelToast(
-                        channelName = state.streamName,
-                        currentEpgProgram = state.currentEpgProgram,
-                    )
-                }
             }
 
             // Category streams panel — slides in from the left
@@ -547,6 +535,22 @@ fun MobilePlayerScreen(
                     },
                     onDismiss = { showLastWatchedOverlay = false },
                 )
+            }
+
+            // Channel/program info — also shown while the category or last-watched panel is
+            // open (above them, since both cover most of the screen) so it's never hidden.
+            Box(modifier = Modifier.fillMaxSize()) {
+                AnimatedVisibility(
+                    visible = !isInPipMode && (showChannelToast || showCategoryOverlay || showLastWatchedOverlay),
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.TopCenter),
+                ) {
+                    ChannelToast(
+                        channelName = state.streamName,
+                        currentEpgProgram = state.currentEpgProgram,
+                    )
+                }
             }
 
             // Selector dialogs (outside the clickable Box)
