@@ -94,6 +94,10 @@ fun MobileStatsOverlay(
         ?: remember { mutableStateOf(0) }
     val serviceMeasuredFps by StreamingPlaybackService.getInstance()?.measuredFps?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
+    val serviceMeasuredDroppedFps by StreamingPlaybackService.getInstance()?.measuredDroppedFps?.collectAsStateWithLifecycle(0f)
+        ?: remember { mutableStateOf(0f) }
+    val streamHealthState by StreamingPlaybackService.getInstance()?.streamHealthState?.collectAsStateWithLifecycle(org.njarasoa.fijerena.core.player.network.StreamHealthState())
+        ?: remember { mutableStateOf(org.njarasoa.fijerena.core.player.network.StreamHealthState()) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
     LaunchedEffect(Unit) {
@@ -319,10 +323,36 @@ fun MobileStatsOverlay(
                 if (totalFrames > 0) {
                     StatRowColored("Drop Rate", String.format("%.2f%%", dropRate), dropColor)
                 }
+                
+                val currentDropFps = serviceMeasuredDroppedFps
+                if (currentDropFps > 0f) {
+                    val currentDropColor = when {
+                        currentDropFps < 1.0f -> CinemaSuccess
+                        currentDropFps < 10.0f -> CinemaWarning
+                        else -> CinemaError
+                    }
+                    StatRowColored("Drop Rate/sec", String.format("%.1f fps", currentDropFps), currentDropColor)
+                }
 
                 SectionHeader("STREAM")
                 StatRow("Type", if (metadata.isLive) "Live" else "VOD")
                 StatRow("Retries", "$serviceRetryCount")
+                
+                if (metadata.isLive) {
+                    val health = streamHealthState
+                    val healthText = when {
+                        health.isDegraded -> "DEGRADED (Attempt ${health.degradedAttempts})"
+                        !health.isHealthy -> "UNSTABLE (Points: ${health.recycleAttempts})"
+                        else -> "HEALTHY"
+                    }
+                    val healthColor = when {
+                        health.isDegraded -> CinemaError
+                        !health.isHealthy -> CinemaWarning
+                        else -> CinemaSuccess
+                    }
+                    StatRowColored("Stream Health", healthText, healthColor)
+                }
+                
                 StatRow("Uptime", streamElapsed)
                 StatRow("URL", metadata.streamUrl.substringAfterLast("/").take(25))
 

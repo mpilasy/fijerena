@@ -106,6 +106,10 @@ fun StatsOverlay(
         ?: remember { mutableStateOf(0) }
     val serviceMeasuredFps by StreamingPlaybackService.getInstance()?.measuredFps?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
+    val serviceMeasuredDroppedFps by StreamingPlaybackService.getInstance()?.measuredDroppedFps?.collectAsStateWithLifecycle(0f)
+        ?: remember { mutableStateOf(0f) }
+    val streamHealthState by StreamingPlaybackService.getInstance()?.streamHealthState?.collectAsStateWithLifecycle(org.njarasoa.fijerena.core.player.network.StreamHealthState())
+        ?: remember { mutableStateOf(org.njarasoa.fijerena.core.player.network.StreamHealthState()) }
     var streamElapsed by remember { mutableStateOf("0:00") }
 
     // Update stats periodically
@@ -386,6 +390,20 @@ fun StatsOverlay(
                                     dropColor,
                                 )
                             }
+                            
+                            val currentDropFps = serviceMeasuredDroppedFps
+                            if (currentDropFps > 0f) {
+                                val currentDropColor = when {
+                                    currentDropFps < 1.0f -> CinemaSuccess
+                                    currentDropFps < 10.0f -> CinemaWarning
+                                    else -> CinemaError
+                                }
+                                CompactStatRowColored(
+                                    "Drop Rate/sec", // Replace with stringResource if you have one, using hardcoded for now to avoid needing string additions
+                                    String.format("%.1f fps", currentDropFps),
+                                    currentDropColor
+                                )
+                            }
 
                             // Stream info
                             SectionHeader(stringResource(R.string.player_stats_stream))
@@ -394,6 +412,22 @@ fun StatsOverlay(
                                 if (metadata.isLive) stringResource(R.string.player_live) else "VOD"
                             )
                             CompactStatRow(stringResource(R.string.player_stats_retries), "$serviceRetryCount")
+                            
+                            if (metadata.isLive) {
+                                val health = streamHealthState
+                                val healthText = when {
+                                    health.isDegraded -> "DEGRADED (Attempt ${health.degradedAttempts})"
+                                    !health.isHealthy -> "UNSTABLE (Points: ${health.recycleAttempts})"
+                                    else -> "HEALTHY"
+                                }
+                                val healthColor = when {
+                                    health.isDegraded -> CinemaError
+                                    !health.isHealthy -> CinemaWarning
+                                    else -> CinemaSuccess
+                                }
+                                CompactStatRowColored("Stream Health", healthText, healthColor)
+                            }
+                            
                             CompactStatRow(stringResource(R.string.player_stats_uptime), streamElapsed)
                             CompactStatRow(stringResource(R.string.player_stats_url), metadata.streamUrl.substringAfterLast("/").take(20))
 
