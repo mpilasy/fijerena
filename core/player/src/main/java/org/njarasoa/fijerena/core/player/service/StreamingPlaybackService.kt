@@ -164,7 +164,6 @@ class StreamingPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        instance = this
         NetworkMonitor.init(this)
         mediaSourceFactory = StreamingMediaSourceFactory(this)
 
@@ -186,11 +185,14 @@ class StreamingPlaybackService : MediaSessionService() {
         )
 
         initializePlayer()
-        // Only complete this after initializePlayer() so awaitInstance() callers (e.g.
-        // PlaybackViewModel.playStream(), launched on Dispatchers.Main.immediate) can't
-        // resolve and call into playStream() while mediaSession is still null — that race
-        // made playStream()'s `mediaSession?.player ?: return` guard silently no-op with
-        // no log, leaving the UI stuck on a black screen with no diagnostic trail.
+        // Only publish the instance after initializePlayer() so getInstance()/awaitInstance()
+        // callers (e.g. PlaybackViewModel.playStream(), and TvPlayerScreen's setContentType()/
+        // setPositionSaveListener() calls fired from a LaunchedEffect right as the player
+        // screen mounts) can't resolve to a service whose mediaSession/adaptiveLoadControl is
+        // still null. Those callers silently no-op on null (`?: return`, `?.`) with no log, so
+        // the previous early-publish made failures invisible — playStream()'s case produced a
+        // black screen stuck in Idle forever, with no diagnostic trail.
+        instance = this
         instanceReady.complete(this)
         acquireWakeLock()
         observeNetworkChanges()
