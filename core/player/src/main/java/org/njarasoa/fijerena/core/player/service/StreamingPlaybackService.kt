@@ -85,6 +85,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private var liveRetryCount = 0
     private var autoRetryAttempted = false
+    private var lastErrorMessage: String? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingRetry: Runnable? = null
 
@@ -377,6 +378,7 @@ class StreamingPlaybackService : MediaSessionService() {
         playerListener?.resetErrorState()
         liveRetryCount = 0
         autoRetryAttempted = false
+        lastErrorMessage = null
         healthMonitor?.notifyStablePlayback()
         healthMonitor?.reset()
         _streamRetryCount.value = 0
@@ -412,10 +414,10 @@ class StreamingPlaybackService : MediaSessionService() {
         val metadata = _currentMetadata.value
         if (!metadata.isLive || liveRetryCount >= MAX_LIVE_RETRIES) {
             if (metadata.isLive && liveRetryCount >= MAX_LIVE_RETRIES) {
+                val detail = lastErrorMessage ?: "The channel may be offline."
                 _playbackState.value =
                     PlaybackState.Error(
-                        "Live stream unavailable after $MAX_LIVE_RETRIES retries. " +
-                            "The channel may be offline.",
+                        "Live stream unavailable after $MAX_LIVE_RETRIES retries. $detail",
                     )
             }
             return
@@ -466,6 +468,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private fun handleStreamEndedOrError(errorMessage: String?) {
         val metadata = _currentMetadata.value
         if (metadata.isLive) {
+            lastErrorMessage = errorMessage
             attemptLiveRetry()
         } else {
             if (errorMessage != null) {
@@ -845,7 +848,7 @@ class StreamingPlaybackService : MediaSessionService() {
                         401 -> "HTTP 401 — Authentication failed. Check your credentials."
                         403 -> "HTTP 403 — Access denied. Your subscription may have expired."
                         404 -> "HTTP 404 — Stream not found. The channel may be offline."
-                        458 -> "HTTP 458 — Connection limit reached. Close other active streams on this account."
+                        456, 458 -> "HTTP $code — Connection limit reached. Close other active streams on this account."
                         502, 503, 504 -> "HTTP $code — Server unavailable. Try again shortly."
                         in 500..599 -> "HTTP $code — Server error. Try again later."
                         in 400..499 -> "HTTP $code — Stream access denied."
