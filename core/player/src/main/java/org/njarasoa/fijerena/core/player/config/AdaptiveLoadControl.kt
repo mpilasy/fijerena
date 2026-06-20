@@ -36,6 +36,12 @@ class AdaptiveLoadControl(
     private var lastPreparedPlayerId: PlayerId? = null
     private var lastTracksSelected: TracksSelectedCall? = null
 
+    // When true, the delegate was swapped and needs lifecycle state replayed on the
+    // playback thread. Cleared either by replayIfPending() (mid-playback swap) or by
+    // a natural onPrepared() call from ExoPlayer (retry / new prepare).
+    @Volatile
+    private var pendingReplay = false
+
     // Swapped on network/content-type changes; LoadControl methods below always read through
     // this reference, so a swap takes effect on the very next call. Rebuilding just constructs
     // a fresh value object — it doesn't touch the player, the allocator, or buffered data — so
@@ -45,18 +51,29 @@ class AdaptiveLoadControl(
 
     fun updateForNetwork(networkType: NetworkType) {
         this.networkType = networkType
-        delegate = buildDelegate(networkType, contentType).also(::replayLifecycle)
+        delegate = buildDelegate(networkType, contentType)
+        pendingReplay = true
     }
 
     fun updateContentType(contentType: PlayerConfigFactory.ContentType) {
         this.contentType = contentType
-        delegate = buildDelegate(networkType, contentType).also(::replayLifecycle)
+        delegate = buildDelegate(networkType, contentType)
+        pendingReplay = true
     }
 
-    private fun replayLifecycle(newDelegate: DefaultLoadControl) {
-        lastPreparedPlayerId?.let { newDelegate.onPrepared(it) }
-        lastTracksSelected?.let { (parameters, trackGroups, trackSelections) ->
-            newDelegate.onTracksSelected(parameters, trackGroups, trackSelections)
+    /**
+     * Replays cached [onPrepared]/[onTracksSelected] state on the current delegate.
+     * Called from [shouldContinueLoading]/[shouldStartPlayback] which ExoPlayer always
+     * invokes on the playback looper thread, satisfying Media3 1.7.1's thread assertion
+     * in [DefaultLoadControl.onPrepared].
+     */
+    private fun replayIfPending() {
+        if (pendingReplay) {
+            pendingReplay = false
+            lastPreparedPlayerId?.let { delegate.onPrepared(it) }
+            lastTracksSelected?.let { (parameters, trackGroups, trackSelections) ->
+                delegate.onTracksSelected(parameters, trackGroups, trackSelections)
+            }
         }
     }
 
@@ -149,6 +166,7 @@ class AdaptiveLoadControl(
 
     // Analytics-aware lifecycle methods (often used by 1.7.1+ internal logic)
     override fun onPrepared(playerId: PlayerId) {
+        pendingReplay = false  // Natural lifecycle call from ExoPlayer supersedes deferred replay
         lastPreparedPlayerId = playerId
         delegate.onPrepared(playerId)
     }
@@ -174,9 +192,15 @@ class AdaptiveLoadControl(
 
     override fun retainBackBufferFromKeyframe(playerId: PlayerId): Boolean = delegate.retainBackBufferFromKeyframe(playerId)
 
-    override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean = delegate.shouldContinueLoading(parameters)
+    override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
+        replayIfPending()
+        return delegate.shouldContinueLoading(parameters)
+    }
 
-    override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean = delegate.shouldStartPlayback(parameters)
+    override fun shouldStartPlayback(parameters: LoadControl.Parameters): Boolean {
+        replayIfPending()
+        return delegate.shouldStartPlayback(parameters)
+    }
 
     override fun onTracksSelected(
         parameters: LoadControl.Parameters,
