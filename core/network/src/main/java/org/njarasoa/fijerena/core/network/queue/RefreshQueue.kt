@@ -15,7 +15,6 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import java.util.PriorityQueue
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Singleton queue manager that processes tasks based on priority.
@@ -39,14 +38,22 @@ object RefreshQueue {
     private val _activeTaskIds = MutableStateFlow<Set<String>>(emptySet())
     val activeTaskIds = _activeTaskIds.asStateFlow()
 
-    private val activeJobs = ConcurrentHashMap<String, Job>()
-
     private class QueuedTask(
         val task: RefreshTask,
         val deferred: CompletableDeferred<Unit>,
     ) : Comparable<QueuedTask> {
         override fun compareTo(other: QueuedTask): Int = task.compareTo(other.task)
     }
+
+    private class ActiveTask(
+        val job: Job,
+        val deferred: CompletableDeferred<Unit>,
+    )
+
+    // Tasks already polled off `queue` and currently executing (or about to). Guarded by the
+    // same queueMutex as `queue` so a task can never be in neither place at once — that gap
+    // is exactly what previously let submit() enqueue a concurrent duplicate of a running task.
+    private val activeTasks = mutableMapOf<String, ActiveTask>()
 
     init {
         startWorker()
@@ -62,22 +69,26 @@ object RefreshQueue {
 
     /**
      * Submit a task to the queue.
-     * Returns a Deferred that completes when the task finishes.
+     * Returns a Deferred that completes when the task finishes. If a task with the same
+     * ID is already executing, coalesces into that run's Deferred instead of starting a
+     * second, concurrent one.
      */
     suspend fun submit(task: RefreshTask): Deferred<Unit> {
-        val deferred = CompletableDeferred<Unit>()
-        val queuedTask = QueuedTask(task, deferred)
+        val deferred =
+            queueMutex.withLock {
+                activeTasks[task.id]?.let { return@withLock it.deferred }
 
-        queueMutex.withLock {
-            // Remove existing task with same ID to ensure we don't queue multiple same tasks
-            val existing = queue.find { it.task.id == task.id }
-            if (existing != null) {
-                queue.remove(existing)
-                existing.deferred.cancel()
+                // Remove existing queued task with same ID to ensure we don't queue multiple same tasks
+                val existing = queue.find { it.task.id == task.id }
+                if (existing != null) {
+                    queue.remove(existing)
+                    existing.deferred.cancel()
+                }
+                val newDeferred = CompletableDeferred<Unit>()
+                queue.add(QueuedTask(task, newDeferred))
+                _queuedTaskIds.value = queue.map { it.task.id }.toSet()
+                newDeferred
             }
-            queue.add(queuedTask)
-            _queuedTaskIds.value = queue.map { it.task.id }.toSet()
-        }
         processChannel.trySend(Unit)
         return deferred
     }
@@ -86,38 +97,36 @@ object RefreshQueue {
         while (true) {
             val queuedTask =
                 queueMutex.withLock {
-                    if (queue.isEmpty()) return@withLock null
                     queue.poll()?.also {
                         _queuedTaskIds.value = queue.map { it.task.id }.toSet()
                     }
                 } ?: break
 
             // Launch each task in its own coroutine, governed by the semaphore
-            scope.launch {
-                semaphore.withPermit {
-                    _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
-                    _isProcessing.value = true
-
-                    val job =
-                        launch {
-                            try {
-                                queuedTask.task.execute()
-                                queuedTask.deferred.complete(Unit)
-                            } catch (e: Exception) {
-                                android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
-                                queuedTask.deferred.completeExceptionally(e)
-                            }
+            val job =
+                scope.launch {
+                    semaphore.withPermit {
+                        _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
+                        _isProcessing.value = true
+                        try {
+                            queuedTask.task.execute()
+                            queuedTask.deferred.complete(Unit)
+                        } catch (e: Exception) {
+                            android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
+                            queuedTask.deferred.completeExceptionally(e)
+                        } finally {
+                            queueMutex.withLock { activeTasks.remove(queuedTask.task.id) }
+                            _activeTaskIds.value = _activeTaskIds.value - queuedTask.task.id
+                            _isProcessing.value = _activeTaskIds.value.isNotEmpty()
                         }
-
-                    activeJobs[queuedTask.task.id] = job
-                    try {
-                        job.join()
-                    } finally {
-                        activeJobs.remove(queuedTask.task.id)
-                        _activeTaskIds.value = _activeTaskIds.value - queuedTask.task.id
-                        _isProcessing.value = _activeTaskIds.value.isNotEmpty()
                     }
                 }
+
+            // Registered as active immediately, in the same dequeue step — not after the
+            // semaphore permit is acquired — so a task waiting on a full semaphore is still
+            // covered by submit()'s de-dup check, with no gap where it's in neither place.
+            queueMutex.withLock {
+                activeTasks[queuedTask.task.id] = ActiveTask(job, queuedTask.deferred)
             }
         }
     }
@@ -137,8 +146,10 @@ object RefreshQueue {
      * Cancel all executing and pending tasks.
      */
     suspend fun cancelAll() {
-        activeJobs.values.forEach { it.cancel() }
-        activeJobs.clear()
+        queueMutex.withLock {
+            activeTasks.values.forEach { it.job.cancel() }
+            activeTasks.clear()
+        }
         clear()
     }
 }

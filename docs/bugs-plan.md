@@ -23,8 +23,8 @@ tier. Each entry below also has a **Complexity** rating; at a glance:
 | # | Bug | Complexity |
 |---|-----|-----------|
 | 1 | [FIXED] EPG Now Playing/Up Next stale 12h | Easy |
-| 2 | AppContainer zombie repo at provider ID 0 | Moderate |
-| 3 | RefreshQueue duplicate concurrent execution | Moderate |
+| 2 | [FIXED] AppContainer zombie repo at provider ID 0 | Moderate |
+| 3 | [FIXED] RefreshQueue duplicate concurrent execution | Moderate |
 | 4 | ProviderViewModel sync-status overwrite | Moderate–Involved |
 | 5 | Mobile gesture (self-mutation + missing guard) | Easy–Moderate |
 | 6 | [FIXED] First ~10s of playback not saved | Trivial |
@@ -56,7 +56,7 @@ depend on UI/consumer call sites not yet traced (see their entries below).
 **Resolved:** added `EpgFileManager.invalidateXmltvCache()`, called from both `processAllSourcesInternal()` and `processSingleSourceInternal()` right after a successful ingest (post-swap, so the SQLite index is already visible). It resolves affected provider IDs from each ingested source's `providerId` — a `null` providerId ("applies to all providers") expands to every provider via `ProviderRepository.getAllProvidersList()` — then calls `XmltvEpgService(context, providerId).clearCache()` for each.
 **Verify:** force an EPG sync (`EpgSyncDebugReceiver`) while a live channel with stale cached EPG is playing; confirm the player's now/next info updates promptly after the sync completes instead of holding the old snapshot.
 
-### 2. AppContainer permanently caches a provider-less repository under ID 0
+### 2. [FIXED] AppContainer permanently caches a provider-less repository under ID 0
 **File:** `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/di/AppContainer.kt` (`getMediaRepository()`, lines 37–66)
 
 When `providerId` is the default `0L` and `providerRepository.getActiveProvider()` returns null (no active provider yet), `resolvedId` falls back to `0L`. The function then builds a `MediaRepository` keyed at `0L`, but since `entity` is also null in that branch, `newRepo.setProvider(...)` is never called — the repo has no backing provider implementation. It still gets cached at `mediaRepositories[0L]` (line 64) before `repo.connect()` is attempted and fails. Every later call to `getMediaRepository()` with the default arg will hit this cached, permanently-broken instance — even after a real active provider exists — because the cache is keyed by ID and `0L` is never evicted.
@@ -65,8 +65,9 @@ When `providerId` is the default `0L` and `providerRepository.getActiveProvider(
 **Impact:** silent, sticky connection failure for the affected user that survives until `clearAllCaches()` is called or the app is restarted — narrow trigger window, but total breakage when hit.
 **Fix:** don't cache the result when `resolvedId <= 0` or `entity == null`; return/throw a clear "no active provider" signal instead.
 **Complexity:** Moderate — contained to one function, but the `?: run { }` cache-miss block needs careful restructuring so a provider-less repo is built-and-returned-but-not-cached, without breaking the mutex invariant or causing repeated recreation churn on every call until a provider exists.
+**Resolved:** moved `mediaRepositories[resolvedId] = newRepo` inside the `if (entity != null)` branch, so a provider-less repo is still built and returned (preserving the existing `MediaRepository` non-nullable contract and the connect-and-fail behavior callers already handle) but is never cached. The next call after a real active provider exists resolves to that provider's real ID and builds/caches a proper repo, unaffected by any earlier provider-less attempt.
 
-### 3. RefreshQueue lets the same task ID run twice concurrently
+### 3. [FIXED] RefreshQueue lets the same task ID run twice concurrently
 **File:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/queue/RefreshQueue.kt` (`submit()` lines 67–83, `activeJobs`/`processAvailable()` lines 42, 96–122)
 
 `submit()` only de-duplicates against tasks still sitting in the pending `queue` (line 73: `queue.find { it.task.id == task.id }`). It never checks `activeJobs`, the map of tasks already polled off the queue and currently executing. If a refresh for source/provider X is submitted, starts executing, and a second refresh for the same X is submitted before the first finishes, the de-dup check finds nothing in `queue` and enqueues a second run — which then executes *concurrently* with the first.
@@ -75,6 +76,7 @@ When `providerId` is the default `0L` and `providerRepository.getActiveProvider(
 **Impact:** two concurrent pipeline runs writing into the same DB rows/staging tables — wasted work at best, corrupted/interleaved EPG data at worst.
 **Fix:** check `activeJobs` (or a combined in-flight ID set) in `submit()` before accepting a new submission with the same ID; coalesce into the existing `Deferred` instead of starting a parallel run.
 **Complexity:** Moderate — `queue` (guarded by `queueMutex`) and `activeJobs` (a separate `ConcurrentHashMap`) aren't under one lock today; de-duplicating across both needs either a unified lock or careful TOCTOU reasoning, plus a decision on semantics (coalesce vs. queue-behind). Small code footprint (~15-20 lines), but the concurrency design needs to be right.
+**Resolved:** replaced the separate `ConcurrentHashMap`-backed `activeJobs` with `activeTasks`, guarded by the same `queueMutex` as `queue`. A task is moved from `queue` into `activeTasks` in the same dequeue step in `processAvailable()` — before the semaphore permit is even acquired — so it's never absent from both at once. `submit()` now checks `activeTasks` first and coalesces into the running task's existing `Deferred` instead of enqueueing a duplicate. (A sub-microsecond gap remains between `scope.launch` returning a `Job` and that job being registered into `activeTasks`, both still inside `processAvailable()`; closing that fully would need pre-registering a placeholder before launch, which wasn't judged worth the extra complexity given the bug's realistic triggers — UI double-taps, overlapping manual/auto refresh — operate on millisecond-or-slower timescales.)
 
 ### 4. ProviderViewModel's sync-status tracking is overwritten by a second concurrent sync
 **File:** `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProviderViewModel.kt` (`syncProvider()` lines 347–355, completion check in `loadProviders()` lines 151–174)
