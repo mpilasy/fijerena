@@ -148,9 +148,15 @@ class EpgViewModel(
     fun forceRefresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
+            if (!::repository.isInitialized) {
+                repository = AppContainer.getInstance(context).getMediaRepository()
+            }
             repository.clearEpgCache()
             repository.clearXmltvCache()
-            loadEpgData(currentDate)
+            // Call the suspending internal loader directly (not the fire-and-forget
+            // loadEpgData() wrapper), so isRefreshing only flips back once the reload
+            // actually finishes instead of immediately after merely scheduling it.
+            loadEpgDataInternal(currentDate)
             _isRefreshing.value = false
         }
     }
@@ -262,7 +268,8 @@ class EpgViewModel(
 
     private fun calculateCurrentTimeSlot(timeSlots: List<TimeSlot>): Int {
         val now = System.currentTimeMillis() / 1000
-        val index = timeSlots.indexOfFirst { now in it.startTime..it.endTime }
-        return if (index >= 0) index else 0
+        // -1 (not 0) when "now" isn't in any slot of the selected date — e.g. any
+        // non-today date — so callers don't mistake "no match" for "slot 0 is current".
+        return timeSlots.indexOfFirst { now in it.startTime..it.endTime }
     }
 }

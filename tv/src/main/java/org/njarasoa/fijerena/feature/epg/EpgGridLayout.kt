@@ -427,7 +427,7 @@ private fun TimeHeaderRow(
         ) {
             items(timeSlots.size, contentType = { "time_slot" }) { index ->
                 val slot = timeSlots[index]
-                val isCurrent = index == currentTimeSlot
+                val isCurrent = currentTimeSlot >= 0 && index == currentTimeSlot
 
                 Box(
                     modifier =

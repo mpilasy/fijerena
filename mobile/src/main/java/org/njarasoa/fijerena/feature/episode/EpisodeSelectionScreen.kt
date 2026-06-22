@@ -258,6 +258,9 @@ private fun EpisodeListContent(
             if (hasMultipleSeasons && sortedSeasons.isNotEmpty()) setOf(sortedSeasons.first().seasonNumber) else emptySet(),
         )
     }
+    // Set by the manual season-header toggle below, so the auto-expand effect doesn't
+    // clobber a choice the user already made while the playback-position lookups were in flight.
+    var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(false) }
 
     // Auto-expand season with next unwatched/in-progress episode
     LaunchedEffect(seriesDetail) {
@@ -279,7 +282,9 @@ private fun EpisodeListContent(
             for (episode in episodes) {
                 val watched = allWatched[episode.id]
                 if (watched == null || !watched.isCompleted) {
-                    expandedSeasons = setOf(season.seasonNumber)
+                    if (!hasManuallyToggledSeasons) {
+                        expandedSeasons = setOf(season.seasonNumber)
+                    }
                     return@LaunchedEffect
                 }
             }
@@ -355,6 +360,7 @@ private fun EpisodeListContent(
                             episodeCount = seasonEpisodes.size,
                             isExpanded = isExpanded,
                             onToggle = {
+                                hasManuallyToggledSeasons = true
                                 expandedSeasons =
                                     if (isExpanded) {
                                         emptySet()
