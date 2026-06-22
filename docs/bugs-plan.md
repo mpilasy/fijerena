@@ -26,7 +26,7 @@ tier. Each entry below also has a **Complexity** rating; at a glance:
 | 2 | [FIXED] AppContainer zombie repo at provider ID 0 | Moderate |
 | 3 | [FIXED] RefreshQueue duplicate concurrent execution | Moderate |
 | 4 | ProviderViewModel sync-status overwrite | Moderate–Involved |
-| 5 | Mobile gesture (self-mutation + missing guard) | Easy–Moderate |
+| 5 | [FIXED, manual verify pending] Mobile gesture (self-mutation + missing guard) | Easy–Moderate |
 | 6 | [FIXED] First ~10s of playback not saved | Trivial |
 | 7 | EpgBrowserViewModel stale pager after Clear All Data | Involved |
 | 8 | [FIXED] Live-retry drops bandwidth telemetry | Trivial |
@@ -90,7 +90,7 @@ When `providerId` is the default `0L` and `providerRepository.getActiveProvider(
 
 ## Moderate impact
 
-### 5. Mobile swipe gesture for channel-switch/category-panel can flicker, drop input mid-swipe, or double-fire
+### 5. [FIXED, manual verify still pending] Mobile swipe gesture for channel-switch/category-panel can flicker, drop input mid-swipe, or double-fire
 **File:** `mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt:351-396` (re-confirmed still present in current code)
 
 Two compounding issues in the same gesture handler:
@@ -105,6 +105,7 @@ Two compounding issues in the same gesture handler:
 
 **Complexity:** Easy–Moderate — two independent, well-understood Compose fixes, small diff, single file. The real cost isn't the code but the lack of automated test coverage for gestures — correctness has to be confirmed by manual device testing.
 **Verify:** on a mobile device/emulator, do one continuous swipe right noticeably longer than the 80px threshold (don't lift between); confirm the category panel opens once and stays open. Repeat for vertical channel-switch with a long swipe to confirm only one channel change fires and the rest of the gesture isn't dropped. Try a diagonal swipe and confirm only one of (channel switch / overlay toggle) fires, not both.
+**Resolved:** dropped `showCategoryOverlay`/`showLastWatchedOverlay` from the `pointerInput()` key list (kept `state.categoryStreams`/`showStats`); reads of those two vars inside `onDrag` stay fresh regardless, since they're `mutableStateOf`-backed, not plain captured values — no `rememberUpdatedState` wrapper needed. Added `hasFiredHorizontalThisGesture`, mirroring the existing vertical guard (renamed to `hasFiredVerticalThisGesture` for clarity), reset alongside it in `onDragStart`/`onDragEnd`/`onDragCancel`. Compiles and installed to a real device + emulator, but the on-device swipe-by-swipe manual verification above hasn't been completed yet — got interrupted mid-attempt (building a throwaway Remote M3U test provider to reach the live-TV gesture surface, since no provider was configured on the test devices).
 
 ### 6. [FIXED] First ~10 seconds of every playback session are never saved to watch history
 **File:** `core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt` (`PlayerListener`, lines 790–819, save gate at lines 798–816)
