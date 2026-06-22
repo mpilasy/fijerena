@@ -22,7 +22,7 @@ tier. Each entry below also has a **Complexity** rating; at a glance:
 
 | # | Bug | Complexity |
 |---|-----|-----------|
-| 1 | EPG Now Playing/Up Next stale 12h | Easy |
+| 1 | [FIXED] EPG Now Playing/Up Next stale 12h | Easy |
 | 2 | AppContainer zombie repo at provider ID 0 | Moderate |
 | 3 | RefreshQueue duplicate concurrent execution | Moderate |
 | 4 | ProviderViewModel sync-status overwrite | Moderate–Involved |
@@ -41,18 +41,19 @@ depend on UI/consumer call sites not yet traced (see their entries below).
 
 ## High impact
 
-### 1. Live TV's "Now Playing" / "Up Next" info can be stale for up to 12 hours after an EPG sync
+### 1. [FIXED] Live TV's "Now Playing" / "Up Next" info can be stale for up to 12 hours after an EPG sync
 **Root cause, traced precisely:**
 - `StreamLoaderViewModel.loadStreamInternal()` (`core/ui/.../viewmodels/StreamLoaderViewModel.kt:186`) calls `repo.getEpgBulkForItems(listOf(currentItem))` to populate `currentEpgProgram`/`nextEpgProgram` — the data shown in the player's live-TV info bar.
 - That delegates to `MediaRepository.getEpgBulkForItems()` (`core/network/.../MediaRepository.kt:241-256`), which tries `xmltvEpgService.getEpgForChannels(items)` first.
 - `XmltvEpgService.getEpgForChannels()` (`core/network/.../xmltv/XmltvEpgService.kt:133-207`) checks an in-memory/SharedPreferences cache via `getCachedEpg()` (lines 270-290) before ever touching the SQLite EPG index. That cache is considered valid as long as: (a) the wall-clock TTL (`PARSED_CACHE_TTL_MS = 12h`, line 25) hasn't elapsed, and (b) every requested channel ID is already a key in the cached map (line 145, `allPresent`).
-- Nothing in this check considers whether the underlying SQLite index (`epg_index.db`) has been updated more recently than the cached snapshot. `EpgSyncWorker`/`EpgIndexer` write fresh programme data straight into SQLite on every background sync, but `clearXmltvCache()` (the only thing that nulls this cache) is never called from the sync path — only from explicit user actions elsewhere (e.g. switching providers). **Re-confirmed during this merge:** no `clearCache`/`clearXmltvCache` call exists anywhere in `EpgSyncWorker.kt` or `EpgFileManager.kt` — still unfixed.
+- Nothing in this check considers whether the underlying SQLite index (`epg_index.db`) has been updated more recently than the cached snapshot. `EpgSyncWorker`/`EpgIndexer` write fresh programme data straight into SQLite on every background sync, but `clearXmltvCache()` (the only thing that nulls this cache) was never called from the sync path — only from explicit user actions elsewhere (e.g. switching providers).
 - Net effect: once a channel's EPG has been fetched once, the player can keep showing that exact snapshot — wrong current-program title, wrong end time, wrong "up next" — for up to 12 hours after a sync corrects or updates it, with no way for the user to tell.
 
 **Trigger:** happens passively, every live-TV session after every background EPG sync — the broadest-reach bug in this list.
 **Impact:** wrong now/next info shown silently, on essentially every live TV viewing session at some point.
 **Fix:** have `EpgSyncWorker`/`EpgFileManager.processAllSources()` call `XmltvEpgService.clearCache()` (already exists, `XmltvEpgService.kt:264-268`) after a successful ingest, so a completed sync invalidates the stale snapshot. Minimal — uses an existing method, no new invalidation mechanism needed.
 **Complexity:** Easy — the invalidation method already exists; the only wrinkle is that `XmltvEpgService` is keyed per-provider (`xmltv_cache_$providerId`), so the call site needs to know which provider(s) just synced rather than clearing one global cache.
+**Resolved:** added `EpgFileManager.invalidateXmltvCache()`, called from both `processAllSourcesInternal()` and `processSingleSourceInternal()` right after a successful ingest (post-swap, so the SQLite index is already visible). It resolves affected provider IDs from each ingested source's `providerId` — a `null` providerId ("applies to all providers") expands to every provider via `ProviderRepository.getAllProvidersList()` — then calls `XmltvEpgService(context, providerId).clearCache()` for each.
 **Verify:** force an EPG sync (`EpgSyncDebugReceiver`) while a live channel with stale cached EPG is playing; confirm the player's now/next info updates promptly after the sync completes instead of holding the old snapshot.
 
 ### 2. AppContainer permanently caches a provider-less repository under ID 0
