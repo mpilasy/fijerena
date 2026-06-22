@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
@@ -652,6 +653,10 @@ class EpgFileManager private constructor(
                 indexer.executeSwapToMain(syncedIds)
             }
 
+            if (anyIngested) {
+                invalidateXmltvCache(sources, allStats)
+            }
+
             val endTime = System.currentTimeMillis()
             val finalState =
                 MultiSourceState.Completed(
@@ -682,6 +687,31 @@ class EpgFileManager private constructor(
             Log.e(TAG, "processAllSources failed: ${e.message}", e)
             EpgIndexer.getInstance(context).endBulkIngestion()
             _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
+        }
+    }
+
+    /**
+     * Clear the per-provider XMLTV cache (SharedPreferences-backed, 12h TTL) for every
+     * provider affected by a just-completed sync, so the player doesn't keep showing a
+     * pre-sync EPG snapshot until that TTL expires. A source with `providerId == null`
+     * applies to every provider, so it invalidates all of them.
+     */
+    private suspend fun invalidateXmltvCache(
+        sources: List<EpgSourceEntity>,
+        stats: List<SourceStats>,
+    ) {
+        val ingestedSourceIds = stats.filter { it.error == null }.map { it.sourceId }.toSet()
+        val ingestedSources = sources.filter { it.id in ingestedSourceIds }
+        if (ingestedSources.isEmpty()) return
+
+        val providerIds = mutableSetOf<Long>()
+        providerIds += ingestedSources.mapNotNull { it.providerId }
+        if (ingestedSources.any { it.providerId == null }) {
+            providerIds += ProviderRepository(context).getAllProvidersList().map { it.id }
+        }
+
+        providerIds.forEach { providerId ->
+            XmltvEpgService(context, providerId).clearCache()
         }
     }
 
@@ -811,6 +841,10 @@ class EpgFileManager private constructor(
                     totalDownloadBytes = stats.downloadBytes,
                 )
                 indexer.executeSwapToMain(listOf(sourceId))
+            }
+
+            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+                invalidateXmltvCache(listOf(source), listOf(stats))
             }
 
             val endTime = System.currentTimeMillis()
