@@ -379,8 +379,15 @@ EPG is configured via **Settings -> Manage EPG Data** (`Screen.EpgManagement`). 
 | XMLTV temp file (mobile) | `cacheDir/xmltv_source_<id>_tmp` | Deleted after ingest | Download staging |
 | SQLite index | `databases/epg_index.db` | Until next refresh | FTS4 search index |
 | Parsed EPG results | SharedPreferences per-provider | 12h | XmltvEpgService grid cache |
+| Channel matcher maps | In-memory (`EpgChannelMatcher`), process lifetime | Until next sync | `epgChannelId`/normalized-name -> `streamId` lookup maps, used by EPG Browser channel matching |
 
 No persistent XMLTV file. Mobile downloads to a temp file first, then ingests from file, then deletes the temp file.
+
+### Channel Matcher Cache: Persistent Disk Tier (Considered, Deferred)
+
+A persistent (disk-backed) L2 cache for `EpgChannelMatcher` was proposed to avoid rebuilding its normalization maps on cold start (~300-500ms on an NVIDIA Shield, since `EpgBrowserViewModel` must fetch all live streams and re-normalize on first use after a process restart). The proposed design: a `epg_matcher_cache` table in `SettingsDatabase` (`providerId` PK, serialized map blob, a version tag hashed from the stream data for staleness detection), with `EpgChannelMatcher.getOrCreate()` checking memory (L1, 0ms) -> disk cache (L2, ~50ms) -> full rebuild (L3, >300ms), and `ProviderSyncManager` populating L2 after each background sync.
+
+**Decision: deferred.** The "Memory Warming" approach actually implemented — populating the in-memory matcher cache immediately after a sync completes, rather than persisting it to disk — covers most real usage (the cache is already warm by the time a user opens the EPG Browser) without the added DB schema and serialization complexity. The disk-tier design is recorded here in case cold-start latency on this path becomes a real complaint; the trade-off was judged as marginal gains (~200-300ms, on a path that already shows a loading state) against meaningful added complexity.
 
 **Network constraints:**
 - EPG downloads: confirmation dialog on cellular, auto-refresh on WiFi/Ethernet
