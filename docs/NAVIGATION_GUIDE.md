@@ -198,17 +198,27 @@ navController.navigate(Screen.NewScreen(someParam = "value"))
 ## ADB Deployment
 
 ### Emulator Targets
-- **TV emulator**: `adb -s emulator-5554 install tv/build/outputs/apk/debug/tv-debug.apk`
-- **Mobile emulator**: `adb -s emulator-5556 install mobile/build/outputs/apk/debug/mobile-debug.apk`
+Emulator port numbers (`emulator-5554`, `-5556`, ...) are assigned by **launch order**, not by which AVD it is. Check `product:`/`model:` from `adb devices -l` to identify which emulator is TV vs. mobile before installing — never assume from the port number alone.
+
+```bash
+adb devices -l                                                          # check product:/model: first
+adb -s emulator-XXXX install tv/build/outputs/apk/debug/tv-debug.apk         # whichever serial is the TV AVD
+adb -s emulator-YYYY install mobile/build/outputs/apk/debug/mobile-debug.apk # whichever serial is the mobile AVD
+```
 
 ### Physical Devices
+
+TV device IPs drift across sessions (DHCP) — run `adb mdns services` to find a device that moved rather than assuming a fixed address.
+
 ```bash
 # Connect to TV via network
-adb connect 192.168.1.100:5555
+adb connect <TV_IP>:5555
 
-# Build and install
-./gradlew :tv:installDebug    # TV module
-./gradlew :mobile:installDebug # Mobile module
+# Build with assembleDebug + install per-device with -s when both TV and
+# mobile devices are connected — installDebug with no filter installs onto
+# every connected device regardless of type.
+./gradlew :tv:assembleDebug :mobile:assembleDebug
+adb -s <device_id> install -r <apk-path>
 ```
 
 ## Dependencies

@@ -21,7 +21,8 @@ Refer to `gradle/libs.versions.toml` for authoritative versions.
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | Language | Kotlin | 2.3.0 |
-| Build System | Gradle | 9.2.1 |
+| Build System | Gradle | 9.4.1 |
+| Build System | Android Gradle Plugin (AGP) | 9.2.1 |
 | UI Framework | Jetpack Compose | 2024.12.01 BOM |
 | Material Design | Material 3 | 1.4.0 |
 | TV Components | androidx.tv.material3 | 1.0.0-alpha10 |
@@ -30,7 +31,7 @@ Refer to `gradle/libs.versions.toml` for authoritative versions.
 | Serialization | kotlinx.serialization | 1.8.0 |
 | Coroutines | kotlinx.coroutines | 1.7.3 |
 | Database | Room (with FTS4) | 2.8.4 |
-| SQLite | Bundled (FTS5 capable) | 3.45.0 |
+| SQLite | Bundled (FTS5 capable) | 3.49.0 |
 | Image Loading | Coil | 3.1.0 |
 | Navigation | Navigation Compose | 2.8.5 |
 | SMB Client | smbj | 0.13.0 |
@@ -141,8 +142,8 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 - **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently (Semaphore-gated: 3 on mobile, 2 on TV), and ingestion into the DB is parallelized (2 workers) via an `UNLIMITED` Channel queue. User-initiated refreshes are submitted through `RefreshQueue`; the coroutine-based auto-refresh (`awaitRefreshOutdatedSources`) and `EpgSyncWorker` call `processAllSourcesInternal` directly to avoid releasing the wake lock on Shield/Doze.
 - **Stale Threshold:** `staleThresholdMs` = user refresh interval / 2. Sources older than this are picked up by auto-refresh and `EpgSyncWorker`. Defaults to 24h when the interval is "Never" (≤ 0).
-- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 13) using FTS4. The `ingest_method` column tracks how each source was ingested.
-- **Search:** Two-tier strategy: SQLite **FTS4 MATCH** (primary) -> **LIKE** (fallback). The old FTS index stays usable until `rebuildFtsAndUpdateState()` actually starts (stale is marked at entry, not at dispatch), so searches only fall back to LIKE during the actual rebuild window, not the scheduling gap.
+- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 16) using FTS4. The `ingest_method` column tracks how each source was ingested.
+- **Search:** Two-tier strategy, both via SQLite **FTS4 MATCH** in `XmltvSearchService`: a raw query preserving FTS operators (OR/NEAR/NOT, prefix wildcard), then a sanitized "safe" AND-style retry if the raw query returns nothing. No LIKE or XML-scan fallback exists — if the index isn't built yet (`EpgIndexState.NotIndexed`), search returns null; if the FTS index is mid-rebuild (`isFtsStale()`), search throws rather than degrading to a full scan. The old FTS index stays usable until `rebuildFtsAndUpdateState()` actually starts (stale is marked at entry, not at dispatch), so this only affects the actual rebuild window, not the scheduling gap.
 - **Timezone:** Per-source `timezoneOffsetHours` override applied at parse time.
 - **State Machine:** `MultiSourceState` sealed interface: `Idle` -> `Processing` -> `Completed`/`Error`, plus `Clearing` state. Per-source progress tracked via `ActiveSourceProgress(label, phase, channels, programmes)`.
 - **Persistent Stats:** Pipeline completion triggers an update to `EpgPipelineStatsEntity` in `providers.db` (version 5).

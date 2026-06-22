@@ -1,5 +1,26 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Live TV Service-Recreation Races & Bug Sweep Fixes
+**Release Date:** 2026-06-22
+
+### Playback Service Stability (hot-swapped LoadControl / service recreation)
+- **`onPrepared`/`onTracksSelected` replay:** When `AdaptiveLoadControl` is hot-swapped mid-playback, replayed callbacks are now deferred onto the playback thread instead of firing from the swap call site, and a real retry error surfaces instead of being swallowed.
+- **`playStream()` no-op race closed:** Fixed a window where `playStream()` could silently no-op against a black screen if called while the player was mid-(re)initialization.
+- **Service instance published only when ready:** `StreamingPlaybackService`'s singleton instance is now published after the player itself is initialized, not before — callers using `awaitInstance()` could otherwise observe a not-yet-usable service.
+- **`instanceReady` re-armed on recreation:** If Android recreates the service after reclaiming it during long standby, `instanceReady` is now reset to a fresh `CompletableDeferred()` in `onDestroy()` so `awaitInstance()` doesn't hand out a permanently-stale, already-completed deferred — this was the root cause of live TV getting stuck after the device spent hours in standby.
+
+### Bug Sweep Fixes (see `docs/bugs-plan.md` for full trigger/impact analysis)
+- **EPG cache invalidation after sync:** `EpgFileManager` now clears `XmltvEpgService`'s per-provider 12h SharedPreferences cache immediately after a successful sync, instead of leaving the player to show a pre-sync now/next snapshot for up to 12h.
+- **AppContainer no longer caches a provider-less repo:** `getMediaRepository()` only caches the resolved `MediaRepository` once a real provider entity is attached — a repo built before any active provider exists is returned but never poisons `mediaRepositories[0L]`.
+- **RefreshQueue de-dups against in-flight tasks:** `submit()` now checks tasks already executing (not just the pending queue), coalescing into the running task's `Deferred` instead of racing a concurrent duplicate run.
+- **Mobile live-TV swipe gesture stabilized:** Fixed `pointerInput()` being keyed on state the gesture handler itself mutates (which tore down and restarted `detectDragGestures` mid-touch), and added a missing single-fire guard to the horizontal overlay-toggle branch (previously only the vertical channel-switch branch had one).
+- **Quick-win batch:** first-10-seconds watch-history save gate, live-retry bandwidth telemetry, `PlaybackViewModel` metadata-before-service ordering, `EpgIndexDatabase` cursor leak, and `onDestroy()` listener cleanup asymmetry (missing `removeAnalyticsListener`, `playerListener` never nulled).
+
+### Player Overlay Allocation Pass
+- Moved `flushWatchHistory()` off the main thread (`HandlerThread`), added diff-before-write + skip-unchanged-track-scan to the stats overlays, and hoisted `CategoryList.kt`'s border `Brush.verticalGradient`. See `docs/player-overlay-performance-plan.md` for the full investigation, including which proposed fixes were retracted as compile errors (`remember {}` can't wrap the `@Composable` `ButtonDefaults.colors()`/`ClickableSurfaceDefaults` factories).
+
+---
+
 ## Version: EPG FTS Index Availability During Rebuild
 **Release Date:** 2026-05-15
 

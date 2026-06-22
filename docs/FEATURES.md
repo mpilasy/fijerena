@@ -35,7 +35,7 @@ Season accordion with episode list. Auto-expands the next unwatched season. Epis
 - **Episode Navigation:** Swipe (mobile) or D-pad Left/Right (TV) to jump between episodes directly from the player.
 
 ### EPG Guide (TV Guide)
-Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. 30-minute cache TTL.
+Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. Backed by `XmltvEpgService`'s 12-hour SharedPreferences cache (`PARSED_CACHE_TTL_MS`).
 
 ---
 
@@ -72,7 +72,7 @@ Standalone programme title search across all indexed XMLTV data.
 - **Smart Refresh:** Shows a "Refresh Data" button when indexed programmes are stale according to the selected interval.
 - Results grouped by start date (Today, Tomorrow, weekday name, or "EEEE, MMM d" for later dates), then by programme within each date
 - Time window: −1 to +6 days from now, max 500 results per query
-- SQLite FTS4 MATCH for fast search (<100ms); falls back to LIKE if FTS returns empty
+- SQLite FTS4 MATCH for fast search (<100ms): a raw query first, then a sanitized "safe" AND-style retry if that returns nothing — no LIKE or XML-scan fallback
 - Programme titles and channel names scroll with `basicMarquee` when they overflow
 - Mobile: sticky date headers with expandable programme cards showing up to 3 airings (tap to expand all)
 - TV: date headers with GlassPanel programme cards in TvLazyColumn

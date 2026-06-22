@@ -115,7 +115,8 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | Language | Kotlin | 2.3.0 |
-| Build System | Gradle | 9.2.1 |
+| Build System | Gradle | 9.4.1 |
+| Build System | Android Gradle Plugin (AGP) | 9.2.1 |
 | UI Framework | Jetpack Compose | 2024.12.01 BOM |
 | Material Design | Material 3 | 1.4.0 |
 | TV Components | androidx.tv.material3 | 1.0.0-alpha10 |
