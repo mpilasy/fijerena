@@ -108,7 +108,7 @@ Download progress is computed from `downloadedBytes / contentLength`. Ingestion 
 
 **Cancel support:**
 
-`cancelProcessing()` cancels the coroutine `processJob` and calls `RefreshQueue.cancelAll()`, which cancels the currently executing task and clears all pending tasks. The state is immediately set to `Idle`.
+`cancelProcessing()` cancels the coroutine `processJob` and calls `RefreshQueue.cancelAll()`, which cancels every currently executing task (up to 3 concurrently) and clears all pending tasks. The state is immediately set to `Idle`.
 
 **Lifecycle:**
 - `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, schedules auto-refresh coroutine, schedules WorkManager periodic sync based on user-selected interval
@@ -125,13 +125,12 @@ Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync
 
 ### RefreshQueue
 
-**Singleton** (`core/network/.../queue/RefreshQueue.kt`) providing priority-based sequential task execution.
+**Singleton** (`core/network/.../queue/RefreshQueue.kt`) providing priority-based task execution with up to 3 tasks running concurrently (`Semaphore(3)`) — not strictly sequential.
 
 - Uses a `PriorityQueue<QueuedTask>` with a `Channel<Unit>(CONFLATED)` trigger
-- Tasks are deduplicated by `id` — submitting a task with an existing ID replaces it
-- Tracks `currentJob` for the actively executing task
-- `cancelAll()` cancels `currentJob` and clears all pending tasks
-- Exposes `isProcessing` and `queuedTaskIds` as `StateFlow`
+- Tasks are deduplicated by `id` against both the pending queue and already-executing tasks (`activeTasks`, guarded by the same mutex as the queue) — a duplicate submission coalesces into the running task's `Deferred` instead of racing a second execution
+- `cancelAll()` cancels every active task's `Job` and clears all pending tasks
+- Exposes `isProcessing`, `queuedTaskIds`, and `activeTaskIds` as `StateFlow`
 
 ### XmltvParser
 
