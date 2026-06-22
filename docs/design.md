@@ -174,52 +174,9 @@ FFmpeg extension (from Jellyfin pre-built) provides software decoding for AC3, E
 
 ## Navigation
 
-### Route Definitions (`core:navigation/Screen.kt`)
+Type-safe navigation using `kotlinx.serialization` with Navigation Compose; routes are defined once in `core:navigation/Screen.kt` and shared by both `tv/navigation/TvNavHost.kt` (D-pad, no on-screen back buttons except error screens) and `mobile/navigation/MobileNavHost.kt` (touch, portrait-locked except player). Startup lands on `ContentTypeSelection` if a provider is configured, otherwise `Settings`.
 
-Type-safe navigation using `kotlinx.serialization` with Navigation Compose.
-
-```kotlin
-sealed interface Screen {
-    object ProviderSelection          -- provider list/CRUD
-    class  AddProvider(editId)        -- add/edit provider form
-    object Login                      -- LEGACY, not wired into either NavHost (see below)
-    object ContentTypeSelection       -- Live TV / Movies / TV Shows picker
-    object EditProvider               -- edit provider URL
-    object Settings                   -- app settings
-    class  CategoryList(contentType, initialCategoryId?)  -- category grid
-    class  EpisodeSelection(seriesId, seriesName, categoryId)  -- season/episode picker
-    class  MovieDetails(movieId, movieName, categoryId)  -- movie info + play
-    class  Search(contentType)        -- search screen
-    class  EpgGuide(categoryId, categoryName)  -- TV guide grid
-    object EpgBrowser                 -- programme search
-    object EpgManagement              -- multi-source EPG config
-    object CellularBufferSettings     -- buffer tuning (dev mode)
-    class  Player(streamId, streamName, categoryId, contentType, ...)  -- playback
-}
-```
-
-### Navigation Flow
-
-```
-App Start
-  No provider configured? -> Settings
-  Provider + saved content type? -> CategoryList (auto-navigate)
-  Otherwise -> ContentTypeSelection
-
-ContentTypeSelection -> CategoryList -> MovieDetails/EpisodeSelection -> Player
-                                     -> Search
-                                     -> EpgGuide (Live TV only)
-ContentTypeSelection -> Search("ALL") [cross-type global search]
-ContentTypeSelection -> EpgBrowser (when EPG indexed)
-Settings -> ProviderSelection -> AddProvider
-         -> EpgManagement
-         -> CellularBufferSettings (dev mode)
-```
-
-### Platform-Specific Navigation
-
-- **TV** (`tv/navigation/TvNavHost.kt`): D-pad navigation only, no on-screen back buttons (except error screens)
-- **Mobile** (`mobile/navigation/MobileNavHost.kt`): Touch navigation, portrait locked except player (sensor-based)
+**See [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) for the full `Screen` definition list and navigation flow diagram** — kept in one place to avoid the two copies drifting out of sync.
 
 ---
 
@@ -243,94 +200,9 @@ epg_index.db
     -> EpgManagementViewModel -> EpgManagementScreen
 ```
 
-### Database Schema (`epg_index.db`, Room v16)
+Channel-based producer-consumer ingestion: downloads run concurrently (`Semaphore`-bounded, 3 on mobile / 2 on TV) as producers; 2 parallel workers consume and batch-insert into `epg_index.db` via `EpgIndexer`. `RefreshQueue` runs up to 3 tasks concurrently (semaphore-gated, not a single tracked job) and de-dupes by task ID against both queued and already-executing tasks. "Clear All Data" destroys and recreates the Room instance (instant regardless of row count) rather than `DELETE FROM`; `EpgManagementViewModel` re-subscribes its `sources` Flow afterward via a `_dbGeneration` counter. Search is two-tier FTS4 MATCH (raw query, then a sanitized AND-style retry) — no LIKE or XML-scan fallback.
 
-**Tables:**
-
-| Table | Purpose |
-|-------|---------|
-| `epg_channel` | Channel ID + source ID (composite PK), display name, icon URL |
-| `epg_channel_staging` | Write target during staged ingestion; promoted to `epg_channel` by the atomic swap |
-| `epg_programme` | Programme listings with time ranges, 7 indices for query performance |
-| `epg_programme_staging` | Write target during staged ingestion; promoted to `epg_programme` by the atomic swap |
-| `epg_programme_fts` | FTS4 virtual table for full-text search on programme title + description |
-| `epg_index_metadata` | Index stats (channel count, programme count, timestamps) |
-| `epg_source` | Multi-source configuration (URL, label, timezone override, status) — stored in `providers.db` |
-
-**Key indices on `epg_programme`:**
-- `idx_programme_start` - start epoch
-- `idx_programme_end` - end epoch
-- `idx_programme_time_range` - composite (start, end)
-- `idx_programme_channel` - channel ID
-- `idx_programme_dedup` - unique (channel_id, source_id, start_epoch) prevents duplicates
-- `idx_programme_source` - source ID for per-source operations
-- `idx_programme_channel_source` - composite (channel_id, source_id) for per-source channel queries
-
-### Ingestion Pipeline
-
-Channel-based producer-consumer architecture:
-
-1. **Download phase (producers):** Sources download concurrently, bounded by `Semaphore` (3 on mobile, 2 on TV). Each download produces a `DownloadedSource` object (source metadata + temp file + byte count) and sends it to a `Channel<DownloadedSource>(UNLIMITED)`.
-2. **Ingestion phase (workers):** 2 parallel workers consume from the channel. Each `DownloadedSource` is ingested via `EpgIndexer.ingestFromStream()`.
-3. `XmltvParser` performs streaming XML parse with 128KB buffers
-4. `EpgIndexer` does 500-row batch INSERTs wrapped in Room `withTransaction`
-5. Date filter: programmes ending before yesterday (current time - 24h) are skipped during ingestion
-6. Append-only: uses REPLACE on unique (channel_id, source_id, start_epoch) index so the database stays searchable during sync
-7. Temp files deleted immediately after ingestion
-8. Mobile background sync via WorkManager `EpgSyncWorker` (24h periodic)
-9. Source deletion cleans up associated programmes via `deleteBySourceId()`
-10. Selective refresh: UI allows selecting specific sources to refresh instead of all
-11. Ingestion progress percentage tracked via `CountingInputStream` (file mode)
-
-### Progress Tracking
-
-`ActiveSourceProgress` tracks per-source state during processing:
-
-| Field | Description |
-|-------|-------------|
-| `label` | Source display name |
-| `phase` | `"Downloading"` or `"Ingesting"` |
-| `progressPercent` | 0-100, or -1 if content-length unknown |
-| `downloadedBytes` / `downloadTotalBytes` | Download progress |
-| `channels` / `programmes` | Ingestion counters (updated per batch) |
-
-Download progress updates throttled to every 512KB. Aggregate progress (`MultiSourceState.Processing`) sums completed stats + active progress for total channels, programmes, and bytes.
-
-### Cancel
-
-`RefreshQueue` (singleton priority queue) tracks `currentJob`. `cancelAll()` cancels the running task's `Job` and clears pending tasks. `EpgFileManager.cancelProcessing()` also cancels its own `processJob` coroutine, which tears down the producer-consumer pipeline.
-
-### Clear All Data
-
-Uses `EpgIndexDatabase.destroy()` to close the Room instance, null the singleton, and delete the DB file (plus WAL/SHM). Room recreates the schema on next `getInstance()`. Sources are saved before destroy and restored with stats reset (`lastIngestedAtMs=0`, counters zeroed, error cleared). Instant regardless of data size.
-
-### State Machine
-
-`MultiSourceState` (sealed interface):
-
-| State | Description |
-|-------|-------------|
-| `Idle` | No processing active |
-| `Processing` | Active download/ingestion with per-source progress, aggregate stats |
-| `Completed` | Final stats (sources processed, errors, per-source breakdown) |
-| `Error` | Processing failed with reason string |
-| `Clearing` | Blocking overlay while `clearDatabase()` runs |
-
-`Completed` and `Error` auto-reset to `Idle` after 10 seconds.
-
-### ViewModel
-
-`EpgManagementViewModel` uses `db()` function (not a cached reference) to always get the fresh `EpgIndexDatabase` singleton. A `_dbGeneration` counter is incremented after `destroy()`/recreate. The `sources` Flow uses `flatMapLatest` on `_dbGeneration` so it automatically re-subscribes to the new database's DAO after clearing.
-
-### Search
-
-Two-tier search strategy, both via **FTS4 MATCH** (no LIKE or XML-scan fallback exists):
-1. Raw FTS query preserving operators (OR/NEAR/NOT) with a trailing prefix wildcard (< 100ms)
-2. If that returns nothing, a sanitized "safe" AND-style FTS retry (operators stripped, phrase-quoted)
-
-If the FTS index is mid-rebuild (`isFtsStale()`), search throws rather than degrading to a scan; the old index stays queryable until the rebuild actually starts.
-
-Time window: -1 to +6 days, max 500 results, grouped by title, sorted by airing count.
+**See [epg_guide.md](epg_guide.md) for the full pipeline walkthrough, state machine, and search strategy, and [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) for the canonical table/column reference** — kept in one place to avoid copies drifting out of sync.
 
 ---
 
