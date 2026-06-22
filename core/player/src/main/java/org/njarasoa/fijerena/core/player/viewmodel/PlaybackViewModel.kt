@@ -123,12 +123,12 @@ class PlaybackViewModel(
         // Reset error state on new stream
         isInErrorState = false
         onFocusRegained()
-        _currentMetadata.value = metadata
-        // DO NOT set _playbackState.value = Buffering here! 
+        // DO NOT set _playbackState.value = Buffering here!
         // Let the service handle the state transitions.
 
         viewModelScope.launch {
             val service = StreamingPlaybackService.awaitInstance()
+            _currentMetadata.value = metadata
             service.playStream(metadata, resumeFromPosition)
         }
     }
