@@ -135,14 +135,14 @@ class PlaybackViewModel(
 
     fun pause() {
         viewModelScope.launch {
-            StreamingPlaybackService.getInstance()?.pause()
+            StreamingPlaybackService.awaitInstance().pause()
         }
     }
 
     fun resume() {
         onFocusRegained()
         viewModelScope.launch {
-            StreamingPlaybackService.getInstance()?.resume()
+            StreamingPlaybackService.awaitInstance().resume()
         }
     }
 
@@ -151,7 +151,7 @@ class PlaybackViewModel(
         isInErrorState = false
         onFocusRegained()
         viewModelScope.launch {
-            StreamingPlaybackService.getInstance()?.stop()
+            StreamingPlaybackService.awaitInstance().stop()
         }
     }
 
@@ -190,7 +190,7 @@ class PlaybackViewModel(
 
     fun seekTo(position: Long) {
         viewModelScope.launch {
-            StreamingPlaybackService.getInstance()?.seekTo(position)
+            StreamingPlaybackService.awaitInstance().seekTo(position)
         }
     }
 
@@ -221,7 +221,7 @@ class PlaybackViewModel(
 
     fun setPlaybackSpeed(speed: Float) {
         viewModelScope.launch {
-            StreamingPlaybackService.getInstance()?.setPlaybackSpeed(speed)
+            StreamingPlaybackService.awaitInstance().setPlaybackSpeed(speed)
         }
     }
 
@@ -268,8 +268,8 @@ class PlaybackViewModel(
         trackIndex: Int,
     ) {
         viewModelScope.launch {
-            val service = StreamingPlaybackService.getInstance()
-            service?.selectAudioTrack(groupIndex, trackIndex)
+            val service = StreamingPlaybackService.awaitInstance()
+            service.selectAudioTrack(groupIndex, trackIndex)
         }
     }
 
@@ -314,8 +314,8 @@ class PlaybackViewModel(
         trackIndex: Int,
     ) {
         viewModelScope.launch {
-            val service = StreamingPlaybackService.getInstance()
-            service?.selectSubtitleTrack(groupIndex, trackIndex)
+            val service = StreamingPlaybackService.awaitInstance()
+            service.selectSubtitleTrack(groupIndex, trackIndex)
         }
     }
 
@@ -324,8 +324,8 @@ class PlaybackViewModel(
      */
     fun disableSubtitles() {
         viewModelScope.launch {
-            val service = StreamingPlaybackService.getInstance()
-            service?.disableSubtitles()
+            val service = StreamingPlaybackService.awaitInstance()
+            service.disableSubtitles()
         }
     }
 
@@ -415,8 +415,8 @@ class PlaybackViewModel(
         trackIndex: Int,
     ) {
         viewModelScope.launch {
-            val service = StreamingPlaybackService.getInstance()
-            service?.selectVideoQuality(groupIndex, trackIndex)
+            val service = StreamingPlaybackService.awaitInstance()
+            service.selectVideoQuality(groupIndex, trackIndex)
         }
     }
 
@@ -425,8 +425,8 @@ class PlaybackViewModel(
      */
     fun enableAutoQuality() {
         viewModelScope.launch {
-            val service = StreamingPlaybackService.getInstance()
-            service?.enableAutoQuality()
+            val service = StreamingPlaybackService.awaitInstance()
+            service.enableAutoQuality()
         }
     }
 

@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 data class ParsedUrlCredentials(
     val baseUrl: String,
@@ -369,6 +370,10 @@ class ProviderViewModel(
         try {
             if (id != null) {
                 providerRepository.updateProvider(id, name, url, username, password, type, config)
+                // Credentials may have changed — evict the cached MediaRepository so the
+                // next getMediaRepository() call rebuilds it instead of reusing one built
+                // from the old URL/username/password.
+                AppContainer.getInstance(context).evictMediaRepository(id)
             } else {
                 providerRepository.addProvider(name, url, username, password, type, config, initialSettings)
             }

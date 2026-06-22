@@ -374,6 +374,15 @@ class XtreamContentManager(
 
                         val currentHashes = categoryDao.getCategoryHashes(providerId, type)
                         val seenIds = entities.map { it.categoryId }.toSet()
+
+                        if (seenIds.isEmpty() && currentHashes.isNotEmpty()) {
+                            android.util.Log.w(
+                                TAG,
+                                "syncCategories($type): server returned 0 categories but ${currentHashes.size} exist locally — treating as a failed sync, not deleting",
+                            )
+                            return
+                        }
+
                         val toDeleteIds = currentHashes.keys.filter { it !in seenIds }
                         val toInsert =
                             entities.filter { newEntity ->
@@ -479,6 +488,14 @@ class XtreamContentManager(
                                 service.getVodStreamsStreaming(null, onStreamItem)
                             }
 
+                            if (seenIds.isEmpty() && currentHashes.isNotEmpty()) {
+                                android.util.Log.w(
+                                    TAG,
+                                    "syncStreams($type): server returned 0 streams but ${currentHashes.size} exist locally — treating as a failed sync, not deleting",
+                                )
+                                return@coroutineScope
+                            }
+
                             if (batch.isNotEmpty()) {
                                 streamDao.insertAll(batch)
                             }
@@ -571,6 +588,14 @@ class XtreamContentManager(
                                         batch.clear()
                                     }
                                 }
+                            }
+
+                            if (seenIds.isEmpty() && currentHashes.isNotEmpty()) {
+                                android.util.Log.w(
+                                    TAG,
+                                    "syncSeries(): server returned 0 series but ${currentHashes.size} exist locally — treating as a failed sync, not deleting",
+                                )
+                                return@coroutineScope
                             }
 
                             if (batch.isNotEmpty()) {
