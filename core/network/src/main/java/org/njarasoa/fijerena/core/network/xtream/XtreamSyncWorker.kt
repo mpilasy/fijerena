@@ -18,6 +18,8 @@ class XtreamSyncWorker(
         providers.filter { it.type == "XTREAM" }.forEach { provider ->
             val password = providerRepo.getPassword(provider.id)
             if (password != null) {
+                val startTime = System.currentTimeMillis()
+                var syncError: String? = null
                 try {
                     val mediaProvider = MediaProviderFactory.create(provider, applicationContext, password)
                     if (mediaProvider is XtreamMediaProvider) {
@@ -27,10 +29,16 @@ class XtreamSyncWorker(
 
                         if (mediaProvider.isConnected()) {
                             mediaProvider.syncAll()
+                        } else {
+                            syncError = "Failed to connect"
                         }
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("XtreamSyncWorker", "Error during sync", e)
+                    syncError = e.message ?: "Unknown error"
+                } finally {
+                    val endTime = System.currentTimeMillis()
+                    providerRepo.updateSyncStats(provider.id, endTime, endTime - startTime, syncError)
                 }
             }
         }

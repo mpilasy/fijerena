@@ -36,16 +36,16 @@ tier. Each entry below also has a **Complexity** rating; at a glance:
 | 9 | [FIXED] PlaybackViewModel metadata-before-service race | Trivial |
 | 10 | [FIXED] EpgIndexDatabase cursor leak | Trivial |
 | 11 | [FIXED] onDestroy() listener cleanup asymmetry | Trivial |
-| 12 | Xtream sync mass-deletes local library on empty/partial server response | Easy–Moderate |
-| 13 | Player getInstance()/awaitInstance() race beyond playStream() | Easy |
-| 14 | AppContainer caches stale MediaRepository after credential edit | Moderate |
+| 12 | [FIXED] Xtream sync mass-deletes local library on empty/partial server response | Easy–Moderate |
+| 13 | [FIXED] Player getInstance()/awaitInstance() race beyond playStream() | Easy |
+| 14 | [FIXED] AppContainer caches stale MediaRepository after credential edit | Moderate |
 | 15 | JellyfinMediaProvider.resolvePlayableStream() has no auto-reconnect-on-401 | Easy–Moderate |
 | 16 | Saved audio/subtitle track index uses wrong indexing scheme on restore | Moderate |
 | 17 | Favorites/favorite-categories silently evict oldest entry at cap | Easy–Moderate |
-| 18 | Episode season auto-expand clobbers manual accordion toggle | Easy |
-| 19 | EpgViewModel.forceRefresh()'s isRefreshing flag decoupled from reload | Trivial |
-| 20 | XtreamSyncWorker never updates provider sync stats | Trivial |
-| 21 | TV EPG grid's "now" highlight is wrong on any non-today date | Trivial–Easy |
+| 18 | [FIXED] Episode season auto-expand clobbers manual accordion toggle | Easy |
+| 19 | [FIXED] EpgViewModel.forceRefresh()'s isRefreshing flag decoupled from reload | Trivial |
+| 20 | [FIXED] XtreamSyncWorker never updates provider sync stats | Trivial |
+| 21 | [FIXED] TV EPG grid's "now" highlight is wrong on any non-today date | Trivial–Easy |
 
 Quick-win batch (one small PR, low review risk): #6, #8, #9, #10, #11 — all
 fixed.
@@ -53,12 +53,9 @@ fixed.
 turned out not to be reachable via the app's actual navigation/ViewModel
 architecture (see their entries below for the reachability analysis, so
 neither needs re-investigating cold later).
-#12-#21 are a follow-up batch (2026-06-22), not yet attempted — see their
-entries below for full root-cause analysis. #12 and #14 are the highest-value
-target: #12 is real data loss (a transient empty server response can wipe a
-user's whole Live TV/VOD/Series library), #14 means an edited provider's
-new credentials silently never take effect until the user switches providers
-or restarts the app.
+#12, #13, #14, #18, #19, #20, #21 fixed (2026-06-22) — see their entries
+below for the resolution notes. #15, #16, #17 from the same sweep remain
+open.
 
 ## High impact
 
@@ -110,7 +107,7 @@ When `providerId` is the default `0L` and `providerRepository.getActiveProvider(
 **Complexity:** Moderate–Involved — the ViewModel-side change is mechanical, but it's unverified whether `_syncState` is consumed as a single global value by UI (e.g. one spinner for "the" sync) — if so, every consumer needs updating too. Needs a quick check of UI call sites before sizing precisely.
 **Skipped:** confirmed `_syncState` IS a single global value, consumed identically by `MobileAddProviderScreen.kt`/`TvAddProviderScreen.kt`/`DataManagementSection.kt`/`CacheManagementSection.kt` — so the "proper" fix would mean reworking 4 UI files across both platforms. But the documented trigger isn't reachable at all: `ProviderViewModel` is scoped per-screen via Compose's `viewModel()` (tied to that screen's `NavBackStackEntry`), `syncProvider()` is only ever called with a fixed `editId` from the single Add/Edit Provider screen, and no call site invokes it with a second, different provider ID from the same instance. "Sync two different providers in close succession" would require two separate screen visits, each getting its own isolated `syncingProviderId`/`_syncState` — they can't collide. Decided not worth the 4-file UI rework for a scenario that can't occur via any current call site. (Separately found a real, structurally-similar issue: `ProviderSyncManager.startManualSync()` has zero de-duplication — a double-tap on the same provider's "Sync Now," or a manual sync racing the periodic `performFullSync()` auto-refresh, launches fully concurrent `syncAll()` runs with no coordination. Not fixed here; would be the same class of fix as #3 if picked up later.)
 
-### 12. Xtream sync mass-deletes the local library on any empty/partial server response
+### 12. [FIXED] Xtream sync mass-deletes the local library on any empty/partial server response
 **File:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamContentManager.kt` (`syncCategories()` lines 339-409, `syncStreams()` lines 411-505, `syncSeries()` lines 507-598 — all three share the identical pattern)
 
 All three sync functions fetch fresh data from the server, track which IDs were seen this round (`seenIds`), then compute `allIds.filter { it !in seenIds }` and delete everything not seen — this is how server-side deletions get mirrored locally. Confirmed precisely: `syncCategories()` (line 376-377: `val seenIds = entities.map { it.categoryId }.toSet(); val toDeleteIds = currentHashes.keys.filter { it !in seenIds }`), `syncStreams()` (line 487-488: `val allIds = streamDao.getStreamIds(...); val toDelete = allIds.filter { it !in seenIds }`), and `syncSeries()` (line 580-581, identical shape) all have zero guard against the case where the server call succeeds (no exception thrown) but returns an empty or truncated list — which real IPTV providers do under rate-limiting, transient overload, or auth hiccups, returning HTTP 200 with an empty/partial body rather than an error. When that happens, `seenIds` is empty or far smaller than reality, and the cleanup step interprets the user's entire existing Live TV channel list, VOD catalog, or series library as server-side deletions and wipes it locally — with no minimum-count or "suspiciously-empty-response" sanity check anywhere in any of the three functions.
@@ -119,8 +116,9 @@ All three sync functions fetch fresh data from the server, track which IDs were 
 **Impact:** real data loss — a user's whole Live TV and/or VOD/Series library can vanish after one bad sync, silently, with no warning and no rollback path short of a full re-sync (which itself depends on the next sync actually returning real data).
 **Fix:** before running the delete step, compare `seenIds.size` against the source's previous channel/stream/series count (or just skip the delete-by-absence step entirely when `seenIds` is empty while `currentHashes` is non-empty) — treat a suspiciously-empty response as a failed sync, not a confirmed mass-deletion.
 **Complexity:** Easy–Moderate — the guard logic itself is a few lines, but it needs to be applied consistently across all three functions (categories/streams/series), and the right threshold ("how empty is suspicious") needs a judgment call rather than a hard rule.
+**Resolved:** added an identical guard to all three functions — `if (seenIds.isEmpty() && currentHashes.isNotEmpty())`, logs a warning, and bails out before the delete/insert/timestamp-update step (`return` in `syncCategories()`, `return@coroutineScope` in `syncStreams()`/`syncSeries()` since those are wrapped in a non-inline `coroutineScope { }`). Bailing out also skips `rebuildFts()` and the per-type timestamp write, so a suspiciously-empty sync is correctly treated as not-yet-synced rather than marked fresh.
 
-### 13. Player control methods beyond playStream() still race service initialization via getInstance()
+### 13. [FIXED] Player control methods beyond playStream() still race service initialization via getInstance()
 **Files:** `core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt:195-201` (the comment documenting this exact gap), `core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt` (`pause()` line 138, `resume()` line 145, `stop()` lines 154 and 446, `seekTo()` line 193, `setPlaybackSpeed()` line 224, `selectAudioTrack()` line 271, `selectSubtitleTrack()` line 317, `disableSubtitles()` line 327, `selectVideoQuality()` line 418, `enableAutoQuality()` line 428), `tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt:156,161`, `mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt:253,274`
 
 `playStream()` was already fixed (commits afa3c71/b082e57) to use `StreamingPlaybackService.awaitInstance()` instead of `getInstance()`, closing a race where the service singleton isn't published yet when the player screen mounts. That fix was never applied to any of its ~12 sibling call sites — confirmed every one of them still calls `getInstance()?.xxx()`. The gap is even self-documented: the comment at `StreamingPlaybackService.kt:195-201` explicitly names `TvPlayerScreen`'s `setContentType()`/`setPositionSaveListener()` calls as having this exact problem ("fired from a LaunchedEffect right as the player screen mounts... can't resolve to a service whose mediaSession/adaptiveLoadControl is still null... silently no-op on null with no log"), but the actual call sites (`TvPlayerScreen.kt:156,161`, `MobilePlayerScreen.kt:253,274`) were never updated to match. `setPositionSaveListener()` in particular is wrapped in `LaunchedEffect(Unit)` — a true one-shot effect that never re-fires — so if `getInstance()` is null at that exact moment, the position-save callback is never wired up for the rest of that screen visit at all.
@@ -128,8 +126,9 @@ All three sync functions fetch fresh data from the server, track which IDs were 
 **Impact:** `setPositionSaveListener` lost → total, silent loss of resume-position/watch-history for that entire session, no error surfaced. `setContentType` lost → wrong (VOD vs Live) buffer profile for the whole session. The `PlaybackViewModel` methods losing a call → a single silently-dropped user command (pause/seek/track-switch does nothing), no feedback.
 **Fix:** swap `getInstance()` for `awaitInstance()` at all listed call sites, mirroring the already-applied `playStream()` fix exactly.
 **Complexity:** Easy — mechanical, same pattern already proven correct in this exact file; the only cost is touching ~14 call sites across 3 files.
+**Resolved:** swapped all 10 `PlaybackViewModel` control methods plus the 4 `TvPlayerScreen.kt`/`MobilePlayerScreen.kt` `LaunchedEffect` call sites to `awaitInstance()`. Deliberately left two call sites unchanged: `onPlayerError`'s `getInstance() == null` check (line 70, a non-suspend `Player.Listener` callback used only as a defensive fallback, not a race) and `onCleared()`'s `getInstance()?.stop()` (line 446, synchronous cleanup with no `viewModelScope` available by that point — `awaitInstance()` there could hang forever if the service never initialized, which would be a worse bug than the one being fixed).
 
-### 14. AppContainer caches a stale MediaRepository after a provider's credentials are edited
+### 14. [FIXED] AppContainer caches a stale MediaRepository after a provider's credentials are edited
 **Files:** `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/di/AppContainer.kt` (`getMediaRepository()`, lines 37-84), `core/network/src/main/java/org/njarasoa/fijerena/core/network/provider/ProviderRepository.kt` (`updateProvider()`, lines 77-108)
 
 `ProviderRepository.updateProvider()` correctly calls `MediaProviderFactory.clearCache(id)` after saving new credentials (line 107) — but that's a *different*, lower-level cache than `AppContainer.mediaRepositories: MutableMap<Long, MediaRepository>`. `getMediaRepository()`'s cache-hit path (`mediaRepositories[resolvedId] ?: run { ... }`) returns the already-cached `MediaRepository` object directly with no re-check of whether the provider's credentials changed — it never calls `MediaProviderFactory.create()` again on a cache hit, so clearing that lower-level factory cache has zero effect on an `AppContainer`-level repo that's already cached. The `MediaRepository`'s `provider` field was set once, at construction time (`newRepo.setProvider(provider)`), using whatever URL/username/password was current then; nothing re-fetches it later.
@@ -137,6 +136,7 @@ All three sync functions fetch fresh data from the server, track which IDs were 
 **Impact:** the app keeps connecting with the old URL/credentials for that provider — silent auth failures or connections to the wrong server — until the user explicitly switches the active provider (the only call sites that invoke `AppContainer.clearAllCaches()`) or the process restarts. The save itself appears to succeed (DB row and `MediaProviderFactory` are both correctly updated), making this confusing to debug.
 **Fix:** give `AppContainer` a targeted single-ID eviction method (mirroring `MediaProviderFactory.clearCache(id)`) and call it from the provider-edit save path (`ProviderViewModel`'s save/update flow), not just on full provider switch via `clearAllCaches()`.
 **Complexity:** Moderate — the eviction method itself is trivial, but wiring it into the right save-path call site needs care to avoid evicting/rebuilding more than necessary (e.g. don't evict on every settings save, only on credential-affecting ones).
+**Resolved:** added `AppContainer.evictMediaRepository(providerId)` (removes one entry under the existing mutex) and call it from `ProviderViewModel.performSave()`'s `id != null` (edit) branch, right after `providerRepository.updateProvider(...)` succeeds — this is the actual UI-reachable path (`validateAndSave()` → `performSave()`, wired from the Add/Edit Provider screens on both platforms). Note: `ProviderViewModel.updateProvider()` (a separate, differently-named ViewModel method) turned out to be dead code with zero callers, so it wasn't touched. Also found a second real call site with the same exposure — `SettingsExportManager.kt:436`'s import-conflict "Overwrite" path also calls `providerRepository.updateProvider()` — but `SettingsExportManager` is in `core:network`, which can't depend on `AppContainer` (in `core:ui`) without violating the module direction in AGENTS.md's architecture constraints. Left unfixed; would need the eviction call added at whatever `core:ui`-or-above layer invokes the import flow.
 
 ## Moderate impact
 
@@ -205,7 +205,7 @@ Both functions insert the new favorite at the front (`favorites.add(0, ...)`) th
 **Fix:** simplest version — after the `.take()`, compare sizes; if an eviction occurred, surface a toast ("X removed from favorites to make room") or block the add entirely with an error instead of silently evicting.
 **Complexity:** Easy–Moderate — the detection itself is a one-line size comparison; the UX decision (toast vs. block vs. raise the default cap) needs a call, and threading a signal back to the fire-and-forget UI call sites needs minor plumbing.
 
-### 18. Episode season auto-expand can clobber the user's manual accordion choice
+### 18. [FIXED] Episode season auto-expand can clobber the user's manual accordion choice
 **File:** `tv/src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt` (`expandedSeasons` state lines 298-302, auto-expand `LaunchedEffect(seriesDetail)` lines 305-332, manual toggle `onToggle` lines 492-499+)
 
 `expandedSeasons` initializes synchronously to the first season. A `LaunchedEffect(seriesDetail)` then runs an async DB lookup (`mediaRepository.getPlaybackPositionsSuspend(allEpisodeIds, ContentType.TV_SHOWS)`, line 316) and, once it resolves, unconditionally overwrites `expandedSeasons` to whichever season has the next incomplete episode (line 327: `expandedSeasons = setOf(season.seasonNumber)`). The manual season-header toggle (`onToggle`, lines 492-499) writes to that exact same state variable with no coordinating flag — there's nothing that marks "the user already manually chose a season" to stop the auto-expand effect from overwriting it once the async lookup finishes.
@@ -213,6 +213,7 @@ Both functions insert the new favorite at the front (`favorites.add(0, ...)`) th
 **Impact:** the accordion silently snaps back to the auto-detected season, undoing the user's just-made manual choice — confusing, looks like a UI glitch.
 **Fix:** add a "user has manually toggled this session" flag, set by `onToggle`, checked by the `LaunchedEffect` before it overwrites `expandedSeasons`.
 **Complexity:** Easy — one boolean flag and a guard check.
+**Resolved:** added `hasManuallyToggledSeasons` (reset alongside `expandedSeasons` via `remember(seriesDetail)`), set to `true` in `onToggle`, checked by the auto-expand `LaunchedEffect` right before it would overwrite `expandedSeasons`. Mobile's `EpisodeSelectionScreen.kt` had the identical pattern (confirmed: same accordion state, same async-lookup-then-overwrite shape, just per-episode lookups instead of one batched call) and got the same fix, even though the original write-up only cited TV.
 
 ## Low impact / quick wins
 
@@ -246,7 +247,7 @@ Both functions insert the new favorite at the front (`favorites.add(0, ...)`) th
 **Fix:** add the missing `removeAnalyticsListener` call and null out both listener fields, matching the existing pattern.
 **Complexity:** Trivial — one added call plus nulling two fields, mirroring the existing `playerListener` cleanup.
 
-### 19. EpgViewModel.forceRefresh()'s isRefreshing flag is decoupled from the actual reload
+### 19. [FIXED] EpgViewModel.forceRefresh()'s isRefreshing flag is decoupled from the actual reload
 **File:** `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt` (`forceRefresh()` lines 148-156, `loadEpgData()` lines 78-85)
 
 `loadEpgData()` is fire-and-forget — it does `viewModelScope.launch { ... }` and returns immediately, it does not suspend until the load finishes. `forceRefresh()` calls it as its second-to-last statement: `_isRefreshing.value = true; repository.clearEpgCache(); repository.clearXmltvCache(); loadEpgData(currentDate); _isRefreshing.value = false`. Since `loadEpgData()` only *schedules* a new, separate coroutine, `_isRefreshing.value = false` runs immediately after, not after the reload actually completes.
@@ -254,8 +255,9 @@ Both functions insert the new favorite at the front (`favorites.add(0, ...)`) th
 **Impact:** the refreshing spinner/indicator disappears almost immediately while the actual cache-clear + network fetch + EPG rebuild is still running in an untracked coroutine — the UI looks done when it isn't, and `loadEpgDataInternal()`'s own `UiState.Loading` transition races against whatever the screen does when `isRefreshing` flips back to false.
 **Fix:** have `forceRefresh()` call `loadEpgDataInternal(currentDate)` directly (the private, properly-suspending function) instead of through the fire-and-forget public `loadEpgData()` wrapper, so `_isRefreshing.value = false` only runs after the reload actually completes.
 **Complexity:** Trivial — swap which function is called inside the existing coroutine.
+**Resolved:** swapped the call to `loadEpgDataInternal(currentDate)`, preserving the same lazy-`repository`-init guard `loadEpgData()` had (`if (!::repository.isInitialized) { ... }`) since `forceRefresh()` no longer goes through that wrapper to get it for free.
 
-### 20. XtreamSyncWorker never updates provider sync stats
+### 20. [FIXED] XtreamSyncWorker never updates provider sync stats
 **File:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/XtreamSyncWorker.kt` (`doWork()`, full file)
 
 `XtreamSyncWorker` is the class actually scheduled by `ProviderSyncManager.updateWorkManagerSchedule()` for the periodic 24h background sync — confirmed via `PeriodicWorkRequestBuilder<XtreamSyncWorker>(24, TimeUnit.HOURS)`. Its `doWork()` calls `mediaProvider.syncAll()` for every Xtream provider but never calls `providerRepo.updateSyncStats(...)` anywhere — contrast with `ProviderSyncManager.performFullSync()`/`startManualSync()`, both of which call it in a `finally` block.
@@ -263,8 +265,9 @@ Both functions insert the new favorite at the front (`favorites.add(0, ...)`) th
 **Impact:** `lastSyncedAtMs`/`lastSyncError` shown in Settings go permanently stale even though background syncs are succeeding — purely a misleading-status bug, no functional/data impact.
 **Fix:** wrap the per-provider sync in a `try`/`finally` that calls `providerRepo.updateSyncStats(provider.id, endTime, duration, syncError)`, mirroring `ProviderSyncManager`'s pattern exactly.
 **Complexity:** Trivial — copy the existing stats-update pattern from `ProviderSyncManager` into this worker's loop.
+**Resolved:** wrapped the per-provider sync in `try`/`finally`, calling `providerRepo.updateSyncStats(provider.id, endTime, endTime - startTime, syncError)` on every path (success, "Failed to connect," and exception) — matches `ProviderSyncManager.startManualSync()`'s pattern exactly.
 
-### 21. TV EPG grid's "now" highlight is wrong on any date other than today
+### 21. [FIXED] TV EPG grid's "now" highlight is wrong on any date other than today
 **File:** `tv/src/main/java/org/njarasoa/fijerena/feature/epg/EpgGridLayout.kt:430`, `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt` (`calculateCurrentTimeSlot()` lines 263-267)
 
 `calculateCurrentTimeSlot()` returns `0` (not a "no match" sentinel like `-1`) whenever real wall-clock "now" doesn't fall inside any of the selected date's 48 time slots — i.e., whenever the selected date isn't today. `EpgGridLayout.kt:430`'s `val isCurrent = index == currentTimeSlot` has no date check, so slot 0 (12:00-12:30 AM) gets visually highlighted as "current" on every non-today date. (The auto-scroll-to-now effect at `EpgGridLayout.kt:155-156` happens to guard on `currentTimeSlot > 0`, so it doesn't also auto-scroll to slot 0 on non-today dates — only the highlight is affected. Confirmed mobile does not share this bug: `MobileEpgTimeline.kt:215` computes its current-slot indicator via an absolute epoch-range comparison, which correctly evaluates false on any non-today date.)
@@ -272,6 +275,7 @@ Both functions insert the new favorite at the front (`favorites.add(0, ...)`) th
 **Impact:** purely cosmetic — the wrong time slot is bolded/highlighted as "now" on every non-today date, but nothing else is affected (no wrong data is fetched or shown, just a visual indicator).
 **Fix:** have `calculateCurrentTimeSlot()` return `-1` when there's no real match, and check `currentTimeSlot >= 0` (not just `index == currentTimeSlot`) before applying the "current" highlight in `EpgGridLayout.kt`.
 **Complexity:** Trivial–Easy — two small, localized changes, same file pair already named.
+**Resolved:** `calculateCurrentTimeSlot()` now just returns `timeSlots.indexOfFirst { ... }` directly — `indexOfFirst` already returns -1 on no match, so the previous `if (index >= 0) index else 0` wrapper was actively converting "no match" into "slot 0." `EpgGridLayout.kt`'s highlight check is now `currentTimeSlot >= 0 && index == currentTimeSlot`. The existing auto-scroll guard (`currentTimeSlot > 0`) already excluded -1 correctly with no change needed.
 
 ---
 
