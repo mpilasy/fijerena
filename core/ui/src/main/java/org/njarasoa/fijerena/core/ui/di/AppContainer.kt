@@ -60,8 +60,11 @@ class AppContainer(
                         val password = providerRepository.getPassword(entity.id) ?: ""
                         val provider = MediaProviderFactory.create(entity, context.applicationContext, password)
                         newRepo.setProvider(provider)
+                        // Only cache once we actually have a backing provider — otherwise this
+                        // provider-less repo would get stuck at mediaRepositories[0L] forever,
+                        // even after a real active provider is set up later.
+                        mediaRepositories[resolvedId] = newRepo
                     }
-                    mediaRepositories[resolvedId] = newRepo
                     newRepo
                 }
 
