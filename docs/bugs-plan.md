@@ -25,10 +25,10 @@ tier. Each entry below also has a **Complexity** rating; at a glance:
 | 1 | [FIXED] EPG Now Playing/Up Next stale 12h | Easy |
 | 2 | [FIXED] AppContainer zombie repo at provider ID 0 | Moderate |
 | 3 | [FIXED] RefreshQueue duplicate concurrent execution | Moderate |
-| 4 | ProviderViewModel sync-status overwrite | Moderate–Involved |
+| 4 | [SKIPPED — not reachable] ProviderViewModel sync-status overwrite | Moderate–Involved |
 | 5 | [FIXED, manual verify pending] Mobile gesture (self-mutation + missing guard) | Easy–Moderate |
 | 6 | [FIXED] First ~10s of playback not saved | Trivial |
-| 7 | EpgBrowserViewModel stale pager after Clear All Data | Involved |
+| 7 | [SKIPPED — split-screen only, mobile only] EpgBrowserViewModel stale pager after Clear All Data | Involved |
 | 8 | [FIXED] Live-retry drops bandwidth telemetry | Trivial |
 | 9 | [FIXED] PlaybackViewModel metadata-before-service race | Trivial |
 | 10 | [FIXED] EpgIndexDatabase cursor leak | Trivial |
@@ -36,8 +36,10 @@ tier. Each entry below also has a **Complexity** rating; at a glance:
 
 Quick-win batch (one small PR, low review risk): #6, #8, #9, #10, #11 — all
 fixed.
-Need a bit more investigation before sizing precisely: #4 and #7 — both
-depend on UI/consumer call sites not yet traced (see their entries below).
+#4 and #7 were investigated and skipped — both have documented triggers that
+turned out not to be reachable via the app's actual navigation/ViewModel
+architecture (see their entries below for the reachability analysis, so
+neither needs re-investigating cold later).
 
 ## High impact
 
@@ -78,7 +80,7 @@ When `providerId` is the default `0L` and `providerRepository.getActiveProvider(
 **Complexity:** Moderate — `queue` (guarded by `queueMutex`) and `activeJobs` (a separate `ConcurrentHashMap`) aren't under one lock today; de-duplicating across both needs either a unified lock or careful TOCTOU reasoning, plus a decision on semantics (coalesce vs. queue-behind). Small code footprint (~15-20 lines), but the concurrency design needs to be right.
 **Resolved:** replaced the separate `ConcurrentHashMap`-backed `activeJobs` with `activeTasks`, guarded by the same `queueMutex` as `queue`. A task is moved from `queue` into `activeTasks` in the same dequeue step in `processAvailable()` — before the semaphore permit is even acquired — so it's never absent from both at once. `submit()` now checks `activeTasks` first and coalesces into the running task's existing `Deferred` instead of enqueueing a duplicate. (A sub-microsecond gap remains between `scope.launch` returning a `Job` and that job being registered into `activeTasks`, both still inside `processAvailable()`; closing that fully would need pre-registering a placeholder before launch, which wasn't judged worth the extra complexity given the bug's realistic triggers — UI double-taps, overlapping manual/auto refresh — operate on millisecond-or-slower timescales.)
 
-### 4. ProviderViewModel's sync-status tracking is overwritten by a second concurrent sync
+### 4. [SKIPPED — trigger not reachable] ProviderViewModel's sync-status tracking is overwritten by a second concurrent sync
 **File:** `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProviderViewModel.kt` (`syncProvider()` lines 347–355, completion check in `loadProviders()` lines 151–174)
 
 `syncingProviderId` is a single nullable `var` with no guard in `syncProvider()` against a sync already being in flight. If the user starts syncing provider A (`syncingProviderId = A`), then starts syncing provider B before A finishes, `syncingProviderId` is silently reassigned to B. When A's sync later completes and updates its DB row, the `providers` Flow re-emits and the completion-check in `loadProviders()` looks up `syncingProviderId` (now B) — so A's completion is never reported, and B can get a stale/spurious "completed" status reported off an old `lastSyncedAtMs` that has nothing to do with the in-flight sync.
@@ -87,6 +89,7 @@ When `providerId` is the default `0L` and `providerRepository.getActiveProvider(
 **Impact:** wrong or missing sync success/error feedback shown to the user.
 **Fix:** track sync state per provider ID (`Map<Long, SyncState>` instead of a single `var`), or disable starting a new sync while one is already in progress.
 **Complexity:** Moderate–Involved — the ViewModel-side change is mechanical, but it's unverified whether `_syncState` is consumed as a single global value by UI (e.g. one spinner for "the" sync) — if so, every consumer needs updating too. Needs a quick check of UI call sites before sizing precisely.
+**Skipped:** confirmed `_syncState` IS a single global value, consumed identically by `MobileAddProviderScreen.kt`/`TvAddProviderScreen.kt`/`DataManagementSection.kt`/`CacheManagementSection.kt` — so the "proper" fix would mean reworking 4 UI files across both platforms. But the documented trigger isn't reachable at all: `ProviderViewModel` is scoped per-screen via Compose's `viewModel()` (tied to that screen's `NavBackStackEntry`), `syncProvider()` is only ever called with a fixed `editId` from the single Add/Edit Provider screen, and no call site invokes it with a second, different provider ID from the same instance. "Sync two different providers in close succession" would require two separate screen visits, each getting its own isolated `syncingProviderId`/`_syncState` — they can't collide. Decided not worth the 4-file UI rework for a scenario that can't occur via any current call site. (Separately found a real, structurally-similar issue: `ProviderSyncManager.startManualSync()` has zero de-duplication — a double-tap on the same provider's "Sync Now," or a manual sync racing the periodic `performFullSync()` auto-refresh, launches fully concurrent `syncAll()` runs with no coordination. Not fixed here; would be the same class of fix as #3 if picked up later.)
 
 ## Moderate impact
 
@@ -117,7 +120,7 @@ Two compounding issues in the same gesture handler:
 **Fix:** seed `lastSavedPosition` so the very first `STATE_READY` transition (or the `playStream()` call itself) performs an immediate save, not just on the periodic/pause boundary.
 **Complexity:** Trivial — one-line fix: seed `lastSavedPosition = -saveIntervalMs` instead of `0L` so the very first `STATE_READY` always clears the save-gate. No structural change.
 
-### 7. EpgBrowserViewModel's "Now Playing" pager is never rebuilt after Clear All EPG Data
+### 7. [SKIPPED — reachable only via split-screen, narrow] EpgBrowserViewModel's "Now Playing" pager is never rebuilt after Clear All EPG Data
 **File:** `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt` (`loadNowPlaying()`, lines 314–338; same pattern in the search pager around lines 456–480)
 
 `loadNowPlaying()` calls `EpgIndexDatabase.getInstance(context)` once, captures the resulting `dao` in a `Pager { dao.getPagedNowPlaying(...) }` closure, and caches the flow for the ViewModel's lifetime via `.cachedIn(viewModelScope)`. `EpgManagementViewModel` deliberately guards against exactly this class of bug with its `_dbGeneration` counter (re-subscribing Room flows after a DB destroy+recreate from "Clear All EPG Data") — but `EpgBrowserViewModel` has no equivalent mechanism. If "Clear All EPG Data" destroys and recreates the database while the Now Playing pager is alive, every subsequent page load queries a DAO bound to a closed `SupportSQLiteDatabase`.
@@ -126,6 +129,7 @@ Two compounding issues in the same gesture handler:
 **Impact:** paging errors / stuck "Now Playing" list until the screen is fully re-created; no crash observed downstream since Paging3 surfaces load failures as `LoadState.Error`, but the feature breaks until next navigation.
 **Fix:** mirror `EpgManagementViewModel`'s generation-counter pattern, or have `EpgIndexDatabase.destroy()` broadcast an invalidation event this ViewModel observes to rebuild its pagers.
 **Complexity:** Involved — the most architecturally heavy fix in this list. `EpgManagementViewModel`'s `_dbGeneration` counter is scoped to that ViewModel; fixing this properly means either promoting an invalidation signal up into `EpgIndexDatabase` itself so any consumer can react, or duplicating the generation-counter pattern locally. Also needs verifying that hot-swapping the inner `Flow<PagingData<...>>` inside `_pagedNowPlaying`/`_pagedSearchResults` is actually picked up by whatever composable collects it (`collectAsLazyPagingItems()`) — not yet verified.
+**Skipped:** confirmed the "Involved" framing was overstated — `EpgIndexer.state` is already a process-wide signal `EpgBrowserViewModel` already subscribes to forever (`indexer.state.collect{}` in `initPagedNowPlaying()`), and `clearAll()` already publishes `EpgIndexState.NotIndexed` into it after destroying the DB. The actual gap is just that the existing collector's `if (state is Indexed)` ignores every other state — a same-file, few-line fix, not a new generation-counter/broadcast mechanism. However, the documented trigger ("open EPG browser, then clear data while it's still active") isn't reachable in single-window use: EPG Browser and EPG Management are pushed from two different parent hubs with no `saveState`, so leaving EPG Browser always pops it — destroying the ViewModel and its collector — before Clear All Data can run, on both mobile and TV. It IS reachable on mobile via Android split-screen (two instances of the app open at once, sharing the same process-wide `EpgIndexer`/`EpgIndexDatabase` singletons) — confirmed `mobile/AndroidManifest.xml` doesn't set `resizeableActivity="false"`, so multi-window isn't blocked — but that's a deliberate two-window action, not ordinary usage, and TV has no split-screen at all. Decided the narrow, mobile-only, split-screen-only trigger doesn't justify the change right now; `_pagedSearchResults` would also need separate handling since it has no reactive mechanism at all today.
 
 ## Low impact / quick wins
 
