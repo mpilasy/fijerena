@@ -251,7 +251,7 @@ Uses DB destroy+recreate instead of `DELETE FROM` (which takes 10+ minutes on 4M
 
 The ViewModel uses a `_dbGeneration` counter with `flatMapLatest` so the sources `Flow` re-subscribes after DB recreation.
 
-After all sources are ingested, `EpgFileManager` launches `rebuildFtsAndUpdateState()` in a background coroutine. The old FTS index remains usable until the rebuild actually starts (stale is set inside the function at entry, not at dispatch time), so searches only degrade to LIKE during the actual rebuild window rather than during the scheduling gap:
+After all sources are ingested, `EpgFileManager` launches `rebuildFtsAndUpdateState()` in a background coroutine. The old FTS index remains usable until the rebuild actually starts (stale is set inside the function at entry, not at dispatch time), so a search only throws during the actual rebuild window (`isFtsStale()`) rather than during the scheduling gap:
 ```sql
 INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')
 ```
@@ -494,7 +494,7 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 |------|------|-------------|
 | `EpgFileManager.kt` | Singleton | Channel-based download-ingest pipeline manager |
 | `XmltvParser.kt` | Object | Streaming XMLTV parser with timezone override |
-| `XmltvSearchService.kt` | Class | Dual-path search (SQLite FTS -> LIKE -> XML scan) |
+| `XmltvSearchService.kt` | Class | Two-tier FTS search (raw query, then sanitized safe-AND retry); no LIKE or XML-scan fallback |
 | `XmltvEpgService.kt` | Class | XMLTV -> EpgResponse adapter for grid |
 | `XmltvModels.kt` | Data | XMLTV channel/programme/search models |
 | `EpgBrowserModels.kt` | Data | Browser UI models (program + airings) |
