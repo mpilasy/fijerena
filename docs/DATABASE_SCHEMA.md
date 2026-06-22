@@ -5,7 +5,7 @@ This document details the complete database schema for the Fijerena application,
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 5
+**Version:** 7
 
 Manages media provider configurations, authentication metadata, and persistent EPG source URLs.
 
@@ -27,12 +27,15 @@ Manages media provider configurations, authentication metadata, and persistent E
 | `name` | TEXT | User-friendly display name |
 | `url` | TEXT | Server URL or connection string |
 | `username` | TEXT | Username for authentication |
-| `type` | TEXT | Provider type: `XTREAM`, `JELLYFIN`, `SMB`, `LOCAL` |
+| `type` | TEXT | Provider type: `XTREAM`, `JELLYFIN`, `SMB`, `LOCAL`, `REMOTE_M3U` |
 | `config` | TEXT | JSON blob for type-specific config (e.g., SMB share) |
 | `providerSettings` | TEXT | JSON blob for per-provider preferences |
 | `createdAt` | INTEGER | Timestamp when created |
 | `lastUsedAt` | INTEGER | Timestamp of last access |
 | `isActive` | INTEGER | Boolean (0/1) if currently selected |
+| `lastSyncedAtMs` | INTEGER | Timestamp of last manual/background content sync (added v6) |
+| `lastSyncDurationMs` | INTEGER | Duration of last sync (added v6) |
+| `lastSyncError` | TEXT | Error message from last failed sync, if any (added v6) |
 
 ### Table: `epg_source`
 | Column | Type | Description |
@@ -40,6 +43,7 @@ Manages media provider configurations, authentication metadata, and persistent E
 | `id` | INTEGER (PK) | Auto-generated ID |
 | `url` | TEXT | XMLTV source URL |
 | `label` | TEXT | Display label for the source |
+| `provider_id` | INTEGER | Owning provider ID, nullable — `NULL` means the source applies to all providers (added v7) |
 | `timezone_offset_hours` | INTEGER | Manual offset for parsing |
 | `added_at_ms` | INTEGER | Timestamp when added |
 | `last_ingested_at_ms` | INTEGER | Timestamp of last successful sync |
@@ -55,7 +59,7 @@ Manages media provider configurations, authentication metadata, and persistent E
 ---
 
 ## 2. EPG Index Database (`epg_index.db`)
-**Version:** 13
+**Version:** 16
 
 Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast schedule searching. This database is considered transient and may be cleared during schema updates.
 
@@ -68,6 +72,9 @@ Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast
 | `icon_url` | TEXT | URL to channel logo |
 
 **Index:** `idx_channel_source` on `(source_id)`
+
+### Table: `epg_channel_staging`
+Mirrors `epg_channel` exactly (same columns, no indices). Used as a write target during ingestion when staging is enabled, so the live `epg_channel` table stays queryable until the atomic swap (`executeSwapToMain()`) promotes staged rows.
 
 ### Table: `epg_programme`
 | Column | Type | Description |
@@ -82,10 +89,15 @@ Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast
 | `end_epoch` | INTEGER | End time (Unix epoch) |
 | `source_id` | INTEGER | Reference to `epg_source.id` in Settings DB |
 
+**Indices (7):** `idx_programme_start` (start_epoch), `idx_programme_end` (end_epoch), `idx_programme_time_range` (start_epoch, end_epoch), `idx_programme_channel` (channel_id), `idx_programme_dedup` (channel_id, source_id, start_epoch — UNIQUE), `idx_programme_source` (source_id), `idx_programme_channel_source` (channel_id, source_id).
+
+### Table: `epg_programme_staging`
+Mirrors `epg_programme` (same columns), with a single unique index `idx_programme_staging_dedup` on `(channel_id, source_id, start_epoch)`. Same role as `epg_channel_staging` — write target during staged ingestion before the atomic swap.
+
 ### Virtual Table: `epg_programme_fts` (FTS4)
 Provides full-text search over `epg_programme`.
 - **Content Entity:** `EpgProgrammeEntity`
-- **Columns:** `title`
+- **Columns:** `title`, `description`
 - **Tokenizer:** `unicode61`
 
 ### Table: `epg_index_metadata`
@@ -102,9 +114,9 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 8
+**Version:** 10
 
-Persistent cache for Xtream Codes API metadata to enable offline browsing. (v8 removed AI vector embedding tables that existed in v7.)
+Persistent cache for Xtream Codes API metadata to enable offline browsing. (v8 removed AI vector embedding tables that existed in v7; v9 added richer episode metadata; v10 added FTS4 search tables for streams and series.)
 
 ### Table: `xtream_categories`
 | Column | Type | Description |
@@ -166,6 +178,17 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v8 r
 | `episodeNum` | INTEGER | Episode number |
 | `title` | TEXT | Episode title |
 | `overview` | TEXT | Episode plot summary |
+| `plot` | TEXT | Extended plot summary (added v9) |
+| `airDate` | TEXT | Original air date (added v9) |
+| `durationSecs` | INTEGER | Runtime in seconds (added v9) |
+| `bitrate` | INTEGER | Encoded bitrate (added v9) |
+| `tmdbId` | TEXT | TMDB identifier, used for synopsis enrichment (added v9) |
+
+### Virtual Table: `xtream_streams_fts` (FTS4, added v10)
+Full-text search over `xtream_streams.name`. Content table: `xtream_streams`. Tokenizer: `unicode61`.
+
+### Virtual Table: `xtream_series_fts` (FTS4, added v10)
+Full-text search over `xtream_series.name`. Content table: `xtream_series`. Tokenizer: `unicode61`.
 
 ---
 

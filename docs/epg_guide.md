@@ -47,7 +47,7 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
    │  EPG Grid        │              │   EPG Browser         │
    │  XmltvEpgService │              │   XmltvSearchService  │
    │  → EpgViewModel  │              │   → EpgBrowserVM      │
-   │  (24h window,    │              │   (FTS→LIKE→XML scan) │
+   │  (24h window,    │              │   (FTS raw→FTS safe)   │
    │   50 channels)   │              │   (7-day window,      │
    │                  │              │    500 results max)    │
    └─────────────────┘              └───────────────────────┘
@@ -152,7 +152,7 @@ Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync
 
 ### Database Schema
 
-**Room database** `epg_index.db` (version 13, WAL mode):
+**Room database** `epg_index.db` (version 16, WAL mode):
 
 ```
 epg_channel
@@ -160,6 +160,9 @@ epg_channel
 ├── source_id      INTEGER (Composite PK with xmltv_id)
 ├── display_name   TEXT
 └── icon_url       TEXT?
+
+epg_channel_staging  (mirrors epg_channel; write target during staged ingestion,
+                      promoted by the atomic swap in executeSwapToMain())
 
 epg_programme
 ├── id               INTEGER  (PK, autoGenerate)
@@ -172,18 +175,22 @@ epg_programme
 ├── end_epoch        LONG
 └── source_id        LONG
 
-Indices (8):
+Indices (7):
 ├── idx_programme_start          (start_epoch)
 ├── idx_programme_end            (end_epoch)
 ├── idx_programme_time_range     (start_epoch, end_epoch)
 ├── idx_programme_channel        (channel_id)
-├── idx_programme_title_lower    (title_lowercase)
 ├── idx_programme_dedup          (channel_id, source_id, start_epoch) UNIQUE
 ├── idx_programme_source         (source_id)
 └── idx_programme_channel_source (channel_id, source_id)
 
+epg_programme_staging  (mirrors epg_programme; one unique index
+                        idx_programme_staging_dedup on the same 3 columns;
+                        write target during staged ingestion)
+
 epg_programme_fts  (FTS4 virtual table, content=epg_programme, tokenizer=unicode61)
-└── title          TEXT
+├── title          TEXT
+└── description    TEXT?
 
 epg_index_metadata
 ├── id                     INTEGER  (PK, always 1)
@@ -297,10 +304,11 @@ Standalone screen for full-text searching across the entire XMLTV dataset. Acces
 
 **Class** (`core/network/.../xmltv/XmltvSearchService.kt`) implementing dual-path search.
 
-**Search strategy (in order):**
-1. **SQLite FTS MATCH** — when index is built, queries `epg_programme_fts`. Prefix matching. Typically <100ms.
-2. **SQLite LIKE** — fallback if FTS returns empty. Uses `title_lowercase LIKE '%query%'`.
-3. **XML scan** — fallback when index not yet built. Streaming parse, 1-2 seconds.
+**Search strategy (in order, both via FTS — no LIKE or XML-scan fallback exists):**
+1. **Raw FTS query** — preserves user-provided FTS operators (OR/NEAR/NOT), appends a prefix wildcard `*` to the last token. Typically <100ms.
+2. **Safe FTS retry** — if the raw query returns nothing (or throws, e.g. malformed syntax), strips `" * ( ) :` and retries as a quoted AND-style phrase query.
+
+If the index isn't built yet (`EpgIndexState.NotIndexed`), `search()` returns `null` directly. If the FTS index is mid-rebuild (`isFtsStale()`), the query throws rather than scanning — the old index remains usable right up until the rebuild actually starts.
 
 All queries time-windowed: past 1 day to future 6 days. Max 500 results.
 
@@ -467,7 +475,7 @@ data class EpgProgrammeEntity(val id: Long, val channelId: String, val title: St
                               val category: String?, val startEpoch: Long, val endEpoch: Long,
                               val sourceId: Long)
 ```
-data class EpgProgrammeFts(val title: String)  // FTS4 content table
+data class EpgProgrammeFts(val title: String, val description: String?)  // FTS4 content table
 data class EpgIndexMetadata(val id: Int, val fileSizeBytes: Long, val fileLastModifiedMs: Long,
                             val indexedAtMs: Long, val channelCount: Int,
                             val programmeCount: Int, val timezoneOffsetHours: Int)
@@ -507,7 +515,7 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 | File | Type | Description |
 |------|------|-------------|
 | `EpgIndexer.kt` | Singleton | Index builder (streaming + batch transactional) |
-| `EpgIndexDatabase.kt` | Room DB | Database singleton (v13, WAL, with destroy/recreate) |
+| `EpgIndexDatabase.kt` | Room DB | Database singleton (v16, WAL, with destroy/recreate) |
 | `EpgSourceEntity.kt` | Entity | EPG source config (URL, label, tz, enabled, stats, ingestMethod) |
 | `EpgSourceDao.kt` | DAO | CRUD for EPG sources, resetAllIngestionState() |
 | `EpgIndexDao.kt` | DAO | FTS MATCH, LIKE, paged queries |

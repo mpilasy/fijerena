@@ -89,11 +89,11 @@ RemoteM3uMediaProvider           -- remote M3U URL fetching + parsing
 
 | Store | Purpose | Location |
 |-------|---------|----------|
-| `providers.db` (Room v5) | Provider configurations (name, URL, type, config JSON, active flag), EPG sources, pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
+| `providers.db` (Room v7) | Provider configurations (name, URL, type, config JSON, active flag, sync stats), EPG sources, pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
 | EncryptedSharedPreferences | Per-provider passwords (keyed by provider ID) | `provider_password_{id}` |
 | `xtream_cache_{id}` SharedPreferences | Per-provider Xtream category/item cache | JSON blobs |
 | `app_settings` SharedPreferences | Global settings (theme, dev mode, buffer multipliers) | `AppSettings` |
-| `epg_index.db` (Room v13) | EPG programme index with FTS4 search | See EPG section |
+| `epg_index.db` (Room v16) | EPG programme index with FTS4 search | See EPG section |
 
 ---
 
@@ -182,7 +182,7 @@ Type-safe navigation using `kotlinx.serialization` with Navigation Compose.
 sealed interface Screen {
     object ProviderSelection          -- provider list/CRUD
     class  AddProvider(editId)        -- add/edit provider form
-    object Login                      -- credential entry
+    object Login                      -- LEGACY, not wired into either NavHost (see below)
     object ContentTypeSelection       -- Live TV / Movies / TV Shows picker
     object EditProvider               -- edit provider URL
     object Settings                   -- app settings
@@ -243,15 +243,17 @@ epg_index.db
     -> EpgManagementViewModel -> EpgManagementScreen
 ```
 
-### Database Schema (`epg_index.db`, Room v13)
+### Database Schema (`epg_index.db`, Room v16)
 
 **Tables:**
 
 | Table | Purpose |
 |-------|---------|
 | `epg_channel` | Channel ID + source ID (composite PK), display name, icon URL |
-| `epg_programme` | Programme listings with time ranges, 8 indices for query performance |
-| `epg_programme_fts` | FTS4 virtual table for full-text search on programme titles |
+| `epg_channel_staging` | Write target during staged ingestion; promoted to `epg_channel` by the atomic swap |
+| `epg_programme` | Programme listings with time ranges, 7 indices for query performance |
+| `epg_programme_staging` | Write target during staged ingestion; promoted to `epg_programme` by the atomic swap |
+| `epg_programme_fts` | FTS4 virtual table for full-text search on programme title + description |
 | `epg_index_metadata` | Index stats (channel count, programme count, timestamps) |
 | `epg_source` | Multi-source configuration (URL, label, timezone override, status) — stored in `providers.db` |
 
@@ -260,7 +262,6 @@ epg_index.db
 - `idx_programme_end` - end epoch
 - `idx_programme_time_range` - composite (start, end)
 - `idx_programme_channel` - channel ID
-- `idx_programme_title_lower` - lowercase title for LIKE queries
 - `idx_programme_dedup` - unique (channel_id, source_id, start_epoch) prevents duplicates
 - `idx_programme_source` - source ID for per-source operations
 - `idx_programme_channel_source` - composite (channel_id, source_id) for per-source channel queries
@@ -323,9 +324,11 @@ Uses `EpgIndexDatabase.destroy()` to close the Room instance, null the singleton
 
 ### Search
 
-Two-tier search strategy:
-1. **FTS4 MATCH** query (< 100ms) - primary
-2. **LIKE fallback** if FTS returns empty - handles partial matches FTS misses
+Two-tier search strategy, both via **FTS4 MATCH** (no LIKE or XML-scan fallback exists):
+1. Raw FTS query preserving operators (OR/NEAR/NOT) with a trailing prefix wildcard (< 100ms)
+2. If that returns nothing, a sanitized "safe" AND-style FTS retry (operators stripped, phrase-quoted)
+
+If the FTS index is mid-rebuild (`isFtsStale()`), search throws rather than degrading to a scan; the old index stays queryable until the rebuild actually starts.
 
 Time window: -1 to +6 days, max 500 results, grouped by title, sorted by airing count.
 
@@ -481,8 +484,9 @@ Updates every ~500ms via polling loop.
 | EPG Guide | `epg/EpgGuideScreen.kt` + `epg/EpgGridLayout.kt` | TV guide time grid |
 | EPG Management | `epg/TvEpgManagementScreen.kt` | Multi-source EPG configuration |
 | EPG Browser | `epgbrowser/EpgBrowserScreen.kt` | Programme search |
-| Login | `login/LoginScreenTv.kt` | Credential entry |
 | Stats Overlay (generic) | `common/StatsOverlay.kt` | Reusable stats component for non-player screens |
+
+`login/LoginScreenTv.kt` still exists on disk but `Screen.Login` is not wired into `TvNavHost.kt` — dead code left over from the login-screen removal (see RELEASE_NOTES.md, Phase 4).
 
 ### Mobile Screens (`mobile/feature/`)
 
@@ -502,7 +506,8 @@ Updates every ~500ms via polling loop.
 | EPG Guide | `epg/MobileEpgGuideScreen.kt` + `epg/MobileEpgTimeline.kt` | TV guide |
 | EPG Management | `epg/MobileEpgManagementScreen.kt` | EPG source management |
 | EPG Browser | `epgbrowser/MobileEpgBrowserScreen.kt` | Programme search |
-| Login | `login/LoginScreen.kt` | Credential entry |
+
+`login/LoginScreen.kt` still exists on disk but `Screen.Login` is not wired into `MobileNavHost.kt` — dead code left over from the login-screen removal (see RELEASE_NOTES.md, "Mobile Login Screen Removal").
 
 ---
 
@@ -605,12 +610,14 @@ Client-side filename matching against scanned file list.
 ### Deployment
 
 ```bash
-# Mobile emulator
+# Emulator (check `adb devices -l` product/model first — port numbers are
+# assigned by launch order, not by device type)
 adb -s emulator-5554 install -r mobile/build/outputs/apk/debug/mobile-debug.apk
 
-# TV devices (network)
-adb connect 192.168.68.39:5555
-adb -s 192.168.68.39:5555 install -r tv/build/outputs/apk/debug/tv-debug.apk
+# TV devices (network) — IP changes with DHCP; use `adb mdns services` to find
+# a device that moved rather than assuming a fixed address
+adb connect <TV_IP>:5555
+adb -s <TV_IP>:5555 install -r tv/build/outputs/apk/debug/tv-debug.apk
 ```
 
 TV and mobile share `applicationId` -- use `adb -s <device>` when deploying to both simultaneously.

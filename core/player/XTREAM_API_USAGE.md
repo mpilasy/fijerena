@@ -129,8 +129,8 @@ class ChannelRepository {
 ## Integration with StreamingPlaybackService
 
 ```kotlin
-import com.example.firstvideoplayer.core.player.viewmodel.PlaybackViewModel
-import com.example.firstvideoplayer.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 
 class ChannelPlayerViewModel(application: Application) : AndroidViewModel(application) {
     private val apiService = XtreamApiService(

@@ -1,5 +1,7 @@
 # EPG Search Optimization Plan
 
+**Status: COMPLETE.** All three phases verified present in current code (2026-06-22): the LIKE fallback is gone (`XmltvSearchService.searchFromIndex()` throws on `isFtsStale()` instead of scanning), `CancellationException` is re-thrown in `EpgBrowserViewModel.performSearch()`, the TV clear button uses `showClearButton = localQuery.isNotEmpty() || hasResults`, `EpgProgrammeFts` now indexes both `title` and `description`, and `rebuildFtsAndUpdateState()` applies the `synchronous = OFF` / `temp_store = MEMORY` / `cache_size = -64000` PRAGMAs. Kept as a historical record of the rationale.
+
 ## Objective
 Address performance bottlenecks in EPG data ingestion, optimize EPG search queries, fix coroutine cancellation errors, enable program description indexing, and refine the UI clear button behavior.
 
