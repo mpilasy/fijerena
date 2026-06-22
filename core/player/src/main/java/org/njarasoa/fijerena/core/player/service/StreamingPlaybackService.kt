@@ -138,7 +138,11 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     private fun performSeamlessRecycle(metadata: PlayerMetadata, currentPos: Long) {
-        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+            ?: run {
+                Log.w(TAG, "performSeamlessRecycle: no-op, mediaSession/player unavailable.")
+                return
+            }
 
         // A hard retry scheduled for the same underlying error must not be allowed to fire
         // later with a screen-clearing setMediaSource() call on top of this seamless swap.
@@ -153,7 +157,10 @@ class StreamingPlaybackService : MediaSessionService() {
             isLive = metadata.isLive,
             onRetry = { _streamRetryCount.value++ },
             transferListener = bandwidthMeter,
-        ) ?: return
+        ) ?: run {
+            Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
+            return
+        }
 
         // setMediaSource(source, resetPosition=false) keeps the current frame on screen
         // while the new source prepares in the background.
@@ -380,7 +387,11 @@ class StreamingPlaybackService : MediaSessionService() {
         metadata: PlayerMetadata,
         startPositionMs: Long = 0L,
     ) {
-        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+            ?: run {
+                Log.w(TAG, "playStream: no-op, mediaSession/player unavailable.")
+                return
+            }
         cancelPendingRetry()
         playerListener?.resetErrorState()
         liveRetryCount = 0
@@ -407,7 +418,10 @@ class StreamingPlaybackService : MediaSessionService() {
                 isLive = metadata.isLive,
                 onRetry = { _streamRetryCount.value++ },
                 transferListener = bandwidthMeter,
-            ) ?: return
+            ) ?: run {
+                Log.w(TAG, "playStream: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
+                return
+            }
 
         player.setMediaSource(mediaSource)
         if (startPositionMs > 0) {
@@ -764,6 +778,12 @@ class StreamingPlaybackService : MediaSessionService() {
         adaptiveLoadControl = null
         NetworkMonitor.release()
         instance = null
+        // If Android recreates this service later in the same process (e.g. after
+        // reclaiming it during long standby), the next onCreate() needs a fresh,
+        // not-yet-completed deferred to publish into — instanceReady.complete() is a
+        // silent no-op once already completed, so without this reset awaitInstance()
+        // would hand out this now-destroyed instance forever.
+        instanceReady = kotlinx.coroutines.CompletableDeferred()
         super.onDestroy()
     }
 
@@ -1081,7 +1101,8 @@ class StreamingPlaybackService : MediaSessionService() {
         @Volatile
         private var instance: StreamingPlaybackService? = null
 
-        private val instanceReady = kotlinx.coroutines.CompletableDeferred<StreamingPlaybackService>()
+        @Volatile
+        private var instanceReady = kotlinx.coroutines.CompletableDeferred<StreamingPlaybackService>()
 
         fun getInstance(): StreamingPlaybackService? = instance
 
