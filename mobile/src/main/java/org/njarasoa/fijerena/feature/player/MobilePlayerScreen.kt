@@ -250,7 +250,7 @@ fun MobilePlayerScreen(
 
     // Set up auto-save listener for playback position and track settings
     LaunchedEffect(Unit) {
-        StreamingPlaybackService.getInstance()?.setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
+        StreamingPlaybackService.awaitInstance().setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
             loaderViewModel.recordHistory(position, duration, isPaused, audioIndex, subtitleIndex)
         }
     }
@@ -271,7 +271,7 @@ fun MobilePlayerScreen(
                 ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
                 else -> PlayerConfigFactory.ContentType.VOD
             }
-        StreamingPlaybackService.getInstance()?.setContentType(playerContentType)
+        StreamingPlaybackService.awaitInstance().setContentType(playerContentType)
     }
 
     // Start playback when URL is ready or channel changes

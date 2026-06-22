@@ -94,6 +94,17 @@ class AppContainer(
         }
     }
 
+    /**
+     * Evicts a single cached MediaRepository. Call this after a provider's credentials
+     * change (URL/username/password) so the next getMediaRepository() call rebuilds it
+     * with a fresh MediaProvider instead of reusing one built from the old credentials.
+     */
+    suspend fun evictMediaRepository(providerId: Long) {
+        mutex.withLock {
+            mediaRepositories.remove(providerId)
+        }
+    }
+
     companion object {
         @Volatile
         private var instance: AppContainer? = null
