@@ -471,6 +471,7 @@ class StreamingPlaybackService : MediaSessionService() {
                         headers = metadata.headers,
                         isLive = metadata.isLive,
                         onRetry = { _streamRetryCount.value++ },
+                        transferListener = bandwidthMeter,
                     ) ?: return@Runnable
 
                 player.setMediaSource(mediaSource)
@@ -766,12 +767,14 @@ class StreamingPlaybackService : MediaSessionService() {
 
         mediaSession?.run {
             player.removeListener(playerListener!!)
+            (player as? androidx.media3.exoplayer.ExoPlayer)?.removeAnalyticsListener(analyticsListener!!)
             player.release()
             release()
         }
         mediaSession = null
         releaseWakeLock()
         wakeLock = null
+        playerListener = null
         analyticsListener = null
         serviceScope?.cancel()
         serviceScope = null
@@ -795,8 +798,8 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {},
     ) : Player.Listener {
         private var isInErrorState = false
-        private var lastSavedPosition = 0L
         private val saveIntervalMs = 10_000L
+        private var lastSavedPosition = -saveIntervalMs
 
         fun resetErrorState() {
             isInErrorState = false

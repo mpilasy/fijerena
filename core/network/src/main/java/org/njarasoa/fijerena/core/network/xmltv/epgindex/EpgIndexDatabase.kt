@@ -61,9 +61,10 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                                 db.query("PRAGMA mmap_size = 268435456").close()
                                 db.query("PRAGMA journal_size_limit = 10485760").close()
 
-                                val cursor = db.query("PRAGMA auto_vacuum")
-                                val currentMode = if (cursor.moveToFirst()) cursor.getInt(0) else 0
-                                cursor.close()
+                                val currentMode =
+                                    db.query("PRAGMA auto_vacuum").use { cursor ->
+                                        if (cursor.moveToFirst()) cursor.getInt(0) else 0
+                                    }
                                 if (currentMode != 2) { // 2 = INCREMENTAL
                                     db.execSQL("PRAGMA auto_vacuum = INCREMENTAL")
                                 }
