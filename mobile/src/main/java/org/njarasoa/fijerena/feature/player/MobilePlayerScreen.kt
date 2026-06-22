@@ -350,26 +350,34 @@ fun MobilePlayerScreen(
                             }
                         ).then(
                             if (isInPipMode || !isLiveContent) Modifier else
-                            Modifier.pointerInput(state.categoryStreams, showCategoryOverlay, showLastWatchedOverlay, showStats) {
+                            Modifier.pointerInput(state.categoryStreams, showStats) {
                                 var verticalAccumulator = 0f
                                 var horizontalAccumulator = 0f
-                                var hasFiredThisGesture = false
+                                var hasFiredVerticalThisGesture = false
+                                var hasFiredHorizontalThisGesture = false
                                 detectDragGestures(
                                     onDragStart = {
                                         verticalAccumulator = 0f
                                         horizontalAccumulator = 0f
-                                        hasFiredThisGesture = false
+                                        hasFiredVerticalThisGesture = false
+                                        hasFiredHorizontalThisGesture = false
                                     },
-                                    onDragEnd = { hasFiredThisGesture = false },
-                                    onDragCancel = { hasFiredThisGesture = false },
+                                    onDragEnd = {
+                                        hasFiredVerticalThisGesture = false
+                                        hasFiredHorizontalThisGesture = false
+                                    },
+                                    onDragCancel = {
+                                        hasFiredVerticalThisGesture = false
+                                        hasFiredHorizontalThisGesture = false
+                                    },
                                     onDrag = { change, dragAmount ->
                                         if (showStats) return@detectDragGestures
                                         change.consume()
                                         verticalAccumulator += dragAmount.y
                                         horizontalAccumulator += dragAmount.x
                                         // Vertical: channel switching
-                                        if (!hasFiredThisGesture && kotlin.math.abs(verticalAccumulator) > 100f) {
-                                            hasFiredThisGesture = true
+                                        if (!hasFiredVerticalThisGesture && kotlin.math.abs(verticalAccumulator) > 100f) {
+                                            hasFiredVerticalThisGesture = true
                                             if (verticalAccumulator < 0) {
                                                 loaderViewModel.nextChannel()
                                             } else {
@@ -378,7 +386,8 @@ fun MobilePlayerScreen(
                                             verticalAccumulator = 0f
                                         }
                                         // Horizontal: overlay panels
-                                        if (kotlin.math.abs(horizontalAccumulator) > 80f) {
+                                        if (!hasFiredHorizontalThisGesture && kotlin.math.abs(horizontalAccumulator) > 80f) {
+                                            hasFiredHorizontalThisGesture = true
                                             when {
                                                 horizontalAccumulator > 0 && !showLastWatchedOverlay ->
                                                     showCategoryOverlay = true
