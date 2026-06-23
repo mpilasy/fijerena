@@ -40,7 +40,7 @@ tier. Each entry below also has a **Complexity** rating; at a glance:
 | 13 | [FIXED] Player getInstance()/awaitInstance() race beyond playStream() | Easy |
 | 14 | [FIXED] AppContainer caches stale MediaRepository after credential edit | Moderate |
 | 15 | JellyfinMediaProvider.resolvePlayableStream() has no auto-reconnect-on-401 | Easy–Moderate |
-| 16 | Saved audio/subtitle track index uses wrong indexing scheme on restore | Moderate |
+| 16 | [FIXED] Saved audio/subtitle track index uses wrong indexing scheme on restore | Moderate |
 | 17 | [SKIPPED — deprioritized] Favorites/favorite-categories silently evict oldest entry at cap | Easy–Moderate |
 | 18 | [FIXED] Episode season auto-expand clobbers manual accordion toggle | Easy |
 | 19 | [FIXED] EpgViewModel.forceRefresh()'s isRefreshing flag decoupled from reload | Trivial |
@@ -53,10 +53,10 @@ fixed.
 turned out not to be reachable via the app's actual navigation/ViewModel
 architecture (see their entries below for the reachability analysis, so
 neither needs re-investigating cold later).
-#12, #13, #14, #18, #19, #20, #21 fixed (2026-06-22) — see their entries
+#12, #13, #14, #16, #18, #19, #20, #21 fixed (2026-06-22) — see their entries
 below for the resolution notes. #17 was deprioritized, not invalidated —
-unlike #4/#7, the bug itself is still confirmed real. #15 and #16 from the
-same sweep remain open.
+unlike #4/#7, the bug itself is still confirmed real. #15 from the same
+sweep remains open.
 
 ## High impact
 
@@ -188,7 +188,7 @@ Every other Jellyfin method (`getCategories`, `getItems`, `getMovieDetail`, `sea
 **Fix:** route `resolvePlayableStream()`'s `getPlaybackInfo()`/`getItemById()` calls through `withAutoReconnect { }` like every other method, instead of the local-only `ensureConnected()` check.
 **Complexity:** Easy–Moderate — mechanical to apply the existing wrapper, but the two calls are currently fired in parallel via `async { }` inside a `coroutineScope { }`, so the wrapper needs to wrap that parallel-fetch block as a unit rather than each call individually.
 
-### 16. Saved audio/subtitle track index is restored using the wrong indexing scheme
+### 16. [FIXED] Saved audio/subtitle track index is restored using the wrong indexing scheme
 **File:** `core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt` (`selectAudioTrack(groupIndex, trackIndex)` lines 612-641, `selectSubtitleTrack(groupIndex, trackIndex)` lines 643-672, `selectAudioTrack(consolidatedIndex)` lines 564-570, `selectSubtitleTrack(consolidatedIndex)` lines 600-610, `getAudioTracks()` lines 534-562), `tv/.../player/TvPlayerScreen.kt:190-196`, `mobile/.../player/MobilePlayerScreen.kt:302-308`
 
 Two different indexing schemes exist for the same concept and the save/restore path mixes them. **Save:** `selectAudioTrack(groupIndex, trackIndex)` and `selectSubtitleTrack(groupIndex, trackIndex)` (the direct two-int overloads used by the interactive track-selector dialogs) persist the raw **in-group** `trackIndex` via `onPositionSaveListener?.invoke(..., trackIndex, ...)` (confirmed at lines 640 and 671) — this flows unchanged through `MediaRepository.savePlaybackPosition()` into `WatchedItem.audioTrackIndex`/`subtitleTrackIndex`. **Restore:** both `TvPlayerScreen.kt` and `MobilePlayerScreen.kt` feed that same saved int into the single-argument `selectAudioTrack(consolidatedIndex)`/`selectSubtitleTrack(consolidatedIndex)` overloads, which treat it as a position in the **flattened, cross-group** list built by `getAudioTracks()` (iterates every track group, then every track within each group, in order). These two schemes only produce the same number when a stream happens to expose exactly one relevant track group — true for many but not all sources; some multi-rendition HLS/DASH streams expose multiple audio or subtitle track groups.
@@ -196,6 +196,7 @@ Two different indexing schemes exist for the same concept and the save/restore p
 **Impact:** the wrong track is silently selected on resume (or the restore call no-ops if the saved index falls outside the flattened list's bounds) — no crash, no error, just the wrong language/subtitle track playing.
 **Fix:** persist the consolidated index (i.e., the track's position in `getAudioTracks()`/`getSubtitleTracks()`) at save time instead of the raw in-group index, so save and restore agree on one scheme — or have the restore path search by stable track identity (language/label) instead of by position.
 **Complexity:** Moderate — touches the save call sites, the `onPositionSaveListener` signature's meaning (not its shape), and needs the same fix applied symmetrically to both audio and subtitle paths.
+**Resolved:** at both save call sites, compute `getAudioTracks()`/`getSubtitleTracks()` (the same flattened list the restore path's consolidated selector indexes into) and look up the position of the just-selected `(groupIndex, trackIndex)` pair via `indexOfFirst`, persisting that instead of the raw `trackIndex`. Falls back to `null` (via `.takeIf { it >= 0 }`) in the unreachable case the pair isn't found, rather than reusing `-1` — which already has a distinct meaning ("subtitles explicitly disabled") on the subtitle path.
 
 ### 17. [SKIPPED — deprioritized] Favorites and favorite categories silently evict the oldest entry once the configurable cap is hit
 **File:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaRepository.kt` (`addFavorite()` lines 577-593, `addFavoriteCategory()` lines 652-667)
