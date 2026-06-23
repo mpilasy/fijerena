@@ -636,8 +636,18 @@ class StreamingPlaybackService : MediaSessionService() {
 
         trackSelector.parameters = parameters
 
-        // Save choice immediately
-        onPositionSaveListener?.invoke(player.currentPosition, player.duration, !player.isPlaying, trackIndex, null)
+        // Save choice immediately. Persist the consolidated (flattened, cross-group) index —
+        // not the raw in-group trackIndex — since selectAudioTrack(consolidatedIndex) is what
+        // resumes it on restore, and that overload indexes into getAudioTracks()'s flattened
+        // list, not per-group.
+        val consolidatedIndex = getAudioTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
+        onPositionSaveListener?.invoke(
+            player.currentPosition,
+            player.duration,
+            !player.isPlaying,
+            consolidatedIndex.takeIf { it >= 0 },
+            null,
+        )
     }
 
     fun selectSubtitleTrack(
@@ -667,8 +677,18 @@ class StreamingPlaybackService : MediaSessionService() {
 
         trackSelector.parameters = parameters
 
-        // Save choice immediately
-        onPositionSaveListener?.invoke(player.currentPosition, player.duration, !player.isPlaying, null, trackIndex)
+        // Save choice immediately. Persist the consolidated (flattened, cross-group) index —
+        // not the raw in-group trackIndex — since selectSubtitleTrack(consolidatedIndex) is
+        // what resumes it on restore, and that overload indexes into getSubtitleTracks()'s
+        // flattened list, not per-group.
+        val consolidatedIndex = getSubtitleTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
+        onPositionSaveListener?.invoke(
+            player.currentPosition,
+            player.duration,
+            !player.isPlaying,
+            null,
+            consolidatedIndex.takeIf { it >= 0 },
+        )
     }
 
     fun disableSubtitles() {
