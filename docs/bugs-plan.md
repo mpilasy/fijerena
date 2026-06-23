@@ -41,7 +41,7 @@ tier. Each entry below also has a **Complexity** rating; at a glance:
 | 14 | [FIXED] AppContainer caches stale MediaRepository after credential edit | Moderate |
 | 15 | JellyfinMediaProvider.resolvePlayableStream() has no auto-reconnect-on-401 | Easy–Moderate |
 | 16 | Saved audio/subtitle track index uses wrong indexing scheme on restore | Moderate |
-| 17 | Favorites/favorite-categories silently evict oldest entry at cap | Easy–Moderate |
+| 17 | [SKIPPED — deprioritized] Favorites/favorite-categories silently evict oldest entry at cap | Easy–Moderate |
 | 18 | [FIXED] Episode season auto-expand clobbers manual accordion toggle | Easy |
 | 19 | [FIXED] EpgViewModel.forceRefresh()'s isRefreshing flag decoupled from reload | Trivial |
 | 20 | [FIXED] XtreamSyncWorker never updates provider sync stats | Trivial |
@@ -54,8 +54,9 @@ turned out not to be reachable via the app's actual navigation/ViewModel
 architecture (see their entries below for the reachability analysis, so
 neither needs re-investigating cold later).
 #12, #13, #14, #18, #19, #20, #21 fixed (2026-06-22) — see their entries
-below for the resolution notes. #15, #16, #17 from the same sweep remain
-open.
+below for the resolution notes. #17 was deprioritized, not invalidated —
+unlike #4/#7, the bug itself is still confirmed real. #15 and #16 from the
+same sweep remain open.
 
 ## High impact
 
@@ -196,7 +197,7 @@ Two different indexing schemes exist for the same concept and the save/restore p
 **Fix:** persist the consolidated index (i.e., the track's position in `getAudioTracks()`/`getSubtitleTracks()`) at save time instead of the raw in-group index, so save and restore agree on one scheme — or have the restore path search by stable track identity (language/label) instead of by position.
 **Complexity:** Moderate — touches the save call sites, the `onPositionSaveListener` signature's meaning (not its shape), and needs the same fix applied symmetrically to both audio and subtitle paths.
 
-### 17. Favorites and favorite categories silently evict the oldest entry once the configurable cap is hit
+### 17. [SKIPPED — deprioritized] Favorites and favorite categories silently evict the oldest entry once the configurable cap is hit
 **File:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/MediaRepository.kt` (`addFavorite()` lines 577-593, `addFavoriteCategory()` lines 652-667)
 
 Both functions insert the new favorite at the front (`favorites.add(0, ...)`) then `.take(providerSettings.favoritesMaxSize)` — whatever falls past the cap (default 100, configurable 10-500 per provider settings) is gone, with no signal to the caller that an eviction happened. Both functions return a plain `Boolean` meaning only "was this newly added," and every UI call site (`MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt` on both platforms) is fire-and-forget — none of them check the return value or could show eviction feedback even if they wanted to. (Watch history's identical `.take()` pattern is fine by contrast — it's an LRU activity list by design, not a curated collection the user explicitly built.)
@@ -204,6 +205,7 @@ Both functions insert the new favorite at the front (`favorites.add(0, ...)`) th
 **Impact:** the user's oldest explicitly-curated favorite is silently deleted with zero indication anything was removed — surprising, silent data loss of a deliberate user action.
 **Fix:** simplest version — after the `.take()`, compare sizes; if an eviction occurred, surface a toast ("X removed from favorites to make room") or block the add entirely with an error instead of silently evicting.
 **Complexity:** Easy–Moderate — the detection itself is a one-line size comparison; the UX decision (toast vs. block vs. raise the default cap) needs a call, and threading a signal back to the fire-and-forget UI call sites needs minor plumbing.
+**Skipped:** deprioritized at the user's direction — not investigated as unreachable like #4/#7. The bug analysis above still stands as confirmed; this is just not being picked up right now.
 
 ### 18. [FIXED] Episode season auto-expand can clobber the user's manual accordion choice
 **File:** `tv/src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt` (`expandedSeasons` state lines 298-302, auto-expand `LaunchedEffect(seriesDetail)` lines 305-332, manual toggle `onToggle` lines 492-499+)
