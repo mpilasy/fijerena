@@ -20,3 +20,7 @@
 ## 2026-06-09 - [Avoid .flatMap with chunked database calls]
 **Learning:** Using `.chunked(N).flatMap { dao.get...() }` followed by `.groupBy` or `.associateBy` creates multiple intermediate list allocations per chunk, a final flattened list, and Map.Entry allocations which is inefficient when querying massive EPG index datasets.
 **Action:** Replace chunked `.flatMap` and subsequent grouping with standard `for` loops iterating over `.chunked(N)` results and directly populating a `mutableMapOf`.
+
+## 2024-06-24 - [Bulk Fetch vs Short-Circuiting Trade-offs]
+**Learning:** When trying to fix an N+1 query loop by switching to a bulk-fetch strategy (e.g. `getPlaybackPositionsSuspend`), I learned that the bulk strategy might actually introduce performance overhead if the original loop utilized short-circuit evaluation (`return@LaunchedEffect`). By pre-fetching a massive dataset (like an entire multi-season TV show's playback statuses) when the loop historically exited after the very first item, we trade network roundtrips for excessive memory allocation and database reads.
+**Action:** Before converting a loop to a bulk query, explicitly check for `break` or `return` statements inside the loop. If they exist, evaluate the statistical likelihood of an early exit. If early exits are common, consider alternative strategies like batching queries in small chunks rather than querying the entire dataset at once.
