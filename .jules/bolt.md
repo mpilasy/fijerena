@@ -20,3 +20,6 @@
 ## 2026-06-09 - [Avoid .flatMap with chunked database calls]
 **Learning:** Using `.chunked(N).flatMap { dao.get...() }` followed by `.groupBy` or `.associateBy` creates multiple intermediate list allocations per chunk, a final flattened list, and Map.Entry allocations which is inefficient when querying massive EPG index datasets.
 **Action:** Replace chunked `.flatMap` and subsequent grouping with standard `for` loops iterating over `.chunked(N)` results and directly populating a `mutableMapOf`.
+## 2024-06-29 - [Replace flatMap.toMap with direct map population]
+**Learning:** Using chained `.map { async { ... } }.flatMap { it.await() }.toMap()` on coroutine results creates multiple intermediate lists and pairs.
+**Action:** Replace `flatMap { it.await() }.toMap()` with an explicit `HashMap` allocation and iteration over the deferred results to directly populate the map, avoiding unnecessary GC overhead.
