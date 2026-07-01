@@ -176,21 +176,28 @@ class XtreamMediaProvider(
         seasons: Set<Int>,
     ): Map<Pair<Int, Int>, String> =
         coroutineScope {
-            seasons
-                .map { season ->
-                    async {
-                        runCatching { tmdb.getSeason(tmdbSeriesId, season) }
-                            .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
-                            .getOrNull()
-                            ?.episodes
-                            ?.mapNotNull { ep ->
-                                val overview = ep.overview?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                                val s = ep.seasonNumber ?: season
-                                (s to ep.episodeNumber) to overview
-                            }.orEmpty()
-                    }
-                }.flatMap { it.await() }
-                .toMap()
+            val jobs = seasons.map { season ->
+                async {
+                    val seasonRes = runCatching { tmdb.getSeason(tmdbSeriesId, season) }
+                        .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
+                        .getOrNull()
+                    season to seasonRes
+                }
+            }
+
+            // ⚡ Bolt: Performance Optimization
+            // Replaced chained .flatMap { it.await() }.toMap() which creates intermediate lists and pairs.
+            // Directly accumulating results into a pre-allocated HashMap.
+            val result = HashMap<Pair<Int, Int>, String>()
+            jobs.forEach { job ->
+                val (season, seasonData) = job.await()
+                seasonData?.episodes?.forEach { ep ->
+                    val overview = ep.overview?.takeIf { it.isNotBlank() } ?: return@forEach
+                    val s = ep.seasonNumber ?: season
+                    result[s to ep.episodeNumber] = overview
+                }
+            }
+            result
         }
 
     override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
