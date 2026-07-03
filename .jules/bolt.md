@@ -20,6 +20,6 @@
 ## 2026-06-09 - [Avoid .flatMap with chunked database calls]
 **Learning:** Using `.chunked(N).flatMap { dao.get...() }` followed by `.groupBy` or `.associateBy` creates multiple intermediate list allocations per chunk, a final flattened list, and Map.Entry allocations which is inefficient when querying massive EPG index datasets.
 **Action:** Replace chunked `.flatMap` and subsequent grouping with standard `for` loops iterating over `.chunked(N)` results and directly populating a `mutableMapOf`.
-## 2026-06-10 - [Optimize N+1 queries across matching screens in modular codebases]
-**Learning:** Found an N+1 query issue for playback positions in the `mobile` module's `EpisodeSelectionScreen` that had already been resolved in the `tv` module. When modular codebases duplicate similar features, optimizations applied to one module might be missed in the other.
-**Action:** When identifying a missing optimization in one part of the app, verify if equivalent screens in other modules (e.g. mobile vs. tv) require the same fix. Resolving N+1 query patterns using bulk endpoints minimizes background thread blocking and reduces latency significantly.
+## 2026-06-11 - [Jetpack Compose specific optimization check]
+**Learning:** Found an O(N) list search running on every recomposition inside a `TopAppBar` block (`state.categories.find { it.id == targetId }`). While standard UI frameworks might tolerate this for small lists, IPTV apps often load hundreds of categories, making `find` inside a recomposed block a serious bottleneck.
+**Action:** When filtering or finding items in potentially massive datasets (like EPG streams or categories) strictly within `@Composable` functions, always memoize collections into lookup maps using `remember(list) { list.associateBy { it.id } }` to enable O(1) performance.

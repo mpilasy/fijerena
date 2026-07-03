@@ -163,7 +163,9 @@ fun MobileCategoryListScreen(
                         val state = uiState
                         if (state is CategoryViewModel.UiState.Success) {
                             val selectedCatId = state.selectedCategoryId
-                            val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
+                            // O(1) lookup map memoized on state.categories to avoid O(N) list search on recomposition
+                            val categoryMap = remember(state.categories) { state.categories.associateBy { it.id } }
+                            val selectedCatName = selectedCatId?.let { categoryMap[it]?.name }
                             val hasEpgData =
                                 supportsNativeEpg ||
                                     epgIndexState is EpgIndexState.Indexed
