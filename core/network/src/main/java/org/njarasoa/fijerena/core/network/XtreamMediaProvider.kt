@@ -176,21 +176,27 @@ class XtreamMediaProvider(
         seasons: Set<Int>,
     ): Map<Pair<Int, Int>, String> =
         coroutineScope {
-            seasons
-                .map { season ->
-                    async {
-                        runCatching { tmdb.getSeason(tmdbSeriesId, season) }
-                            .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
-                            .getOrNull()
-                            ?.episodes
-                            ?.mapNotNull { ep ->
-                                val overview = ep.overview?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                                val s = ep.seasonNumber ?: season
-                                (s to ep.episodeNumber) to overview
-                            }.orEmpty()
+            // ⚡ Bolt: Iterate over deferred results directly to avoid .flatMap and intermediate Pair/list allocations
+            val deferredTasks = seasons.map { season ->
+                season to async {
+                    runCatching { tmdb.getSeason(tmdbSeriesId, season) }
+                        .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
+                        .getOrNull()?.episodes
+                }
+            }
+
+            val result = HashMap<Pair<Int, Int>, String>()
+            for ((season, deferred) in deferredTasks) {
+                val episodes = deferred.await() ?: continue
+                for (ep in episodes) {
+                    val overview = ep.overview
+                    if (!overview.isNullOrBlank()) {
+                        val s = ep.seasonNumber ?: season
+                        result[s to ep.episodeNumber] = overview
                     }
-                }.flatMap { it.await() }
-                .toMap()
+                }
+            }
+            result
         }
 
     override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
