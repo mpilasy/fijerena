@@ -176,21 +176,25 @@ class XtreamMediaProvider(
         seasons: Set<Int>,
     ): Map<Pair<Int, Int>, String> =
         coroutineScope {
-            seasons
-                .map { season ->
-                    async {
-                        runCatching { tmdb.getSeason(tmdbSeriesId, season) }
-                            .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
-                            .getOrNull()
-                            ?.episodes
-                            ?.mapNotNull { ep ->
-                                val overview = ep.overview?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                                val s = ep.seasonNumber ?: season
-                                (s to ep.episodeNumber) to overview
-                            }.orEmpty()
-                    }
-                }.flatMap { it.await() }
-                .toMap()
+            // ⚡ Bolt: Avoid chained flatMap/toMap to prevent intermediate list allocations
+            val deferreds = seasons.map { season ->
+                async {
+                    season to runCatching { tmdb.getSeason(tmdbSeriesId, season) }
+                        .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
+                        .getOrNull()
+                }
+            }
+
+            val overviews = HashMap<Pair<Int, Int>, String>()
+            for (deferred in deferreds) {
+                val (season, response) = deferred.await()
+                response?.episodes?.forEach { ep ->
+                    val overview = ep.overview?.takeIf { it.isNotBlank() } ?: return@forEach
+                    val s = ep.seasonNumber ?: season
+                    overviews[s to ep.episodeNumber] = overview
+                }
+            }
+            overviews
         }
 
     override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
