@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.R
@@ -23,7 +24,7 @@ fun LanguageSettingsCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { showLanguageDialog = true }
+                .clickable(role = Role.Button) { showLanguageDialog = true }
                 .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -81,7 +82,7 @@ private fun LanguageOption(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(role = Role.RadioButton) { onClick() }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

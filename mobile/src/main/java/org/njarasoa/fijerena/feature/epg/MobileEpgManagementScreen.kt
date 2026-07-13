@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -436,7 +437,7 @@ private fun EpgSourceCard(
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    GlassPanel(modifier = Modifier.clickable { onToggleSelection() }) {
+    GlassPanel(modifier = Modifier.clickable(role = Role.Checkbox) { onToggleSelection() }) {
         Column(modifier = Modifier.padding(CinemaSpacing.md)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

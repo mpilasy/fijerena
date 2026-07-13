@@ -54,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -226,7 +227,7 @@ fun MobileEpgBrowserScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier =
                                 Modifier
-                                    .clickable { viewModel.setSearchMode(mode) }
+                                    .clickable(role = Role.RadioButton) { viewModel.setSearchMode(mode) }
                                     .padding(end = Spacing.sm),
                         ) {
                             RadioButton(
@@ -249,7 +250,7 @@ fun MobileEpgBrowserScreen(
                 // Matched only checkbox
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { matchedOnly = !matchedOnly },
+                    modifier = Modifier.clickable(role = Role.Checkbox) { matchedOnly = !matchedOnly },
                 ) {
                     Checkbox(
                         checked = matchedOnly,
@@ -574,7 +575,7 @@ private fun MobileProgramCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded },
+                .clickable(role = Role.Button) { expanded = !expanded },
     ) {
         Column(
             modifier =
@@ -671,7 +672,7 @@ private fun MobileProgramCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .clickable { expanded = !expanded }
+                            .clickable(role = Role.Button) { expanded = !expanded }
                             .padding(top = CinemaSpacing.xs),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
