@@ -23,3 +23,6 @@
 ## 2026-06-10 - [Optimize N+1 queries across matching screens in modular codebases]
 **Learning:** Found an N+1 query issue for playback positions in the `mobile` module's `EpisodeSelectionScreen` that had already been resolved in the `tv` module. When modular codebases duplicate similar features, optimizations applied to one module might be missed in the other.
 **Action:** When identifying a missing optimization in one part of the app, verify if equivalent screens in other modules (e.g. mobile vs. tv) require the same fix. Resolving N+1 query patterns using bulk endpoints minimizes background thread blocking and reduces latency significantly.
+## 2026-06-12 - [Avoid .flatMap with asynchronous map results]
+**Learning:** Using `.flatMap { it.await() }.toMap()` on a mapped list of Deferreds creates unnecessary intermediate `ArrayList` and `Pair` objects. This is inefficient when combining parallel fetching logic like in TMDB overview resolution.
+**Action:** Replace `.flatMap` chained with terminal collection operations (like `.toMap()`) with a `for` loop that iterates over the resolved `await()` payloads and inserts elements directly into a pre-allocated `HashMap`.
