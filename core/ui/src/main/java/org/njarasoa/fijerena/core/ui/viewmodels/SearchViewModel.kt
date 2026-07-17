@@ -228,6 +228,7 @@ class SearchViewModel(
             _uiState.value = UiState.Loading()
 
             val realCategories = prefetchedCategories ?: emptyList()
+            val categoryNameById = realCategories.associate { it.category.id to it.category.name }
             val normalizedQuery = query.trim().lowercase()
             val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
 
@@ -257,7 +258,7 @@ class SearchViewModel(
                                         itemId = item.id,
                                         streamName = item.name,
                                         categoryId = item.categoryId,
-                                        categoryName = "",
+                                        categoryName = categoryNameById[item.categoryId] ?: "",
                                         contentType = type,
                                         thumbnailUrl = item.thumbnailUrl,
                                         mediaType = item.mediaType,
