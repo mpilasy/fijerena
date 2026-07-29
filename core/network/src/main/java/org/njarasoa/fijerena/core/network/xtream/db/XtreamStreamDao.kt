@@ -53,6 +53,18 @@ interface XtreamStreamDao {
         Int,
     >
 
+    @Query("SELECT streamId, streamIcon FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids)")
+    fun getIconsByIds(
+        providerId: Long,
+        type: String,
+        ids: List<Int>,
+    ): Map<
+        @MapColumn(columnName = "streamId")
+        Int,
+        @MapColumn(columnName = "streamIcon")
+        String?,
+    >
+
     @Query("DELETE FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids)")
     fun deleteByIds(
         providerId: Long,
