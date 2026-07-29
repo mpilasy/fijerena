@@ -229,7 +229,7 @@ class SearchViewModel(
 
             // The background prefetch may not have populated the category list yet (a search fired
             // right after the screen opened). Fall back to loading categories now — they're
-            // DB-cached and cheap — so category names never come up blank in results.
+            // DB-cached and cheap — so category matching never silently sees an empty list.
             val realCategories =
                 prefetchedCategories?.takeIf { it.isNotEmpty() }
                     ?: targetContentTypes.flatMap { type ->
@@ -238,7 +238,14 @@ class SearchViewModel(
                             ?.map { SearchableCategory(it, type) }
                             ?: emptyList()
                     }
-            val categoryNameById = realCategories.associate { it.category.id to it.category.name }
+            // Build the id→name map from the UNFILTERED category list: a stream can belong to a
+            // category hidden from browse by the provider's script/prefix filter (e.g. names with
+            // non-Latin unicode like "FR| PRIME ᴿᴬᵂ"), and we still want its name shown on results
+            // instead of a blank "Category:" line.
+            val categoryNameById =
+                targetContentTypes
+                    .flatMap { type -> repo.getCategories(type).getOrNull().orEmpty() }
+                    .associate { it.id to it.name }
             val normalizedQuery = query.trim().lowercase()
             val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
 
