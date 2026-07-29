@@ -227,7 +227,17 @@ class SearchViewModel(
 
             _uiState.value = UiState.Loading()
 
-            val realCategories = prefetchedCategories ?: emptyList()
+            // The background prefetch may not have populated the category list yet (a search fired
+            // right after the screen opened). Fall back to loading categories now — they're
+            // DB-cached and cheap — so category names never come up blank in results.
+            val realCategories =
+                prefetchedCategories?.takeIf { it.isNotEmpty() }
+                    ?: targetContentTypes.flatMap { type ->
+                        repo.getFilteredCategories(type).getOrNull()
+                            ?.filter { it.id != "last_watched" && !it.isVirtual }
+                            ?.map { SearchableCategory(it, type) }
+                            ?: emptyList()
+                    }
             val categoryNameById = realCategories.associate { it.category.id to it.category.name }
             val normalizedQuery = query.trim().lowercase()
             val parsedQuery = SearchUtils.parseQuery(normalizedQuery)
