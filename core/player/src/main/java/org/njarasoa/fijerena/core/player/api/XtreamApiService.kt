@@ -262,14 +262,24 @@ class XtreamApiService(
      * @return Series info with seasons and episodes
      * @throws Exception if the request fails
      */
-    suspend fun getSeriesInfo(seriesId: Int): SeriesInfo =
-        client
-            .get("player_api.php") {
+    suspend fun getSeriesInfo(seriesId: Int): SeriesInfo {
+        val response =
+            client.get("player_api.php") {
                 parameter("username", username)
                 parameter("password", password)
                 parameter("action", "get_series_info")
                 parameter("series_id", seriesId)
-            }.body()
+            }
+
+        val responseText = response.bodyAsText()
+
+        // Some providers return an empty array [] instead of an object when series info is unavailable
+        if (responseText.trim().startsWith("[")) {
+            return SeriesInfo()
+        }
+
+        return json.decodeFromString(responseText)
+    }
 
     /**
      * Fetches detailed information about a specific VOD movie.
