@@ -13,6 +13,7 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
@@ -407,7 +408,7 @@ class ProviderViewModel(
                             Result.success(Unit)
                         }
                     } catch (e: Exception) {
-                        Result.failure(e)
+                        Result.failure(Exception(friendlyErrorMessage(e, appSettings.isDevMode), e))
                     }
                 }
                 "REMOTE_M3U" -> {
@@ -438,7 +439,7 @@ class ProviderViewModel(
                             connection.disconnect()
                         }
                     } catch (e: Exception) {
-                        Result.failure(e)
+                        Result.failure(Exception(friendlyErrorMessage(e, appSettings.isDevMode), e))
                     }
                 }
                 "JELLYFIN", "SMB" -> {
@@ -461,7 +462,7 @@ class ProviderViewModel(
                         }
                         result
                     } catch (e: Exception) {
-                        Result.failure(e)
+                        Result.failure(Exception(friendlyErrorMessage(e, appSettings.isDevMode), e))
                     }
                 }
                 else -> Result.success(Unit)
