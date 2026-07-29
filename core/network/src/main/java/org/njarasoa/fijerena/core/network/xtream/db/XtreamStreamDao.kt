@@ -53,7 +53,7 @@ interface XtreamStreamDao {
         Int,
     >
 
-    @Query("SELECT streamId, streamIcon FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids)")
+    @Query("SELECT streamId, streamIcon FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids) AND streamIcon IS NOT NULL")
     fun getIconsByIds(
         providerId: Long,
         type: String,
@@ -62,7 +62,7 @@ interface XtreamStreamDao {
         @MapColumn(columnName = "streamId")
         Int,
         @MapColumn(columnName = "streamIcon")
-        String?,
+        String,
     >
 
     @Query("DELETE FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids)")
