@@ -868,21 +868,55 @@ class MediaRepository(
         if (usesServerUserData) {
             return provider?.getFavoriteItems(contentType)?.getOrNull() ?: emptyList()
         }
-        return getFavoritesForContentType(contentType)
+        return rehydrateThumbnails(getFavoritesForContentType(contentType), contentType)
     }
 
     suspend fun getInProgressItemsSuspend(contentType: String): List<MediaItem> {
         if (usesServerUserData) {
             return provider?.getResumeItems(contentType)?.getOrNull() ?: emptyList()
         }
-        return getInProgressItems(contentType)
+        return rehydrateThumbnails(getInProgressItems(contentType), contentType)
     }
 
     suspend fun getWatchHistoryForContentTypeSuspend(contentType: String): List<MediaItem> {
         if (usesServerUserData) {
             return provider?.getRecentlyPlayed(contentType)?.getOrNull() ?: emptyList()
         }
-        return getWatchHistoryForContentType(contentType)
+        return rehydrateThumbnails(getWatchHistoryForContentType(contentType), contentType)
+    }
+
+    /**
+     * Locally-stored favorites / watch-history keep only id+name+category, not the poster URL.
+     * Look the image back up from the synced Xtream DB (the same source the browse grid uses:
+     * `streamIcon` for movies/live, `cover` for series) so these tiles show art instead of the
+     * letter fallback. Items not yet in the cache are left with a null thumbnail, as before.
+     */
+    private suspend fun rehydrateThumbnails(
+        items: List<MediaItem>,
+        contentType: String,
+    ): List<MediaItem> {
+        val missing = items.filter { it.thumbnailUrl.isNullOrBlank() }
+        if (missing.isEmpty()) return items
+        val ids = missing.mapNotNull { it.id.toIntOrNull() }
+        if (ids.isEmpty()) return items
+
+        val icons: Map<Int, String?> =
+            withContext(Dispatchers.IO) {
+                val db = XtreamDatabase.getInstance(context)
+                when (contentType) {
+                    ContentType.MOVIES -> db.streamDao().getIconsByIds(providerId, XtreamStreamEntity.TYPE_VOD, ids)
+                    ContentType.LIVE_TV -> db.streamDao().getIconsByIds(providerId, XtreamStreamEntity.TYPE_LIVE, ids)
+                    ContentType.TV_SHOWS -> db.seriesDao().getCoversByIds(providerId, ids)
+                    else -> emptyMap()
+                }
+            }
+        if (icons.isEmpty()) return items
+
+        return items.map { item ->
+            if (!item.thumbnailUrl.isNullOrBlank()) return@map item
+            val url = item.id.toIntOrNull()?.let { icons[it] }
+            if (url.isNullOrBlank()) item else item.copy(thumbnailUrl = url)
+        }
     }
 
     suspend fun getPlaybackPositionSuspend(
