@@ -5,11 +5,7 @@ import android.util.Log
 import androidx.work.*
 import kotlinx.coroutines.*
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
 import java.util.*
@@ -91,35 +87,12 @@ class ProviderSyncManager private constructor(private val context: Context) {
             val password = providerRepo.getPassword(provider.id)
             if (password != null) {
                 val startTime = System.currentTimeMillis()
-                var syncError: String? = null
-                try {
-                    val mediaProvider = MediaProviderFactory.create(provider, context, password)
-                    if (mediaProvider is XtreamMediaProvider) {
-                        if (!mediaProvider.isConnected()) {
-                            mediaProvider.connect()
-                        }
-                        if (mediaProvider.isConnected()) {
-                            mediaProvider.syncAll()
-                            
-                            // Proactively warm the cache for the provider that was just synced
-                            val streams = XtreamDatabase.getInstance(context)
-                                .streamDao()
-                                .getAllStreams(provider.id, org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity.TYPE_LIVE)
-                            EpgChannelMatcher.warmCache(provider.id, streams)
-                            
-                            Log.d(TAG, "Sync completed for provider: ${provider.name}")
-                        } else {
-                            syncError = "Failed to connect"
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error syncing provider ${provider.name}", e)
-                    syncError = e.message ?: "Unknown error"
-                } finally {
-                    val endTime = System.currentTimeMillis()
-                    val duration = endTime - startTime
-                    providerRepo.updateSyncStats(provider.id, endTime, duration, syncError)
+                val outcome = ProviderSyncRunner.syncProvider(context, provider, password)
+                if (outcome is ProviderSyncRunner.Outcome.Success) {
+                    Log.d(TAG, "Sync completed for provider: ${provider.name}")
                 }
+                val endTime = System.currentTimeMillis()
+                providerRepo.updateSyncStats(provider.id, endTime, endTime - startTime, outcome.errorOrNull())
             }
         }
     }
@@ -134,6 +107,7 @@ class ProviderSyncManager private constructor(private val context: Context) {
         val request = PeriodicWorkRequestBuilder<XtreamSyncWorker>(24, TimeUnit.HOURS)
             .setConstraints(constraints)
             .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
             .build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
@@ -189,35 +163,12 @@ class ProviderSyncManager private constructor(private val context: Context) {
             val password = providerRepo.getPassword(providerId) ?: return@launch
 
             val startTime = System.currentTimeMillis()
-            var syncError: String? = null
-            try {
-                val mediaProvider = MediaProviderFactory.create(provider, context, password)
-                if (mediaProvider is XtreamMediaProvider) {
-                    if (!mediaProvider.isConnected()) {
-                        mediaProvider.connect()
-                    }
-                    if (mediaProvider.isConnected()) {
-                        mediaProvider.syncAll()
-                        
-                        // Proactively warm the cache for the provider that was just synced
-                        val streams = XtreamDatabase.getInstance(context)
-                            .streamDao()
-                            .getAllStreams(provider.id, org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity.TYPE_LIVE)
-                        org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher.warmCache(provider.id, streams)
-                        
-                        Log.d(TAG, "Manual sync completed for provider: ${provider.name}")
-                    } else {
-                        syncError = "Failed to connect"
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error during manual sync for ${provider.name}", e)
-                syncError = e.message ?: "Unknown error"
-            } finally {
-                val endTime = System.currentTimeMillis()
-                val duration = endTime - startTime
-                providerRepo.updateSyncStats(providerId, endTime, duration, syncError)
+            val outcome = ProviderSyncRunner.syncProvider(context, provider, password)
+            if (outcome is ProviderSyncRunner.Outcome.Success) {
+                Log.d(TAG, "Manual sync completed for provider: ${provider.name}")
             }
+            val endTime = System.currentTimeMillis()
+            providerRepo.updateSyncStats(providerId, endTime, endTime - startTime, outcome.errorOrNull())
         }
     }
 }
