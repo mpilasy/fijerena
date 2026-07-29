@@ -42,6 +42,17 @@ interface XtreamSeriesDao {
         Int,
     >
 
+    @Query("SELECT seriesId, cover FROM xtream_series WHERE providerId = :providerId AND seriesId IN (:ids)")
+    fun getCoversByIds(
+        providerId: Long,
+        ids: List<Int>,
+    ): Map<
+        @MapColumn(columnName = "seriesId")
+        Int,
+        @MapColumn(columnName = "cover")
+        String?,
+    >
+
     @Query("DELETE FROM xtream_series WHERE providerId = :providerId AND seriesId IN (:ids)")
     fun deleteByIds(
         providerId: Long,
