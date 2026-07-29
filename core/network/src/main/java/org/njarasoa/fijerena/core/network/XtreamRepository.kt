@@ -156,7 +156,7 @@ class XtreamRepository(
 
     fun getSeriesCached(categoryId: String): List<XtreamStream>? = contentManager.getSeriesCached(categoryId)
 
-    fun searchByFts(contentType: String, ftsQuery: String): List<XtreamStream> =
+    suspend fun searchByFts(contentType: String, ftsQuery: String): List<XtreamStream> =
         when (contentType) {
             ContentType.LIVE_TV -> contentManager.searchStreams(XtreamStreamEntity.TYPE_LIVE, ftsQuery)
             ContentType.MOVIES -> contentManager.searchStreams(XtreamStreamEntity.TYPE_VOD, ftsQuery)

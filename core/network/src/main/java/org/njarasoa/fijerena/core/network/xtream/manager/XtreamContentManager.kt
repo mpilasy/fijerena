@@ -831,11 +831,15 @@ class XtreamContentManager(
             youtubeTrailer = it.youtubeTrailer,
         )
 
-    fun searchStreams(type: String, query: String): List<XtreamStream> =
-        streamDao.searchByFts(providerId, type, query, cleanQueryForLike(query)).map { mapStreamEntityToModel(it) }
+    suspend fun searchStreams(type: String, query: String): List<XtreamStream> =
+        withContext(Dispatchers.IO) {
+            streamDao.searchByFts(providerId, type, query, cleanQueryForLike(query)).map { mapStreamEntityToModel(it) }
+        }
 
-    fun searchSeries(query: String): List<XtreamStream> =
-        seriesDao.searchByFts(providerId, query, cleanQueryForLike(query)).map { mapSeriesEntityToStream(it) }
+    suspend fun searchSeries(query: String): List<XtreamStream> =
+        withContext(Dispatchers.IO) {
+            seriesDao.searchByFts(providerId, query, cleanQueryForLike(query)).map { mapSeriesEntityToStream(it) }
+        }
 
     private fun cleanQueryForLike(query: String): String {
         val clean = query.replace("*", "").trim().replace("\\s+".toRegex(), "%")

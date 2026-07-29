@@ -32,6 +32,7 @@ import kotlinx.coroutines.sync.withPermit
 import okhttp3.Request
 import org.njarasoa.fijerena.core.network.utils.await
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
@@ -931,6 +932,9 @@ class EpgFileManager private constructor(
         val tmpFile = File(context.cacheDir, "xmltv_source_${source.id}_tmp")
         var downloadedBytes = 0L
         var lastError: String? = null
+        // Raw throwable retained so we can persist a friendly message while keeping the raw
+        // `lastError` string for the HTTP-4xx retry-classification check below.
+        var lastException: Throwable? = null
         val downloadStartMs = System.currentTimeMillis()
 
         try {
@@ -988,6 +992,7 @@ class EpgFileManager private constructor(
                     }
                 } catch (e: java.net.UnknownHostException) {
                     lastError = "DNS lookup failed for ${e.message ?: "host"}"
+                    lastException = e
                     Log.w(TAG, "EPG download DNS failure (attempt $attempt): $lastError", e)
                     if (attempt < 5) {
                         val backoff = (5000L * (1 shl (attempt - 1))).coerceAtMost(60000L)
@@ -996,6 +1001,7 @@ class EpgFileManager private constructor(
                     }
                 } catch (e: Exception) {
                     lastError = e.message ?: "unknown error"
+                    lastException = e
                     Log.w(TAG, "EPG download error (attempt $attempt): $lastError", e)
                     if (attempt < 5) {
                         val backoff = (5000L * (1 shl (attempt - 1))).coerceAtMost(60000L)
@@ -1006,7 +1012,8 @@ class EpgFileManager private constructor(
             }
 
             if (lastError != null) {
-                sourceDao.markError(source.id, lastError)
+                val display = lastException?.let { friendlyErrorMessage(it, appSettings.isDevMode) } ?: lastError
+                sourceDao.markError(source.id, display)
                 tmpFile.delete()
                 return null
             }
@@ -1014,7 +1021,7 @@ class EpgFileManager private constructor(
             return DownloadedSource(source, label, tmpFile, downloadedBytes, System.currentTimeMillis() - downloadStartMs)
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading source: $label", e)
-            sourceDao.markError(source.id, e.message ?: "Unknown error")
+            sourceDao.markError(source.id, friendlyErrorMessage(e, appSettings.isDevMode))
             tmpFile.delete()
             return null
         }
@@ -1091,8 +1098,9 @@ class EpgFileManager private constructor(
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error ingesting source: $label", e)
-            sourceDao.markError(source.id, e.message ?: "Unknown error")
-            return SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = e.message ?: "Unknown error")
+            val display = friendlyErrorMessage(e, appSettings.isDevMode)
+            sourceDao.markError(source.id, display)
+            return SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = display)
         } finally {
             downloaded.tmpFile.delete()
         }
