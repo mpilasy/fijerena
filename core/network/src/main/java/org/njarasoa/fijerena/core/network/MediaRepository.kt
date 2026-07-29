@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -281,10 +283,12 @@ class MediaRepository(
 
         try {
             val streams =
-                XtreamDatabase
-                    .getInstance(context)
-                    .streamDao()
-                    .getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE)
+                withContext(Dispatchers.IO) {
+                    XtreamDatabase
+                        .getInstance(context)
+                        .streamDao()
+                        .getAllStreams(providerId, XtreamStreamEntity.TYPE_LIVE)
+                }
             if (streams.isEmpty()) return
 
             val streamIds = streams.map { it.streamId.toString() }
