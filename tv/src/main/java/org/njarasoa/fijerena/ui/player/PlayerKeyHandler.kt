@@ -16,7 +16,6 @@ fun handlePlayerKeyEvent(
     viewModel: PlaybackViewModel,
     playbackState: PlaybackState,
     currentMetadata: PlayerMetadata,
-    onBack: () -> Unit,
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
 ): Boolean {
@@ -145,34 +144,10 @@ fun handlePlayerKeyEvent(
                 false
             }
         }
-        Key.Back -> {
-            // Close any visible overlays first, then exit
-            when {
-                state.scrubPositionMs != null -> {
-                    state.scrubPositionMs = null
-                    true
-                }
-                state.showCategoryOverlay -> {
-                    state.showCategoryOverlay = false
-                    true
-                }
-                state.showLastWatchedOverlay -> {
-                    state.showLastWatchedOverlay = false
-                    true
-                }
-                state.showStats || state.showControls || state.showStreamInfo -> {
-                    state.showStats = false
-                    state.showControls = false
-                    state.showStreamInfo = false
-                    true
-                }
-                else -> {
-                    viewModel.stop()
-                    onBack()
-                    true
-                }
-            }
-        }
+        // Key.Back is intentionally NOT handled here — see the BackHandler in PlayerScreen.kt.
+        // A raw onKeyEvent consume doesn't stop the separate OnBackPressedDispatcher chain, so
+        // handling it in both places raced an outer BackHandler (e.g. LiveTvSplitLayout's) into
+        // seeing already-mutated state and double-popping past it.
         Key(AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) -> {
             if (!currentMetadata.isLive) {
                 when (playbackState) {

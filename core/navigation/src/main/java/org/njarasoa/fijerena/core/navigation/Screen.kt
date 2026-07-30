@@ -67,11 +67,24 @@ sealed interface Screen {
      * Shows available categories for the selected content type.
      *
      * @param contentType The type of content to show categories for (LIVE_TV, MOVIES, TV_SHOWS)
+     * @param initialStreamId For Live TV: seed the preview pane (TV) or docked mini-player
+     * (mobile) with this stream immediately on entry (e.g. arriving from EPG/catalog search or
+     * the per-category EPG guide) instead of waiting for D-pad focus to settle (TV) or a tap
+     * (mobile). Null means no specific stream was picked to get here.
+     * @param showPreviewPane TV only: whether this entry shows the preview-pane split layout
+     * (video + list) or the classic categories-left/streams-right layout also used by Movies/TV
+     * Shows. False is used for a silently-pushed entry underneath a preview entry, so Back from
+     * the preview lands on a real "browse" screen instead of exiting Live TV outright. Ignored
+     * for Movies/TV Shows (always classic layout) and by mobile, whose docked mini-player is an
+     * overlay on the same list screen rather than a replacement destination, so it has no
+     * equivalent "Back exits entirely" problem to solve.
      */
     @Serializable
     data class CategoryList(
         val contentType: String,
         val initialCategoryId: String? = null,
+        val initialStreamId: String? = null,
+        val showPreviewPane: Boolean = true,
     ) : Screen
 
     /**

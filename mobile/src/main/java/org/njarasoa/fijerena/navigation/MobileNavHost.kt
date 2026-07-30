@@ -179,8 +179,16 @@ fun MobileNavHost(
             composable<Screen.EpgBrowser> {
                 MobileEpgBrowserScreen(
                     onBack = { navController.navigateUp() },
-                    onNavigateToPlayer = { streamId, streamName, categoryId ->
-                        navController.navigate(Screen.Player(streamId, streamName, categoryId, ContentType.LIVE_TV))
+                    onNavigateToPlayer = { streamId, _, categoryId ->
+                        // Land on the docked mini-player, not full-screen — same parity as every
+                        // other Live TV entry point.
+                        navController.navigate(
+                            Screen.CategoryList(
+                                contentType = ContentType.LIVE_TV,
+                                initialCategoryId = categoryId,
+                                initialStreamId = streamId,
+                            ),
+                        )
                     },
                 )
             }
@@ -191,6 +199,7 @@ fun MobileNavHost(
                 MobileCategoryListScreen(
                     contentType = categoryListScreen.contentType,
                     initialCategoryId = categoryListScreen.initialCategoryId,
+                    initialStreamId = categoryListScreen.initialStreamId,
                     onStreamSelected = { itemId, itemName, categoryId, contentType, providerData ->
                         when (categoryListScreen.contentType) {
                             ContentType.TV_SHOWS -> {
@@ -231,7 +240,11 @@ fun MobileNavHost(
                                 )
                             }
                             else -> {
-                                // For Live TV, go directly to player
+                                // Live TV: unreachable in practice for a genuine stream tap —
+                                // MobileCategoryListScreen docks it locally instead of calling
+                                // this callback (mirrors TV's LiveTvChannelList.onStreamPromote
+                                // interception). Kept as a fallback for the "not resolvable from
+                                // the current list" case, same as TV.
                                 navController.navigate(Screen.Player(itemId, itemName, categoryId, contentType))
                             }
                         }
@@ -407,12 +420,12 @@ fun MobileNavHost(
                                     ),
                                 )
                             else ->
+                                // Live TV: land on the docked mini-player, not full-screen.
                                 navController.navigate(
-                                    Screen.Player(
-                                        streamId = itemId,
-                                        streamName = itemName,
-                                        categoryId = categoryId,
+                                    Screen.CategoryList(
                                         contentType = contentType,
+                                        initialCategoryId = categoryId,
+                                        initialStreamId = itemId,
                                     ),
                                 )
                         }
@@ -495,23 +508,22 @@ fun MobileNavHost(
                 MobileEpgGuideScreen(
                     categoryId = epgScreen.categoryId,
                     categoryName = epgScreen.categoryName,
-                    onProgramSelected = { program, channel ->
+                    onProgramSelected = { _, channel ->
+                        // Land on the docked mini-player, not full-screen.
                         navController.navigate(
-                            Screen.Player(
-                                streamId = channel.id,
-                                streamName = channel.name,
-                                categoryId = channel.categoryId,
+                            Screen.CategoryList(
                                 contentType = ContentType.LIVE_TV,
+                                initialCategoryId = channel.categoryId,
+                                initialStreamId = channel.id,
                             ),
                         )
                     },
-                    onChannelSelected = { streamId, streamName, categoryId ->
+                    onChannelSelected = { streamId, _, categoryId ->
                         navController.navigate(
-                            Screen.Player(
-                                streamId = streamId,
-                                streamName = streamName,
-                                categoryId = categoryId,
+                            Screen.CategoryList(
                                 contentType = ContentType.LIVE_TV,
+                                initialCategoryId = categoryId,
+                                initialStreamId = streamId,
                             ),
                         )
                     },

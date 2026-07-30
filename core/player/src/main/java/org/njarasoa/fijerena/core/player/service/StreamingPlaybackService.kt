@@ -423,6 +423,12 @@ class StreamingPlaybackService : MediaSessionService() {
                 return
             }
 
+        // Fully release the outgoing renderer/decoder session before starting the next one.
+        // setMediaSource() alone replaces the playlist but can reuse the existing renderer
+        // rather than releasing it, which on this emulator's decoder leaves the old codec
+        // session still delivering in-flight frames to its Surface after the new one starts —
+        // rendering two channels overlapping. An explicit stop() forces a clean teardown first.
+        player.stop()
         player.setMediaSource(mediaSource)
         if (startPositionMs > 0) {
             player.seekTo(startPositionMs)
@@ -458,6 +464,11 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamRetryCount.value++
         val delayMs = LIVE_RETRY_BASE_DELAY_MS * liveRetryCount
         Log.i(TAG, "Live stream retry $liveRetryCount/$MAX_LIVE_RETRIES in ${delayMs}ms")
+
+        // updatePlaybackState() already pushed the player's raw STATE_IDLE through before
+        // onPlayerError ran, so without this the screen goes silently blank for the whole
+        // retry delay — indistinguishable from a dead app. Show buffering instead.
+        _playbackState.value = PlaybackState.Buffering
 
         val retryRunnable =
             Runnable {

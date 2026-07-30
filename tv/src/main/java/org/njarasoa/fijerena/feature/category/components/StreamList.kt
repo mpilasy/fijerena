@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
@@ -83,6 +84,7 @@ internal fun StreamList(
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onStreamLongPress: (MediaItem) -> Unit = {},
+    onStreamFocused: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -247,6 +249,7 @@ internal fun StreamList(
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId, item.providerData) },
                                 onLongPress = { onStreamLongPress(item) },
+                                onFocused = { onStreamFocused(item) },
                                 // Only the last-played item gets a focus requester for auto-scroll
                                 focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null,
                             )
@@ -267,6 +270,7 @@ private fun StreamItem(
     nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
+    onFocused: () -> Unit = {},
     focusRequester: FocusRequester? = null,
 ) {
     val scale = LocalUiScale.current
@@ -285,6 +289,7 @@ private fun StreamItem(
             Modifier
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
+                .onFocusChanged { if (it.isFocused) onFocused() }
                 .tvLongPress(onLongPress)
                 .then(
                     if (focusRequester != null) {

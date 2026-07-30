@@ -1,6 +1,10 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.FavoriteStream
@@ -28,6 +32,22 @@ class XtreamUserDataManager(
             encodeDefaults = true
         }
 
+    // Dedicated single-thread dispatcher for disk writes. Every write below uses commit()
+    // (synchronous, blocks only this background thread) instead of apply(). apply() queues
+    // the write into the process-wide QueuedWork backlog and returns immediately; any later,
+    // unrelated Service dispatch (e.g. startService() -> ActivityThread.handleServiceArgs)
+    // synchronously drains that entire backlog on the MAIN thread before running, which is a
+    // well-documented ANR trap when writes pile up faster than they drain. commit() waits for
+    // its own write to finish before returning, so it never leaves anything in that backlog.
+    // In-memory caches (favoritesCacheMap, cachedWatchHistory, ...) are updated synchronously
+    // on the caller's thread before the write is dispatched, so reads stay consistent regardless
+    // of when the background commit actually lands.
+    private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
+    private fun commitAsync(action: SharedPreferences.Editor.() -> Unit) {
+        writeScope.launch { sharedPreferences.edit(commit = true, action = action) }
+    }
+
     private var cachedWatchHistory: List<WatchedStream>? = null
 
     // O(1) lookup map for getPlaybackPosition — keyed by (streamId, contentType)
@@ -53,7 +73,7 @@ class XtreamUserDataManager(
         streamName: String,
         contentType: String,
     ) {
-        sharedPreferences.edit {
+        commitAsync {
             // Save content-type specific last played
             when (contentType) {
                 "LIVE_TV" -> {
@@ -145,7 +165,7 @@ class XtreamUserDataManager(
 
         // Save to cache
         val historyJson = json.encodeToString(trimmedHistory)
-        sharedPreferences.edit { putString(KEY_WATCH_HISTORY, historyJson) }
+        commitAsync { putString(KEY_WATCH_HISTORY, historyJson) }
         cachedWatchHistory = trimmedHistory
         watchHistoryLookup = null
     }
@@ -176,7 +196,7 @@ class XtreamUserDataManager(
      * Clear watch history
      */
     fun clearWatchHistory() {
-        sharedPreferences.edit { remove(KEY_WATCH_HISTORY) }
+        commitAsync { remove(KEY_WATCH_HISTORY) }
         cachedWatchHistory = emptyList()
         watchHistoryLookup = null
     }
@@ -208,7 +228,7 @@ class XtreamUserDataManager(
         favoriteIdSet = null
 
         // Save
-        sharedPreferences.edit { putString(KEY_FAVORITES, json.encodeToString(trimmed)) }
+        commitAsync { putString(KEY_FAVORITES, json.encodeToString(trimmed)) }
         return true
     }
 
@@ -226,7 +246,7 @@ class XtreamUserDataManager(
             // Update cache
             favoritesCacheMap[providerId] = favorites
             favoriteIdSet = null
-            sharedPreferences.edit { putString(KEY_FAVORITES, json.encodeToString(favorites)) }
+            commitAsync { putString(KEY_FAVORITES, json.encodeToString(favorites)) }
         }
         return removed
     }
@@ -270,7 +290,7 @@ class XtreamUserDataManager(
      * Clear all favorites
      */
     fun clearFavorites() {
-        sharedPreferences.edit { remove(KEY_FAVORITES) }
+        commitAsync { remove(KEY_FAVORITES) }
         favoritesCacheMap[providerId] = emptyList()
         favoriteIdSet = null
     }
@@ -355,7 +375,7 @@ class XtreamUserDataManager(
         if (index != -1) {
             val item = history[index]
             history[index] = item.copy(playbackPosition = 0L, isCompleted = false)
-            sharedPreferences.edit { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
+            commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
             cachedWatchHistory = history
             watchHistoryLookup = null
         }

@@ -100,6 +100,9 @@ class PlaybackViewModel(
     }
 
     private fun startService() {
+        // See serviceStartRequested doc. compareAndSet ensures only the first caller across all
+        // PlaybackViewModel instances actually issues the (ANR-risky) startService() call.
+        if (!serviceStartRequested.compareAndSet(false, true)) return
         val intent = Intent(context, StreamingPlaybackService::class.java)
         context.startService(intent)
     }
@@ -445,5 +448,16 @@ class PlaybackViewModel(
         }
         StreamingPlaybackService.getInstance()?.stop()
         serviceConnection.disconnect()
+    }
+
+    companion object {
+        // Guards startService() against being called more than once. getInstance() alone isn't
+        // enough: it only becomes non-null after the Service's onCreate() completes, so two
+        // PlaybackViewModel instances created close together (e.g. an embedded preview and the
+        // full-screen player) can both observe null and both call startService(). Every such call
+        // delivers a fresh onStartCommand, and Android synchronously flushes all pending
+        // SharedPreferences writes on the main thread before dispatching it — a real ANR risk.
+        // Set synchronously at call time, unlike the instance reference.
+        private val serviceStartRequested = java.util.concurrent.atomic.AtomicBoolean(false)
     }
 }

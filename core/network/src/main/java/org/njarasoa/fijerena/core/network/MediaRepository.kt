@@ -2,7 +2,10 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -113,6 +116,21 @@ class MediaRepository(
     private val watchHistoryWriteThread = android.os.HandlerThread("WatchHistoryWriter").apply { start() }
     private val watchHistoryWriteHandler = android.os.Handler(watchHistoryWriteThread.looper)
     private val watchHistoryWriteRunnable = Runnable { flushWatchHistory() }
+
+    // Dedicated single-thread dispatcher for prefs writes below. commit() (not apply()) blocks
+    // only this background thread until its own write finishes, so it never leaves anything
+    // pending in the process-wide QueuedWork backlog. apply() returns immediately but registers
+    // the write there; a later, unrelated Service dispatch (startService() -> ActivityThread.
+    // handleServiceArgs) synchronously drains that whole backlog on the MAIN thread before
+    // running — a well-known ANR trap when writes pile up faster than they drain. In-memory
+    // caches are updated synchronously on the caller's thread before the write is dispatched,
+    // so reads stay consistent regardless of when the background commit actually lands.
+    private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
+    private fun SharedPreferences.commitAsync(action: SharedPreferences.Editor.() -> Unit) {
+        val prefs = this
+        writeScope.launch { prefs.edit(commit = true, action = action) }
+    }
 
     companion object {
         private const val KEY_WATCH_HISTORY = "watch_history_v2"
@@ -320,7 +338,7 @@ class MediaRepository(
                 providerId = providerId,
             )
 
-            prefs.edit { putLong(KEY_XTREAM_EPG_INGESTED_AT, System.currentTimeMillis()) }
+            prefs.commitAsync { putLong(KEY_XTREAM_EPG_INGESTED_AT, System.currentTimeMillis()) }
         } catch (_: Exception) {
             // Non-critical — silently fail
         }
@@ -371,7 +389,7 @@ class MediaRepository(
         seriesId: String? = null,
         seriesName: String? = null,
     ) {
-        cache.edit {
+        cache.commitAsync {
             when (contentType) {
                 ContentType.LIVE_TV -> {
                     putString(KEY_LAST_LIVE_CATEGORY, categoryId)
@@ -437,7 +455,7 @@ class MediaRepository(
         updated.add(0, RecentCategory(categoryId, categoryName, contentType, System.currentTimeMillis()))
         // Keep max 20 entries
         val trimmed = updated.take(MAX_RECENT_CATEGORIES)
-        cache.edit { putString(key, json.encodeToString(trimmed)) }
+        cache.commitAsync { putString(key, json.encodeToString(trimmed)) }
         cachedRecentCategories[contentType] = trimmed
     }
 
@@ -562,7 +580,7 @@ class MediaRepository(
         synchronized(watchHistoryLock) {
             if (!watchHistoryDirty) return
             cachedWatchHistory?.let { history ->
-                cache.edit { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
+                cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
             }
             watchHistoryDirty = false
         }
@@ -574,7 +592,7 @@ class MediaRepository(
             cachedWatchHistory = emptyList()
             watchHistoryLookup = null
             watchHistoryDirty = false
-            cache.edit { remove(KEY_WATCH_HISTORY) }
+            cache.commitAsync { remove(KEY_WATCH_HISTORY) }
         }
     }
 
@@ -590,7 +608,7 @@ class MediaRepository(
         }
         favorites.add(0, FavoriteItem(itemId, itemName, categoryId, contentType))
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
-        cache.edit { putString(KEY_FAVORITES, json.encodeToString(trimmed)) }
+        cache.commitAsync { putString(KEY_FAVORITES, json.encodeToString(trimmed)) }
         cachedFavorites = trimmed
         favoriteIdSet = null
         return true
@@ -603,7 +621,7 @@ class MediaRepository(
         val favorites = getFavoriteItems().toMutableList()
         val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
         if (!removed) return false
-        cache.edit { putString(KEY_FAVORITES, json.encodeToString(favorites)) }
+        cache.commitAsync { putString(KEY_FAVORITES, json.encodeToString(favorites)) }
         cachedFavorites = favorites
         favoriteIdSet = null
         return true
@@ -648,7 +666,7 @@ class MediaRepository(
     fun clearFavorites() {
         cachedFavorites = emptyList()
         favoriteIdSet = null
-        cache.edit { remove(KEY_FAVORITES) }
+        cache.commitAsync { remove(KEY_FAVORITES) }
     }
 
     // --- Favorite Categories ---
@@ -664,7 +682,7 @@ class MediaRepository(
         }
         favorites.add(0, FavoriteCategoryItem(categoryId, categoryName, contentType))
         val trimmed = favorites.take(providerSettings.favoritesMaxSize)
-        cache.edit { putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(trimmed)) }
+        cache.commitAsync { putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(trimmed)) }
         cachedFavoriteCategories = trimmed
         favoriteCategoryIdSet = null
         return true
@@ -677,7 +695,7 @@ class MediaRepository(
         val favorites = getFavoriteCategoryItems().toMutableList()
         val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
         if (!removed) return false
-        cache.edit { putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(favorites)) }
+        cache.commitAsync { putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(favorites)) }
         cachedFavoriteCategories = favorites
         favoriteCategoryIdSet = null
         return true
@@ -721,7 +739,7 @@ class MediaRepository(
     fun clearFavoriteCategories() {
         cachedFavoriteCategories = emptyList()
         favoriteCategoryIdSet = null
-        cache.edit { remove(KEY_FAVORITE_CATEGORIES) }
+        cache.commitAsync { remove(KEY_FAVORITE_CATEGORIES) }
     }
 
     fun savePlaybackPosition(
@@ -977,7 +995,7 @@ class MediaRepository(
                 cachedWatchHistory = history
                 watchHistoryLookup = null
 
-                cache.edit { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
+                cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
             }
         }
     }
@@ -1001,7 +1019,7 @@ class MediaRepository(
     // --- Cache management ---
 
     fun clearCache() {
-        cache.edit { clear() }
+        cache.commitAsync { clear() }
         payloadSizes.clear()
         fetchTimes.clear()
         cachedFavorites = null

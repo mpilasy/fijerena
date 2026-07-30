@@ -28,10 +28,10 @@ object MobileDimensions {
     val strokeWidth: Dp = 2.dp
 
     // Poster / Thumbnail
-    val posterWidth: Dp = 100.dp
-    val posterHeight: Dp = 56.dp
+    val posterWidth: Dp = 72.dp
+    val posterHeight: Dp = 40.dp
     val posterHeightLarge: Dp = 200.dp
-    val streamCardHeight: Dp = 80.dp
+    val streamCardHeight: Dp = 64.dp
 
     // EPG
     val epgProgramMinWidth: Dp = 140.dp
