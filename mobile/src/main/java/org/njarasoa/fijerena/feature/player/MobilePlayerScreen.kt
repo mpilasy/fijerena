@@ -22,21 +22,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -47,6 +44,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
@@ -69,6 +67,15 @@ import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
  */
 private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
 
+/**
+ * Nav-route wrapper: owns ViewModel creation (fresh [StreamLoaderViewModel] per back-stack entry,
+ * Activity-scoped [PlaybackViewModel] shared with MainActivity for PiP) and delegates to
+ * [MobilePlayerContent]. Used by every nav destination that jumps straight to full-screen
+ * playback (Movies, TV Shows/episodes, and any Live TV entry not going through the docked
+ * mini-player). The Live TV docked screen (`MobileCategoryListScreen`) calls
+ * [MobilePlayerContent] directly with its own dock-owned ViewModel pair instead, so promoting to
+ * full-screen never creates a second engine connection.
+ */
 @Composable
 fun MobilePlayerScreen(
     streamId: String,
@@ -99,15 +106,61 @@ fun MobilePlayerScreen(
                 ),
         ),
 ) {
+    val activity = LocalContext.current as? Activity
+
+    // Use activity-scoped ViewModel so it's shared with MainActivity for PiP updates
+    val activityScopedViewModel: PlaybackViewModel =
+        viewModel(
+            viewModelStoreOwner = (activity as? ViewModelStoreOwner) ?: LocalLifecycleOwner.current as ViewModelStoreOwner
+        )
+
+    // This is the standalone full-screen route (Movies, TV Shows, or Live TV reached without
+    // the docked mini-player) — unlike the dock's promoted view, actually leaving this screen
+    // means the watch session is over, so finalize + stop here. Mirrors TV's
+    // TvPlayerScreen.kt, which owns this same responsibility instead of PlayerScreen.kt.
+    DisposableEffect(Unit) {
+        onDispose {
+            if (!activityScopedViewModel.isInPictureInPictureMode.value) {
+                finalizeSession(activityScopedViewModel.playbackState.value, loaderViewModel)
+                activityScopedViewModel.stop()
+            }
+        }
+    }
+
+    MobilePlayerContent(
+        viewModel = activityScopedViewModel,
+        loaderViewModel = loaderViewModel,
+        contentType = contentType,
+        onBack = {
+            finalizeSession(activityScopedViewModel.playbackState.value, loaderViewModel)
+            activityScopedViewModel.stop()
+            onBack()
+        },
+    )
+}
+
+/**
+ * The actual full-screen player UI (touch controls, gestures, overlays, PiP wiring). Takes its
+ * [PlaybackViewModel]/[StreamLoaderViewModel] as params rather than owning creation, so callers
+ * can share a single engine connection across a preview/dock and full-screen — mirrors TV's
+ * `PlayerScreen`/`TvPlayerScreen` split (`tv/.../ui/player/PlayerScreen.kt`).
+ */
+@Composable
+fun MobilePlayerContent(
+    viewModel: PlaybackViewModel,
+    loaderViewModel: StreamLoaderViewModel,
+    contentType: String,
+    onBack: () -> Unit,
+    // When provided (by MobileCategoryListScreen, as a movableContentOf node), rendered instead
+    // of a fresh EmbeddedPlayerSurface — keeps the same underlying Android View/Surface alive
+    // across the dock<->full-screen promotion instead of swapping to a new one. Null for the
+    // standalone (MobilePlayerScreen) route, which has no dock to persist a surface from.
+    videoSurface: (@Composable () -> Unit)? = null,
+) {
     val context = LocalContext.current
     val activity = context as? Activity
     val appSettings = remember { AppSettings(context.applicationContext) }
     val lifecycleOwner = LocalLifecycleOwner.current
-
-    // Use activity-scoped ViewModel so it's shared with MainActivity for PiP updates
-    val viewModel: PlaybackViewModel = viewModel(
-        viewModelStoreOwner = (activity as? ViewModelStoreOwner) ?: LocalLifecycleOwner.current as ViewModelStoreOwner
-    )
 
     // Observe app focus/lifecycle to pause on background and stop after timeout
     DisposableEffect(lifecycleOwner) {
@@ -129,18 +182,19 @@ fun MobilePlayerScreen(
         }
     }
 
-    // Force sensor-based rotation while in the player screen so the video
-    // rotates when the device rotates, even if system auto-rotate is off.
+    // Force landscape while in the full-screen player, even though the rest of the app is
+    // portrait-locked and even if system auto-rotate is off. SENSOR_LANDSCAPE (not plain
+    // LANDSCAPE) still follows the sensor between landscape-left/landscape-right, it just never
+    // flips to portrait.
     DisposableEffect(activity) {
         val originalOrientation = activity?.requestedOrientation ?: android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR
+        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         onDispose {
             activity?.requestedOrientation = originalOrientation
         }
     }
 
     val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
-    val currentStreamState by rememberUpdatedState(streamState)
 
     // UI State
     var showChannelToast by remember { mutableStateOf(false) }
@@ -279,33 +333,42 @@ fun MobilePlayerScreen(
     LaunchedEffect(currentStreamId) {
         val state = streamState
         if (state is StreamLoaderViewModel.StreamState.Success) {
-            // Show toast if channel changed (implicit logic: if ID changed)
-            showChannelToast = true
+            // Promoting an already-playing docked preview to full screen re-mounts this
+            // composable (and thus re-runs this effect) even though nothing actually changed —
+            // skip re-issuing playStream() so promoting doesn't restart the stream from scratch.
+            val alreadyPlayingThis =
+                viewModel.currentMetadata.value.streamUrl == state.streamUrl &&
+                    viewModel.playbackState.value !is PlaybackState.Idle &&
+                    viewModel.playbackState.value !is PlaybackState.Error
+            if (!alreadyPlayingThis) {
+                // Show toast if channel changed (implicit logic: if ID changed)
+                showChannelToast = true
 
-            val metadata =
-                PlayerMetadata(
-                    title = state.streamName,
-                    channelName = appSettings.providerName,
-                    description = state.description,
-                    streamUrl = state.streamUrl,
-                    isLive = state.isLive,
-                    headers = state.streamHeaders,
-                )
-            viewModel.playStream(metadata, state.resumePosition)
+                val metadata =
+                    PlayerMetadata(
+                        title = state.streamName,
+                        channelName = appSettings.providerName,
+                        description = state.description,
+                        streamUrl = state.streamUrl,
+                        isLive = state.isLive,
+                        headers = state.streamHeaders,
+                    )
+                viewModel.playStream(metadata, state.resumePosition)
 
-            // Restore saved track settings when player is ready
-            if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
-                snapshotFlow { viewModel.playbackState.value }
-                    .filter { it is PlaybackState.Playing || it is PlaybackState.Paused }
-                    .first() // Wait for first ready state
+                // Restore saved track settings when player is ready
+                if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
+                    snapshotFlow { viewModel.playbackState.value }
+                        .filter { it is PlaybackState.Playing || it is PlaybackState.Paused }
+                        .first() // Wait for first ready state
 
-                val service = StreamingPlaybackService.getInstance()
-                if (service != null) {
-                    state.savedAudioTrackIndex?.let { audioIdx ->
-                        service.selectAudioTrack(audioIdx)
-                    }
-                    state.savedSubtitleTrackIndex?.let { subIdx ->
-                        service.selectSubtitleTrack(subIdx)
+                    val service = StreamingPlaybackService.getInstance()
+                    if (service != null) {
+                        state.savedAudioTrackIndex?.let { audioIdx ->
+                            service.selectAudioTrack(audioIdx)
+                        }
+                        state.savedSubtitleTrackIndex?.let { subIdx ->
+                            service.selectSubtitleTrack(subIdx)
+                        }
                     }
                 }
             }
@@ -405,37 +468,24 @@ fun MobilePlayerScreen(
                             }
                         ),
             ) {
-                // Video surface
-                val playerView =
-                    remember {
-                        PlayerView(context).apply {
-                            useController = false
-                            keepScreenOn = true
-                        }
-                    }
+                // Video surface — shared implementation with TV's full-screen/preview surfaces
+                // (core/ui/.../EmbeddedPlayerSurface.kt), bound to the same StreamingPlaybackService.
+                if (videoSurface != null) {
+                    videoSurface()
+                } else {
+                    EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
+                }
 
-                AndroidView(
-                    factory = { playerView },
-                    modifier = Modifier.fillMaxSize(),
-                )
-
-                // Bind player to view
+                // Reset PiP auto-enter when leaving the full-screen player. Finalizing the
+                // session and stopping playback is NOT done here — this composable is shared
+                // between the standalone full-screen route (which does own that) and the Live
+                // TV dock's promoted view (where "leaving" just means shrinking back to the
+                // dock, and the stream must keep playing). See MobilePlayerScreen's own
+                // DisposableEffect for the standalone case.
                 DisposableEffect(Unit) {
-                    val service = StreamingPlaybackService.getInstance()
-                    playerView.player = service?.getPlayer()
-
                     onDispose {
                         if (viewModel.isInPictureInPictureMode.value) return@onDispose
 
-                        val currentState = currentStreamState
-                        if (currentState is StreamLoaderViewModel.StreamState.Success) {
-                            finalizeSession(viewModel.playbackState.value, loaderViewModel)
-                        }
-                        // Stop playback when leaving the player screen
-                        viewModel.stop()
-                        playerView.player = null
-
-                        // Reset PiP auto-enter
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                             activity?.setPictureInPictureParams(
                                 android.app.PictureInPictureParams.Builder()
@@ -497,13 +547,9 @@ fun MobilePlayerScreen(
                         },
                         onFastForward = if (!isLiveContent) ({ viewModel.seekRelative(300_000L) }) else null,
                         onRewind = if (!isLiveContent) ({ viewModel.seekRelative(-60_000L) }) else null,
-                        onBack = {
-                            // Finalize session before stopping
-                            finalizeSession(viewModel.playbackState.value, loaderViewModel)
-
-                            viewModel.stop()
-                            onBack()
-                        },
+                        // Finalizing the session and stopping playback is the caller's call —
+                        // see the DisposableEffect note above. Forward as-is.
+                        onBack = onBack,
                         onStats = { showStats = true },
                         onAudioTrack = { showAudioTrackSelector = true },
                         onSubtitle = { showSubtitleSelector = true },

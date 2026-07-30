@@ -1,9 +1,12 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.asString
@@ -32,6 +35,17 @@ class XtreamContentManager(
     private val streamDao = database.streamDao()
     private val seriesDao = database.seriesDao()
     private val episodeDao = database.episodeDao()
+
+    // See MediaRepository's identical writeScope/commitAsync for the full rationale: commit()
+    // on a background thread never leaves an entry in QueuedWork, unlike apply(). These freshness
+    // timestamps are written on the same cold-entry path (category/stream load) as several
+    // Media3-triggered startForegroundService() dispatches, so keeping this backlog at zero here
+    // matters as much as in MediaRepository.
+    private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
+    private fun commitAsync(action: SharedPreferences.Editor.() -> Unit) {
+        writeScope.launch { sharedPreferences.edit(commit = true, action = action) }
+    }
 
     companion object {
         private const val TAG = "XtreamContentManager"
@@ -407,7 +421,7 @@ class XtreamContentManager(
                                 else -> ""
                             }
                         if (key.isNotEmpty()) {
-                            sharedPreferences.edit { putLong(key, System.currentTimeMillis()) }
+                            commitAsync { putLong(key, System.currentTimeMillis()) }
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing data", e)
@@ -511,7 +525,7 @@ class XtreamContentManager(
 
                             streamDao.rebuildFts()
 
-                            sharedPreferences.edit { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + type, System.currentTimeMillis()) }
+                            commitAsync { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + type, System.currentTimeMillis()) }
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing streams", e)
@@ -612,7 +626,7 @@ class XtreamContentManager(
 
                             seriesDao.rebuildFts()
 
-                            sharedPreferences.edit { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES", System.currentTimeMillis()) }
+                            commitAsync { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES", System.currentTimeMillis()) }
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing series", e)

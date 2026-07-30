@@ -576,4 +576,14 @@ class CategoryViewModel(
             loadStreamsInternal(categoryId, isRetryEnabled = false)
         }
     }
+
+    /**
+     * Watch history fetch that bypasses [uiState] entirely — for callers (the Live TV preview
+     * pane) that need the history list independent of whatever category is actually selected/
+     * browsed, without disturbing that selection or its own streams list.
+     */
+    suspend fun getLastWatchedSnapshot(): List<MediaItem> {
+        if (!::repository.isInitialized) return emptyList()
+        return repository.getWatchHistoryForContentTypeSuspend(contentType)
+    }
 }

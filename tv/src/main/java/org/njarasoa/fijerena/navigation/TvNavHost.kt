@@ -162,8 +162,23 @@ fun TvNavHost(
                     BackHandler {}
                     ContentTypeSelectionScreen(
                         onContentTypeSelected = { contentType ->
-                            navController.navigate(Screen.CategoryList(contentType.name)) {
-                                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                            if (contentType.name == ContentType.LIVE_TV) {
+                                // Live TV never lands full-screen or bare — silently push the
+                                // classic categories/streams browse screen first (so Back from the
+                                // preview below lands on a real screen, same as Movies/TV Shows),
+                                // then push the preview on top of it.
+                                navController.navigate(
+                                    Screen.CategoryList(contentType.name, showPreviewPane = false),
+                                ) {
+                                    popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                                }
+                                navController.navigate(
+                                    Screen.CategoryList(contentType.name, showPreviewPane = true),
+                                )
+                            } else {
+                                navController.navigate(Screen.CategoryList(contentType.name)) {
+                                    popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                                }
                             }
                         },
                         onSettings = {
@@ -182,8 +197,17 @@ fun TvNavHost(
                 composable<Screen.EpgBrowser> {
                     EpgBrowserScreen(
                         onBack = { navController.navigateUp() },
-                        onNavigateToPlayer = { streamId, streamName, categoryId ->
-                            navController.navigate(Screen.Player(streamId, streamName, categoryId, ContentType.LIVE_TV))
+                        onNavigateToPlayer = { streamId, _, categoryId ->
+                            // Land on the preview pane, not full-screen — see LiveTvSplitLayout.
+                            // Pushing (not popUpTo) a new CategoryList entry means Back from the
+                            // preview pops back here for free via normal nav-stack semantics.
+                            navController.navigate(
+                                Screen.CategoryList(
+                                    contentType = ContentType.LIVE_TV,
+                                    initialCategoryId = categoryId,
+                                    initialStreamId = streamId,
+                                ),
+                            )
                         },
                     )
                 }
@@ -207,6 +231,8 @@ fun TvNavHost(
                     CategoryGridScreen(
                         contentType = categoryListScreen.contentType,
                         initialCategoryId = categoryListScreen.initialCategoryId,
+                        initialStreamId = categoryListScreen.initialStreamId,
+                        showPreviewPane = categoryListScreen.showPreviewPane,
                         onStreamSelected = { itemId, streamName, categoryId, providerData ->
                             when (categoryListScreen.contentType) {
                                 ContentType.TV_SHOWS -> {
@@ -247,13 +273,15 @@ fun TvNavHost(
                                     )
                                 }
                                 else -> {
-                                    // For Live TV, go directly to player
+                                    // Live TV: land on the preview pane, not full-screen. Reachable
+                                    // from the classic browse screen too (showPreviewPane=false,
+                                    // e.g. the one silently pushed under the main-menu preview) —
+                                    // same rule applies there as everywhere else.
                                     navController.navigate(
-                                        Screen.Player(
-                                            streamId = itemId,
-                                            streamName = streamName,
-                                            categoryId = categoryId,
+                                        Screen.CategoryList(
                                             contentType = categoryListScreen.contentType,
+                                            initialCategoryId = categoryId,
+                                            initialStreamId = itemId,
                                         ),
                                     )
                                 }
@@ -272,10 +300,11 @@ fun TvNavHost(
                             )
                         },
                         onBack = {
-                            // Go back to content type selection to access Movies/TV Shows
-                            navController.navigate(Screen.ContentTypeSelection) {
-                                popUpTo(Screen.CategoryList(ContentType.LIVE_TV)) { inclusive = true }
-                            }
+                            // A single pop always lands on whatever pushed this entry — the
+                            // content-type screen normally, or the silently-pushed bare browse
+                            // screen underneath the Live TV main-menu preview, or the search/EPG
+                            // screen underneath a search/EPG-originated preview.
+                            navController.popBackStack()
                         },
                     )
                 }
@@ -305,12 +334,14 @@ fun TvNavHost(
                                         ),
                                     )
                                 else ->
+                                    // Live TV: land on the preview pane, not full-screen. Pushing
+                                    // (not popUpTo) means Back from the preview pops back to these
+                                    // search results for free via normal nav-stack semantics.
                                     navController.navigate(
-                                        Screen.Player(
-                                            streamId = itemId,
-                                            streamName = streamName,
-                                            categoryId = categoryId,
+                                        Screen.CategoryList(
                                             contentType = streamContentType,
+                                            initialCategoryId = categoryId,
+                                            initialStreamId = itemId,
                                         ),
                                     )
                             }
@@ -386,25 +417,23 @@ fun TvNavHost(
                     EpgGuideScreen(
                         categoryId = epgScreen.categoryId,
                         categoryName = epgScreen.categoryName,
-                        onProgramSelected = { program, channel ->
-                            // Navigate to player for the selected program
+                        onProgramSelected = { _, channel ->
+                            // Land on the preview pane, not full-screen. Pushing (not popUpTo)
+                            // means Back from the preview pops back to the EPG guide for free.
                             navController.navigate(
-                                Screen.Player(
-                                    streamId = channel.id,
-                                    streamName = channel.name,
-                                    categoryId = channel.categoryId,
+                                Screen.CategoryList(
                                     contentType = ContentType.LIVE_TV,
+                                    initialCategoryId = channel.categoryId,
+                                    initialStreamId = channel.id,
                                 ),
                             )
                         },
-                        onChannelSelected = { streamId, streamName, categoryId ->
-                            // Navigate to player for the selected channel
+                        onChannelSelected = { streamId, _, categoryId ->
                             navController.navigate(
-                                Screen.Player(
-                                    streamId = streamId,
-                                    streamName = streamName,
-                                    categoryId = categoryId,
+                                Screen.CategoryList(
                                     contentType = ContentType.LIVE_TV,
+                                    initialCategoryId = categoryId,
+                                    initialStreamId = streamId,
                                 ),
                             )
                         },

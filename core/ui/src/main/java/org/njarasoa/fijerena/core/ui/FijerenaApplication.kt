@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.core.ui
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
+import android.os.StrictMode
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -14,6 +16,18 @@ class FijerenaApplication :
     SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
+        // Debug-only: log any main-thread disk/DB access (with a stack trace) to pinpoint UI-thread
+        // jank/ANRs. Gated on the debuggable flag so it never runs in release.
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            StrictMode.setThreadPolicy(
+                StrictMode.ThreadPolicy.Builder()
+                    .detectDiskReads()
+                    .detectDiskWrites()
+                    .detectCustomSlowCalls()
+                    .penaltyLog()
+                    .build(),
+            )
+        }
         // Initialize network module for robust DNS resolution
         NetworkModule.init(this)
         // Initialize EPG management

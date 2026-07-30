@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.ErrorScreen
+import org.njarasoa.fijerena.feature.category.components.LiveTvSplitLayout
 import org.njarasoa.fijerena.feature.category.components.LoadingScreen
 import org.njarasoa.fijerena.feature.category.components.TwoColumnLayout
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -48,6 +49,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 fun CategoryGridScreen(
     contentType: String,
     initialCategoryId: String? = null,
+    initialStreamId: String? = null,
+    showPreviewPane: Boolean = true,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
@@ -103,6 +106,8 @@ fun CategoryGridScreen(
         onEpgClick = onEpgClick,
         onBack = onBack,
         contentType = contentType,
+        initialStreamId = initialStreamId,
+        showPreviewPane = showPreviewPane,
     )
 }
 
@@ -122,6 +127,8 @@ private fun CategoryGridContent(
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
     onBack: () -> Unit,
     contentType: String,
+    initialStreamId: String? = null,
+    showPreviewPane: Boolean = true,
 ) {
     val scale = LocalUiScale.current
 
@@ -145,6 +152,32 @@ private fun CategoryGridContent(
                 is CategoryViewModel.UiState.Success -> {
                     val immutableCategories = remember(state.categories) { ImmutableCategoryList(state.categories) }
                     val immutableStreams = remember(state.streams) { state.streams?.let { ImmutableMediaList(it) } }
+                    if (contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV && showPreviewPane) {
+                        val ctx = LocalContext.current
+                        val devMode = remember { org.njarasoa.fijerena.core.network.AppSettings(ctx.applicationContext).isDevMode }
+                        LiveTvSplitLayout(
+                            categoryViewModel = catViewModel,
+                            categories = immutableCategories,
+                            selectedCategoryId = state.selectedCategoryId,
+                            streams = immutableStreams,
+                            streamsLoading = state.streamsLoading,
+                            categoriesRefreshing = state.categoriesRefreshing,
+                            lastPlayedItemId = state.lastPlayedItemId,
+                            nowPlaying = nowPlaying,
+                            contentType = contentType,
+                            isDevMode = devMode,
+                            favoriteIds = favoriteIds,
+                            favoriteCategoryIds = favoriteCategoryIds,
+                            watchProgress = watchProgress,
+                            onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
+                            onStreamSelected = onStreamSelected,
+                            onRefreshCategories = { catViewModel.refreshCategories() },
+                            onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
+                            onBack = onBack,
+                            initialStreamId = initialStreamId,
+                        )
+                        return@Box
+                    }
                     TwoColumnLayout(
                         categoryViewModel = catViewModel,
                         categories = immutableCategories,

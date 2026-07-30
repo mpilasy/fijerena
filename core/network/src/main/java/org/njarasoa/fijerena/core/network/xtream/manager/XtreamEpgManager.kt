@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -30,6 +31,16 @@ class XtreamEpgManager(
             ignoreUnknownKeys = true
             encodeDefaults = true
         }
+
+    // See MediaRepository's identical writeScope/commitAsync for the full rationale. This one
+    // matters more than most: getEpgForStreams() fans out up to 10 concurrent cache writes per
+    // category load, which can otherwise pile up a real QueuedWork backlog right as Media3's
+    // startForegroundService() dispatches are firing for the same channel-load.
+    private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
+    private fun commitAsync(action: SharedPreferences.Editor.() -> Unit) {
+        writeScope.launch { sharedPreferences.edit(commit = true, action = action) }
+    }
 
     /** Whether caching is enabled for this provider */
     private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
@@ -146,7 +157,7 @@ class XtreamEpgManager(
         epg: EpgResponse,
     ) {
         if (!cachingEnabled) return
-        sharedPreferences.edit {
+        commitAsync {
             putString(KEY_EPG_PREFIX + streamId, json.encodeToString(epg))
                 .putLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, System.currentTimeMillis())
         }
@@ -156,7 +167,7 @@ class XtreamEpgManager(
      * Clear EPG cache for a specific stream
      */
     fun clearEpgCache(streamId: Int) {
-        sharedPreferences.edit {
+        commitAsync {
             remove(KEY_EPG_PREFIX + streamId)
                 .remove(KEY_EPG_TIMESTAMP_PREFIX + streamId)
         }
@@ -166,7 +177,7 @@ class XtreamEpgManager(
      * Clear all EPG cache
      */
     fun clearAllEpgCache() {
-        sharedPreferences.edit {
+        commitAsync {
             sharedPreferences.all.keys
                 .filter { it.startsWith(KEY_EPG_PREFIX) || it.startsWith(KEY_EPG_TIMESTAMP_PREFIX) }
                 .forEach { remove(it) }

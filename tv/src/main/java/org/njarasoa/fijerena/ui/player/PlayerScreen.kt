@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.ui.player
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,11 +32,8 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -47,6 +45,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
@@ -78,6 +77,11 @@ fun PlayerScreen(
     categoryStreams: ImmutableMediaList = ImmutableMediaList(),
     lastWatchedStreams: ImmutableMediaList = ImmutableMediaList(),
     onStreamSelected: ((MediaItem) -> Unit)? = null,
+    // When provided (by LiveTvSplitLayout, as a movableContentOf node), rendered instead of a
+    // fresh EmbeddedPlayerSurface — keeps the same underlying Android View/Surface alive across
+    // the preview<->full-screen promotion instead of swapping to a new one. Null for the
+    // standalone (TvPlayerScreen) route, which has no preview to persist a surface from.
+    videoSurface: (@Composable () -> Unit)? = null,
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
@@ -90,6 +94,32 @@ fun PlayerScreen(
     val context = LocalContext.current
 
     val state = rememberPlayerScreenState(context, currentMetadata)
+
+    // Proper BackHandler (not the onKeyEvent below) so this composes correctly whether
+    // PlayerScreen is reached via nav (Screen.Player) or embedded full-screen inside
+    // LiveTvSplitLayout's own BackHandler. A raw onKeyEvent consuming KEYCODE_BACK does not
+    // stop the OnBackPressedDispatcher chain, so an outer BackHandler still fires for the same
+    // press and can race a state read here into a double pop — same class of bug fixed earlier
+    // for the CategoryList/ContentTypeSelection transition. BackHandler's registration is
+    // properly stacked instead (innermost/most-recently-composed wins), so only one handler
+    // ever runs per press.
+    BackHandler {
+        when {
+            state.scrubPositionMs != null -> state.scrubPositionMs = null
+            state.showCategoryOverlay -> state.showCategoryOverlay = false
+            state.showLastWatchedOverlay -> state.showLastWatchedOverlay = false
+            state.showStats || state.showControls || state.showStreamInfo -> {
+                state.showStats = false
+                state.showControls = false
+                state.showStreamInfo = false
+            }
+            // Whether "back" should stop playback is the caller's call, not this shared
+            // composable's — the standalone route's onBack stops (TvPlayerScreen.kt), while
+            // LiveTvSplitLayout's promoted view just wants to demote back to the dock without
+            // interrupting playback.
+            else -> onBack()
+        }
+    }
 
     PlayerEffects(
         state = state,
@@ -133,39 +163,18 @@ fun PlayerScreen(
                         viewModel = viewModel,
                         playbackState = playbackState,
                         currentMetadata = currentMetadata,
-                        onBack = onBack,
                         onNextChannel = onNextChannel,
                         onPreviousChannel = onPreviousChannel,
                     )
                 },
     ) {
-        // Use metadata title as key to identify stream changes without recreating view
-        val streamKey = currentMetadata.title + currentMetadata.streamUrl
-
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    useController = false
-                    keepScreenOn = true
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    // CRITICAL: Block all native focus
-                    isFocusable = false
-                    isFocusableInTouchMode = false
-                    descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
-                }
-            },
-            modifier = Modifier.fillMaxSize(),
-            update = { view ->
-                view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                // Bind player directly from service for zero-lag visibility
-                val service = StreamingPlaybackService.getInstance()
-                val player = service?.getPlayer()
-                if (view.player != player) {
-                    view.player = player
-                }
-            },
-        )
+        // Shared surface bound to the single playback engine (also used by the embedded
+        // Live TV preview pane / mobile dock).
+        if (videoSurface != null) {
+            videoSurface()
+        } else {
+            EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
+        }
 
         // Loading/Error overlays (always show, except Idle which is handled silently)
         Box(
