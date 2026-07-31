@@ -3,7 +3,9 @@ import android.content.Context
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
@@ -207,15 +209,18 @@ class ProviderRepository(
 
         // Recompute category-filter exclusion flags immediately, purely locally (no network) —
         // lets a filter change take effect right away instead of waiting for the next sync.
+        // Runs on IO: the DAO calls inside recompute() are synchronous, non-suspend Room queries.
         if (entity.type == "XTREAM") {
-            val database = org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase.getInstance(context)
-            org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
-                database.categoryDao(),
-                database.streamDao(),
-                database.seriesDao(),
-                providerId,
-                settings.categoryFilters,
-            )
+            withContext(Dispatchers.IO) {
+                val database = org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase.getInstance(context)
+                org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
+                    database.categoryDao(),
+                    database.streamDao(),
+                    database.seriesDao(),
+                    providerId,
+                    settings.categoryFilters,
+                )
+            }
         }
     }
 

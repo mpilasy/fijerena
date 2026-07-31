@@ -225,12 +225,20 @@
     <string name="provider_filter_mode_label">Filter mode:</string>
     <string name="provider_filter_exclude">Exclude</string>
     <string name="provider_filter_include">Include Only</string>
-    <string name="provider_filter_exclude_desc">Categories starting with these prefixes will be hidden</string>
-    <string name="provider_filter_include_desc">Only categories starting with these prefixes will be shown</string>
-    <string name="provider_filter_prefixes_label">Prefixes (comma-separated)</string>
+    <string name="provider_filter_exclude_desc">Categories matching these rules will be hidden</string>
+    <string name="provider_filter_include_desc">Only categories matching these rules will be shown</string>
+    <string name="provider_filter_add_rules_label">Add rules (comma-separated)</string>
     <string name="provider_filter_prefixes_placeholder">Adult, XXX, 18+</string>
     <string name="provider_filter_script_title">Language Script Filter:</string>
     <string name="provider_filter_script_desc">Show only categories in selected scripts (none = show all)</string>
+    <string name="provider_filter_choose_match_type">Choose match type</string>
+    <string name="provider_filter_match_starts">Starts</string>
+    <string name="provider_filter_match_ends">Ends</string>
+    <string name="provider_filter_match_contains">Contains</string>
+    <string name="provider_filter_match_exact">Exact</string>
+    <string name="provider_filter_edit_rule">Edit rule</string>
+    <string name="provider_filter_delete_rule">Delete rule</string>
+    <string name="provider_filter_include_empty_warning">No rules configured — INCLUDE mode will hide every category</string>
 
     <!-- Provider Setup Extras -->
     <string name="provider_url_placeholder_xtream">http://provider.example.com</string>

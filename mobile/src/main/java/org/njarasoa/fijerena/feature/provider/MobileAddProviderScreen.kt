@@ -14,6 +14,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -51,6 +53,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
@@ -62,9 +66,11 @@ import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.CategoryMatcher
 import org.njarasoa.fijerena.core.network.provider.FilterMode
+import org.njarasoa.fijerena.core.network.provider.MatchType
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.ScriptType
+import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
@@ -652,8 +658,23 @@ fun MobileAddProviderScreen(
             // Category Filter Dialog
             if (showCategoryFilterDialog) {
                 var filterMode by remember { mutableStateOf(categoryFilters.mode) }
-                var prefixesText by remember { mutableStateOf(categoryFilters.rules.joinToString(", ") { it.value }) }
+                var rules by remember { mutableStateOf(categoryFilters.rules) }
+                var editingIndex by remember { mutableStateOf<Int?>(null) }
+                var editingValue by remember { mutableStateOf("") }
+                var editingMatchType by remember { mutableStateOf(MatchType.STARTS_WITH) }
+                var addRulesText by remember { mutableStateOf("") }
+                var pendingAddValues by remember { mutableStateOf<List<String>?>(null) }
+                var pendingAddMatchType by remember { mutableStateOf(MatchType.STARTS_WITH) }
                 var selectedScripts by remember { mutableStateOf(categoryFilters.allowedScripts) }
+
+                @Composable
+                fun matchTypeLabel(type: MatchType): String =
+                    when (type) {
+                        MatchType.STARTS_WITH -> stringResource(R.string.provider_filter_match_starts)
+                        MatchType.ENDS_WITH -> stringResource(R.string.provider_filter_match_ends)
+                        MatchType.CONTAINS -> stringResource(R.string.provider_filter_match_contains)
+                        MatchType.EXACT -> stringResource(R.string.provider_filter_match_exact)
+                    }
 
                 AlertDialog(
                     onDismissRequest = { showCategoryFilterDialog = false },
@@ -686,15 +707,130 @@ fun MobileAddProviderScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                             )
+                            if (filterMode == FilterMode.INCLUDE && rules.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.provider_filter_include_empty_warning),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+
+                            rules.forEachIndexed { index, rule ->
+                                if (editingIndex == index) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                        OutlinedTextField(
+                                            value = editingValue,
+                                            onValueChange = { editingValue = it },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                        )
+                                        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                            MatchType.entries.forEach { type ->
+                                                FilterChip(
+                                                    selected = editingMatchType == type,
+                                                    onClick = { editingMatchType = type },
+                                                    label = { Text(matchTypeLabel(type)) },
+                                                )
+                                            }
+                                        }
+                                        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                            Button(onClick = {
+                                                val trimmed = editingValue.trim()
+                                                if (trimmed.isNotEmpty()) {
+                                                    rules =
+                                                        rules.toMutableList().also {
+                                                            it[index] = CategoryMatcher(trimmed, editingMatchType)
+                                                        }
+                                                }
+                                                editingIndex = null
+                                            }) { Text(stringResource(R.string.common_ok)) }
+                                            OutlinedButton(onClick = { editingIndex = null }) {
+                                                Text(stringResource(R.string.common_cancel))
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = matchTypeLabel(rule.matchType),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                            modifier = Modifier.width(64.dp),
+                                        )
+                                        Text(
+                                            text = rule.value,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        IconButton(onClick = {
+                                            editingIndex = index
+                                            editingValue = rule.value
+                                            editingMatchType = rule.matchType
+                                        }) {
+                                            Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.provider_filter_edit_rule))
+                                        }
+                                        IconButton(onClick = {
+                                            rules = rules.toMutableList().also { it.removeAt(index) }
+                                        }) {
+                                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.provider_filter_delete_rule))
+                                        }
+                                    }
+                                }
+                            }
+
                             OutlinedTextField(
-                                value = prefixesText,
-                                onValueChange = { prefixesText = it },
-                                label = { Text(stringResource(R.string.provider_filter_prefixes_label)) },
+                                value = addRulesText,
+                                onValueChange = { addRulesText = it },
+                                label = { Text(stringResource(R.string.provider_filter_add_rules_label)) },
                                 placeholder = { Text(stringResource(R.string.provider_filter_prefixes_placeholder)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = false,
                                 minLines = 2,
                             )
+                            OutlinedButton(
+                                onClick = {
+                                    val values = addRulesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                                    if (values.isNotEmpty()) {
+                                        pendingAddValues = values
+                                        pendingAddMatchType = MatchType.STARTS_WITH
+                                    }
+                                },
+                                enabled = addRulesText.isNotBlank(),
+                            ) { Text(stringResource(R.string.common_add)) }
+
+                            pendingAddValues?.let { values ->
+                                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                    Text(
+                                        text = stringResource(R.string.provider_filter_choose_match_type),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                        MatchType.entries.forEach { type ->
+                                            FilterChip(
+                                                selected = pendingAddMatchType == type,
+                                                onClick = { pendingAddMatchType = type },
+                                                label = { Text(matchTypeLabel(type)) },
+                                            )
+                                        }
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                        Button(onClick = {
+                                            rules = rules.withAddedRules(values, pendingAddMatchType)
+                                            addRulesText = ""
+                                            pendingAddValues = null
+                                        }) { Text(stringResource(R.string.common_ok)) }
+                                        OutlinedButton(onClick = { pendingAddValues = null }) {
+                                            Text(stringResource(R.string.common_cancel))
+                                        }
+                                    }
+                                }
+                            }
+
                             Text(text = stringResource(R.string.provider_filter_script_title), style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 text = stringResource(R.string.provider_filter_script_desc),
@@ -718,7 +854,6 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                val rules = prefixesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { CategoryMatcher(value = it) }
                                 val newFilters = CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)
                                 categoryFilters = newFilters
                                 coroutineScope.launch {

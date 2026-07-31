@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -26,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -33,13 +39,17 @@ import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.CategoryMatcher
 import org.njarasoa.fijerena.core.network.provider.FilterMode
+import org.njarasoa.fijerena.core.network.provider.MatchType
 import org.njarasoa.fijerena.core.network.provider.ScriptType
+import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -99,8 +109,41 @@ fun CategoryFilterDialog(
             }
         }
     var filterMode by remember { mutableStateOf(currentFilters.mode) }
-    var prefixesText by remember { mutableStateOf(currentFilters.rules.joinToString(", ") { it.value }) }
+    var rules by remember { mutableStateOf(currentFilters.rules) }
+    var editingIndex by remember { mutableStateOf<Int?>(null) }
+    var editingValue by remember { mutableStateOf("") }
+    var editingMatchType by remember { mutableStateOf(MatchType.STARTS_WITH) }
+    var addRulesText by remember { mutableStateOf("") }
+    var pendingAddValues by remember { mutableStateOf<List<String>?>(null) }
+    var pendingAddMatchType by remember { mutableStateOf(MatchType.STARTS_WITH) }
     var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
+
+    fun matchTypeLabel(type: MatchType): String =
+        when (type) {
+            MatchType.STARTS_WITH -> "Starts"
+            MatchType.ENDS_WITH -> "Ends"
+            MatchType.CONTAINS -> "Contains"
+            MatchType.EXACT -> "Exact"
+        }
+
+    @Composable
+    fun MatchTypeChipRow(selected: MatchType, onSelect: (MatchType) -> Unit) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            MatchType.entries.forEach { type ->
+                androidx.tv.material3.Button(
+                    onClick = { onSelect(type) },
+                    modifier = Modifier.tvFocusableNoScale(),
+                    colors =
+                        androidx.tv.material3.ButtonDefaults.colors(
+                            containerColor = if (selected == type) CinemaAccent else CinemaSurfaceVariant,
+                        ),
+                ) { Text(matchTypeLabel(type)) }
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -132,18 +175,106 @@ fun CategoryFilterDialog(
                 }
                 Text(
                     if (filterMode == FilterMode.EXCLUDE) {
-                        "Hide categories that start with these prefixes"
+                        "Hide categories matching these rules"
                     } else {
-                        "Show only categories that start with these prefixes"
+                        "Show only categories matching these rules"
                     },
                     style = scaledStyles.bodySmall,
                     color = CinemaTextSecondary,
                 )
-                Text("Prefixes (comma-separated):", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                if (filterMode == FilterMode.INCLUDE && rules.isEmpty()) {
+                    Text(
+                        "No rules configured — Include mode will hide every category",
+                        style = scaledStyles.bodySmall,
+                        color = CinemaError,
+                    )
+                }
+
+                Text("Rules:", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                rules.forEachIndexed { index, rule ->
+                    if (editingIndex == index) {
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+                            OutlinedTextField(
+                                value = editingValue,
+                                onValueChange = { editingValue = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                colors =
+                                    OutlinedTextFieldDefaults.colors(
+                                        focusedContainerColor = CinemaSurface,
+                                        unfocusedContainerColor = CinemaSurface,
+                                        focusedBorderColor = CinemaAccent,
+                                        unfocusedBorderColor = CinemaSurfaceVariant,
+                                        focusedTextColor = CinemaTextPrimary,
+                                        unfocusedTextColor = CinemaTextPrimary,
+                                        cursorColor = CinemaAccent,
+                                    ),
+                            )
+                            MatchTypeChipRow(selected = editingMatchType, onSelect = { editingMatchType = it })
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                                androidx.tv.material3.Button(
+                                    onClick = {
+                                        val trimmed = editingValue.trim()
+                                        if (trimmed.isNotEmpty()) {
+                                            rules =
+                                                rules.toMutableList().also {
+                                                    it[index] = CategoryMatcher(trimmed, editingMatchType)
+                                                }
+                                        }
+                                        editingIndex = null
+                                    },
+                                    colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaAccent),
+                                ) { Text("Save") }
+                                androidx.tv.material3.Button(
+                                    onClick = { editingIndex = null },
+                                    colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
+                                ) { Text("Cancel") }
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = matchTypeLabel(rule.matchType),
+                                style = scaledStyles.bodySmall,
+                                color = CinemaTextSecondary,
+                                modifier = Modifier.width(72.dp.scaled(scale)),
+                            )
+                            Text(
+                                text = rule.value,
+                                style = scaledStyles.bodyMedium,
+                                color = CinemaTextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                            CinemaIconButton(
+                                onClick = {
+                                    editingIndex = index
+                                    editingValue = rule.value
+                                    editingMatchType = rule.matchType
+                                },
+                                icon = { Icon(Icons.Rounded.Edit, contentDescription = "Edit rule") },
+                                size = 36.dp,
+                            )
+                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+                            CinemaDangerIconButton(
+                                onClick = { rules = rules.toMutableList().also { it.removeAt(index) } },
+                                icon = { Icon(Icons.Rounded.Delete, contentDescription = "Delete rule") },
+                                size = 36.dp,
+                            )
+                        }
+                    }
+                }
+
+                Text("Add rules (comma-separated):", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 OutlinedTextField(
-                    value = prefixesText,
-                    onValueChange = { prefixesText = it },
-                    label = { Text("Prefixes (comma-separated)") },
+                    value = addRulesText,
+                    onValueChange = { addRulesText = it },
+                    label = { Text("Add rules (comma-separated)") },
                     placeholder = { Text("e.g., XXX, Adult, 18+") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
@@ -161,6 +292,39 @@ fun CategoryFilterDialog(
                             cursorColor = CinemaAccent,
                         ),
                 )
+                androidx.tv.material3.Button(
+                    onClick = {
+                        val values = addRulesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        if (values.isNotEmpty()) {
+                            pendingAddValues = values
+                            pendingAddMatchType = MatchType.STARTS_WITH
+                        }
+                    },
+                    enabled = addRulesText.isNotBlank(),
+                    colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
+                ) { Text("Add") }
+
+                pendingAddValues?.let { values ->
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+                        Text("Choose match type:", style = scaledStyles.bodyMedium, color = CinemaTextPrimary)
+                        MatchTypeChipRow(selected = pendingAddMatchType, onSelect = { pendingAddMatchType = it })
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                            androidx.tv.material3.Button(
+                                onClick = {
+                                    rules = rules.withAddedRules(values, pendingAddMatchType)
+                                    addRulesText = ""
+                                    pendingAddValues = null
+                                },
+                                colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaAccent),
+                            ) { Text("OK") }
+                            androidx.tv.material3.Button(
+                                onClick = { pendingAddValues = null },
+                                colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
+                            ) { Text("Cancel") }
+                        }
+                    }
+                }
+
                 Text("Language Script Filter:", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 Text(
                     "Show only categories in selected scripts (none = show all)",
@@ -196,7 +360,6 @@ fun CategoryFilterDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val rules = prefixesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { CategoryMatcher(value = it) }
                     val newFilters = CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)
                     onSave(newFilters)
                 },

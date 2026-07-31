@@ -225,12 +225,20 @@
     <string name="provider_filter_mode_label">Mode de filtrage :</string>
     <string name="provider_filter_exclude">Exclure</string>
     <string name="provider_filter_include">Inclure uniquement</string>
-    <string name="provider_filter_exclude_desc">Les catégories commençant par ces préfixes seront masquées</string>
-    <string name="provider_filter_include_desc">Seules les catégories commençant par ces préfixes seront affichées</string>
-    <string name="provider_filter_prefixes_label">Préfixes (séparés par une virgule)</string>
+    <string name="provider_filter_exclude_desc">Les catégories correspondant à ces règles seront masquées</string>
+    <string name="provider_filter_include_desc">Seules les catégories correspondant à ces règles seront affichées</string>
+    <string name="provider_filter_add_rules_label">Ajouter des règles (séparées par une virgule)</string>
     <string name="provider_filter_prefixes_placeholder">Adulte, XXX, 18+</string>
     <string name="provider_filter_script_title">Filtre d\'écriture :</string>
     <string name="provider_filter_script_desc">Afficher uniquement les scripts sélectionnés (aucun = tout afficher)</string>
+    <string name="provider_filter_choose_match_type">Choisir le type de correspondance</string>
+    <string name="provider_filter_match_starts">Commence par</string>
+    <string name="provider_filter_match_ends">Se termine par</string>
+    <string name="provider_filter_match_contains">Contient</string>
+    <string name="provider_filter_match_exact">Exacte</string>
+    <string name="provider_filter_edit_rule">Modifier la règle</string>
+    <string name="provider_filter_delete_rule">Supprimer la règle</string>
+    <string name="provider_filter_include_empty_warning">Aucune règle configurée — le mode Inclure uniquement masquera toutes les catégories</string>
 
     <!-- Provider Setup Extras -->
     <string name="provider_url_placeholder_xtream">http://fournisseur.exemple.com</string>
