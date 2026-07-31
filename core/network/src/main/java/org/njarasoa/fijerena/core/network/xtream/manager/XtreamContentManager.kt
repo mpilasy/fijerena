@@ -73,7 +73,7 @@ class XtreamContentManager(
                 }
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
-                val categories = service.getCategories()
+                val categories = service.getCategories().filter { providerSettings.categoryFilters.shouldShowCategory(it.categoryName) }
                 categoryDao.insertAll(
                     categories.map {
                         XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_LIVE)
@@ -95,7 +95,7 @@ class XtreamContentManager(
                 }
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
-                val categories = service.getVodCategories()
+                val categories = service.getVodCategories().filter { providerSettings.categoryFilters.shouldShowCategory(it.categoryName) }
                 categoryDao.insertAll(
                     categories.map {
                         XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_VOD)
@@ -117,7 +117,7 @@ class XtreamContentManager(
                 }
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
-                val categories = service.getSeriesCategories()
+                val categories = service.getSeriesCategories().filter { providerSettings.categoryFilters.shouldShowCategory(it.categoryName) }
                 categoryDao.insertAll(
                     categories.map {
                         XtreamCategoryEntity(it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_SERIES)
@@ -140,11 +140,26 @@ class XtreamContentManager(
                 }
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
-                val streams =
+                val streamsRaw =
                     when (type) {
                         XtreamStreamEntity.TYPE_LIVE -> service.getStreams()
                         XtreamStreamEntity.TYPE_VOD -> service.getVodStreams()
                         else -> emptyList()
+                    }
+
+                val filters = providerSettings.categoryFilters
+                val streams =
+                    if (filters.prefixes.isEmpty() && filters.allowedScripts.isEmpty()) {
+                        streamsRaw
+                    } else {
+                        val categories =
+                            when (type) {
+                                XtreamStreamEntity.TYPE_LIVE -> service.getCategories()
+                                XtreamStreamEntity.TYPE_VOD -> service.getVodCategories()
+                                else -> emptyList()
+                            }
+                        val allowedCategoryIds = categories.filter { filters.shouldShowCategory(it.categoryName) }.map { it.categoryId }.toSet()
+                        streamsRaw.filter { it.categoryId in allowedCategoryIds }
                     }
 
                 streamDao.insertAll(
@@ -365,7 +380,7 @@ class XtreamContentManager(
                                 XtreamCategoryEntity.TYPE_VOD -> service.getVodCategories()
                                 XtreamCategoryEntity.TYPE_SERIES -> service.getSeriesCategories()
                                 else -> emptyList()
-                            }
+                            }.filter { providerSettings.categoryFilters.shouldShowCategory(it.categoryName) }
 
                         val entities =
                             categories.map {
@@ -447,7 +462,24 @@ class XtreamContentManager(
                             val currentHashes = streamDao.getStreamHashes(providerId, type)
                             val seenIds = mutableSetOf<Int>()
 
-                            val onStreamItem: suspend (XtreamStream) -> Unit = { it ->
+                            val filters = providerSettings.categoryFilters
+                            val allowedCategoryIds: Set<String>? =
+                                if (filters.prefixes.isEmpty() && filters.allowedScripts.isEmpty()) {
+                                    null
+                                } else {
+                                    val categories =
+                                        when (type) {
+                                            XtreamStreamEntity.TYPE_LIVE -> service.getCategories()
+                                            XtreamStreamEntity.TYPE_VOD -> service.getVodCategories()
+                                            else -> emptyList()
+                                        }
+                                    categories.filter { filters.shouldShowCategory(it.categoryName) }.map { it.categoryId }.toSet()
+                                }
+
+                            val onStreamItem: suspend (XtreamStream) -> Unit = onStreamItem@{ it ->
+                                if (allowedCategoryIds != null && it.categoryId !in allowedCategoryIds) {
+                                    return@onStreamItem
+                                }
                                 val contentHash =
                                     XtreamStreamEntity.computeHash(
                                         streamId = it.streamId,
@@ -550,7 +582,21 @@ class XtreamContentManager(
                             val currentHashes = seriesDao.getSeriesHashes(providerId)
                             val seenIds = mutableSetOf<Int>()
 
+                            val filters = providerSettings.categoryFilters
+                            val allowedCategoryIds: Set<String>? =
+                                if (filters.prefixes.isEmpty() && filters.allowedScripts.isEmpty()) {
+                                    null
+                                } else {
+                                    service.getSeriesCategories()
+                                        .filter { filters.shouldShowCategory(it.categoryName) }
+                                        .map { it.categoryId }
+                                        .toSet()
+                                }
+
                             service.getSeriesStreaming(null) { it ->
+                                if (allowedCategoryIds != null && it.categoryId !in allowedCategoryIds) {
+                                    return@getSeriesStreaming
+                                }
                                 val contentHash =
                                     XtreamSeriesEntity.computeHash(
                                         seriesId = it.seriesId,
