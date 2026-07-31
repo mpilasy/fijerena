@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -239,13 +240,20 @@ private fun MovieDetailsContent(
         }
     }
 
+    val scrollState = rememberScrollState()
     Box(modifier = Modifier.fillMaxSize()) {
-    AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = movieDetail.coverUrl)
+    AmbientBackdrop(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { translationY = scrollState.value * 0.3f },
+        imageUrl = movieDetail.coverUrl,
+    )
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .focusable()
                 .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
     ) {

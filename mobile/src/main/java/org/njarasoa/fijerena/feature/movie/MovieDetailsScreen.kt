@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -171,14 +172,21 @@ private fun MovieDetailsContent(
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
 ) {
     val extension = movieDetail.extension ?: "mp4"
+    val scrollState = rememberScrollState()
 
     Box(modifier = Modifier.fillMaxSize()) {
-    AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = movieDetail.coverUrl)
+    AmbientBackdrop(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { translationY = scrollState.value * 0.3f },
+        imageUrl = movieDetail.coverUrl,
+    )
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(CinemaSpacing.md),
     ) {
         // Cover image

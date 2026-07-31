@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -88,6 +88,7 @@ import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -762,6 +763,10 @@ private fun CategoryChipRow(
             selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
         )
 
+    // Entrance animation plays once per item: LazyRow recycles item composition off the ends
+    // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
+    val enteredCategoryIds = remember { mutableSetOf<String>() }
+
     LaunchedEffect(selectedCategoryId) {
         if (selectedCategoryId != null && selectedCategoryId !in VIRTUAL_CATEGORY_IDS) {
             val index = regularCategories.indexOfFirst { it.id == selectedCategoryId }
@@ -782,7 +787,7 @@ private fun CategoryChipRow(
                 contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
-                items(virtualCategories, key = { it.id }, contentType = { "category" }) { category ->
+                itemsIndexed(virtualCategories, key = { _, category -> category.id }, contentType = { _, _ -> "category" }) { index, category ->
                     FilterChip(
                         selected = category.id == selectedCategoryId,
                         onClick = { onCategorySelected(category.id) },
@@ -794,6 +799,12 @@ private fun CategoryChipRow(
                             )
                         },
                         colors = chipColors,
+                        modifier =
+                            if (enteredCategoryIds.add(category.id)) {
+                                Modifier.staggeredEntrance(index)
+                            } else {
+                                Modifier
+                            },
                     )
                 }
             }
@@ -809,7 +820,7 @@ private fun CategoryChipRow(
             contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
-            items(regularCategories, key = { it.id }, contentType = { "category" }) { category ->
+            itemsIndexed(regularCategories, key = { _, category -> category.id }, contentType = { _, _ -> "category" }) { index, category ->
                 val isFavCat = categoryViewModel.isFavoriteCategory(category.id, contentType)
                 FilterChip(
                     selected = category.id == selectedCategoryId,
@@ -833,7 +844,13 @@ private fun CategoryChipRow(
                         }
                     },
                     modifier =
-                        Modifier.combinedClickable(
+                        (
+                            if (enteredCategoryIds.add(category.id)) {
+                                Modifier.staggeredEntrance(index)
+                            } else {
+                                Modifier
+                            }
+                        ).combinedClickable(
                             onClick = { onCategorySelected(category.id) },
                             onLongClick = { onCategoryLongPress(category) },
                         ),
@@ -856,6 +873,10 @@ private fun StreamsList(
     onItemLongPress: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
+
+    // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
+    // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
+    val enteredStreamIds = remember { mutableSetOf<String>() }
 
     LaunchedEffect(items, lastPlayedItemId) {
         if (!items.isNullOrEmpty() && lastPlayedItemId != null) {
@@ -922,7 +943,7 @@ private fun StreamsList(
                         modifier = Modifier.padding(bottom = 4.dp, start = 4.dp),
                     )
                 }
-                items(items, key = { it.id }, contentType = { "stream" }) { item ->
+                itemsIndexed(items, key = { _, item -> item.id }, contentType = { _, _ -> "stream" }) { index, item ->
                     StreamCard(
                         item = item,
                         nowPlayingProgram = nowPlaying[item.id],
@@ -931,6 +952,12 @@ private fun StreamsList(
                             onItemSelected(item.id, item.name, item.categoryId)
                         },
                         onLongClick = { onItemLongPress(item) },
+                        modifier =
+                            if (enteredStreamIds.add(item.id)) {
+                                Modifier.staggeredEntrance(index)
+                            } else {
+                                Modifier
+                            },
                     )
                 }
             }
@@ -1013,10 +1040,11 @@ private fun StreamCard(
     isCurrentlyPlaying: Boolean = false,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     Card(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .height(MobileDimensions.streamCardHeight)
                 .combinedClickable(
