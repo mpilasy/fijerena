@@ -56,10 +56,10 @@ import org.njarasoa.fijerena.ui.player.components.dialogs.AudioTrackSelectorDial
 import org.njarasoa.fijerena.ui.player.components.dialogs.ChapterSelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.QualitySelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.SubtitleSelectorDialog
-import org.njarasoa.fijerena.ui.player.components.overlays.ChannelListOverlay
+import org.njarasoa.fijerena.ui.player.components.overlays.TvChannelListOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.ControlHintsOverlay
-import org.njarasoa.fijerena.ui.player.components.overlays.PlayerControlsOverlay
-import org.njarasoa.fijerena.ui.player.components.overlays.StatsOverlay
+import org.njarasoa.fijerena.ui.player.components.overlays.TvPlayerControlsOverlay
+import org.njarasoa.fijerena.ui.player.components.overlays.TvStatsOverlay
 import org.njarasoa.fijerena.ui.theme.Spacing
 import java.util.Date
 
@@ -229,7 +229,7 @@ fun PlayerScreen(
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
-            StatsOverlay(
+            TvStatsOverlay(
                 playbackState = currentPs,
                 metadata = currentMeta,
                 onHide = {
@@ -320,7 +320,7 @@ fun PlayerScreen(
             enter = slideInHorizontally { -it },
             exit = slideOutHorizontally { -it },
         ) {
-            ChannelListOverlay(
+            TvChannelListOverlay(
                 title = stringResource(R.string.player_category_channels),
                 streams = categoryStreams,
                 panelAlignment = Alignment.CenterStart,
@@ -339,7 +339,7 @@ fun PlayerScreen(
             enter = slideInHorizontally { it },
             exit = slideOutHorizontally { it },
         ) {
-            ChannelListOverlay(
+            TvChannelListOverlay(
                 title = stringResource(R.string.player_last_watched),
                 streams = lastWatchedStreams,
                 panelAlignment = Alignment.CenterEnd,
@@ -361,7 +361,7 @@ fun PlayerScreen(
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
-            PlayerControlsOverlay(
+            TvPlayerControlsOverlay(
                 playbackState = currentPs,
                 metadata = state.displayedMetadata,
                 viewModel = viewModel,

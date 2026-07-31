@@ -40,7 +40,7 @@ import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
-fun ChannelListOverlay(
+fun TvChannelListOverlay(
     title: String,
     streams: ImmutableMediaList,
     onSelect: (MediaItem) -> Unit,

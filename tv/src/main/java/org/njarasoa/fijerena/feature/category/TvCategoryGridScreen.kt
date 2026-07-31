@@ -46,7 +46,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * - Scroll state restoration
  */
 @Composable
-fun CategoryGridScreen(
+fun TvCategoryGridScreen(
     contentType: String,
     initialCategoryId: String? = null,
     initialStreamId: String? = null,

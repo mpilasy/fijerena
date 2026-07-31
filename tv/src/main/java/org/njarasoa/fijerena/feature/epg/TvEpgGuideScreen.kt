@@ -39,7 +39,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 
 @Composable
-fun EpgGuideScreen(
+fun TvEpgGuideScreen(
     categoryId: String,
     categoryName: String,
     onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
