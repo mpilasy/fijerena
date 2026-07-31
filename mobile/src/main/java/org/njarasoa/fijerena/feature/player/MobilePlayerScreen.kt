@@ -197,6 +197,15 @@ fun MobilePlayerContent(
 
     // UI State
     var showChannelToast by remember { mutableStateOf(false) }
+    // Bumped every time showChannelToast is (re)triggered, so the auto-hide LaunchedEffect below
+    // restarts its delay even when a second channel switch lands while the toast from the first
+    // one is still showing (showChannelToast itself stays true across both, so keying on it
+    // alone wouldn't restart the coroutine).
+    var channelToastTick by remember { mutableStateOf(0) }
+    // Tracks whether the stream-start effect below has run at least once, so its very first run
+    // (mounting on / promoting to full screen) can stay silent while every later run — a genuine
+    // channel switch — shows the toast, independent of whether playback itself needed restarting.
+    var hasHandledFirstStream by remember { mutableStateOf(false) }
     var showCategoryOverlay by remember { mutableStateOf(false) }
     var showLastWatchedOverlay by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
@@ -275,7 +284,7 @@ fun MobilePlayerContent(
     }
 
     // Auto-hide channel toast
-    LaunchedEffect(showChannelToast) {
+    LaunchedEffect(showChannelToast, channelToastTick) {
         if (showChannelToast) {
             delay(CinemaAnimation.toastDismissMs)
             showChannelToast = false
@@ -339,10 +348,19 @@ fun MobilePlayerContent(
                 viewModel.currentMetadata.value.streamUrl == state.streamUrl &&
                     viewModel.playbackState.value !is PlaybackState.Idle &&
                     viewModel.playbackState.value !is PlaybackState.Error
-            if (!alreadyPlayingThis) {
-                // Show toast if channel changed (implicit logic: if ID changed)
-                showChannelToast = true
 
+            // Toast visibility is intentionally independent of alreadyPlayingThis: when this
+            // screen is the promoted full-screen view of a Live TV dock (MobileCategoryListScreen),
+            // the dock's own effect already calls playStream() for the new channel before this one
+            // runs, so alreadyPlayingThis is true on every ordinary channel switch, not just on
+            // promote. Only the very first run of this effect (mount / promote) should stay silent.
+            if (hasHandledFirstStream) {
+                showChannelToast = true
+                channelToastTick++
+            }
+            hasHandledFirstStream = true
+
+            if (!alreadyPlayingThis) {
                 val metadata =
                     PlayerMetadata(
                         title = state.streamName,

@@ -79,7 +79,7 @@ fun PlayerEffects(
 
     // Auto-hide overlays. Re-keyed on scrubPositionMs so each scrub step resets the timer
     // and the cursor stays visible while the user is still moving it.
-    LaunchedEffect(state.showControls, state.showStreamInfo, state.scrubPositionMs) {
+    LaunchedEffect(state.showControls, state.showStreamInfo, state.scrubPositionMs, state.showStreamInfoTick) {
         if (state.scrubPositionMs != null) {
             // Hold the OSD open while scrubbing; longer timeout so user can keep stepping
             delay(CinemaAnimation.controlsAutoHideTvMs)

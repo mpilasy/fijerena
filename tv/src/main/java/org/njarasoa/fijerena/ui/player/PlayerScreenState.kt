@@ -24,7 +24,21 @@ class PlayerScreenState(
     var showAudioTrackSelector by mutableStateOf(false)
     var showSubtitleSelector by mutableStateOf(false)
     var showQualitySelector by mutableStateOf(false)
-    var showStreamInfo by mutableStateOf(false)
+    private var showStreamInfoState by mutableStateOf(false)
+
+    // Bumped whenever showStreamInfo is set to true, so PlayerEffects' auto-hide LaunchedEffect
+    // restarts its delay even when a second trigger (e.g. another channel zap) lands while
+    // showStreamInfo is already true from a previous one — keying on showStreamInfo alone
+    // wouldn't restart the coroutine since the value doesn't actually change.
+    var showStreamInfoTick by mutableIntStateOf(0)
+        private set
+
+    var showStreamInfo: Boolean
+        get() = showStreamInfoState
+        set(value) {
+            showStreamInfoState = value
+            if (value) showStreamInfoTick++
+        }
     var showCategoryOverlay by mutableStateOf(false)
     var showLastWatchedOverlay by mutableStateOf(false)
     var showChapterSelector by mutableStateOf(false)
