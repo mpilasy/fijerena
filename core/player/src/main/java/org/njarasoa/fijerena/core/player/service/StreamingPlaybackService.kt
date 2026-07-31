@@ -93,6 +93,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private var bandwidthMeter: androidx.media3.exoplayer.upstream.DefaultBandwidthMeter? = null
     private var serviceScope: CoroutineScope? = null
     private var healthMonitor: org.njarasoa.fijerena.core.player.network.StreamHealthMonitor? = null
+    private var lastHealthCheckPosition: Long = -1L
 
     private val _isRecycling = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isRecyclingFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = _isRecycling.asStateFlow()
@@ -245,10 +246,19 @@ class StreamingPlaybackService : MediaSessionService() {
                 if (player != null && metadata.isLive) {
                     val state = player.playbackState
                     if (state == Player.STATE_READY || state == Player.STATE_BUFFERING) {
+                        val position = player.currentPosition
+                        // Position not moving while ExoPlayer claims READY+playing isn't caught by
+                        // the buffered-margin check below: bufferedPosition stalls right alongside
+                        // currentPosition, so their difference still looks like a healthy buffer.
+                        val isStalled =
+                            state == Player.STATE_READY &&
+                                player.isPlaying &&
+                                lastHealthCheckPosition == position
+                        lastHealthCheckPosition = position
                         healthMonitor?.updateMetrics(
                             bufferedDurationMs = player.bufferedPosition - player.currentPosition,
                             droppedFramesPerSecond = _measuredDroppedFps.value,
-                            hasReadTimeout = false
+                            hasReadTimeout = isStalled
                         )
                     }
                 }
@@ -399,6 +409,11 @@ class StreamingPlaybackService : MediaSessionService() {
         lastErrorMessage = null
         healthMonitor?.notifyStablePlayback()
         healthMonitor?.reset()
+        // A new stream has no position history yet — without this, the stall check in
+        // startHealthMonitorLoop() compares the new stream's first sampled position against
+        // whatever the PREVIOUS stream's position happened to be, and a coincidental match
+        // false-positives an immediate recycle.
+        lastHealthCheckPosition = -1L
         _streamRetryCount.value = 0
         _rebufferCount.value = 0
         _exhaustionRebufferCount.value = 0
