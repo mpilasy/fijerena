@@ -8,18 +8,30 @@ import androidx.room.Query
 
 @Dao
 interface XtreamStreamDao {
-    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId ORDER BY num ASC")
+    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId AND excluded = 0 ORDER BY num ASC")
     fun getStreamsByCategory(
         providerId: Long,
         type: String,
         categoryId: String,
     ): List<XtreamStreamEntity>
 
-    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type ORDER BY num ASC")
+    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND excluded = 0 ORDER BY num ASC")
     fun getAllStreams(
         providerId: Long,
         type: String,
     ): List<XtreamStreamEntity>
+
+    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type ORDER BY num ASC")
+    fun getAllStreamsIncludingExcluded(
+        providerId: Long,
+        type: String,
+    ): List<XtreamStreamEntity>
+
+    @Query("UPDATE xtream_streams SET excluded = COALESCE((SELECT c.excluded FROM xtream_categories c WHERE c.categoryId = xtream_streams.categoryId AND c.providerId = xtream_streams.providerId AND c.type = :type), 0) WHERE providerId = :providerId AND type = :type")
+    fun syncExcludedFromCategories(
+        providerId: Long,
+        type: String,
+    )
 
     @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND streamId = :streamId LIMIT 1")
     fun getStreamById(
@@ -82,6 +94,7 @@ interface XtreamStreamDao {
             OR (c.categoryName LIKE :categoryQuery)
         )
         AND s.providerId = :providerId AND s.type = :type
+        AND (s.excluded = 0 OR :includeExcluded = 1)
         LIMIT 200
     """)
     fun searchByFts(
@@ -89,6 +102,7 @@ interface XtreamStreamDao {
         type: String,
         query: String,
         categoryQuery: String,
+        includeExcluded: Boolean,
     ): List<XtreamStreamEntity>
 
     @Query("INSERT INTO xtream_streams_fts(xtream_streams_fts) VALUES('rebuild')")

@@ -9,6 +9,7 @@ import androidx.room.Index
     indices = [
         Index(value = ["providerId"]),
         Index(value = ["categoryId", "providerId"]),
+        Index(value = ["providerId", "categoryId", "excluded"]),
     ],
 )
 data class XtreamSeriesEntity(
@@ -30,6 +31,7 @@ data class XtreamSeriesEntity(
     val categoryId: String,
     val backdropPath: String? = null, // Comma separated URLs
     val contentHash: Int = 0,
+    val excluded: Boolean = false,
 ) {
     companion object {
         fun computeHash(

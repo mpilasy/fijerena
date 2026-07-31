@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         XtreamStreamFts::class,
         XtreamSeriesFts::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -66,6 +66,19 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /** Migration 10→11: add `excluded` flag for category-filter exclusion. */
+        private val MIGRATION_10_11 =
+            object : Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `xtream_categories` ADD COLUMN `excluded` INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE `xtream_streams` ADD COLUMN `excluded` INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE `xtream_series` ADD COLUMN `excluded` INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_xtream_categories_providerId_type_excluded` ON `xtream_categories` (`providerId`, `type`, `excluded`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_xtream_streams_providerId_type_categoryId_excluded` ON `xtream_streams` (`providerId`, `type`, `categoryId`, `excluded`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_xtream_series_providerId_categoryId_excluded` ON `xtream_series` (`providerId`, `categoryId`, `excluded`)")
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -73,7 +86,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         context.applicationContext,
                         XtreamDatabase::class.java,
                         "xtream_v2.db",
-                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { INSTANCE = it }

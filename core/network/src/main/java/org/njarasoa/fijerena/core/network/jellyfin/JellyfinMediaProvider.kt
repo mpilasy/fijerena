@@ -167,6 +167,7 @@ class JellyfinMediaProvider(
     override suspend fun search(
         query: String,
         contentType: String,
+        includeExcluded: Boolean,
     ): Result<List<MediaItem>> {
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 

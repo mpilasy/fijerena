@@ -41,6 +41,7 @@ interface MediaProvider {
     suspend fun search(
         query: String,
         contentType: String,
+        includeExcluded: Boolean = false,
     ): Result<List<MediaItem>>? = null
 
     /** Returns estimated byte size of the full dataset fetched for the last search (before filtering). */

@@ -266,6 +266,7 @@ class XtreamMediaProvider(
     override suspend fun search(
         query: String,
         contentType: String,
+        includeExcluded: Boolean,
     ): kotlin.Result<List<MediaItem>>? {
         val words = query.trim().split("\\s+".toRegex())
             .filter { it.isNotBlank() && !it.startsWith("-") }
@@ -281,7 +282,7 @@ class XtreamMediaProvider(
 
             val mediaType = getMediaType(contentType)
             try {
-                val results = repository.searchByFts(contentType, ftsQuery)
+                val results = repository.searchByFts(contentType, ftsQuery, includeExcluded)
                 kotlin.Result.success(results.map { it.toDomain(mediaType) })
             } catch (e: Exception) {
                 null
@@ -334,5 +335,6 @@ class XtreamMediaProvider(
                 repository.syncSeries(),
             )
         jobs.forEach { it.await() }
+        repository.recomputeExclusions()
     }
 }

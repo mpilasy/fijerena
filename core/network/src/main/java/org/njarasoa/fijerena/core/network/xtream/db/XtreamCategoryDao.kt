@@ -8,11 +8,25 @@ import androidx.room.Query
 
 @Dao
 interface XtreamCategoryDao {
-    @Query("SELECT * FROM xtream_categories WHERE providerId = :providerId AND type = :type ORDER BY categoryName ASC")
+    @Query("SELECT * FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 0 ORDER BY categoryName ASC")
     fun getCategories(
         providerId: Long,
         type: String,
     ): List<XtreamCategoryEntity>
+
+    @Query("SELECT * FROM xtream_categories WHERE providerId = :providerId AND type = :type ORDER BY categoryName ASC")
+    fun getAllCategoriesIncludingExcluded(
+        providerId: Long,
+        type: String,
+    ): List<XtreamCategoryEntity>
+
+    @Query("UPDATE xtream_categories SET excluded = :excluded WHERE providerId = :providerId AND type = :type AND categoryId IN (:ids)")
+    fun setExcluded(
+        providerId: Long,
+        type: String,
+        ids: List<String>,
+        excluded: Boolean,
+    )
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(categories: List<XtreamCategoryEntity>)

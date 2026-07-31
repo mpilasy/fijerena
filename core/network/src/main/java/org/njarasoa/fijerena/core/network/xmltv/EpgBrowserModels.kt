@@ -22,6 +22,7 @@ data class EpgBrowserMatchedStream(
     val streamId: Int,
     val streamName: String,
     val categoryId: String,
+    val excluded: Boolean = false,
 )
 
 data class EpgBrowserDateGroup(

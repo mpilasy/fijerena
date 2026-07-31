@@ -7,6 +7,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -275,7 +276,7 @@ class EpgBrowserViewModel(
                     val streams = XtreamDatabase
                         .getInstance(context)
                         .streamDao()
-                        .getAllStreams(provider.id, XtreamStreamEntity.TYPE_LIVE)
+                        .getAllStreamsIncludingExcluded(provider.id, XtreamStreamEntity.TYPE_LIVE)
                     val t1 = System.currentTimeMillis()
                     android.util.Log.d("EpgBrowserViewModel", "Fetched ${streams.size} streams in ${t1 - t0}ms for new matcher")
                     streams
@@ -464,6 +465,7 @@ class EpgBrowserViewModel(
                 val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
                 val sourceIds = validSources.map { it.id }
 
+                val matcher = channelMatcher
                 _pagedSearchResults.value =
                     Pager(
                         config =
@@ -474,7 +476,14 @@ class EpgBrowserViewModel(
                             ),
                     ) {
                         dao.searchByTitleFtsPaged(ftsQuery, sourceIds, windowStart, windowEnd)
-                    }.flow.cachedIn(viewModelScope)
+                    }.flow
+                        .map { pagingData ->
+                            pagingData.filter { row ->
+                                val matched = matcher?.match(row.channelId, row.channelDisplayName)
+                                matched == null || !matched.excluded
+                            }
+                        }
+                        .cachedIn(viewModelScope)
             }
         }
     }
@@ -501,35 +510,39 @@ class EpgBrowserViewModel(
 
     private fun applyChannelMatching(dateGroups: List<EpgBrowserDateGroup>): List<EpgBrowserDateGroup> {
         val matcher = channelMatcher ?: return dateGroups
-        return dateGroups.map { group ->
-            group.copy(
-                programs =
-                    group.programs.map { program ->
-                        // ⚡ Bolt: Performance Optimization
-                        // Replaced O(N log N) `sortedWith` with an O(N) stable bucketing approach.
-                        // `program.airings` is already sorted by `startEpoch`. By accumulating
-                        // matches and non-matches separately and concatenating, we preserve
-                        // the initial chronological ordering natively without redundant allocations.
-                        val matchedList = ArrayList<EpgBrowserAiring>()
-                        val unmatchedList = ArrayList<EpgBrowserAiring>()
+        return dateGroups
+            .map { group ->
+                group.copy(
+                    programs =
+                        group.programs
+                            .map { program ->
+                                // ⚡ Bolt: Performance Optimization
+                                // Replaced O(N log N) `sortedWith` with an O(N) stable bucketing approach.
+                                // `program.airings` is already sorted by `startEpoch`. By accumulating
+                                // matches and non-matches separately and concatenating, we preserve
+                                // the initial chronological ordering natively without redundant allocations.
+                                val matchedList = ArrayList<EpgBrowserAiring>()
+                                val unmatchedList = ArrayList<EpgBrowserAiring>()
 
-                        for (airing in program.airings) {
-                            val matched = matcher.match(airing.channelId, airing.channelName)
-                            if (matched != null) {
-                                matchedList.add(airing.copy(matchedStream = matched))
-                            } else {
-                                unmatchedList.add(airing)
+                                for (airing in program.airings) {
+                                    val matched = matcher.match(airing.channelId, airing.channelName)
+                                    when {
+                                        matched != null && matched.excluded -> Unit // excluded channel: drop from search results
+                                        matched != null -> matchedList.add(airing.copy(matchedStream = matched))
+                                        else -> unmatchedList.add(airing) // no corresponding stream at all — keep as before
+                                    }
+                                }
+
+                                val sorted = ArrayList<EpgBrowserAiring>(matchedList.size + unmatchedList.size)
+                                sorted.addAll(matchedList)
+                                sorted.addAll(unmatchedList)
+
+                                program.copy(airings = sorted)
                             }
-                        }
-
-                        val sorted = ArrayList<EpgBrowserAiring>(matchedList.size + unmatchedList.size)
-                        sorted.addAll(matchedList)
-                        sorted.addAll(unmatchedList)
-
-                        program.copy(airings = sorted)
-                    },
-            )
-        }
+                            .filter { it.airings.isNotEmpty() },
+                )
+            }
+            .filter { it.programs.isNotEmpty() }
     }
 
     private fun groupByDate(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {

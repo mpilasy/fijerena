@@ -11,6 +11,7 @@ import androidx.room.Index
         Index(value = ["categoryId", "providerId"]),
         // Composite index covering getStreamsByCategory query (providerId + type + categoryId)
         Index(value = ["providerId", "type", "categoryId"]),
+        Index(value = ["providerId", "type", "categoryId", "excluded"]),
     ],
 )
 data class XtreamStreamEntity(
@@ -38,6 +39,7 @@ data class XtreamStreamEntity(
     val rating: String? = null,
     val duration: String? = null,
     val youtubeTrailer: String? = null,
+    val excluded: Boolean = false,
 ) {
     companion object {
         const val TYPE_LIVE = "LIVE"

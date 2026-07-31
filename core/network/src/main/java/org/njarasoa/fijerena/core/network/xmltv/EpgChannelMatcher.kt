@@ -154,5 +154,6 @@ class EpgChannelMatcher(
             streamId = streamId,
             streamName = name,
             categoryId = categoryId,
+            excluded = excluded,
         )
 }

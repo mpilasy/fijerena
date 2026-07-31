@@ -246,7 +246,8 @@ class MediaRepository(
     suspend fun search(
         query: String,
         contentType: String,
-    ): kotlin.Result<List<MediaItem>>? = provider?.search(query, contentType)
+        includeExcluded: Boolean = false,
+    ): kotlin.Result<List<MediaItem>>? = provider?.search(query, contentType, includeExcluded)
 
     fun getLastSearchDataSize(contentType: String): Long? = provider?.getLastSearchDataSize(contentType)
 
