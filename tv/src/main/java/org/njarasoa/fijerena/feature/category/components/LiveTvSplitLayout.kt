@@ -23,7 +23,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -286,8 +285,11 @@ internal fun LiveTvSplitLayout(
         val s = success ?: return@LaunchedEffect
         val reachedPlaying =
             withTimeoutOrNull(8_000) {
-                snapshotFlow { playback.playbackState.value }
-                    .first { it is PlaybackState.Playing }
+                // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it in
+                // snapshotFlow{} never registers an observable read, so it emits once and then
+                // never again, making first{} hang the full timeout regardless of whether playback
+                // actually started. first{} on the StateFlow directly works correctly.
+                playback.playbackState.first { it is PlaybackState.Playing }
             }
         if (reachedPlaying == null && success?.streamId == s.streamId && !fullScreen) {
             playback.stop()
@@ -560,5 +562,6 @@ private fun LiveTvChannelList(
         onStreamFocused = onStreamFocused,
         onRefreshStreams = onRefreshStreams,
         modifier = modifier,
+        thumbnailScale = 0.5f,
     )
 }

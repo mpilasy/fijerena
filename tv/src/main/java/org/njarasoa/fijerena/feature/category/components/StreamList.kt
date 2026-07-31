@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -87,17 +86,16 @@ internal fun StreamList(
     onStreamFocused: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
+    thumbnailScale: Float = 1f,
 ) {
     // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { streamsLoading }.collect { loading ->
-            if (loading) {
-                while (true) {
-                    targetRotation = (targetRotation + 360f) % 3600f
-                    kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
-                }
+    LaunchedEffect(streamsLoading) {
+        if (streamsLoading) {
+            while (true) {
+                targetRotation = (targetRotation + 360f) % 3600f
+                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
             }
         }
     }
@@ -252,6 +250,7 @@ internal fun StreamList(
                                 onFocused = { onStreamFocused(item) },
                                 // Only the last-played item gets a focus requester for auto-scroll
                                 focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null,
+                                thumbnailScale = thumbnailScale,
                             )
                         }
                     }
@@ -272,6 +271,7 @@ private fun StreamItem(
     onLongPress: () -> Unit = {},
     onFocused: () -> Unit = {},
     focusRequester: FocusRequester? = null,
+    thumbnailScale: Float = 1f,
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
@@ -338,8 +338,8 @@ private fun StreamItem(
                     modifier =
                         Modifier
                             .size(
-                                width = TvDimensions.posterWidth.scaled(scale),
-                                height = TvDimensions.posterHeight.scaled(scale),
+                                width = (TvDimensions.posterWidth * thumbnailScale).scaled(scale),
+                                height = (TvDimensions.posterHeight * thumbnailScale).scaled(scale),
                             ),
                 )
 

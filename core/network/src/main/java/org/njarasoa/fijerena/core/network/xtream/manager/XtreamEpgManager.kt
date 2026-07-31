@@ -91,17 +91,29 @@ class XtreamEpgManager(
                         streamIds.map { streamId ->
                             async {
                                 semaphore.withPermit {
-                                    val epg = fetchEpgDirect(streamId, service)
+                                    val epg = fetchEpgDirect(streamId, service, cache = false)
                                     if (epg != null) streamId to epg else null
                                 }
                             }
                         }
 
                     val results = mutableMapOf<Int, EpgResponse>()
+                    // Freshly network-fetched entries only (cache hits didn't touch the network and
+                    // are already on disk) — written as a single commit() below instead of one
+                    // commit()+fsync per stream, which used to serialize up to 50 blocking fsyncs
+                    // to the same SharedPreferences file on every category/preview load.
+                    val toCache = mutableMapOf<Int, EpgResponse>()
                     deferreds.awaitAll().forEach { pair ->
                         if (pair != null) {
-                            results[pair.first] = pair.second
+                            val (streamId, epg) = pair
+                            results[streamId] = epg
+                            if (getCachedEpg(streamId) == null) {
+                                toCache[streamId] = epg
+                            }
                         }
+                    }
+                    if (toCache.isNotEmpty()) {
+                        cacheEpgBatch(toCache)
                     }
                     results
                 }
@@ -119,12 +131,13 @@ class XtreamEpgManager(
     private suspend fun fetchEpgDirect(
         streamId: Int,
         service: org.njarasoa.fijerena.core.player.api.XtreamApiService,
+        cache: Boolean = true,
     ): EpgResponse? {
         return try {
             val cached = getCachedEpg(streamId)
             if (cached != null) return cached
             val epg = service.getEpgForStream(streamId)
-            cacheEpg(streamId, epg)
+            if (cache) cacheEpg(streamId, epg)
             epg
         } catch (_: Exception) {
             // Continue on failure - EPG may not be available for all channels
@@ -160,6 +173,18 @@ class XtreamEpgManager(
         commitAsync {
             putString(KEY_EPG_PREFIX + streamId, json.encodeToString(epg))
                 .putLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, System.currentTimeMillis())
+        }
+    }
+
+    /** Same as [cacheEpg] but writes every entry in a single commit() — see [getEpgForStreams]. */
+    private fun cacheEpgBatch(entries: Map<Int, EpgResponse>) {
+        if (!cachingEnabled) return
+        val now = System.currentTimeMillis()
+        commitAsync {
+            for ((streamId, epg) in entries) {
+                putString(KEY_EPG_PREFIX + streamId, json.encodeToString(epg))
+                putLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, now)
+            }
         }
     }
 
