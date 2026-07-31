@@ -56,7 +56,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -306,8 +305,11 @@ fun MobileCategoryListScreen(
             val s = dockSuccess ?: return@LaunchedEffect
             val reachedPlaying =
                 withTimeoutOrNull(8_000) {
-                    snapshotFlow { dockPlayback.playbackState.value }
-                        .first { it is PlaybackState.Playing }
+                    // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
+                    // in snapshotFlow{} never registers an observable read, so it emits once and
+                    // never again, making first{} hang the full timeout regardless of whether
+                    // playback actually started. first{} on the StateFlow directly works correctly.
+                    dockPlayback.playbackState.first { it is PlaybackState.Playing }
                 }
             if (reachedPlaying == null && dockSuccess?.streamId == s.streamId && !fullScreen) {
                 dockPlayback.stop()
