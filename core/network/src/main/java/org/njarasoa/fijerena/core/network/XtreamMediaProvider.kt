@@ -337,4 +337,7 @@ class XtreamMediaProvider(
         jobs.forEach { it.await() }
         repository.recomputeExclusions()
     }
+
+    /** Total category count for [contentType], including any excluded by category filters — for "X of Y" UI counts. */
+    suspend fun getCategoryTotalCount(contentType: String): Int = repository.getCategoryTotalCount(contentType)
 }

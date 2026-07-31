@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -77,12 +78,6 @@ fun MobileContentTypeSelectionScreen(
     var moviesCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var tvShowsCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var mediaProviderRef by remember { mutableStateOf<org.njarasoa.fijerena.core.player.domain.MediaProvider?>(null) }
-    var categoryFilters by remember {
-        mutableStateOf(
-            org.njarasoa.fijerena.core.network.provider
-                .CategoryFilters(),
-        )
-    }
 
     // Show EPG Browser button when EPG index has data
     val hasEpgData =
@@ -109,7 +104,6 @@ fun MobileContentTypeSelectionScreen(
                 val password = providerRepo.getPassword(activeProvider.id) ?: ""
                 val mediaProvider = MediaProviderFactory.create(activeProvider, context.applicationContext, password)
                 supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
-                categoryFilters = providerRepo.getProviderSettings(activeProvider.id).categoryFilters
                 mediaProviderRef = mediaProvider
             } else {
                 providerName = appSettings.providerName
@@ -120,25 +114,26 @@ fun MobileContentTypeSelectionScreen(
     // Load category counts in the background once provider is ready
     LaunchedEffect(mediaProviderRef) {
         val mp = mediaProviderRef ?: return@LaunchedEffect
-        val filters = categoryFilters
-        val hasFilters = filters.prefixes.isNotEmpty() || filters.allowedScripts.isNotEmpty()
+        // getCategories() already excludes filtered-out categories at the DB layer, so its size
+        // IS the visible count — the total (for "X of Y") needs the unfiltered count separately.
+        val xtream = mp as? XtreamMediaProvider
         withContext(Dispatchers.IO) {
             if (ContentType.LIVE_TV in mp.capabilities.supportedContentTypes) {
                 mp.getCategories(ContentType.LIVE_TV).onSuccess { cats ->
-                    val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
-                    liveTvCounts = Pair(filtered, cats.size)
+                    val total = xtream?.getCategoryTotalCount(ContentType.LIVE_TV) ?: cats.size
+                    liveTvCounts = Pair(cats.size, total)
                 }
             }
             if (ContentType.MOVIES in mp.capabilities.supportedContentTypes) {
                 mp.getCategories(ContentType.MOVIES).onSuccess { cats ->
-                    val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
-                    moviesCounts = Pair(filtered, cats.size)
+                    val total = xtream?.getCategoryTotalCount(ContentType.MOVIES) ?: cats.size
+                    moviesCounts = Pair(cats.size, total)
                 }
             }
             if (ContentType.TV_SHOWS in mp.capabilities.supportedContentTypes) {
                 mp.getCategories(ContentType.TV_SHOWS).onSuccess { cats ->
-                    val filtered = if (hasFilters) cats.count { filters.shouldShowCategory(it.name) } else cats.size
-                    tvShowsCounts = Pair(filtered, cats.size)
+                    val total = xtream?.getCategoryTotalCount(ContentType.TV_SHOWS) ?: cats.size
+                    tvShowsCounts = Pair(cats.size, total)
                 }
             }
         }
