@@ -2,7 +2,11 @@
 
 package org.njarasoa.fijerena.feature.contentselection
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -20,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -67,11 +73,15 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
+import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaLive
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrangeDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -119,6 +129,7 @@ fun ContentTypeSelectionScreen(
 
     // Stash provider ref so we can load counts
     var mediaProviderRef by remember { mutableStateOf<MediaProvider?>(null) }
+    var backdropImageUrl by remember { mutableStateOf<String?>(null) }
 
     // Show EPG Browser button when EPG index has data
     val hasEpgData =
@@ -148,6 +159,26 @@ fun ContentTypeSelectionScreen(
                 mediaProviderRef = mediaProvider
             } else {
                 providerName = appSettings.providerName
+            }
+        }
+    }
+
+    // Pull a recently-watched poster for the ambient backdrop wash — falls back to the plain
+    // gradient (AmbientBackdrop's default) if there's no watch history yet or the provider
+    // doesn't support it.
+    LaunchedEffect(mediaProviderRef) {
+        val mp = mediaProviderRef ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            for (contentType in listOf(ContentType.MOVIES, ContentType.TV_SHOWS, ContentType.LIVE_TV)) {
+                val poster =
+                    mp.getRecentlyPlayed(contentType)
+                        ?.getOrNull()
+                        ?.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }
+                        ?.thumbnailUrl
+                if (poster != null) {
+                    backdropImageUrl = poster
+                    break
+                }
             }
         }
     }
@@ -186,7 +217,7 @@ fun ContentTypeSelectionScreen(
         val scale = LocalUiScale.current
 
         Box(modifier = Modifier.fillMaxSize()) {
-        AmbientBackdrop(modifier = Modifier.fillMaxSize())
+        AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = backdropImageUrl)
         Box(
             modifier =
                 Modifier
@@ -215,6 +246,7 @@ fun ContentTypeSelectionScreen(
                                         .scaled(scale),
                             ),
                         color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.staggeredEntrance(0),
                     )
                     // Provider name in glass pill badge + settings gear
                     Row(
@@ -317,6 +349,7 @@ fun ContentTypeSelectionScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         val isDevMode = appSettings.isDevMode
+                        var cardIndex = 1
                         if (ContentType.LIVE_TV in supportedContentTypes) {
                             ContentTypeHeroCard(
                                 title = "Live TV",
@@ -324,9 +357,10 @@ fun ContentTypeSelectionScreen(
                                 icon = Icons.Rounded.LiveTv,
                                 categoryCounts = liveTvCounts,
                                 showTotal = isDevMode,
+                                showLivePulse = true,
                                 gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
                                 onClick = { onContentTypeSelected(NavContentType.LIVE_TV) },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
                             )
                         }
 
@@ -339,7 +373,7 @@ fun ContentTypeSelectionScreen(
                                 showTotal = isDevMode,
                                 gradientColors = listOf(CinemaAccent, CinemaAccentDark),
                                 onClick = { onContentTypeSelected(NavContentType.MOVIES) },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
                             )
                         }
 
@@ -352,7 +386,7 @@ fun ContentTypeSelectionScreen(
                                 showTotal = isDevMode,
                                 gradientColors = listOf(CinemaAccentLight, CinemaAccent),
                                 onClick = { onContentTypeSelected(NavContentType.TV_SHOWS) },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
                             )
                         }
                     }
@@ -450,6 +484,7 @@ private fun ContentTypeHeroCard(
     icon: ImageVector,
     categoryCounts: Pair<Int, Int>?,
     showTotal: Boolean = false,
+    showLivePulse: Boolean = false,
     gradientColors: List<androidx.compose.ui.graphics.Color>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -501,12 +536,34 @@ private fun ContentTypeHeroCard(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(Spacing.md),
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = CinemaTextPrimary,
-                    modifier = Modifier.size(TvDimensions.contentTypeIconSize.scaled(scale)),
-                )
+                Box(contentAlignment = Alignment.TopEnd) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = CinemaTextPrimary,
+                        modifier = Modifier.size(TvDimensions.contentTypeIconSize.scaled(scale)),
+                    )
+                    if (showLivePulse) {
+                        val pulseTransition = rememberInfiniteTransition(label = "live_pulse")
+                        val pulseAlpha by pulseTransition.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 0.3f,
+                            animationSpec =
+                                infiniteRepeatable(
+                                    animation = tween(CinemaAnimation.shimmerDurationMs),
+                                    repeatMode = RepeatMode.Reverse,
+                                ),
+                            label = "live_pulse_alpha",
+                        )
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(TvDimensions.liveDotSize.scaled(scale))
+                                    .border(TvDimensions.borderThin, CinemaTextPrimary.copy(alpha = pulseAlpha), CircleShape)
+                                    .background(CinemaLive.copy(alpha = pulseAlpha), shape = CircleShape),
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                 Text(
                     text = title,
@@ -532,7 +589,15 @@ private fun ContentTypeHeroCard(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = Spacing.xxs.scaled(scale)),
                 )
-                if (categoryCounts != null) {
+                if (categoryCounts == null) {
+                    ShimmerPlaceholder(
+                        modifier =
+                            Modifier
+                                .padding(top = Spacing.xs)
+                                .size(width = TvDimensions.contentTypeIconSize.scaled(scale), height = Spacing.md)
+                                .clip(RoundedCornerShape(CinemaCornerRadius.small)),
+                    )
+                } else {
                     val (filtered, total) = categoryCounts
                     val countText =
                         if (showTotal && filtered < total) {
