@@ -64,9 +64,9 @@ val AmoledBlackPalette =
     CinemaThemePalette(
         id = "amoled_black",
         displayName = "AMOLED Black",
-        accent = Color(0xFF2979FF),
-        accentDark = Color(0xFF1565C0),
-        accentLight = Color(0xFF82B1FF),
+        accent = Color(0xFFE0E0E0),
+        accentDark = Color(0xFFB0B0B0),
+        accentLight = Color(0xFFFFFFFF),
         orange = Color(0xFFFF6D00),
         orangeDark = Color(0xFFE65100),
         orangeLight = Color(0xFFFFAB40),
@@ -75,16 +75,16 @@ val AmoledBlackPalette =
         surfaceVariant = Color(0xFF121212),
         surfaceLight = Color(0xFF1A1A1A),
         glassBackground = Color(0xBF000000),
-        glassBorder = Color(0x142979FF),
+        glassBorder = Color(0x14E0E0E0),
     )
 
-val EmeraldPalette =
+val AmethystPalette =
     CinemaThemePalette(
-        id = "emerald",
-        displayName = "Emerald",
-        accent = Color(0xFF00C853),
-        accentDark = Color(0xFF009624),
-        accentLight = Color(0xFF69F0AE),
+        id = "amethyst",
+        displayName = "Amethyst",
+        accent = Color(0xFF9C6BFF),
+        accentDark = Color(0xFF6A3FD6),
+        accentLight = Color(0xFFC7A8FF),
         orange = Color(0xFFFF6D00),
         orangeDark = Color(0xFFE65100),
         orangeLight = Color(0xFFFFAB40),
@@ -93,16 +93,16 @@ val EmeraldPalette =
         surfaceVariant = Color(0xFF1E2228),
         surfaceLight = Color(0xFF2A3038),
         glassBackground = Color(0xBF0F1014),
-        glassBorder = Color(0x1400C853),
+        glassBorder = Color(0x149C6BFF),
     )
 
-val CrimsonPalette =
+val TealPalette =
     CinemaThemePalette(
-        id = "crimson",
-        displayName = "Crimson",
-        accent = Color(0xFFFF1744),
-        accentDark = Color(0xFFD50000),
-        accentLight = Color(0xFFFF8A80),
+        id = "teal",
+        displayName = "Teal",
+        accent = Color(0xFF26C6DA),
+        accentDark = Color(0xFF00838F),
+        accentLight = Color(0xFF80DEEA),
         orange = Color(0xFFFF6D00),
         orangeDark = Color(0xFFE65100),
         orangeLight = Color(0xFFFFAB40),
@@ -111,7 +111,7 @@ val CrimsonPalette =
         surfaceVariant = Color(0xFF1E2228),
         surfaceLight = Color(0xFF2A3038),
         glassBackground = Color(0xBF0F1014),
-        glassBorder = Color(0x14FF1744),
+        glassBorder = Color(0x1426C6DA),
     )
 
 // --- All palettes ---
@@ -120,8 +120,8 @@ val AllPalettes: List<CinemaThemePalette> =
     listOf(
         DeepNightPalette,
         AmoledBlackPalette,
-        EmeraldPalette,
-        CrimsonPalette,
+        AmethystPalette,
+        TealPalette,
     )
 
 fun paletteById(id: String): CinemaThemePalette = AllPalettes.firstOrNull { it.id == id } ?: DeepNightPalette
