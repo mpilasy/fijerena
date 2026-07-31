@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.FilterMode
@@ -40,6 +41,8 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
+
+private const val CATEGORY_FILTER_PREVIEW_COUNT = 6
 
 @Composable
 fun ProviderSettingsSection(
@@ -285,14 +288,20 @@ fun ProviderSettingsSection(
                     text = if (providerSettings.categoryFilters.rules.isEmpty()) {
                         stringResource(R.string.provider_no_filters)
                     } else {
+                        val rules = providerSettings.categoryFilters.rules
+                        val preview = rules.take(CATEGORY_FILTER_PREVIEW_COUNT).joinToString(", ") { it.value }
+                        val remaining = rules.size - CATEGORY_FILTER_PREVIEW_COUNT
+                        val suffix = if (remaining > 0) ", +$remaining more" else ""
                         stringResource(
                             R.string.provider_prefixes_value,
-                            providerSettings.categoryFilters.rules.size,
-                            providerSettings.categoryFilters.rules.joinToString(", ") { it.value },
+                            rules.size,
+                            "$preview$suffix",
                         )
                     },
                     style = styles.bodyMedium,
                     color = CinemaTextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Text(
@@ -306,6 +315,8 @@ fun ProviderSettingsSection(
                 ),
                 style = styles.bodyMedium,
                 color = CinemaTextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             CinemaPrimaryButton(
