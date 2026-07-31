@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.provider
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -724,7 +725,10 @@ fun MobileAddProviderScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             singleLine = true,
                                         )
-                                        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                        FlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                                            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                                        ) {
                                             MatchType.entries.forEach { type ->
                                                 FilterChip(
                                                     selected = editingMatchType == type,
@@ -781,6 +785,9 @@ fun MobileAddProviderScreen(
                                         }
                                     }
                                 }
+                                if (index < rules.lastIndex) {
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = CinemaSpacing.xxs))
+                                }
                             }
 
                             OutlinedTextField(
@@ -809,7 +816,10 @@ fun MobileAddProviderScreen(
                                         text = stringResource(R.string.provider_filter_choose_match_type),
                                         style = MaterialTheme.typography.bodyMedium,
                                     )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                                    ) {
                                         MatchType.entries.forEach { type ->
                                             FilterChip(
                                                 selected = pendingAddMatchType == type,

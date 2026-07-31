@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.feature.provider.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -126,11 +128,12 @@ fun CategoryFilterDialog(
             MatchType.EXACT -> "Exact"
         }
 
+    @OptIn(ExperimentalLayoutApi::class)
     @Composable
     fun MatchTypeChipRow(selected: MatchType, onSelect: (MatchType) -> Unit) {
-        Row(
+        FlowRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         ) {
             MatchType.entries.forEach { type ->
                 androidx.tv.material3.Button(

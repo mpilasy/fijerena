@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -33,6 +34,8 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaError
+
+private const val CATEGORY_FILTER_PREVIEW_COUNT = 6
 
 @Composable
 fun ColumnScope.ProviderSettingsSection(
@@ -353,12 +356,15 @@ fun ColumnScope.ProviderSettingsSection(
                                     if (categoryFilters.rules.isEmpty()) {
                                         "No filters configured"
                                     } else {
-                                        "${categoryFilters.rules.size} prefix(es): ${categoryFilters.rules.joinToString(
-                                            ", ",
-                                        ) { it.value }}"
+                                        val preview = categoryFilters.rules.take(CATEGORY_FILTER_PREVIEW_COUNT).joinToString(", ") { it.value }
+                                        val remaining = categoryFilters.rules.size - CATEGORY_FILTER_PREVIEW_COUNT
+                                        val suffix = if (remaining > 0) ", +$remaining more" else ""
+                                        "${categoryFilters.rules.size} prefix(es): $preview$suffix"
                                     },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                             )
                             Text(
                                 text = "Scripts: ${if (categoryFilters.allowedScripts.isEmpty()) {
@@ -371,6 +377,8 @@ fun ColumnScope.ProviderSettingsSection(
                                 }}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                         OutlinedButton(onClick = { onShowCategoryFilterDialogChange(true) }) { Text("Edit") }
