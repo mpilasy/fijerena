@@ -100,6 +100,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -360,7 +361,10 @@ fun MobileCategoryListScreen(
         return
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+    AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target?.thumbnailUrl)
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(contentType.replace("_", " ")) },
@@ -721,6 +725,7 @@ fun MobileCategoryListScreen(
                 }
             }
         }
+    }
     }
 }
 

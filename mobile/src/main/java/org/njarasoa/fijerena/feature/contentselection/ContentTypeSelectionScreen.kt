@@ -9,13 +9,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -38,6 +43,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeDark
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -138,7 +144,10 @@ fun MobileContentTypeSelectionScreen(
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+    AmbientBackdrop(modifier = Modifier.fillMaxSize())
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             val displayName =
                 buildString {
@@ -212,6 +221,7 @@ fun MobileContentTypeSelectionScreen(
                 GradientContentCard(
                     title = "Live TV",
                     description = "Watch live television channels",
+                    icon = Icons.Rounded.LiveTv,
                     categoryCounts = liveTvCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
@@ -223,6 +233,7 @@ fun MobileContentTypeSelectionScreen(
                 GradientContentCard(
                     title = "Movies",
                     description = "Browse on-demand movies",
+                    icon = Icons.Rounded.Movie,
                     categoryCounts = moviesCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccent, CinemaAccentDark),
@@ -234,6 +245,7 @@ fun MobileContentTypeSelectionScreen(
                 GradientContentCard(
                     title = "TV Shows",
                     description = "Watch series and episodes",
+                    icon = Icons.Rounded.Tv,
                     categoryCounts = tvShowsCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccentLight, CinemaAccent),
@@ -241,6 +253,7 @@ fun MobileContentTypeSelectionScreen(
                 )
             }
         }
+    }
     }
 
     // Provider picker dialog
@@ -324,6 +337,7 @@ fun MobileContentTypeSelectionScreen(
 private fun GradientContentCard(
     title: String,
     description: String,
+    icon: ImageVector,
     categoryCounts: Pair<Int, Int>?,
     showTotal: Boolean = false,
     gradientColors: List<androidx.compose.ui.graphics.Color>,
@@ -355,18 +369,29 @@ private fun GradientContentCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = CinemaTextPrimary,
-                        fontWeight = FontWeight.Bold,
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = CinemaTextPrimary,
+                        modifier = Modifier.size(MobileDimensions.iconLarge),
                     )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                    )
+                    Column {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = CinemaTextPrimary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                        )
+                    }
                 }
                 if (categoryCounts != null) {
                     val (filtered, total) = categoryCounts
