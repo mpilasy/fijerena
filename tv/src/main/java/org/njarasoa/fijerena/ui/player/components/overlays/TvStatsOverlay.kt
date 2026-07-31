@@ -56,7 +56,7 @@ import org.njarasoa.fijerena.ui.player.utils.formatTime
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
-fun StatsOverlay(
+fun TvStatsOverlay(
     playbackState: PlaybackState,
     metadata: PlayerMetadata,
     onHide: () -> Unit = {},

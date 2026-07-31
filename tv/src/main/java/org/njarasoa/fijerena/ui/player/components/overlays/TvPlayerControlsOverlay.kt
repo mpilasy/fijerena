@@ -84,7 +84,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import java.util.Date
 
 @Composable
-fun PlayerControlsOverlay(
+fun TvPlayerControlsOverlay(
     playbackState: PlaybackState,
     metadata: PlayerMetadata,
     viewModel: PlaybackViewModel,
@@ -159,7 +159,7 @@ fun PlayerControlsOverlay(
             try {
                 controlsFocusRequester.requestFocus()
             } catch (e: Exception) {
-                android.util.Log.e("PlayerControlsOverlay", "Failed to request focus for controls", e)
+                android.util.Log.e("TvPlayerControlsOverlay", "Failed to request focus for controls", e)
             }
         }
     }

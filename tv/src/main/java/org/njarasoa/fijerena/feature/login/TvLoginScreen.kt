@@ -61,7 +61,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun LoginScreenTv(
+fun TvLoginScreen(
     viewModel: LoginViewModel =
         viewModel(
             factory = LoginViewModelFactory(LocalContext.current.applicationContext),

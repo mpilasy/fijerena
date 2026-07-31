@@ -102,7 +102,7 @@ import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.ui.components.TvSearchTextField
 
 @Composable
-fun EpgBrowserScreen(
+fun TvEpgBrowserScreen(
     onBack: () -> Unit,
     onNavigateToPlayer: (streamId: String, streamName: String, categoryId: String) -> Unit = { _, _, _ -> },
 ) {

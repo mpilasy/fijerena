@@ -30,11 +30,11 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
-import org.njarasoa.fijerena.feature.category.CategoryGridScreen
+import org.njarasoa.fijerena.feature.category.TvCategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
-import org.njarasoa.fijerena.feature.epg.EpgGuideScreen
+import org.njarasoa.fijerena.feature.epg.TvEpgGuideScreen
 import org.njarasoa.fijerena.feature.epg.TvEpgManagementScreen
-import org.njarasoa.fijerena.feature.epgbrowser.EpgBrowserScreen
+import org.njarasoa.fijerena.feature.epgbrowser.TvEpgBrowserScreen
 import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
@@ -195,7 +195,7 @@ fun TvNavHost(
 
                 // EPG Browser Screen
                 composable<Screen.EpgBrowser> {
-                    EpgBrowserScreen(
+                    TvEpgBrowserScreen(
                         onBack = { navController.navigateUp() },
                         onNavigateToPlayer = { streamId, _, categoryId ->
                             // Land on the preview pane, not full-screen — see LiveTvSplitLayout.
@@ -228,7 +228,7 @@ fun TvNavHost(
                 // Category List Screen
                 composable<Screen.CategoryList> { backStackEntry ->
                     val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
-                    CategoryGridScreen(
+                    TvCategoryGridScreen(
                         contentType = categoryListScreen.contentType,
                         initialCategoryId = categoryListScreen.initialCategoryId,
                         initialStreamId = categoryListScreen.initialStreamId,
@@ -414,7 +414,7 @@ fun TvNavHost(
                 // EPG Guide Screen
                 composable<Screen.EpgGuide> { backStackEntry ->
                     val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
-                    EpgGuideScreen(
+                    TvEpgGuideScreen(
                         categoryId = epgScreen.categoryId,
                         categoryName = epgScreen.categoryName,
                         onProgramSelected = { _, channel ->
