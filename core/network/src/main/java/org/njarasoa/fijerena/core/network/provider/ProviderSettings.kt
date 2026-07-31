@@ -124,6 +124,23 @@ data class CategoryMatcher(
         }
 }
 
+/**
+ * Appends [values] as new [CategoryMatcher]s with [matchType], skipping blanks and duplicates.
+ * A duplicate is a case-insensitive value match with the same [matchType] — same text under a
+ * different matchType is a distinct rule and is kept.
+ */
+fun List<CategoryMatcher>.withAddedRules(values: List<String>, matchType: MatchType): List<CategoryMatcher> {
+    val result = toMutableList()
+    val seen = result.mapTo(mutableSetOf()) { it.value.trim().lowercase() to it.matchType }
+    for (raw in values) {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) continue
+        val key = trimmed.lowercase() to matchType
+        if (seen.add(key)) result.add(CategoryMatcher(value = trimmed, matchType = matchType))
+    }
+    return result
+}
+
 object CategoryMatcherSerializer : JsonTransformingSerializer<CategoryMatcher>(CategoryMatcher.serializer()) {
     override fun transformDeserialize(element: JsonElement): JsonElement =
         if (element is JsonPrimitive && element.isString) {
