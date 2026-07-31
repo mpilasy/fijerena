@@ -4,6 +4,7 @@ import android.util.Log
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
+import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
@@ -122,6 +123,9 @@ class XtreamMediaProvider(
             seriesId.toIntOrNull() ?: return kotlin.Result.failure(
                 Exception("Invalid series ID: $seriesId"),
             )
+        // Always hit Xtream for the episode list — ongoing shows add episodes, and skipping this
+        // call would mean not noticing new ones until the persisted cache expires. Only the TMDB
+        // content-rating round trip below is skipped when we already have a fresh persisted value.
         return when (val result = repository.getSeriesInfo(id)) {
             is Result.Success -> {
                 val detail = result.data.toDomain(seriesId)
@@ -129,11 +133,22 @@ class XtreamMediaProvider(
                 var enriched = detail
                 if (tmdb.hasApiKey() && tmdbSeriesId != null) {
                     enriched = enrichWithTmdbOverviews(enriched, tmdbSeriesId)
-                    val certification = fetchTvCertification(tmdbSeriesId)
+
+                    val cachedSeries = repository.getCachedSeriesEntity(id)
+                    val cachedRating = cachedSeries?.contentRating
+                    val cachedRatingFresh =
+                        cachedRating != null &&
+                            cachedSeries.detailFetchedAt != null &&
+                            System.currentTimeMillis() - cachedSeries.detailFetchedAt < DETAIL_CACHE_TTL_MS
+                    val certification = if (cachedRatingFresh) cachedRating else fetchTvCertification(tmdbSeriesId)
                     if (certification != null) {
                         enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
                     }
+                    if (!cachedRatingFresh) {
+                        repository.saveSeriesDetailCache(id, certification, tmdbSeriesId.toString(), System.currentTimeMillis())
+                    }
                 }
+                repository.persistEpisodeOverviews(enriched.episodes)
                 seriesDetailCache.put(seriesId, enriched)
                 kotlin.Result.success(enriched)
             }
@@ -231,6 +246,17 @@ class XtreamMediaProvider(
             movieId.toIntOrNull() ?: return kotlin.Result.failure(
                 Exception("Invalid movie ID: $movieId"),
             )
+
+        // A movie's own metadata never changes after release (unlike a series' episode list), so a
+        // fresh persisted cache row is served with no Xtream or TMDB call at all, surviving restarts.
+        repository.getCachedMovieDetail(id)?.let { cached ->
+            if (cached.detailFetchedAt != null && System.currentTimeMillis() - cached.detailFetchedAt < DETAIL_CACHE_TTL_MS) {
+                val detail = cached.toMovieDetail(movieId)
+                movieDetailCache.put(movieId, detail)
+                return kotlin.Result.success(detail)
+            }
+        }
+
         return when (val result = repository.getVodInfo(id)) {
             is Result.Success -> {
                 val detail = result.data.toDomain(movieId)
@@ -247,6 +273,13 @@ class XtreamMediaProvider(
                         detail
                     }
                 movieDetailCache.put(movieId, enriched)
+                repository.saveMovieDetailCache(
+                    vodId = id,
+                    contentRating = enriched.metadata.contentRating,
+                    tmdbId = enriched.metadata.tmdbId,
+                    containerExtension = enriched.extension,
+                    fetchedAt = System.currentTimeMillis(),
+                )
                 kotlin.Result.success(enriched)
             }
             is Result.Error ->

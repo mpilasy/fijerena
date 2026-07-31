@@ -32,6 +32,10 @@ data class XtreamSeriesEntity(
     val backdropPath: String? = null, // Comma separated URLs
     val contentHash: Int = 0,
     val excluded: Boolean = false,
+    // TMDB-derived / full-detail cache fields — populated once a detail screen fetch completes.
+    val contentRating: String? = null,
+    val tmdbId: String? = null,
+    val detailFetchedAt: Long? = null,
 ) {
     companion object {
         fun computeHash(

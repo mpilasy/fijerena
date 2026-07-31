@@ -40,6 +40,11 @@ data class XtreamStreamEntity(
     val duration: String? = null,
     val youtubeTrailer: String? = null,
     val excluded: Boolean = false,
+    // TMDB-derived / full-detail cache fields — populated once a detail screen fetch completes.
+    val contentRating: String? = null,
+    val tmdbId: String? = null,
+    val containerExtension: String? = null,
+    val detailFetchedAt: Long? = null,
 ) {
     companion object {
         const val TYPE_LIVE = "LIVE"
