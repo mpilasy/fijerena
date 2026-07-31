@@ -83,9 +83,15 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private var onPositionSaveListener: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null
 
-    private var liveRetryCount = 0
+    private var retryCount = 0
     private var autoRetryAttempted = false
     private var lastErrorMessage: String? = null
+
+    // Position to resume at on a VOD retry/reconnect — captured the moment a fault is first
+    // observed, since the player's position is still valid then even though playback state is
+    // about to flip to Error/Idle. Live retries reconnect to the live edge instead, so they
+    // never read this.
+    private var pendingResumePositionMs: Long = 0L
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingRetry: Runnable? = null
 
@@ -99,6 +105,14 @@ class StreamingPlaybackService : MediaSessionService() {
     val isRecyclingFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = _isRecycling.asStateFlow()
 
     private var recycleStartTimeMs: Long = 0L
+
+    // A seek (esp. VOD scrubbing into an unbuffered region) briefly looks identical to real
+    // degradation (low buffered margin) to the health monitor. This grace window suppresses
+    // health-metric feeding right after a seek so scrubbing never triggers a spurious recycle.
+    // Live streams don't seek, so this is a no-op for them.
+    private var lastSeekTimeMs: Long = 0L
+
+    private fun isWithinSeekGrace(): Boolean = (SystemClock.elapsedRealtime() - lastSeekTimeMs) < SEEK_HEALTH_GRACE_MS
 
     fun isRecycling(): Boolean = _isRecycling.value
 
@@ -119,9 +133,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private val recycleHandler = Runnable {
         val metadata = _currentMetadata.value
         val player = getPlayer()
-        if (metadata.isLive && player != null) {
+        if (player != null) {
             val currentPos = player.currentPosition
-            Log.i(TAG, "Executing silent stream recycle at position: $currentPos")
+            Log.i(TAG, "Executing silent stream recycle at position: $currentPos (isLive=${metadata.isLive})")
 
             // 1. Evict network connection pool to bypass ISP/CDN shaping.
             // Closing pooled connections can block on socket I/O, so this must not run on
@@ -181,11 +195,13 @@ class StreamingPlaybackService : MediaSessionService() {
             },
             onRecoveryExhausted = {
                 mainHandler.post {
-                    Log.w(TAG, "Recovery exhausted: giving up after repeated recycle attempts.")
+                    val isLive = _currentMetadata.value.isLive
+                    Log.w(TAG, "Recovery exhausted: giving up after repeated recycle attempts (isLive=$isLive).")
                     stop()
+                    val label = if (isLive) "Live stream" else "Video"
                     _playbackState.value =
                         PlaybackState.Error(
-                            "Live stream unavailable after repeated recovery attempts. " +
+                            "$label unavailable after repeated recovery attempts. " +
                                 "Check your connection and try again.",
                         )
                 }
@@ -225,12 +241,14 @@ class StreamingPlaybackService : MediaSessionService() {
 
                 if (connectivityRestored &&
                     !autoRetryAttempted &&
-                    _currentMetadata.value.isLive &&
+                    _currentMetadata.value.streamUrl.isNotEmpty() &&
                     _playbackState.value is PlaybackState.Error
                 ) {
                     autoRetryAttempted = true
-                    Log.i(TAG, "Connectivity restored after recovery exhaustion — auto-retrying once.")
-                    playStream(_currentMetadata.value)
+                    val metadata = _currentMetadata.value
+                    val resumePosition = if (metadata.isLive) 0L else pendingResumePositionMs
+                    Log.i(TAG, "Connectivity restored after recovery exhaustion — auto-retrying once (isLive=${metadata.isLive}).")
+                    playStream(metadata, resumePosition)
                 }
             }
         }
@@ -243,7 +261,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 delay(healthMonitor?.config?.evaluationIntervalMs ?: 5000L)
                 val player = getPlayer()
                 val metadata = _currentMetadata.value
-                if (player != null && metadata.isLive) {
+                if (player != null && metadata.streamUrl.isNotEmpty() && !isWithinSeekGrace()) {
                     val state = player.playbackState
                     if (state == Player.STATE_READY || state == Player.STATE_BUFFERING) {
                         val position = player.currentPosition
@@ -318,7 +336,7 @@ class StreamingPlaybackService : MediaSessionService() {
                     Log.d(TAG, "onStateChanged: newState=$newState, isRecycling=$isRecycling")
                     
                     if (newState is PlaybackState.Playing) {
-                        liveRetryCount = 0
+                        retryCount = 0
                         healthMonitor?.notifyStablePlayback()
                         // Reset recycling mode once we are successfully playing the new stream
                         if (isRecycling) {
@@ -404,9 +422,10 @@ class StreamingPlaybackService : MediaSessionService() {
             }
         cancelPendingRetry()
         playerListener?.resetErrorState()
-        liveRetryCount = 0
+        retryCount = 0
         autoRetryAttempted = false
         lastErrorMessage = null
+        pendingResumePositionMs = 0L
         healthMonitor?.notifyStablePlayback()
         healthMonitor?.reset()
         // A new stream has no position history yet — without this, the stall check in
@@ -452,16 +471,15 @@ class StreamingPlaybackService : MediaSessionService() {
         player.prepare()
     }
 
-    private fun attemptLiveRetry() {
-        val metadata = _currentMetadata.value
-        if (!metadata.isLive || liveRetryCount >= MAX_LIVE_RETRIES) {
-            if (metadata.isLive && liveRetryCount >= MAX_LIVE_RETRIES) {
-                val detail = lastErrorMessage ?: "The channel may be offline."
-                _playbackState.value =
-                    PlaybackState.Error(
-                        "Live stream unavailable after $MAX_LIVE_RETRIES retries. $detail",
-                    )
-            }
+    private fun attemptStreamRetry(metadata: PlayerMetadata) {
+        val maxRetries = if (metadata.isLive) MAX_LIVE_RETRIES else MAX_VOD_RETRIES
+        if (retryCount >= maxRetries) {
+            val detail = lastErrorMessage ?: if (metadata.isLive) "The channel may be offline." else "Check your connection and try again."
+            val label = if (metadata.isLive) "Live stream" else "Video"
+            _playbackState.value =
+                PlaybackState.Error(
+                    "$label unavailable after $maxRetries retries. $detail",
+                )
             return
         }
 
@@ -475,15 +493,20 @@ class StreamingPlaybackService : MediaSessionService() {
         // Hard retry should use fast-startup settings
         setRecycling(false)
 
-        liveRetryCount++
+        retryCount++
         _streamRetryCount.value++
-        val delayMs = LIVE_RETRY_BASE_DELAY_MS * liveRetryCount
-        Log.i(TAG, "Live stream retry $liveRetryCount/$MAX_LIVE_RETRIES in ${delayMs}ms")
+        val baseDelay = if (metadata.isLive) LIVE_RETRY_BASE_DELAY_MS else VOD_RETRY_BASE_DELAY_MS
+        val delayMs = baseDelay * retryCount
+        Log.i(TAG, "Stream retry $retryCount/$maxRetries in ${delayMs}ms (isLive=${metadata.isLive})")
 
         // updatePlaybackState() already pushed the player's raw STATE_IDLE through before
         // onPlayerError ran, so without this the screen goes silently blank for the whole
         // retry delay — indistinguishable from a dead app. Show buffering instead.
         _playbackState.value = PlaybackState.Buffering
+
+        // Captured now, not read from the field inside the closure — a later fault (before this
+        // delayed retry fires) could overwrite pendingResumePositionMs with a different value.
+        val resumePosition = pendingResumePositionMs
 
         val retryRunnable =
             Runnable {
@@ -501,6 +524,10 @@ class StreamingPlaybackService : MediaSessionService() {
                     ) ?: return@Runnable
 
                 player.setMediaSource(mediaSource)
+                // Live reconnects at the live edge; VOD must resume where it failed.
+                if (!metadata.isLive && resumePosition > 0L) {
+                    player.seekTo(resumePosition)
+                }
                 player.playWhenReady = true
                 player.prepare()
             }
@@ -515,16 +542,14 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private fun handleStreamEndedOrError(errorMessage: String?) {
         val metadata = _currentMetadata.value
-        if (metadata.isLive) {
-            lastErrorMessage = errorMessage
-            attemptLiveRetry()
-        } else {
-            if (errorMessage != null) {
-                _playbackState.value = PlaybackState.Error(errorMessage)
-            } else {
-                _playbackState.value = PlaybackState.Ended
-            }
+        if (errorMessage == null && !metadata.isLive) {
+            // Natural end of VOD content — not a fault, never retried.
+            _playbackState.value = PlaybackState.Ended
+            return
         }
+        lastErrorMessage = errorMessage
+        pendingResumePositionMs = getPlayer()?.currentPosition?.coerceAtLeast(0L) ?: pendingResumePositionMs
+        attemptStreamRetry(metadata)
     }
 
     fun pause() {
@@ -550,6 +575,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     fun seekTo(position: Long) {
+        lastSeekTimeMs = SystemClock.elapsedRealtime()
         mediaSession?.player?.seekTo(position)
     }
 
@@ -1105,10 +1131,11 @@ class StreamingPlaybackService : MediaSessionService() {
                 }
             }
             
-            // Feed health monitor on every state change
+            // Feed health monitor on every state change. Skipped right after a seek (VOD
+            // scrubbing) — a seek briefly looks like a low-buffer degradation event otherwise.
             val service = instance
             val player = service?.getPlayer()
-            if (service != null && player != null) {
+            if (service != null && player != null && !service.isWithinSeekGrace()) {
                 service.healthMonitor?.updateMetrics(
                     bufferedDurationMs = player.bufferedPosition - player.currentPosition,
                     droppedFramesPerSecond = service._measuredDroppedFps.value, 
@@ -1145,6 +1172,9 @@ class StreamingPlaybackService : MediaSessionService() {
         private const val TAG = "StreamingPlaybackService"
         private const val MAX_LIVE_RETRIES = 3
         private const val LIVE_RETRY_BASE_DELAY_MS = 2000L
+        private const val MAX_VOD_RETRIES = 3
+        private const val VOD_RETRY_BASE_DELAY_MS = 3000L
+        private const val SEEK_HEALTH_GRACE_MS = 6000L
         private const val SEAMLESS_RECYCLE_GRACE_MS = 7000L
 
         @Volatile
