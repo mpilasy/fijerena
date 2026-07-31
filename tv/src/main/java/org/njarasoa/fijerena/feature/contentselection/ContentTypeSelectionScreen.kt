@@ -67,11 +67,11 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrangeDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -86,16 +86,6 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.navigation.ContentType as NavContentType
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
-
-private val BACKGROUND_GRADIENT =
-    Brush.verticalGradient(
-        colors =
-            listOf(
-                CinemaBackground,
-                CinemaAccentDark.copy(alpha = CinemaAlpha.ghost),
-                CinemaBackground,
-            ),
-    )
 
 /**
  * Content type selection screen with icons, category counts, and gradient cards.
@@ -201,12 +191,12 @@ fun ContentTypeSelectionScreen(
     CompositionLocalProvider(LocalUiScale provides uiScale) {
         val scale = LocalUiScale.current
 
-        // Subtle background gradient wash
+        Box(modifier = Modifier.fillMaxSize()) {
+        AmbientBackdrop(modifier = Modifier.fillMaxSize())
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(BACKGROUND_GRADIENT)
                     .padding(
                         horizontal = Spacing.tvSafeMarginHorizontal,
                         vertical = Spacing.tvSafeMarginVertical,
@@ -451,6 +441,7 @@ fun ContentTypeSelectionScreen(
                     },
                 )
             }
+        }
         }
     } // CompositionLocalProvider
 }
