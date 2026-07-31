@@ -196,9 +196,9 @@ class XtreamRepository(
 
     suspend fun getVodInfo(vodId: Int): Result<VodInfo> = contentManager.getVodInfo(vodId)
 
-    fun getCachedMovieDetail(vodId: Int) = contentManager.getCachedMovieDetail(vodId)
+    suspend fun getCachedMovieDetail(vodId: Int) = contentManager.getCachedMovieDetail(vodId)
 
-    fun saveMovieDetailCache(
+    suspend fun saveMovieDetailCache(
         vodId: Int,
         contentRating: String?,
         tmdbId: String?,
@@ -206,16 +206,16 @@ class XtreamRepository(
         fetchedAt: Long,
     ) = contentManager.saveMovieDetailCache(vodId, contentRating, tmdbId, containerExtension, fetchedAt)
 
-    fun getCachedSeriesEntity(seriesId: Int) = contentManager.getCachedSeriesEntity(seriesId)
+    suspend fun getCachedSeriesEntity(seriesId: Int) = contentManager.getCachedSeriesEntity(seriesId)
 
-    fun saveSeriesDetailCache(
+    suspend fun saveSeriesDetailCache(
         seriesId: Int,
         contentRating: String?,
         tmdbId: String?,
         fetchedAt: Long,
     ) = contentManager.saveSeriesDetailCache(seriesId, contentRating, tmdbId, fetchedAt)
 
-    fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) = contentManager.persistEpisodeOverviews(episodes)
+    suspend fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) = contentManager.persistEpisodeOverviews(episodes)
 
     suspend fun getEpgForStream(streamId: Int): Result<EpgResponse> = epgManager.getEpgForStream(streamId)
 
