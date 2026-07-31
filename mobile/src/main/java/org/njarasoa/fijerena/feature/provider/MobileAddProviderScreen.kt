@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
+import org.njarasoa.fijerena.core.network.provider.CategoryMatcher
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
@@ -651,7 +652,7 @@ fun MobileAddProviderScreen(
             // Category Filter Dialog
             if (showCategoryFilterDialog) {
                 var filterMode by remember { mutableStateOf(categoryFilters.mode) }
-                var prefixesText by remember { mutableStateOf(categoryFilters.prefixes.joinToString(", ")) }
+                var prefixesText by remember { mutableStateOf(categoryFilters.rules.joinToString(", ") { it.value }) }
                 var selectedScripts by remember { mutableStateOf(categoryFilters.allowedScripts) }
 
                 AlertDialog(
@@ -717,8 +718,8 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         Button(
                             onClick = {
-                                val prefixes = prefixesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                                val newFilters = CategoryFilters(mode = filterMode, prefixes = prefixes, allowedScripts = selectedScripts)
+                                val rules = prefixesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { CategoryMatcher(value = it) }
+                                val newFilters = CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)
                                 categoryFilters = newFilters
                                 coroutineScope.launch {
                                     val newSettings = providerSettings.copy(categoryFilters = newFilters)

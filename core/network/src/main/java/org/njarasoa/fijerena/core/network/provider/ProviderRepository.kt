@@ -232,6 +232,22 @@ class ProviderRepository(
         }
     }
 
+    /**
+     * One-time rewrite of any stored provider settings still using the legacy
+     * `categoryFilters.prefixes: List<String>` shape into the current
+     * `categoryFilters.rules: List<CategoryMatcher>` shape. [CategoryMatcherSerializer] already
+     * tolerates reading the old shape indefinitely, so this isn't required for correctness — it
+     * just ensures the stored bytes actually reflect the new format instead of relying on the
+     * lenient decoder forever. Safe to call on every app start: a no-op once migrated.
+     */
+    suspend fun migrateLegacyCategoryFilterPrefixes() {
+        dao.getAllProvidersList().forEach { entity ->
+            if (!entity.providerSettings.contains("\"prefixes\"")) return@forEach
+            val settings = parseProviderSettings(entity.providerSettings)
+            dao.updateProvider(entity.copy(providerSettings = json.encodeToString(settings)))
+        }
+    }
+
     // --- Cache management ---
 
     suspend fun getCacheStatsForProvider(providerId: Long): XtreamRepository.CacheStats {
