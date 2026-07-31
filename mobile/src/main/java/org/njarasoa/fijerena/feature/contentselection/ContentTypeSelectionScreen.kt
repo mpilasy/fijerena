@@ -1,9 +1,16 @@
 package org.njarasoa.fijerena.feature.contentselection
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -18,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -36,12 +44,16 @@ import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
+import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeDark
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
@@ -78,6 +90,7 @@ fun MobileContentTypeSelectionScreen(
     var moviesCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var tvShowsCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var mediaProviderRef by remember { mutableStateOf<org.njarasoa.fijerena.core.player.domain.MediaProvider?>(null) }
+    var backdropImageUrl by remember { mutableStateOf<String?>(null) }
 
     // Show EPG Browser button when EPG index has data
     val hasEpgData =
@@ -111,6 +124,26 @@ fun MobileContentTypeSelectionScreen(
         }
     }
 
+    // Pull a recently-watched poster for the ambient backdrop wash — falls back to the plain
+    // gradient (AmbientBackdrop's default) if there's no watch history yet or the provider
+    // doesn't support it.
+    LaunchedEffect(mediaProviderRef) {
+        val mp = mediaProviderRef ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            for (contentType in listOf(ContentType.MOVIES, ContentType.TV_SHOWS, ContentType.LIVE_TV)) {
+                val poster =
+                    mp.getRecentlyPlayed(contentType)
+                        ?.getOrNull()
+                        ?.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }
+                        ?.thumbnailUrl
+                if (poster != null) {
+                    backdropImageUrl = poster
+                    break
+                }
+            }
+        }
+    }
+
     // Load category counts in the background once provider is ready
     LaunchedEffect(mediaProviderRef) {
         val mp = mediaProviderRef ?: return@LaunchedEffect
@@ -140,7 +173,7 @@ fun MobileContentTypeSelectionScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-    AmbientBackdrop(modifier = Modifier.fillMaxSize())
+    AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = backdropImageUrl)
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
@@ -208,10 +241,14 @@ fun MobileContentTypeSelectionScreen(
             Text(
                 text = "Select Content Type",
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = CinemaSpacing.lg),
+                modifier =
+                    Modifier
+                        .padding(bottom = CinemaSpacing.lg)
+                        .staggeredEntrance(0),
             )
 
             val isDevMode = appSettings.isDevMode
+            var cardIndex = 1
             if (ContentType.LIVE_TV in supportedContentTypes) {
                 GradientContentCard(
                     title = "Live TV",
@@ -219,8 +256,10 @@ fun MobileContentTypeSelectionScreen(
                     icon = Icons.Rounded.LiveTv,
                     categoryCounts = liveTvCounts,
                     showTotal = isDevMode,
+                    showLivePulse = true,
                     gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
                     onClick = { onContentTypeSelected(ContentType.LIVE_TV) },
+                    modifier = Modifier.staggeredEntrance(cardIndex++),
                 )
             }
 
@@ -233,6 +272,7 @@ fun MobileContentTypeSelectionScreen(
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccent, CinemaAccentDark),
                     onClick = { onContentTypeSelected(ContentType.MOVIES) },
+                    modifier = Modifier.staggeredEntrance(cardIndex++),
                 )
             }
 
@@ -245,6 +285,7 @@ fun MobileContentTypeSelectionScreen(
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccentLight, CinemaAccent),
                     onClick = { onContentTypeSelected(ContentType.TV_SHOWS) },
+                    modifier = Modifier.staggeredEntrance(cardIndex++),
                 )
             }
         }
@@ -335,13 +376,15 @@ private fun GradientContentCard(
     icon: ImageVector,
     categoryCounts: Pair<Int, Int>?,
     showTotal: Boolean = false,
+    showLivePulse: Boolean = false,
     gradientColors: List<androidx.compose.ui.graphics.Color>,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
         onClick = onClick,
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .height(MobileDimensions.contentTypeCardHeight),
         shape = RoundedCornerShape(CinemaCornerRadius.large),
@@ -368,12 +411,34 @@ private fun GradientContentCard(
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = CinemaTextPrimary,
-                        modifier = Modifier.size(MobileDimensions.iconLarge),
-                    )
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = CinemaTextPrimary,
+                            modifier = Modifier.size(MobileDimensions.iconLarge),
+                        )
+                        if (showLivePulse) {
+                            val pulseTransition = rememberInfiniteTransition(label = "live_pulse")
+                            val pulseAlpha by pulseTransition.animateFloat(
+                                initialValue = 1f,
+                                targetValue = 0.3f,
+                                animationSpec =
+                                    infiniteRepeatable(
+                                        animation = tween(CinemaAnimation.shimmerDurationMs),
+                                        repeatMode = RepeatMode.Reverse,
+                                    ),
+                                label = "live_pulse_alpha",
+                            )
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .size(MobileDimensions.liveDotSize)
+                                        .border(MobileDimensions.dividerThin, CinemaTextPrimary.copy(alpha = pulseAlpha), CircleShape)
+                                        .background(CinemaLive.copy(alpha = pulseAlpha), shape = CircleShape),
+                            )
+                        }
+                    }
                     Column {
                         Text(
                             text = title,
@@ -388,7 +453,14 @@ private fun GradientContentCard(
                         )
                     }
                 }
-                if (categoryCounts != null) {
+                if (categoryCounts == null) {
+                    ShimmerPlaceholder(
+                        modifier =
+                            Modifier
+                                .size(width = MobileDimensions.iconLarge, height = CinemaSpacing.lg)
+                                .clip(RoundedCornerShape(CinemaCornerRadius.small)),
+                    )
+                } else {
                     val (filtered, total) = categoryCounts
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
