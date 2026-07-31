@@ -1,5 +1,18 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Live TV Preview Pane (TV + Mobile)
+**Release Date:** 2026-07-30
+
+### Embedded Preview / Docked Mini-Player
+- **Preview pane shipped for both platforms:** Live TV browsing now always has a channel playing alongside the list — TV gets a focus-driven split layout (`LiveTvSplitLayout`), mobile gets a tap-driven docked mini-player. Both promote to full-screen using the same `StreamingPlaybackService` connection already playing the preview, so promotion/demotion never restarts the stream. See `docs/FEATURES.md` for the user-facing description.
+- **Full-screen channel switch double-loading fixed:** Switching channels while full-screen no longer double-loads the stream; the watchdog fix that guards this was ported from TV to mobile.
+- **Preview watchdog no longer kills healthy streams:** Fixed the preview watchdog over-aggressively tearing down streams that were still buffering, a stale spinner that could outlive its stream, and a cache-write storm on rapid channel changes.
+- **TV/mobile naming convention aligned:** TV screen/component names now mirror the mobile naming convention for the Live TV preview/dock components.
+- **Full-screen letterboxing fixed:** The full-screen Live TV player on TV was being letterboxed by the browsing UI's overscan margin; full-screen playback now ignores it.
+- **Mobile Back-stack stopover added:** Mobile's docked preview auto-seeds on entry with no bare-list stage, so a missing `BackHandler` let Back skip straight past the category screen and out of Live TV. A second `BackHandler` now clears the dock first, giving Back a real stopover — matching TV's silently-pushed bare `CategoryList` entry. See `docs/NAVIGATION_GUIDE.md` → "Live TV Preview / Dock Back-Stack".
+
+---
+
 ## Version: Live TV Service-Recreation Races & Bug Sweep Fixes
 **Release Date:** 2026-06-22
 

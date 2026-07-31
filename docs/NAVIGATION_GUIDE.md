@@ -24,7 +24,10 @@ sealed interface Screen {
     @Serializable data object ContentTypeSelection : Screen
     @Serializable data object EditProvider : Screen  // Legacy
     @Serializable data object Settings : Screen
-    @Serializable data class CategoryList(val contentType: String, val initialCategoryId: String? = null) : Screen
+    @Serializable data class CategoryList(
+        val contentType: String, val initialCategoryId: String? = null,
+        val initialStreamId: String? = null, val showPreviewPane: Boolean = true
+    ) : Screen
     @Serializable data class EpisodeSelection(val seriesId: String, val seriesName: String, val categoryId: String) : Screen
     @Serializable data class MovieDetails(val movieId: String, val movieName: String, val categoryId: String) : Screen
     @Serializable data class Search(val contentType: String) : Screen
@@ -73,7 +76,7 @@ ContentTypeSelection
 │     ├─→ Player (if result is LIVE_TV)
 │     ├─→ MovieDetails → Player (if result is MOVIES)
 │     └─→ EpisodeSelection → Player (if result is TV_SHOWS)
-├─→ CategoryList(LIVE_TV)
+├─→ CategoryList(LIVE_TV)  [TV: pushed twice — see Live TV Preview / Dock below]
 │     ├─→ Player (direct)
 │     ├─→ Search(LIVE_TV)
 │     └─→ EpgGuide (TV Guide)
@@ -110,6 +113,15 @@ The `SearchViewModel` manages categories and individual stream results across al
 5. **Settings → ProviderSelection → AddProvider**: Standard push chain.
 6. **Provider switch**: Navigate to ContentTypeSelection, clearing back stack.
 7. **Logout**: Clear auth session, navigate to Settings, clear back stack to ContentTypeSelection.
+
+### Live TV Preview / Dock Back-Stack
+
+Live TV always shows a channel playing alongside the browse list (see `docs/FEATURES.md`). Because the preview is entered differently on each platform, each has its own way of guaranteeing Back never skips straight past the browse screen and out of Live TV:
+
+- **TV** (`TvNavHost.kt`, `ContentTypeSelection` handler): selecting Live TV pushes `CategoryList(showPreviewPane = false)` with `popUpTo(ContentTypeSelection)`, then immediately pushes a second `CategoryList(showPreviewPane = true)` on top. These are two real back-stack entries — Back from the preview pops to the bare (silent) entry underneath for free via normal nav semantics.
+- **Mobile** (`MobileCategoryListScreen.kt`): there's only ever one `CategoryList` entry — the dock/preview is local composable state (`dockTarget`, `fullScreen`), not a navigation route, and it auto-seeds on entry so Live TV never shows a bare list first. Two `BackHandler`s provide the equivalent stopover: `fullScreen -> false` (full-screen collapses to dock), then `dockTarget -> null` (dock clears to bare list). Only a third Back (falling through to the `onBack` callback) actually leaves the screen.
+
+When touching either flow, preserve the "Back always has a real stopover before exiting" property — it's the reason both look more convoluted than a single `navigate()` call.
 
 ## AuthViewModel
 
