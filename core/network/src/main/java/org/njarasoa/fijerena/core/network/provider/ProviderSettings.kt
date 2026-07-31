@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.provider
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlinx.serialization.json.buildJsonObject
@@ -24,7 +25,7 @@ data class ProviderSettings(
     /** Whether caching is enabled for this provider */
     val cachingEnabled: Boolean = true,
     /** Category filtering rules */
-    val categoryFilters: CategoryFilters = CategoryFilters(),
+    val categoryFilters: @Serializable(with = CategoryFiltersSerializer::class) CategoryFilters = CategoryFilters(),
     /** External XMLTV EPG URL for this provider (empty = use provider's native EPG) */
     val epgUrl: String = "",
     /** Stream output format for live streams: "m3u8" (HLS) or "ts" (MPEG-TS) */
@@ -130,4 +131,21 @@ object CategoryMatcherSerializer : JsonTransformingSerializer<CategoryMatcher>(C
         } else {
             element
         }
+}
+
+/**
+ * Maps the legacy `prefixes` JSON key to the current `rules` key before delegating to the
+ * normal decoder, so pre-migration stored settings (`{"prefixes": ["Adult", ...]}`) aren't
+ * silently dropped by `ignoreUnknownKeys` and defaulted to an empty rule list.
+ * [CategoryMatcherSerializer] then normalizes each individual bare-string entry.
+ */
+object CategoryFiltersSerializer : JsonTransformingSerializer<CategoryFilters>(CategoryFilters.serializer()) {
+    override fun transformDeserialize(element: JsonElement): JsonElement {
+        if (element !is JsonObject || "rules" in element || "prefixes" !in element) return element
+        return JsonObject(
+            element.toMutableMap().apply {
+                put("rules", remove("prefixes")!!)
+            },
+        )
+    }
 }
