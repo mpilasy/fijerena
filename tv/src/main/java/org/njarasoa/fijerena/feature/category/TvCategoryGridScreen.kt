@@ -131,54 +131,35 @@ private fun CategoryGridContent(
     showPreviewPane: Boolean = true,
 ) {
     val scale = LocalUiScale.current
+    val safeMarginModifier =
+        Modifier
+            .fillMaxSize()
+            .padding(
+                horizontal = Spacing.tvSafeMarginHorizontal,
+                vertical = Spacing.tvSafeMarginVertical,
+            )
 
-    // 5% padding for TV overscan safety
+    // 5% padding for TV overscan safety — applied per-branch rather than around the whole
+    // `when`, since LiveTvSplitLayout's promoted full-screen player must NOT inherit it (it
+    // renders inside this same composable, in place, to avoid a second PlaybackViewModel/ANR —
+    // see LiveTvSplitLayout's doc comment). LiveTvSplitLayout applies this same margin itself,
+    // but only around its split/browsing UI, not the full-screen player.
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        horizontal = Spacing.tvSafeMarginHorizontal,
-                        vertical = Spacing.tvSafeMarginVertical,
-                    ),
-        ) {
-            when (val state = uiState) {
-                is CategoryViewModel.UiState.Loading -> {
+        when (val state = uiState) {
+            is CategoryViewModel.UiState.Loading -> {
+                Box(modifier = safeMarginModifier) {
                     LoadingScreen()
                 }
-                is CategoryViewModel.UiState.Success -> {
-                    val immutableCategories = remember(state.categories) { ImmutableCategoryList(state.categories) }
-                    val immutableStreams = remember(state.streams) { state.streams?.let { ImmutableMediaList(it) } }
-                    if (contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV && showPreviewPane) {
-                        val ctx = LocalContext.current
-                        val devMode = remember { org.njarasoa.fijerena.core.network.AppSettings(ctx.applicationContext).isDevMode }
-                        LiveTvSplitLayout(
-                            categoryViewModel = catViewModel,
-                            categories = immutableCategories,
-                            selectedCategoryId = state.selectedCategoryId,
-                            streams = immutableStreams,
-                            streamsLoading = state.streamsLoading,
-                            categoriesRefreshing = state.categoriesRefreshing,
-                            lastPlayedItemId = state.lastPlayedItemId,
-                            nowPlaying = nowPlaying,
-                            contentType = contentType,
-                            isDevMode = devMode,
-                            favoriteIds = favoriteIds,
-                            favoriteCategoryIds = favoriteCategoryIds,
-                            watchProgress = watchProgress,
-                            onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
-                            onStreamSelected = onStreamSelected,
-                            onRefreshCategories = { catViewModel.refreshCategories() },
-                            onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
-                            onBack = onBack,
-                            initialStreamId = initialStreamId,
-                        )
-                        return@Box
-                    }
-                    TwoColumnLayout(
+            }
+            is CategoryViewModel.UiState.Success -> {
+                val immutableCategories = remember(state.categories) { ImmutableCategoryList(state.categories) }
+                val immutableStreams = remember(state.streams) { state.streams?.let { ImmutableMediaList(it) } }
+                if (contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV && showPreviewPane) {
+                    val ctx = LocalContext.current
+                    val devMode = remember { org.njarasoa.fijerena.core.network.AppSettings(ctx.applicationContext).isDevMode }
+                    LiveTvSplitLayout(
                         categoryViewModel = catViewModel,
                         categories = immutableCategories,
                         selectedCategoryId = state.selectedCategoryId,
@@ -188,29 +169,55 @@ private fun CategoryGridContent(
                         lastPlayedItemId = state.lastPlayedItemId,
                         nowPlaying = nowPlaying,
                         contentType = contentType,
+                        isDevMode = devMode,
                         favoriteIds = favoriteIds,
                         favoriteCategoryIds = favoriteCategoryIds,
                         watchProgress = watchProgress,
-                        supportsNativeEpg = supportsNativeEpg,
-                        epgIndexState = epgIndexState,
-                        onCategorySelected = { categoryId ->
-                            catViewModel.loadStreams(categoryId)
-                        },
-                        onStreamSelected = { streamId, streamName, categoryId, providerData ->
-                            onStreamSelected(streamId, streamName, categoryId, providerData)
-                        },
-                        onRefreshCategories = {
-                            catViewModel.refreshCategories()
-                        },
-                        onRefreshStreams = { categoryId ->
-                            catViewModel.refreshStreams(categoryId)
-                        },
-                        onSearchClick = onSearchClick,
-                        onEpgClick = onEpgClick,
+                        onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
+                        onStreamSelected = onStreamSelected,
+                        onRefreshCategories = { catViewModel.refreshCategories() },
+                        onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
                         onBack = onBack,
+                        initialStreamId = initialStreamId,
                     )
+                } else {
+                    Box(modifier = safeMarginModifier) {
+                        TwoColumnLayout(
+                            categoryViewModel = catViewModel,
+                            categories = immutableCategories,
+                            selectedCategoryId = state.selectedCategoryId,
+                            streams = immutableStreams,
+                            streamsLoading = state.streamsLoading,
+                            categoriesRefreshing = state.categoriesRefreshing,
+                            lastPlayedItemId = state.lastPlayedItemId,
+                            nowPlaying = nowPlaying,
+                            contentType = contentType,
+                            favoriteIds = favoriteIds,
+                            favoriteCategoryIds = favoriteCategoryIds,
+                            watchProgress = watchProgress,
+                            supportsNativeEpg = supportsNativeEpg,
+                            epgIndexState = epgIndexState,
+                            onCategorySelected = { categoryId ->
+                                catViewModel.loadStreams(categoryId)
+                            },
+                            onStreamSelected = { streamId, streamName, categoryId, providerData ->
+                                onStreamSelected(streamId, streamName, categoryId, providerData)
+                            },
+                            onRefreshCategories = {
+                                catViewModel.refreshCategories()
+                            },
+                            onRefreshStreams = { categoryId ->
+                                catViewModel.refreshStreams(categoryId)
+                            },
+                            onSearchClick = onSearchClick,
+                            onEpgClick = onEpgClick,
+                            onBack = onBack,
+                        )
+                    }
                 }
-                is CategoryViewModel.UiState.Error -> {
+            }
+            is CategoryViewModel.UiState.Error -> {
+                Box(modifier = safeMarginModifier) {
                     ErrorScreen(
                         message = state.message,
                         onRetry = { catViewModel.retry() },

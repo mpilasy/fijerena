@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
@@ -167,10 +168,17 @@ internal fun LiveTvSplitLayout(
         if (fullScreen) fullScreen = false else onBack()
     }
 
+    // 5% TV overscan safe margin — applied here (not by the caller) so the promoted full-screen
+    // player below, which renders in place inside this same composable, stays edge-to-edge.
+    val safeMarginModifier =
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
+
     val target = previewTarget
     if (target == null) {
         // Nothing focused/settled yet (e.g. streams still loading) — show the list only.
-        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+        Row(modifier = safeMarginModifier, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
             Box(modifier = Modifier.weight(0.66f).fillMaxHeight())
             LiveTvChannelList(
                 streams = streams,
@@ -372,7 +380,7 @@ internal fun LiveTvSplitLayout(
             )
         }
     } else {
-        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+        Row(modifier = safeMarginModifier, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
             Column(
                 modifier = Modifier.weight(0.66f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
