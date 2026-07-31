@@ -25,6 +25,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -171,6 +172,8 @@ private fun MovieDetailsContent(
 ) {
     val extension = movieDetail.extension ?: "mp4"
 
+    Box(modifier = Modifier.fillMaxSize()) {
+    AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = movieDetail.coverUrl)
     Column(
         modifier =
             Modifier
@@ -395,6 +398,7 @@ private fun MovieDetailsContent(
                 MobileTechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
             }
         }
+    }
     }
 }
 
