@@ -190,6 +190,10 @@ fun MobileCategoryListScreen(
     val isWideLayout = LocalConfiguration.current.screenWidthDp >= 600
 
     BackHandler(enabled = isLiveTv && fullScreen) { fullScreen = false }
+    // Dock auto-seeds on entry (below), so without this, Back from a docked preview would skip
+    // straight past the bare category screen and out of Live TV — mirrors TV's silent bare
+    // CategoryList push in TvNavHost.kt that guarantees the same stopover.
+    BackHandler(enabled = isLiveTv && !fullScreen && dockTarget != null) { dockTarget = null }
 
     // Auto-seed the dock so entry never lands on a bare list — mirrors TV's
     // LiveTvSplitLayout: an explicit initialStreamId (search/EPG deep link) wins, otherwise
