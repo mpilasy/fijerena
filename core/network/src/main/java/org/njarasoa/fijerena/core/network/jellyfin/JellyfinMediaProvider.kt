@@ -249,7 +249,8 @@ class JellyfinMediaProvider(
                             plot = seriesItem.overview,
                             year = seriesItem.productionYear,
                             genre = seriesItem.genres.joinToString(", ").ifEmpty { null },
-                            rating = seriesItem.officialRating,
+                            rating = seriesItem.communityRating?.let { String.format("%.1f", it) },
+                            contentRating = seriesItem.officialRating,
                         ),
                     coverUrl =
                         if (seriesItem.imageTags.containsKey("Primary")) {
@@ -573,11 +574,8 @@ class JellyfinMediaProvider(
                     plot = overview,
                     year = productionYear,
                     genre = genres.joinToString(", ").ifEmpty { null },
-                    rating =
-                        buildList {
-                            communityRating?.let { add(String.format("%.1f", it)) }
-                            officialRating?.let { add(it) }
-                        }.joinToString(" | ").ifEmpty { null },
+                    rating = communityRating?.let { String.format("%.1f", it) },
+                    contentRating = officialRating,
                     duration = runTimeTicks?.let { formatTicks(it) },
                 ),
             providerData = provData,
@@ -597,12 +595,6 @@ class JellyfinMediaProvider(
         val audioStreams = mediaSource?.mediaStreams?.filter { it.type == "Audio" } ?: emptyList()
         val subtitleStreams = mediaSource?.mediaStreams?.filter { it.type == "Subtitle" } ?: emptyList()
 
-        // Prefer communityRating (numeric, e.g. "7.9") with officialRating (e.g. "PG-13") as supplement
-        val ratingParts = mutableListOf<String>()
-        item.communityRating?.let { ratingParts.add(String.format("%.1f", it)) }
-        item.officialRating?.let { ratingParts.add(it) }
-        val rating = ratingParts.joinToString(" | ").ifEmpty { null }
-
         return MovieDetail(
             id = item.id,
             name = item.name,
@@ -611,7 +603,8 @@ class JellyfinMediaProvider(
                     plot = item.overview,
                     year = item.productionYear,
                     genre = item.genres.joinToString(", ").ifEmpty { null },
-                    rating = rating,
+                    rating = item.communityRating?.let { String.format("%.1f", it) },
+                    contentRating = item.officialRating,
                     director = director,
                     cast = cast,
                     duration = item.runTimeTicks?.let { formatTicks(it) },

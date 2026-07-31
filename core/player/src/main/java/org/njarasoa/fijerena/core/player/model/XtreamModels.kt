@@ -342,6 +342,8 @@ data class MovieInfo(
     @SerialName("audio")
     @Serializable(with = AudioInfoSerializer::class)
     val audio: AudioInfo? = null,
+    @SerialName("tmdb_id")
+    val tmdbId: String? = null,
 )
 
 /**

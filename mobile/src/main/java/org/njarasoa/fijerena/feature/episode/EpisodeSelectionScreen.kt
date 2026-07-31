@@ -301,6 +301,7 @@ private fun EpisodeListContent(
                 listOfNotNull(
                     seriesDetail.metadata.genre,
                     seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, it) },
+                    seriesDetail.metadata.contentRating,
                 )
             }
         if (hasPlot || metadataParts.isNotEmpty()) {

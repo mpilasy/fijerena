@@ -51,13 +51,25 @@ class TmdbApiService(
     ): TmdbSeasonResponse =
         client
             .get("tv/$tvId/season/$seasonNumber") {
-                if (isV4Token) {
-                    header(HttpHeaders.Authorization, "Bearer $apiKey")
-                } else {
-                    parameter("api_key", apiKey)
-                }
+                authenticate()
                 parameter("language", "en-US")
             }.body()
+
+    /** Per-country theatrical release dates and certifications (e.g. "PG-13") for a movie. */
+    suspend fun getMovieReleaseDates(movieId: Int): TmdbReleaseDatesResponse =
+        client.get("movie/$movieId/release_dates") { authenticate() }.body()
+
+    /** Per-country content ratings (e.g. "TV-MA") for a TV series. */
+    suspend fun getTvContentRatings(tvId: Int): TmdbContentRatingsResponse =
+        client.get("tv/$tvId/content_ratings") { authenticate() }.body()
+
+    private fun io.ktor.client.request.HttpRequestBuilder.authenticate() {
+        if (isV4Token) {
+            header(HttpHeaders.Authorization, "Bearer $apiKey")
+        } else {
+            parameter("api_key", apiKey)
+        }
+    }
 
     fun hasApiKey(): Boolean = apiKey.isNotBlank()
 }
