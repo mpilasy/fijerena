@@ -7,6 +7,10 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
 import org.njarasoa.fijerena.core.player.network.NetworkModule
@@ -34,6 +38,11 @@ class FijerenaApplication :
         EpgFileManager.getInstance(this).initialize()
         // Initialize Provider Content sync
         ProviderSyncManager.getInstance(this).initialize()
+        // One-time rewrite of any provider settings still storing the legacy category-filter
+        // prefix shape — see ProviderRepository.migrateLegacyCategoryFilterPrefixes().
+        CoroutineScope(Dispatchers.IO).launch {
+            ProviderRepository(this@FijerenaApplication).migrateLegacyCategoryFilterPrefixes()
+        }
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =

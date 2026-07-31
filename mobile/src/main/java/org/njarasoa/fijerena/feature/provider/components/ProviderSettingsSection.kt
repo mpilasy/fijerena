@@ -350,12 +350,12 @@ fun ColumnScope.ProviderSettingsSection(
                             Text(text = "Mode: ${categoryFilters.mode.name}", style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 text =
-                                    if (categoryFilters.prefixes.isEmpty()) {
+                                    if (categoryFilters.rules.isEmpty()) {
                                         "No filters configured"
                                     } else {
-                                        "${categoryFilters.prefixes.size} prefix(es): ${categoryFilters.prefixes.joinToString(
+                                        "${categoryFilters.rules.size} prefix(es): ${categoryFilters.rules.joinToString(
                                             ", ",
-                                        )}"
+                                        ) { it.value }}"
                                     },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),

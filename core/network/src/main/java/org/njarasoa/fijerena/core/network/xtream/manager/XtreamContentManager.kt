@@ -158,7 +158,7 @@ class XtreamContentManager(
 
                 val filters = providerSettings.categoryFilters
                 val excludedCategoryIds: Set<String> =
-                    if (filters.prefixes.isEmpty() && filters.allowedScripts.isEmpty()) {
+                    if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) {
                         emptySet()
                     } else {
                         val categories =
@@ -486,7 +486,7 @@ class XtreamContentManager(
 
                             val filters = providerSettings.categoryFilters
                             val allowedCategoryIds: Set<String>? =
-                                if (filters.prefixes.isEmpty() && filters.allowedScripts.isEmpty()) {
+                                if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) {
                                     null
                                 } else {
                                     val categories =
@@ -605,7 +605,7 @@ class XtreamContentManager(
 
                             val filters = providerSettings.categoryFilters
                             val allowedCategoryIds: Set<String>? =
-                                if (filters.prefixes.isEmpty() && filters.allowedScripts.isEmpty()) {
+                                if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) {
                                     null
                                 } else {
                                     service.getSeriesCategories()

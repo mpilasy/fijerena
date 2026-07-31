@@ -31,6 +31,7 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
+import org.njarasoa.fijerena.core.network.provider.CategoryMatcher
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -98,7 +99,7 @@ fun CategoryFilterDialog(
             }
         }
     var filterMode by remember { mutableStateOf(currentFilters.mode) }
-    var prefixesText by remember { mutableStateOf(currentFilters.prefixes.joinToString(", ")) }
+    var prefixesText by remember { mutableStateOf(currentFilters.rules.joinToString(", ") { it.value }) }
     var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
 
     AlertDialog(
@@ -195,8 +196,8 @@ fun CategoryFilterDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val prefixes = prefixesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                    val newFilters = CategoryFilters(mode = filterMode, prefixes = prefixes, allowedScripts = selectedScripts)
+                    val rules = prefixesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { CategoryMatcher(value = it) }
+                    val newFilters = CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)
                     onSave(newFilters)
                 },
                 colors =

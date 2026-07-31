@@ -282,13 +282,13 @@ fun ProviderSettingsSection(
                 )
                 Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 Text(
-                    text = if (providerSettings.categoryFilters.prefixes.isEmpty()) {
+                    text = if (providerSettings.categoryFilters.rules.isEmpty()) {
                         stringResource(R.string.provider_no_filters)
                     } else {
                         stringResource(
                             R.string.provider_prefixes_value,
-                            providerSettings.categoryFilters.prefixes.size,
-                            providerSettings.categoryFilters.prefixes.joinToString(", "),
+                            providerSettings.categoryFilters.rules.size,
+                            providerSettings.categoryFilters.rules.joinToString(", ") { it.value },
                         )
                     },
                     style = styles.bodyMedium,
