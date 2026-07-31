@@ -8,14 +8,17 @@ import androidx.room.Query
 
 @Dao
 interface XtreamSeriesDao {
-    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId ORDER BY name ASC")
+    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId AND excluded = 0 ORDER BY name ASC")
     fun getSeriesByCategory(
         providerId: Long,
         categoryId: String,
     ): List<XtreamSeriesEntity>
 
-    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId ORDER BY name ASC")
+    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND excluded = 0 ORDER BY name ASC")
     fun getAllSeries(providerId: Long): List<XtreamSeriesEntity>
+
+    @Query("UPDATE xtream_series SET excluded = COALESCE((SELECT c.excluded FROM xtream_categories c WHERE c.categoryId = xtream_series.categoryId AND c.providerId = xtream_series.providerId AND c.type = 'SERIES'), 0) WHERE providerId = :providerId")
+    fun syncExcludedFromCategories(providerId: Long)
 
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND seriesId = :seriesId LIMIT 1")
     fun getSeriesById(
@@ -69,12 +72,14 @@ interface XtreamSeriesDao {
             OR (c.categoryName LIKE :categoryQuery)
         )
         AND s.providerId = :providerId
+        AND (s.excluded = 0 OR :includeExcluded = 1)
         LIMIT 200
     """)
     fun searchByFts(
         providerId: Long,
         query: String,
         categoryQuery: String,
+        includeExcluded: Boolean,
     ): List<XtreamSeriesEntity>
 
     @Query("INSERT INTO xtream_series_fts(xtream_series_fts) VALUES('rebuild')")

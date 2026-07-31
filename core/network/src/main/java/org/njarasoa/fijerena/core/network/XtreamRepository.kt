@@ -150,17 +150,19 @@ class XtreamRepository(
 
     suspend fun syncSeries(): Deferred<Unit> = contentManager.syncSeries()
 
+    suspend fun recomputeExclusions() = contentManager.recomputeExclusions()
+
     fun getStreamsCached(categoryId: String): List<XtreamStream>? = contentManager.getStreamsCached(categoryId)
 
     fun getVodStreamsCached(categoryId: String): List<XtreamStream>? = contentManager.getVodStreamsCached(categoryId)
 
     fun getSeriesCached(categoryId: String): List<XtreamStream>? = contentManager.getSeriesCached(categoryId)
 
-    suspend fun searchByFts(contentType: String, ftsQuery: String): List<XtreamStream> =
+    suspend fun searchByFts(contentType: String, ftsQuery: String, includeExcluded: Boolean = false): List<XtreamStream> =
         when (contentType) {
-            ContentType.LIVE_TV -> contentManager.searchStreams(XtreamStreamEntity.TYPE_LIVE, ftsQuery)
-            ContentType.MOVIES -> contentManager.searchStreams(XtreamStreamEntity.TYPE_VOD, ftsQuery)
-            ContentType.TV_SHOWS -> contentManager.searchSeries(ftsQuery)
+            ContentType.LIVE_TV -> contentManager.searchStreams(XtreamStreamEntity.TYPE_LIVE, ftsQuery, includeExcluded)
+            ContentType.MOVIES -> contentManager.searchStreams(XtreamStreamEntity.TYPE_VOD, ftsQuery, includeExcluded)
+            ContentType.TV_SHOWS -> contentManager.searchSeries(ftsQuery, includeExcluded)
             else -> emptyList()
         }
 

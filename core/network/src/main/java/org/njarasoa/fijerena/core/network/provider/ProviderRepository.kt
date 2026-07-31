@@ -204,6 +204,19 @@ class ProviderRepository(
         settingsCache[providerId] = settings
         // Clear cached provider so it picks up new settings
         MediaProviderFactory.clearCache(providerId)
+
+        // Recompute category-filter exclusion flags immediately, purely locally (no network) —
+        // lets a filter change take effect right away instead of waiting for the next sync.
+        if (entity.type == "XTREAM") {
+            val database = org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase.getInstance(context)
+            org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
+                database.categoryDao(),
+                database.streamDao(),
+                database.seriesDao(),
+                providerId,
+                settings.categoryFilters,
+            )
+        }
     }
 
     /**
