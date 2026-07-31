@@ -135,6 +135,7 @@ object XtreamMapper {
                     releaseDate = info?.releaseDate,
                     rating = info?.rating.asString(),
                     duration = info?.duration.asString(),
+                    tmdbId = info?.tmdbId,
                 ),
             coverUrl = info?.coverBig ?: info?.movieImage,
             extension = movieData?.containerExtension,

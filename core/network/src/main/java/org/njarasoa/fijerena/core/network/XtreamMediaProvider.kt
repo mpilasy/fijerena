@@ -29,6 +29,7 @@ class XtreamMediaProvider(
     // Keeps reopens cheap without hitting TMDB again this session.
     private val tmdbOverviewCache = mutableMapOf<Int, Map<Pair<Int, Int>, String>>()
 
+
     override val capabilities =
         ProviderCapabilities(
             supportedContentTypes = setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS),
@@ -118,18 +119,41 @@ class XtreamMediaProvider(
             is Result.Success -> {
                 val detail = result.data.toDomain(seriesId)
                 val tmdbSeriesId = result.data.info?.tmdb.asString()?.toIntOrNull()
-                val enriched =
-                    if (tmdb.hasApiKey() && tmdbSeriesId != null) {
-                        enrichWithTmdbOverviews(detail, tmdbSeriesId)
-                    } else {
-                        detail
+                var enriched = detail
+                if (tmdb.hasApiKey() && tmdbSeriesId != null) {
+                    enriched = enrichWithTmdbOverviews(enriched, tmdbSeriesId)
+                    val certification = fetchTvCertification(tmdbSeriesId)
+                    if (certification != null) {
+                        enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
                     }
+                }
                 kotlin.Result.success(enriched)
             }
             is Result.Error ->
                 kotlin.Result.failure(result.exception)
         }
     }
+
+    private suspend fun fetchTvCertification(tmdbSeriesId: Int): String? =
+        runCatching { tmdb.getTvContentRatings(tmdbSeriesId) }
+            .onFailure { Log.w("XtreamMediaProvider", "TMDB content rating fetch failed for series $tmdbSeriesId", it) }
+            .getOrNull()
+            ?.let { extractCertification(it.results.map { r -> r.country to r.rating }) }
+
+    private suspend fun fetchMovieCertification(tmdbMovieId: Int): String? =
+        runCatching { tmdb.getMovieReleaseDates(tmdbMovieId) }
+            .onFailure { Log.w("XtreamMediaProvider", "TMDB release dates fetch failed for movie $tmdbMovieId", it) }
+            .getOrNull()
+            ?.let { response ->
+                extractCertification(
+                    response.results.map { it.country to it.releaseDates.firstNotNullOfOrNull { d -> d.certification?.takeIf { c -> c.isNotBlank() } } },
+                )
+            }
+
+    /** Prefers the US entry (TMDB's most reliably populated region), else the first non-blank one. */
+    private fun extractCertification(byCountry: List<Pair<String, String?>>): String? =
+        byCountry.firstOrNull { it.first == "US" }?.second?.takeIf { it.isNotBlank() }
+            ?: byCountry.firstNotNullOfOrNull { it.second?.takeIf { c -> c.isNotBlank() } }
 
     /**
      * Fetches per-episode overviews from TMDB (one call per season) and injects them
@@ -199,8 +223,22 @@ class XtreamMediaProvider(
                 Exception("Invalid movie ID: $movieId"),
             )
         return when (val result = repository.getVodInfo(id)) {
-            is Result.Success ->
-                kotlin.Result.success(result.data.toDomain(movieId))
+            is Result.Success -> {
+                val detail = result.data.toDomain(movieId)
+                val tmdbMovieId = detail.metadata.tmdbId?.toIntOrNull()
+                val enriched =
+                    if (tmdb.hasApiKey() && tmdbMovieId != null) {
+                        val certification = fetchMovieCertification(tmdbMovieId)
+                        if (certification != null) {
+                            detail.copy(metadata = detail.metadata.copy(contentRating = certification))
+                        } else {
+                            detail
+                        }
+                    } else {
+                        detail
+                    }
+                kotlin.Result.success(enriched)
+            }
             is Result.Error ->
                 kotlin.Result.failure(result.exception)
         }

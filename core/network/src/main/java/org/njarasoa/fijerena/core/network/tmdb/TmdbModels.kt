@@ -32,3 +32,37 @@ data class TmdbEpisode(
     @SerialName("vote_average")
     val voteAverage: Double? = null,
 )
+
+@Serializable
+data class TmdbReleaseDatesResponse(
+    @SerialName("results")
+    val results: List<TmdbReleaseDatesCountry> = emptyList(),
+)
+
+@Serializable
+data class TmdbReleaseDatesCountry(
+    @SerialName("iso_3166_1")
+    val country: String,
+    @SerialName("release_dates")
+    val releaseDates: List<TmdbReleaseDateEntry> = emptyList(),
+)
+
+@Serializable
+data class TmdbReleaseDateEntry(
+    @SerialName("certification")
+    val certification: String? = null,
+)
+
+@Serializable
+data class TmdbContentRatingsResponse(
+    @SerialName("results")
+    val results: List<TmdbContentRatingCountry> = emptyList(),
+)
+
+@Serializable
+data class TmdbContentRatingCountry(
+    @SerialName("iso_3166_1")
+    val country: String,
+    @SerialName("rating")
+    val rating: String? = null,
+)

@@ -1,7 +1,9 @@
 package org.njarasoa.fijerena.feature.movie
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -24,6 +26,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
@@ -221,13 +224,26 @@ private fun MovieDetailsContent(
 
         // Rating and duration on same row
         val hasRating = movieDetail.metadata.rating != null
+        val hasContentRating = movieDetail.metadata.contentRating != null
         val hasDuration = movieDetail.metadata.duration != null
-        if (hasRating || hasDuration) {
+        if (hasRating || hasContentRating || hasDuration) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                movieDetail.metadata.contentRating?.let { contentRating ->
+                    Text(
+                        text = contentRating,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier =
+                            Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                    RoundedCornerShape(CinemaCornerRadius.small),
+                                ).padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xs),
+                    )
+                }
                 movieDetail.metadata.rating?.let { rating ->
                     Text(
                         text = "★ $rating",
