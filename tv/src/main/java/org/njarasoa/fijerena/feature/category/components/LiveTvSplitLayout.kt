@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -178,6 +179,7 @@ internal fun LiveTvSplitLayout(
     val target = previewTarget
     if (target == null) {
         // Nothing focused/settled yet (e.g. streams still loading) — show the list only.
+        AmbientBackdrop(modifier = Modifier.fillMaxSize())
         Row(modifier = safeMarginModifier, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
             Box(modifier = Modifier.weight(0.66f).fillMaxHeight())
             LiveTvChannelList(
@@ -380,6 +382,7 @@ internal fun LiveTvSplitLayout(
             )
         }
     } else {
+        AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target.thumbnailUrl)
         Row(modifier = safeMarginModifier, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
             Column(
                 modifier = Modifier.weight(0.66f).fillMaxHeight(),

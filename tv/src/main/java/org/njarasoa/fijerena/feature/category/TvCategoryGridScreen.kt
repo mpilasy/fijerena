@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.feature.category.components.ErrorScreen
 import org.njarasoa.fijerena.feature.category.components.LiveTvSplitLayout
 import org.njarasoa.fijerena.feature.category.components.LoadingScreen
 import org.njarasoa.fijerena.feature.category.components.TwoColumnLayout
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -149,6 +150,7 @@ private fun CategoryGridContent(
     ) {
         when (val state = uiState) {
             is CategoryViewModel.UiState.Loading -> {
+                AmbientBackdrop(modifier = Modifier.fillMaxSize())
                 Box(modifier = safeMarginModifier) {
                     LoadingScreen()
                 }
@@ -181,6 +183,7 @@ private fun CategoryGridContent(
                         initialStreamId = initialStreamId,
                     )
                 } else {
+                    AmbientBackdrop(modifier = Modifier.fillMaxSize())
                     Box(modifier = safeMarginModifier) {
                         TwoColumnLayout(
                             categoryViewModel = catViewModel,
@@ -217,6 +220,7 @@ private fun CategoryGridContent(
                 }
             }
             is CategoryViewModel.UiState.Error -> {
+                AmbientBackdrop(modifier = Modifier.fillMaxSize())
                 Box(modifier = safeMarginModifier) {
                     ErrorScreen(
                         message = state.message,

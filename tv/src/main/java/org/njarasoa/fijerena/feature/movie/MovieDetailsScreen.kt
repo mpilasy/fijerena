@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -238,6 +239,8 @@ private fun MovieDetailsContent(
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+    AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = movieDetail.coverUrl)
     Column(
         modifier =
             Modifier
@@ -528,6 +531,7 @@ private fun MovieDetailsContent(
                 } // GlassPanel Column
             } // GlassPanel
         } // Outer Row (poster + metadata)
+    }
     }
 }
 

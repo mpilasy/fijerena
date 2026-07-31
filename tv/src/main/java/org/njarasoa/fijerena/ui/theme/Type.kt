@@ -1,23 +1,40 @@
+@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+
 package org.njarasoa.fijerena.ui.theme
 
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Typography
+import org.njarasoa.fijerena.R
+
+/**
+ * Display font for headers only (display and headline styles) — a variable font, sampled at
+ * each weight via [FontVariation.Settings]. Body/title/label text keeps [FontFamily.Default]
+ * (Roboto) for guaranteed 10-ft legibility.
+ */
+private val CinemaDisplayFontFamily =
+    FontFamily(
+        Font(R.font.manrope_variable, FontWeight.Medium, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
+        Font(R.font.manrope_variable, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
+        Font(R.font.manrope_variable, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+    )
 
 /**
  * Full 13-style typography scale optimized for 10-foot TV viewing.
  * All body text 18sp minimum, headers 32sp+.
- * Font: Roboto (system default).
+ * Font: Manrope for display/headline styles, Roboto (system default) for title/body/label.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 val Typography =
     Typography(
         displayLarge =
             TextStyle(
-                fontFamily = FontFamily.Default,
+                fontFamily = CinemaDisplayFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 48.sp,
                 lineHeight = 56.sp,
@@ -25,7 +42,7 @@ val Typography =
             ),
         displayMedium =
             TextStyle(
-                fontFamily = FontFamily.Default,
+                fontFamily = CinemaDisplayFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 40.sp,
                 lineHeight = 48.sp,
@@ -33,7 +50,7 @@ val Typography =
             ),
         displaySmall =
             TextStyle(
-                fontFamily = FontFamily.Default,
+                fontFamily = CinemaDisplayFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 34.sp,
                 lineHeight = 42.sp,
@@ -41,7 +58,7 @@ val Typography =
             ),
         headlineLarge =
             TextStyle(
-                fontFamily = FontFamily.Default,
+                fontFamily = CinemaDisplayFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 32.sp,
                 lineHeight = 40.sp,
@@ -49,7 +66,7 @@ val Typography =
             ),
         headlineMedium =
             TextStyle(
-                fontFamily = FontFamily.Default,
+                fontFamily = CinemaDisplayFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 28.sp,
                 lineHeight = 36.sp,
@@ -57,7 +74,7 @@ val Typography =
             ),
         headlineSmall =
             TextStyle(
-                fontFamily = FontFamily.Default,
+                fontFamily = CinemaDisplayFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 24.sp,
                 lineHeight = 32.sp,
