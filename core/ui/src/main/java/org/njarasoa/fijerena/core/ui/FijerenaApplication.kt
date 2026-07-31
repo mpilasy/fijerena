@@ -6,6 +6,9 @@ import android.os.StrictMode
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.disk.DiskCache
+import coil3.disk.directory
+import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,5 +54,16 @@ class FijerenaApplication :
             .components {
                 // Reuse the shared OkHttpClient for image loading to prevent memory leaks and OOM
                 add(OkHttpNetworkFetcherFactory(NetworkModule.okHttpClient))
+            }
+            // Posters/thumbnails rarely change and there are thousands of them across a large
+            // catalog — a generously sized disk cache means scrolling back through a category or
+            // reopening a detail screen doesn't refetch images that were already downloaded.
+            .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.25).build() }
+            .diskCache {
+                DiskCache
+                    .Builder()
+                    .directory(cacheDir.resolve("image_cache"))
+                    .maxSizeBytes(512L * 1024 * 1024) // 512 MB
+                    .build()
             }.build()
 }

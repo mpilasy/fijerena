@@ -29,6 +29,12 @@ class XtreamMediaProvider(
     // Keeps reopens cheap without hitting TMDB again this session.
     private val tmdbOverviewCache = mutableMapOf<Int, Map<Pair<Int, Int>, String>>()
 
+    // Full movie/series detail (plot, cast, genre, rating, contentRating, episodes, etc.) rarely
+    // changes, but assembling it costs a live Xtream call plus TMDB enrichment — cache the fully
+    // assembled result so reopening the same title doesn't repeat that work.
+    private val movieDetailCache = TtlCache<String, MovieDetail>(DETAIL_CACHE_TTL_MS)
+    private val seriesDetailCache = TtlCache<String, SeriesDetail>(DETAIL_CACHE_TTL_MS)
+
 
     override val capabilities =
         ProviderCapabilities(
@@ -111,6 +117,7 @@ class XtreamMediaProvider(
     }
 
     override suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> {
+        seriesDetailCache.get(seriesId)?.let { return kotlin.Result.success(it) }
         val id =
             seriesId.toIntOrNull() ?: return kotlin.Result.failure(
                 Exception("Invalid series ID: $seriesId"),
@@ -127,6 +134,7 @@ class XtreamMediaProvider(
                         enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
                     }
                 }
+                seriesDetailCache.put(seriesId, enriched)
                 kotlin.Result.success(enriched)
             }
             is Result.Error ->
@@ -218,6 +226,7 @@ class XtreamMediaProvider(
         }
 
     override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {
+        movieDetailCache.get(movieId)?.let { return kotlin.Result.success(it) }
         val id =
             movieId.toIntOrNull() ?: return kotlin.Result.failure(
                 Exception("Invalid movie ID: $movieId"),
@@ -237,6 +246,7 @@ class XtreamMediaProvider(
                     } else {
                         detail
                     }
+                movieDetailCache.put(movieId, enriched)
                 kotlin.Result.success(enriched)
             }
             is Result.Error ->
@@ -378,4 +388,10 @@ class XtreamMediaProvider(
 
     /** Total category count for [contentType], including any excluded by category filters — for "X of Y" UI counts. */
     suspend fun getCategoryTotalCount(contentType: String): Int = repository.getCategoryTotalCount(contentType)
+
+    companion object {
+        // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
+        // long TTL avoids re-hitting Xtream + TMDB every time a detail screen is reopened.
+        private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
+    }
 }

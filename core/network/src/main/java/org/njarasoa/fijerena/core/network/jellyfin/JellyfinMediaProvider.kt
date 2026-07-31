@@ -4,6 +4,7 @@ import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import org.njarasoa.fijerena.core.network.TtlCache
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -46,6 +47,11 @@ class JellyfinMediaProvider(
     private val playSessionIds = mutableMapOf<String, String>()
     private val mediaSourceIds = mutableMapOf<String, String>()
     private val playMethods = mutableMapOf<String, String>()
+
+    // Movie/series detail (plot, cast, genre, rating, contentRating, episodes) rarely changes —
+    // cache the assembled result so reopening the same title doesn't re-hit the server.
+    private val movieDetailCache = TtlCache<String, MovieDetail>(DETAIL_CACHE_TTL_MS)
+    private val seriesDetailCache = TtlCache<String, SeriesDetail>(DETAIL_CACHE_TTL_MS)
 
     override val capabilities =
         ProviderCapabilities(
@@ -181,9 +187,11 @@ class JellyfinMediaProvider(
     }
 
     override suspend fun getSeriesDetail(seriesId: String): Result<SeriesDetail> {
+        seriesDetailCache.get(seriesId)?.let { return Result.success(it) }
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
         return withAutoReconnect { fetchSeriesDetail(seriesId) }
+            .also { result -> result.getOrNull()?.let { seriesDetailCache.put(seriesId, it) } }
     }
 
     private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> {
@@ -278,11 +286,12 @@ class JellyfinMediaProvider(
     }
 
     override suspend fun getMovieDetail(movieId: String): Result<MovieDetail> {
+        movieDetailCache.get(movieId)?.let { return Result.success(it) }
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
         return withAutoReconnect {
             api.getItemById(movieId).map { item -> itemToMovieDetail(item) }
-        }
+        }.also { result -> result.getOrNull()?.let { movieDetailCache.put(movieId, it) } }
     }
 
     override suspend fun resolvePlayableStream(
@@ -660,5 +669,11 @@ class JellyfinMediaProvider(
         } else {
             String.format("%d:%02d", minutes, seconds)
         }
+    }
+
+    companion object {
+        // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
+        // long TTL avoids re-hitting the server every time a detail screen is reopened.
+        private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
     }
 }
