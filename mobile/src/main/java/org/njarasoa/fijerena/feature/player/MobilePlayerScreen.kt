@@ -23,7 +23,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -357,7 +356,10 @@ fun MobilePlayerContent(
 
                 // Restore saved track settings when player is ready
                 if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
-                    snapshotFlow { viewModel.playbackState.value }
+                    // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
+                    // in snapshotFlow{} never registers an observable read, so it emits once and
+                    // never again, leaving this stuck waiting forever instead of restoring tracks.
+                    viewModel.playbackState
                         .filter { it is PlaybackState.Playing || it is PlaybackState.Paused }
                         .first() // Wait for first ready state
 

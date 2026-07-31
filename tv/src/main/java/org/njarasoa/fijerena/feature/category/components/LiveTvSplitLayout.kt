@@ -248,8 +248,13 @@ internal fun LiveTvSplitLayout(
     // Re-point the loader whenever the previewed channel changes, via the lean resolution path
     // (skips the channel-switcher list refetch and watch-history write that a real "commit to
     // watching" does — a preview thumbnail isn't a real watch session).
+    // Skipped while full-screen: the full-screen next/previous/select handlers already call the
+    // full loader.loadStream() directly for the new target.id, so firing this too would race two
+    // loads for the same channel on the same loader/loadJob (duplicate DB/EPG work per switch).
     LaunchedEffect(target.id) {
-        loader.loadStreamLight(target)
+        if (!fullScreen) {
+            loader.loadStreamLight(target)
+        }
     }
 
     LaunchedEffect(success?.streamId) {
