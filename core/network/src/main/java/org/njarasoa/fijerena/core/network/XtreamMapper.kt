@@ -19,6 +19,7 @@ import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 
 object XtreamMapper {
     fun XtreamCategory.toDomain(): MediaCategory =
@@ -156,6 +157,27 @@ object XtreamMapper {
                         )
                     },
                 ),
+        )
+
+    /** Builds a [MovieDetail] straight from the persisted cache row — no Xtream/TMDB call. */
+    fun XtreamStreamEntity.toMovieDetail(movieId: String): MovieDetail =
+        MovieDetail(
+            id = movieId,
+            name = name,
+            metadata =
+                MediaMetadata(
+                    plot = description,
+                    cast = cast,
+                    director = director,
+                    genre = genre,
+                    releaseDate = releaseDate,
+                    rating = rating,
+                    duration = duration,
+                    contentRating = contentRating,
+                    tmdbId = tmdbId,
+                ),
+            coverUrl = streamIcon,
+            extension = containerExtension,
         )
 
     fun WatchedStream.toDomain(mediaType: MediaType): MediaItem =

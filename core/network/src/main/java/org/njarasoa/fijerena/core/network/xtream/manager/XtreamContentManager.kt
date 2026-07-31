@@ -18,6 +18,7 @@ import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
 import org.njarasoa.fijerena.core.network.xtream.db.*
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.*
 
 /**
@@ -804,6 +805,43 @@ class XtreamContentManager(
                 vodInfo
             }
         }
+
+    /** Cached movie row, including any persisted TMDB content rating — no network call. */
+    fun getCachedMovieDetail(vodId: Int): XtreamStreamEntity? = streamDao.getStreamById(providerId, vodId)
+
+    /** Persists the TMDB/full-detail fields once a movie detail fetch has completed. */
+    fun saveMovieDetailCache(
+        vodId: Int,
+        contentRating: String?,
+        tmdbId: String?,
+        containerExtension: String?,
+        fetchedAt: Long,
+    ) {
+        streamDao.updateDetailCache(providerId, vodId, XtreamStreamEntity.TYPE_VOD, contentRating, tmdbId, containerExtension, fetchedAt)
+    }
+
+    /** Cached series row, used only to check for a still-fresh persisted TMDB content rating — episode list is always fetched live. */
+    fun getCachedSeriesEntity(seriesId: Int): XtreamSeriesEntity? = seriesDao.getSeriesById(providerId, seriesId)
+
+    /** Persists the TMDB content rating once a series detail fetch has completed. */
+    fun saveSeriesDetailCache(
+        seriesId: Int,
+        contentRating: String?,
+        tmdbId: String?,
+        fetchedAt: Long,
+    ) {
+        seriesDao.updateDetailCache(providerId, seriesId, contentRating, tmdbId, fetchedAt)
+    }
+
+    /** Backfills episode plots that TMDB filled in (Xtream itself rarely provides episode synopses) — never overwrites an existing plot. */
+    fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) {
+        episodes.values.flatten().forEach { ep ->
+            val plot = ep.metadata.plot
+            if (!plot.isNullOrBlank()) {
+                episodeDao.updateOverviewIfBlank(providerId, ep.id, plot)
+            }
+        }
+    }
 
     fun buildStreamUrl(
         streamId: Int,

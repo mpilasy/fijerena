@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.network.xtream.manager.XtreamSessionManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamStatsManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamUserDataManager
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
@@ -194,6 +195,27 @@ class XtreamRepository(
     suspend fun getSeriesInfo(seriesId: Int): Result<SeriesInfo> = contentManager.getSeriesInfo(seriesId)
 
     suspend fun getVodInfo(vodId: Int): Result<VodInfo> = contentManager.getVodInfo(vodId)
+
+    fun getCachedMovieDetail(vodId: Int) = contentManager.getCachedMovieDetail(vodId)
+
+    fun saveMovieDetailCache(
+        vodId: Int,
+        contentRating: String?,
+        tmdbId: String?,
+        containerExtension: String?,
+        fetchedAt: Long,
+    ) = contentManager.saveMovieDetailCache(vodId, contentRating, tmdbId, containerExtension, fetchedAt)
+
+    fun getCachedSeriesEntity(seriesId: Int) = contentManager.getCachedSeriesEntity(seriesId)
+
+    fun saveSeriesDetailCache(
+        seriesId: Int,
+        contentRating: String?,
+        tmdbId: String?,
+        fetchedAt: Long,
+    ) = contentManager.saveSeriesDetailCache(seriesId, contentRating, tmdbId, fetchedAt)
+
+    fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) = contentManager.persistEpisodeOverviews(episodes)
 
     suspend fun getEpgForStream(streamId: Int): Result<EpgResponse> = epgManager.getEpgForStream(streamId)
 

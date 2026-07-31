@@ -156,4 +156,24 @@ interface XtreamStreamDao {
         duration: String?,
         youtubeTrailer: String?,
     )
+
+    @Query(
+        """
+        UPDATE xtream_streams
+        SET contentRating = :contentRating,
+            tmdbId = :tmdbId,
+            containerExtension = :containerExtension,
+            detailFetchedAt = :detailFetchedAt
+        WHERE streamId = :streamId AND providerId = :providerId AND type = :type
+    """,
+    )
+    fun updateDetailCache(
+        providerId: Long,
+        streamId: Int,
+        type: String,
+        contentRating: String?,
+        tmdbId: String?,
+        containerExtension: String?,
+        detailFetchedAt: Long,
+    )
 }

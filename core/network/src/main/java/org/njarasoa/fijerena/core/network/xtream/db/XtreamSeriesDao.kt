@@ -93,4 +93,21 @@ interface XtreamSeriesDao {
 
     @Query("SELECT COUNT(*) FROM xtream_series WHERE providerId = :providerId")
     fun countSeries(providerId: Long): Int
+
+    @Query(
+        """
+        UPDATE xtream_series
+        SET contentRating = :contentRating,
+            tmdbId = :tmdbId,
+            detailFetchedAt = :detailFetchedAt
+        WHERE seriesId = :seriesId AND providerId = :providerId
+    """,
+    )
+    fun updateDetailCache(
+        providerId: Long,
+        seriesId: Int,
+        contentRating: String?,
+        tmdbId: String?,
+        detailFetchedAt: Long,
+    )
 }

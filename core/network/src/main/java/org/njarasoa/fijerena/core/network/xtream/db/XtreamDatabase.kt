@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         XtreamStreamFts::class,
         XtreamSeriesFts::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -79,6 +79,20 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /** Migration 11→12: persist TMDB-derived detail fields (content rating, tmdbId) so movie/series detail screens don't need TMDB/Xtream detail calls on a warm reopen, even after a process restart. */
+        private val MIGRATION_11_12 =
+            object : Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `xtream_streams` ADD COLUMN `contentRating` TEXT")
+                    db.execSQL("ALTER TABLE `xtream_streams` ADD COLUMN `tmdbId` TEXT")
+                    db.execSQL("ALTER TABLE `xtream_streams` ADD COLUMN `containerExtension` TEXT")
+                    db.execSQL("ALTER TABLE `xtream_streams` ADD COLUMN `detailFetchedAt` INTEGER")
+                    db.execSQL("ALTER TABLE `xtream_series` ADD COLUMN `contentRating` TEXT")
+                    db.execSQL("ALTER TABLE `xtream_series` ADD COLUMN `tmdbId` TEXT")
+                    db.execSQL("ALTER TABLE `xtream_series` ADD COLUMN `detailFetchedAt` INTEGER")
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -86,7 +100,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         context.applicationContext,
                         XtreamDatabase::class.java,
                         "xtream_v2.db",
-                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { INSTANCE = it }
