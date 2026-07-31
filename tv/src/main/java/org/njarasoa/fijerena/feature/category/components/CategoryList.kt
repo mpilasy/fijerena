@@ -35,7 +35,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.items
+import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -149,6 +150,11 @@ internal fun CategoryList(
             typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
         }
 
+    // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
+    // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
+    // guard the fade/slide replays on every focus move instead of just on first appearance.
+    val enteredCategoryIds = remember { mutableSetOf<String>() }
+
     val palette = LocalCinemaTheme.current
     val borderBrush =
         remember(palette) {
@@ -243,11 +249,11 @@ internal fun CategoryList(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(
+                    itemsIndexed(
                         items = regularCategories,
-                        key = { it.id },
-                        contentType = { "category" },
-                    ) { category ->
+                        key = { _, category -> category.id },
+                        contentType = { _, _ -> "category" },
+                    ) { index, category ->
                         CategoryItem(
                             category = category,
                             isSelected = category.id == selectedCategoryId,
@@ -255,6 +261,12 @@ internal fun CategoryList(
                             onClick = { onCategorySelected(category.id) },
                             onLongPress = { onCategoryLongPress(category) },
                             focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() },
+                            modifier =
+                                if (enteredCategoryIds.add(category.id)) {
+                                    Modifier.staggeredEntrance(index)
+                                } else {
+                                    Modifier
+                                },
                         )
                     }
                 }
@@ -272,6 +284,7 @@ private fun CategoryItem(
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
     focusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
@@ -283,7 +296,7 @@ private fun CategoryItem(
     Card(
         onClick = onClick,
         modifier =
-            Modifier
+            modifier
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
                 .tvLongPress(onLongPress)

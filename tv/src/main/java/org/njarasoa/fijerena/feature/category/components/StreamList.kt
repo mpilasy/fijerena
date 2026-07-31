@@ -33,7 +33,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.items
+import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -113,6 +114,11 @@ internal fun StreamList(
 
     // Auto-scroll and focus on last played item (on initial load and when returning from player)
     var lastFocusedItemId by remember { mutableStateOf<String?>(null) }
+
+    // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
+    // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
+    // guard the fade/slide replays on every focus move instead of just on first appearance.
+    val enteredStreamIds = remember { mutableSetOf<String>() }
 
     LaunchedEffect(streams, lastPlayedItemId) {
         if (!streams.isNullOrEmpty() && lastPlayedItemId != null && lastPlayedItemId != lastFocusedItemId) {
@@ -235,11 +241,11 @@ internal fun StreamList(
                         contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                     ) {
-                        items(
+                        itemsIndexed(
                             items = streams,
-                            key = { it.id },
-                            contentType = { "stream" },
-                        ) { item ->
+                            key = { _, item -> item.id },
+                            contentType = { _, _ -> "stream" },
+                        ) { index, item ->
                             StreamItem(
                                 item = item,
                                 isFavorite = item.id in favoriteIds,
@@ -251,6 +257,12 @@ internal fun StreamList(
                                 // Only the last-played item gets a focus requester for auto-scroll
                                 focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null,
                                 thumbnailScale = thumbnailScale,
+                                modifier =
+                                    if (enteredStreamIds.add(item.id)) {
+                                        Modifier.staggeredEntrance(index)
+                                    } else {
+                                        Modifier
+                                    },
                             )
                         }
                     }
@@ -272,6 +284,7 @@ private fun StreamItem(
     onFocused: () -> Unit = {},
     focusRequester: FocusRequester? = null,
     thumbnailScale: Float = 1f,
+    modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
@@ -286,7 +299,7 @@ private fun StreamItem(
     Card(
         onClick = onClick,
         modifier =
-            Modifier
+            modifier
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
                 .onFocusChanged { if (it.isFocused) onFocused() }
