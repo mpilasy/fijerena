@@ -439,6 +439,7 @@ class StreamingPlaybackService : MediaSessionService() {
         _totalRebufferTimeMs.value = 0L
         _bandwidthEstimate.value = 0L
         _qualitySwitchCount.value = 0
+        analyticsListener?.reset()
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
 
@@ -1049,6 +1050,26 @@ class StreamingPlaybackService : MediaSessionService() {
         private var fpsLastTimeMs = 0L
         private var fpsLastFrameCount = 0L
         private var fpsLastDroppedFrameCount = 0L
+
+        // playStream() zeroes the published StateFlow counters on every channel switch, but this
+        // listener instance lives for the whole service lifetime — without resetting these too,
+        // the next real rebuffer republishes a stale, session-wide count in one jump instead of
+        // a small per-stream delta, which used to trip the exhaustion-toast threshold instantly.
+        fun reset() {
+            droppedFrames = 0L
+            totalFrames = 0L
+            rebufferCount = 0
+            exhaustionRebufferCount = 0
+            totalRebufferTimeMs = 0L
+            rebufferStartTimeMs = 0L
+            wasPlaying = false
+            seekPending = false
+            qualitySwitchCount = 0
+            lastVideoHeight = -1
+            fpsLastTimeMs = 0L
+            fpsLastFrameCount = 0L
+            fpsLastDroppedFrameCount = 0L
+        }
 
         override fun onVideoFrameProcessingOffset(
             eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
