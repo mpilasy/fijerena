@@ -925,6 +925,12 @@ class XtreamContentManager(
         XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, providerId, providerSettings.categoryFilters)
     }
 
+    /** Total category count for [type], including excluded ones — for "X of Y" style UI counts. */
+    suspend fun getCategoryTotalCount(type: String): Int =
+        withContext(Dispatchers.IO) {
+            categoryDao.countCategories(providerId, type)
+        }
+
     private fun cleanQueryForLike(query: String): String {
         val clean = query.replace("*", "").trim().replace("\\s+".toRegex(), "%")
         return "%$clean%"

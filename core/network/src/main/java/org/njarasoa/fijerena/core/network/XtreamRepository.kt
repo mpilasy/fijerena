@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.Deferred
 import kotlinx.serialization.Serializable
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamContentManager
@@ -151,6 +152,14 @@ class XtreamRepository(
     suspend fun syncSeries(): Deferred<Unit> = contentManager.syncSeries()
 
     suspend fun recomputeExclusions() = contentManager.recomputeExclusions()
+
+    suspend fun getCategoryTotalCount(contentType: String): Int =
+        when (contentType) {
+            ContentType.LIVE_TV -> contentManager.getCategoryTotalCount(XtreamCategoryEntity.TYPE_LIVE)
+            ContentType.MOVIES -> contentManager.getCategoryTotalCount(XtreamCategoryEntity.TYPE_VOD)
+            ContentType.TV_SHOWS -> contentManager.getCategoryTotalCount(XtreamCategoryEntity.TYPE_SERIES)
+            else -> 0
+        }
 
     fun getStreamsCached(categoryId: String): List<XtreamStream>? = contentManager.getStreamsCached(categoryId)
 
