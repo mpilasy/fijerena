@@ -96,6 +96,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
  * Episode selection screen for TV shows.
@@ -403,7 +404,7 @@ private fun EpisodeListContent(
                             onClick = onToggleFavorite,
                             icon = {
                                 Icon(
-                                    imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                    imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                     contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
                                     tint = if (isFavorite) CinemaAccent else CinemaTextPrimary
                                 )
@@ -419,7 +420,7 @@ private fun EpisodeListContent(
                             enabled = !isRefreshing,
                             icon = {
                                 Icon(
-                                    imageVector = Icons.Rounded.Refresh,
+                                    imageVector = CinemaIcons.Refresh,
                                     contentDescription = stringResource(R.string.series_refresh_info),
                                     modifier =
                                         Modifier
@@ -860,7 +861,7 @@ private fun SeasonHeader(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
     ) {
         Icon(
-            imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+            imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
             contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
             tint = CinemaAccentLight,
             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),

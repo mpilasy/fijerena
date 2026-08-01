@@ -65,6 +65,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 // Extracted as a top-level constant to avoid allocating a new Set on every recomposition
 private val VIRTUAL_CATEGORY_IDS =
@@ -185,7 +187,7 @@ internal fun CategoryList(
                 size = 40.dp,
                 icon = {
                     Icon(
-                        imageVector = Icons.Rounded.Refresh,
+                        imageVector = CinemaIcons.Refresh,
                         contentDescription = "Refresh categories",
                         tint = CinemaTextPrimary,
                         modifier =
@@ -215,7 +217,7 @@ internal fun CategoryList(
                 if (virtualCategories.isNotEmpty()) {
                     Column(
                         modifier = Modifier.padding(Spacing.sm.scaled(scale)),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                        verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing.scaled(scale)),
                     ) {
                         virtualCategories.forEach { category ->
                             CategoryItem(
@@ -246,7 +248,7 @@ internal fun CategoryList(
                 TvLazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                    verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing.scaled(scale)),
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     itemsIndexed(

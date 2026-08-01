@@ -82,6 +82,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import java.util.Date
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun TvPlayerControlsOverlay(
@@ -270,7 +271,7 @@ fun TvPlayerControlsOverlay(
                         .focusRequester(controlsFocusRequester),
             ) {
                 Icon(
-                    imageVector = if (isPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                    imageVector = if (isPaused) CinemaIcons.PlayArrow else CinemaIcons.Pause,
                     contentDescription = if (isPaused) stringResource(R.string.player_resume) else stringResource(R.string.player_pause),
                     modifier = Modifier.size(TvDimensions.iconXLarge),
                 )
@@ -530,7 +531,7 @@ fun TvPlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.AutoMirrored.Rounded.List, stringResource(R.string.player_chapters))
+                                Icon(CinemaIcons.List, stringResource(R.string.player_chapters))
                             }
                         }
 
@@ -546,7 +547,7 @@ fun TvPlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.AutoMirrored.Rounded.VolumeUp, stringResource(R.string.player_audio))
+                                Icon(CinemaIcons.VolumeUp, stringResource(R.string.player_audio))
                             }
                         }
 
@@ -562,7 +563,7 @@ fun TvPlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.Rounded.Subtitles, stringResource(R.string.player_subtitles))
+                                Icon(CinemaIcons.Subtitles, stringResource(R.string.player_subtitles))
                             }
                         }
 
@@ -578,7 +579,7 @@ fun TvPlayerControlsOverlay(
                                         focusedContentColor = CinemaBackground,
                                     ),
                             ) {
-                                Icon(Icons.Rounded.Tune, stringResource(R.string.player_quality))
+                                Icon(CinemaIcons.Tune, stringResource(R.string.player_quality))
                             }
                         }
 
@@ -600,7 +601,7 @@ fun TvPlayerControlsOverlay(
                                     ),
                             ) {
                                 Icon(
-                                    imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                    imageVector = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
                                     contentDescription = if (isFavorite) stringResource(R.string.player_remove_favorite) else stringResource(R.string.player_add_favorite),
                                     tint =
                                         if (isFavorite &&
@@ -625,7 +626,7 @@ fun TvPlayerControlsOverlay(
                                     focusedContentColor = CinemaBackground,
                                 ),
                         ) {
-                            Icon(Icons.Rounded.BarChart, stringResource(R.string.player_stats))
+                            Icon(CinemaIcons.BarChart, stringResource(R.string.player_stats))
                         }
                     }
                 }

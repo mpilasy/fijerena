@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -200,7 +201,7 @@ fun MobileContentTypeSelectionScreen(
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Icon(
-                            imageVector = Icons.Rounded.ArrowDropDown,
+                            imageVector = CinemaIcons.ArrowDropDown,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -210,18 +211,18 @@ fun MobileContentTypeSelectionScreen(
                     if (hasEpgData) {
                         CinemaIconButton(onClick = onEpgBrowser,
                             icon = {
-                                Icon(Icons.AutoMirrored.Rounded.MenuBook, "EPG Browser", tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.MenuBook, "EPG Browser", tint = CinemaTextPrimary)
                             }
                         )
                     }
                     CinemaIconButton(onClick = onSearch,
                         icon = {
-                            Icon(Icons.Rounded.Search, "Search", tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.Search, "Search", tint = CinemaTextPrimary)
                         }
                     )
                     CinemaIconButton(onClick = onSettings,
                         icon = {
-                            Icon(Icons.Rounded.Settings, "Settings", tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.Settings, "Settings", tint = CinemaTextPrimary)
                         }
                     )
                 },
@@ -253,7 +254,7 @@ fun MobileContentTypeSelectionScreen(
                 GradientContentCard(
                     title = "Live TV",
                     description = "Watch live television channels",
-                    icon = Icons.Rounded.LiveTv,
+                    icon = CinemaIcons.LiveTv,
                     categoryCounts = liveTvCounts,
                     showTotal = isDevMode,
                     showLivePulse = true,
@@ -267,7 +268,7 @@ fun MobileContentTypeSelectionScreen(
                 GradientContentCard(
                     title = "Movies",
                     description = "Browse on-demand movies",
-                    icon = Icons.Rounded.Movie,
+                    icon = CinemaIcons.Movie,
                     categoryCounts = moviesCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccent, CinemaAccentDark),
@@ -280,7 +281,7 @@ fun MobileContentTypeSelectionScreen(
                 GradientContentCard(
                     title = "TV Shows",
                     description = "Watch series and episodes",
-                    icon = Icons.Rounded.Tv,
+                    icon = CinemaIcons.Tv,
                     categoryCounts = tvShowsCounts,
                     showTotal = isDevMode,
                     gradientColors = listOf(CinemaAccentLight, CinemaAccent),

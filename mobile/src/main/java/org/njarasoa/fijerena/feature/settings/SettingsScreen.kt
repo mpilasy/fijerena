@@ -33,12 +33,14 @@ import org.njarasoa.fijerena.feature.settings.components.EpgSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ExportImportSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ProviderSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ThemeSettingsCard
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileSettingsScreen(
     onBack: () -> Unit,
     onThemeChanged: (String) -> Unit = {},
+    onUiStyleChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onManageEpg: () -> Unit = {},
     onCellularBuffers: () -> Unit = {},
@@ -204,7 +206,7 @@ fun MobileSettingsScreen(
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.player_back))
+                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
                     }
                 },
             )
@@ -236,6 +238,7 @@ fun MobileSettingsScreen(
                 uiState = uiState,
                 viewModel = viewModel,
                 onThemeChanged = onThemeChanged,
+                onUiStyleChanged = onUiStyleChanged,
             )
 
             // === Language ===

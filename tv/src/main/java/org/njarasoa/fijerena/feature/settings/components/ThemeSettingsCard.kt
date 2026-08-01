@@ -13,6 +13,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
+import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -25,6 +26,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun ThemeSettingsCard(
     selectedThemeId: String,
     onThemeSelected: (String) -> Unit,
+    selectedUiStyleId: String,
+    onUiStyleSelected: (String) -> Unit,
     scale: Float,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
@@ -75,6 +78,61 @@ fun ThemeSettingsCard(
                                         onThemeSelected(palette.id)
                                     },
                                     text = palette.displayName,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+            Text(
+                text = "Look and Feel",
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaAccent,
+            )
+            Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
+            Text(
+                text = "Select a platform-inspired look and feel",
+                style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodySmall.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+            ) {
+                AllUiStyles.chunked(2).forEachIndexed { rowIndex, rowStyles ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                    ) {
+                        rowStyles.forEach { style ->
+                            val isSelected = selectedUiStyleId == style.id
+                            if (isSelected) {
+                                CinemaPrimaryButton(
+                                    onClick = { },
+                                    text = style.displayName,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            } else {
+                                CinemaSecondaryButton(
+                                    onClick = {
+                                        onUiStyleSelected(style.id)
+                                    },
+                                    text = style.displayName,
                                     modifier = Modifier.weight(1f),
                                 )
                             }

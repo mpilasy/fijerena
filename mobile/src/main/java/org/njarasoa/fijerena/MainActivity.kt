@@ -33,13 +33,18 @@ class MainActivity : ComponentActivity() {
 
         val appSettings = AppSettings(applicationContext)
         var themeId by mutableStateOf(appSettings.themeId)
+        var uiStyleId by mutableStateOf(appSettings.uiStyleId)
 
         setContent {
-            FirstVideoPlayerTheme(themeId = themeId) {
+            FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
                 MobileNavHost(
                     onThemeChanged = { newThemeId ->
                         appSettings.themeId = newThemeId
                         themeId = newThemeId
+                    },
+                    onUiStyleChanged = { newStyleId ->
+                        appSettings.uiStyleId = newStyleId
+                        uiStyleId = newStyleId
                     },
                 )
             }

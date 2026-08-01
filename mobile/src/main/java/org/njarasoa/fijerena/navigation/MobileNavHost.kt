@@ -66,6 +66,7 @@ fun MobileNavHost(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel(),
     onThemeChanged: (String) -> Unit = {},
+    onUiStyleChanged: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val accountManager = remember { AccountManager(context.applicationContext) }
@@ -349,6 +350,7 @@ fun MobileNavHost(
                         navController.navigateUp()
                     },
                     onThemeChanged = onThemeChanged,
+                    onUiStyleChanged = onUiStyleChanged,
                     onManageProviders = {
                         navController.navigate(Screen.ProviderSelection)
                     },

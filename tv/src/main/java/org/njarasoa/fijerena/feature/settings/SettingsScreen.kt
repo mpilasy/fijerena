@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun SettingsScreen(
     onBack: () -> Unit,
     onThemeChanged: (String) -> Unit = {},
+    onUiStyleChanged: (String) -> Unit = {},
     onUiScaleChanged: (Float) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onManageEpg: () -> Unit = {},
@@ -221,6 +222,11 @@ fun SettingsScreen(
                         onThemeSelected = { newThemeId ->
                             viewModel.updateTheme(newThemeId)
                             onThemeChanged(newThemeId)
+                        },
+                        selectedUiStyleId = uiState.uiStyleId,
+                        onUiStyleSelected = { newStyleId ->
+                            viewModel.updateUiStyle(newStyleId)
+                            onUiStyleChanged(newStyleId)
                         },
                         scale = scale,
                     )

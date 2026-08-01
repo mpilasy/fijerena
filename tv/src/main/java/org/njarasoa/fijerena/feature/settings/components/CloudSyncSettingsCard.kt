@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun CloudSyncSettingsCard(
@@ -107,7 +108,7 @@ fun CloudSyncSettingsCard(
                     Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                     CinemaIconButton(
                         onClick = onSyncNow,
-                        icon = { Icon(Icons.Rounded.Sync, contentDescription = "Sync Now") },
+                        icon = { Icon(CinemaIcons.Sync, contentDescription = "Sync Now") },
                     )
                     Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                     CinemaDangerButton(

@@ -89,6 +89,7 @@ import org.njarasoa.fijerena.feature.provider.components.ProviderFormSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
 import org.njarasoa.fijerena.feature.provider.components.DataManagementSection
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -225,7 +226,7 @@ fun MobileAddProviderScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.player_back))
+                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
                     }
                 },
             )
@@ -776,12 +777,12 @@ fun MobileAddProviderScreen(
                                             editingValue = rule.value
                                             editingMatchType = rule.matchType
                                         }) {
-                                            Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.provider_filter_edit_rule))
+                                            Icon(CinemaIcons.Edit, contentDescription = stringResource(R.string.provider_filter_edit_rule))
                                         }
                                         IconButton(onClick = {
                                             rules = rules.toMutableList().also { it.removeAt(index) }
                                         }) {
-                                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.provider_filter_delete_rule))
+                                            Icon(CinemaIcons.Delete, contentDescription = stringResource(R.string.provider_filter_delete_rule))
                                         }
                                     }
                                 }

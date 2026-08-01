@@ -67,6 +67,8 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -158,7 +160,7 @@ internal fun StreamList(
                         size = 40.dp,
                         icon = {
                             Icon(
-                                imageVector = Icons.Rounded.Refresh,
+                                imageVector = CinemaIcons.Refresh,
                                 contentDescription = "Refresh streams",
                                 tint = CinemaTextPrimary,
                                 modifier =
@@ -239,7 +241,7 @@ internal fun StreamList(
                     TvLazyColumn(
                         state = listState,
                         contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                        verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing.scaled(scale)),
                     ) {
                         itemsIndexed(
                             items = streams,

@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Typography
 import org.njarasoa.fijerena.R
+import org.njarasoa.fijerena.core.ui.theme.UiTypeTokens
+import org.njarasoa.fijerena.core.ui.theme.applyUiTypeTokens
 
 /**
  * Display font for headers only (display and headline styles) — a variable font, sampled at
@@ -30,7 +32,7 @@ private val CinemaDisplayFontFamily =
  * Font: Manrope for display/headline styles, Roboto (system default) for title/body/label.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
-val Typography =
+private val BaseTypography =
     Typography(
         displayLarge =
             TextStyle(
@@ -153,3 +155,27 @@ val Typography =
                 letterSpacing = 0.5.sp,
             ),
     )
+
+/** [BaseTypography] with the active [UiTypeTokens] weight/tracking character applied. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+fun cinemaTypography(tokens: UiTypeTokens): Typography {
+    fun TextStyle.display() = applyUiTypeTokens(tokens, CinemaDisplayFontFamily)
+    fun TextStyle.body() = applyUiTypeTokens(tokens, FontFamily.Default)
+    return BaseTypography.copy(
+        displayLarge = BaseTypography.displayLarge.display(),
+        displayMedium = BaseTypography.displayMedium.display(),
+        displaySmall = BaseTypography.displaySmall.display(),
+        headlineLarge = BaseTypography.headlineLarge.display(),
+        headlineMedium = BaseTypography.headlineMedium.display(),
+        headlineSmall = BaseTypography.headlineSmall.display(),
+        titleLarge = BaseTypography.titleLarge.body(),
+        titleMedium = BaseTypography.titleMedium.body(),
+        titleSmall = BaseTypography.titleSmall.body(),
+        bodyLarge = BaseTypography.bodyLarge.body(),
+        bodyMedium = BaseTypography.bodyMedium.body(),
+        bodySmall = BaseTypography.bodySmall.body(),
+        labelLarge = BaseTypography.labelLarge.body(),
+        labelMedium = BaseTypography.labelMedium.body(),
+        labelSmall = BaseTypography.labelSmall.body(),
+    )
+}

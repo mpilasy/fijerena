@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 // Pre-compiled formatter — locale-aware medium date (e.g., "Feb 27, 2026")
 private val EPG_SHORT_DATE_FORMATTER = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
@@ -99,7 +100,7 @@ fun MobileEpgGuideScreen(
                 title = { Text(stringResource(R.string.epg_guide_title_format, categoryName) + epgDevStats) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.player_back))
+                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
                     }
                 },
                 actions = {
@@ -110,7 +111,7 @@ fun MobileEpgGuideScreen(
                         },
                     ) {
                         Icon(
-                            if (isSearchActive) Icons.Rounded.Close else Icons.Rounded.Search,
+                            if (isSearchActive) CinemaIcons.Close else CinemaIcons.Search,
                             if (isSearchActive) stringResource(R.string.epg_search_close) else stringResource(R.string.common_search),
                         )
                     }
@@ -124,7 +125,7 @@ fun MobileEpgGuideScreen(
                                 strokeWidth = MobileDimensions.strokeWidth,
                             )
                         } else {
-                            Icon(Icons.Rounded.Refresh, stringResource(R.string.provider_refresh_button))
+                            Icon(CinemaIcons.Refresh, stringResource(R.string.provider_refresh_button))
                         }
                     }
                 },
@@ -246,7 +247,7 @@ private fun DateNavigationRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onPreviousDay) {
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, stringResource(R.string.epg_prev_day))
+            Icon(CinemaIcons.KeyboardArrowLeft, stringResource(R.string.epg_prev_day))
         }
         Text(
             text = selectedDate,
@@ -259,7 +260,7 @@ private fun DateNavigationRow(
             label = { Text(stringResource(R.string.epg_jump_to_now)) },
         )
         IconButton(onClick = onNextDay) {
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.epg_next_day))
+            Icon(CinemaIcons.KeyboardArrowRight, stringResource(R.string.epg_next_day))
         }
     }
 }

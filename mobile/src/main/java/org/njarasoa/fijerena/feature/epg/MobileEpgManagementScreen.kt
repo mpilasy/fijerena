@@ -25,6 +25,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.R
 import androidx.compose.ui.res.stringResource
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -80,12 +81,12 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                 title = { Text(stringResource(R.string.epg_management_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(CinemaIcons.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.epg_add_source))
+                        Icon(CinemaIcons.Add, contentDescription = stringResource(R.string.epg_add_source))
                     }
                 },
             )
@@ -113,7 +114,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         },
                                         modifier = Modifier.weight(1f),
                                     ) {
-                                        Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                        Icon(CinemaIcons.Refresh, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                                         Text(stringResource(R.string.epg_refresh_selected_btn, selectedIds.size))
                                     }
@@ -123,7 +124,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         modifier = Modifier.weight(1f),
                                         colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                                     ) {
-                                        Icon(Icons.Rounded.Delete, null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                                        Icon(CinemaIcons.Delete, null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
                                         Text(stringResource(R.string.epg_delete_selected_btn, selectedIds.size))
                                     }
@@ -201,7 +202,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Rounded.DeleteForever,
+                                        CinemaIcons.DeleteForever,
                                         contentDescription = null,
                                         modifier = Modifier.size(ButtonDefaults.IconSize),
                                     )
@@ -471,7 +472,7 @@ private fun EpgSourceCard(
                 }
 
                 IconButton(onClick = onRefresh) {
-                    Icon(Icons.Rounded.Refresh, "Refresh")
+                    Icon(CinemaIcons.Refresh, "Refresh")
                 }
             }
 

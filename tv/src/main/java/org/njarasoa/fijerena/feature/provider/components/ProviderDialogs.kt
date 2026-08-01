@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun ConfirmActionDialog(
@@ -260,13 +261,13 @@ fun CategoryFilterDialog(
                                     editingValue = rule.value
                                     editingMatchType = rule.matchType
                                 },
-                                icon = { Icon(Icons.Rounded.Edit, contentDescription = "Edit rule") },
+                                icon = { Icon(CinemaIcons.Edit, contentDescription = "Edit rule") },
                                 size = 36.dp,
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaDangerIconButton(
                                 onClick = { rules = rules.toMutableList().also { it.removeAt(index) } },
-                                icon = { Icon(Icons.Rounded.Delete, contentDescription = "Delete rule") },
+                                icon = { Icon(CinemaIcons.Delete, contentDescription = "Delete rule") },
                                 size = 36.dp,
                             )
                         }

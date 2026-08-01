@@ -68,6 +68,7 @@ fun TvNavHost(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel(),
     onThemeChanged: (String) -> Unit = {},
+    onUiStyleChanged: (String) -> Unit = {},
     onUiScaleChanged: (Float) -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -536,6 +537,7 @@ fun TvNavHost(
                             navController.navigateUp()
                         },
                         onThemeChanged = onThemeChanged,
+                        onUiStyleChanged = onUiStyleChanged,
                         onUiScaleChanged = onUiScaleChanged,
                         onManageProviders = {
                             navController.navigate(Screen.ProviderSelection)

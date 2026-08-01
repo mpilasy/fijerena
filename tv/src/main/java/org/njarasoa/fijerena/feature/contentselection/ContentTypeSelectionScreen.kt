@@ -96,6 +96,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.navigation.ContentType as NavContentType
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
  * Content type selection screen with icons, category counts, and gradient cards.
@@ -294,7 +295,7 @@ fun ContentTypeSelectionScreen(
                                         color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
                                     )
                                     Icon(
-                                        imageVector = Icons.Rounded.ArrowDropDown,
+                                        imageVector = CinemaIcons.ArrowDropDown,
                                         contentDescription = null,
                                         tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
                                         modifier = Modifier.padding(start = Spacing.xs),
@@ -307,7 +308,7 @@ fun ContentTypeSelectionScreen(
                                 onClick = onEpgBrowser,
                                 icon = {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Rounded.MenuBook,
+                                        imageVector = CinemaIcons.MenuBook,
                                         contentDescription = "EPG Browser",
                                         tint = CinemaTextPrimary,
                                     )
@@ -318,7 +319,7 @@ fun ContentTypeSelectionScreen(
                             onClick = onSearch,
                             icon = {
                                 Icon(
-                                    imageVector = Icons.Rounded.Search,
+                                    imageVector = CinemaIcons.Search,
                                     contentDescription = "Search All",
                                     tint = CinemaTextPrimary,
                                 )
@@ -328,7 +329,7 @@ fun ContentTypeSelectionScreen(
                             onClick = onSettings,
                             icon = {
                                 Icon(
-                                    imageVector = Icons.Rounded.Settings,
+                                    imageVector = CinemaIcons.Settings,
                                     contentDescription = "Settings",
                                     tint = CinemaTextPrimary,
                                 )
@@ -354,7 +355,7 @@ fun ContentTypeSelectionScreen(
                             ContentTypeHeroCard(
                                 title = "Live TV",
                                 subtitle = "Watch live channels",
-                                icon = Icons.Rounded.LiveTv,
+                                icon = CinemaIcons.LiveTv,
                                 categoryCounts = liveTvCounts,
                                 showTotal = isDevMode,
                                 showLivePulse = true,
@@ -368,7 +369,7 @@ fun ContentTypeSelectionScreen(
                             ContentTypeHeroCard(
                                 title = "Movies",
                                 subtitle = "Browse on-demand",
-                                icon = Icons.Rounded.Movie,
+                                icon = CinemaIcons.Movie,
                                 categoryCounts = moviesCounts,
                                 showTotal = isDevMode,
                                 gradientColors = listOf(CinemaAccent, CinemaAccentDark),
@@ -381,7 +382,7 @@ fun ContentTypeSelectionScreen(
                             ContentTypeHeroCard(
                                 title = "TV Shows",
                                 subtitle = "Series & episodes",
-                                icon = Icons.Rounded.Tv,
+                                icon = CinemaIcons.Tv,
                                 categoryCounts = tvShowsCounts,
                                 showTotal = isDevMode,
                                 gradientColors = listOf(CinemaAccentLight, CinemaAccent),

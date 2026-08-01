@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import java.util.Locale
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +113,7 @@ fun MobileSearchScreen(
                 title = { Text("Search") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+                        Icon(CinemaIcons.ArrowBack, "Back")
                     }
                 },
             )
@@ -145,7 +146,7 @@ fun MobileSearchScreen(
                         },
                         icon = {
                             Icon(
-                                imageVector = Icons.Rounded.Search,
+                                imageVector = CinemaIcons.Search,
                                 contentDescription = "Search",
                                 tint = CinemaTextPrimary
                             )
@@ -161,7 +162,7 @@ fun MobileSearchScreen(
                             },
                             icon = {
                                 Icon(
-                                    imageVector = Icons.Rounded.Close,
+                                    imageVector = CinemaIcons.Close,
                                     contentDescription = "Clear",
                                     tint = CinemaTextPrimary
                                 )
@@ -548,7 +549,7 @@ private fun MobileSearchHistorySection(
             )
             IconButton(onClick = onClearAll) {
                 Icon(
-                    imageVector = Icons.Rounded.Delete,
+                    imageVector = CinemaIcons.Delete,
                     contentDescription = "Clear all",
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     modifier = Modifier.size(MobileDimensions.iconSmall),
@@ -565,7 +566,7 @@ private fun MobileSearchHistorySection(
                     label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Rounded.Search,
+                            imageVector = CinemaIcons.Search,
                             contentDescription = null,
                             modifier = Modifier.size(AssistChipDefaults.IconSize),
                         )
@@ -576,7 +577,7 @@ private fun MobileSearchHistorySection(
                             modifier = Modifier.size(AssistChipDefaults.IconSize),
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.Close,
+                                imageVector = CinemaIcons.Close,
                                 contentDescription = "Remove",
                                 modifier = Modifier.size(AssistChipDefaults.IconSize),
                             )
@@ -618,7 +619,7 @@ private fun MobileCollapsibleHeader(
                 fontWeight = FontWeight.Bold,
             )
             Icon(
-                imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
                 contentDescription = if (isExpanded) "Collapse" else "Expand",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
@@ -664,7 +665,7 @@ private fun CategoryResultCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                Icons.Rounded.Folder,
+                CinemaIcons.Folder,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
