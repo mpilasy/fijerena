@@ -38,7 +38,10 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -529,7 +532,7 @@ private fun EpisodeDetailContent(
         val hasResume = resumePositionMs > 0L
         if (hasResume) {
             val resumeTimeText = formatMillis(resumePositionMs)
-            Button(
+            CinemaButton(
                 onClick = {
                     onPlay(episode.id, episode.title, extension, false)
                 },
@@ -538,7 +541,7 @@ private fun EpisodeDetailContent(
                 Text(stringResource(R.string.movie_resume_from_format, resumeTimeText))
             }
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            OutlinedButton(
+            CinemaOutlinedButton(
                 onClick = {
                     onPlay(episode.id, episode.title, extension, true)
                 },
@@ -547,7 +550,7 @@ private fun EpisodeDetailContent(
                 Text(stringResource(R.string.movie_start_beginning))
             }
         } else {
-            Button(
+            CinemaButton(
                 onClick = {
                     onPlay(episode.id, episode.title, extension, false)
                 },
@@ -653,7 +656,7 @@ private fun EpisodeCard(
     episode: DomainEpisodeItem,
     onClick: () -> Unit,
 ) {
-    Card(
+    CinemaCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -761,7 +764,7 @@ private fun ErrorScreen(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Button(onClick = onBack) {
+            CinemaButton(onClick = onBack) {
                 Text(stringResource(R.string.common_back))
             }
         }
