@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -160,6 +161,10 @@ fun MobileEpisodeSelectionScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
         ) {
+            AmbientBackdrop(
+                modifier = Modifier.fillMaxSize(),
+                imageUrl = selectedEpisode?.thumbnailUrl ?: seriesDetail?.coverUrl,
+            )
             when {
                 isLoading -> {
                     LoadingScreen()
