@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -19,6 +18,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 
 @Composable
 fun DeveloperSettingsCard(
@@ -50,7 +50,7 @@ fun DeveloperSettingsCard(
 
         if (uiState.isDevMode) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            Button(
+            CinemaButton(
                 onClick = onCellularBuffers,
                 modifier = Modifier.fillMaxWidth(),
             ) {

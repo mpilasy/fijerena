@@ -9,6 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 
@@ -40,7 +42,7 @@ fun LanguageSettingsCard(
 
     if (showLanguageDialog) {
         val context = androidx.compose.ui.platform.LocalContext.current
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { showLanguageDialog = false },
             title = { Text(stringResource(R.string.settings_language)) },
             text = {
@@ -63,7 +65,7 @@ fun LanguageSettingsCard(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showLanguageDialog = false }) {
+                CinemaDialogTextButton(onClick = { showLanguageDialog = false }) {
                     Text(stringResource(R.string.player_back))
                 }
             }

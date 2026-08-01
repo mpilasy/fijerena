@@ -20,6 +20,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,7 +184,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(
+                CinemaButton(
                     onClick = {
                         appSettings.cellularLiveMultiplier = liveMultiplier
                         appSettings.cellularVodMultiplier = vodMultiplier
@@ -194,7 +196,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                     Text("Apply Changes")
                 }
 
-                OutlinedButton(
+                CinemaOutlinedButton(
                     onClick = {
                         liveMultiplier = 1.0f
                         vodMultiplier = 1.0f

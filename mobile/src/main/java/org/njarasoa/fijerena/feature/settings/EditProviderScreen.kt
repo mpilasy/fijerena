@@ -11,13 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -41,6 +39,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,18 +131,18 @@ fun MobileEditProviderScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                OutlinedButton(
+                CinemaOutlinedButton(
                     onClick = onBack,
                     modifier = Modifier.weight(1f),
                 ) {
                     Text("Cancel")
                 }
 
-                Button(
+                CinemaButton(
                     onClick = {
                         if (providerUrl.isBlank()) {
                             message = "URL cannot be empty"
-                            return@Button
+                            return@CinemaButton
                         }
 
                         scope.launch {
