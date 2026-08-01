@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -18,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
@@ -34,6 +37,7 @@ import org.njarasoa.fijerena.feature.category.components.TwoColumnLayout
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * TV two-column layout: Categories on left, Streams on right.
@@ -140,6 +144,20 @@ private fun CategoryGridContent(
                 vertical = Spacing.tvSafeMarginVertical,
             )
 
+    // One-time "hold to favorite" hint — favoriting has no other visible affordance on TV.
+    // Shown once ever (marked seen as soon as it's shown), auto-dismisses after a few seconds.
+    val hintContext = LocalContext.current
+    var showFavoriteHint by remember {
+        mutableStateOf(!org.njarasoa.fijerena.core.network.AppSettings(hintContext.applicationContext).hasSeenFavoriteHint)
+    }
+    LaunchedEffect(showFavoriteHint) {
+        if (showFavoriteHint) {
+            org.njarasoa.fijerena.core.network.AppSettings(hintContext.applicationContext).hasSeenFavoriteHint = true
+            delay(4000)
+            showFavoriteHint = false
+        }
+    }
+
     // 5% padding for TV overscan safety — applied per-branch rather than around the whole
     // `when`, since LiveTvSplitLayout's promoted full-screen player must NOT inherit it (it
     // renders inside this same composable, in place, to avoid a second PlaybackViewModel/ANR —
@@ -229,5 +247,38 @@ private fun CategoryGridContent(
                 }
             }
         }
+
+        // Skip the LiveTvSplitLayout branch — its promoted full-screen player renders in this
+        // same Box (see comment above), and the hint must never draw over live video.
+        val isLiveTvSplitPane = contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV && showPreviewPane
+        if (showFavoriteHint && uiState is CategoryViewModel.UiState.Success && !isLiveTvSplitPane) {
+            FavoriteHintBanner(
+                modifier =
+                    Modifier
+                        .align(androidx.compose.ui.Alignment.BottomCenter)
+                        .padding(bottom = Spacing.xxl.scaled(scale)),
+            )
+        }
+    }
+}
+
+/**
+ * One-time hint pointing at the hold-to-favorite gesture, which otherwise has zero on-screen
+ * affordance. See [TvCategoryGridScreen] and `AppSettings.hasSeenFavoriteHint`.
+ */
+@Composable
+private fun FavoriteHintBanner(modifier: Modifier = Modifier) {
+    val scale = LocalUiScale.current
+    org.njarasoa.fijerena.core.ui.components.GlassPanel(modifier = modifier) {
+        androidx.tv.material3.Text(
+            text = "Hold OK on a channel or category to add it to Favorites",
+            style = androidx.tv.material3.MaterialTheme.typography.bodyMedium,
+            color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+            modifier =
+                Modifier.padding(
+                    horizontal = Spacing.lg.scaled(scale),
+                    vertical = Spacing.sm.scaled(scale),
+                ),
+        )
     }
 }

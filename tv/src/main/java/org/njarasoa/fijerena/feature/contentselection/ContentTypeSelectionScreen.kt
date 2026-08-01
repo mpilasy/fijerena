@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -110,6 +111,7 @@ fun ContentTypeSelectionScreen(
     onSearch: () -> Unit = {},
     onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {},
+    onCapabilitiesResolved: (Set<String>) -> Unit = {},
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -134,36 +136,39 @@ fun ContentTypeSelectionScreen(
     var mediaProviderRef by remember { mutableStateOf<MediaProvider?>(null) }
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
 
-    // Show EPG Browser button when EPG index has data
-    val hasEpgData =
-        remember {
-            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-                .getInstance(context.applicationContext)
-                .state.value is
-                org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
-        }
+    // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
+    // `remember`) so a source that finishes indexing while this screen is on-screen shows the
+    // icon immediately, instead of waiting for the composable to be torn down and rebuilt.
+    val epgIndexState by remember {
+        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer.getInstance(context.applicationContext).state
+    }.collectAsStateWithLifecycle()
+    val hasEpgData = epgIndexState is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
 
     LaunchedEffect(refreshTrigger) {
         // Reset counts so stale values don't linger during provider switch
         liveTvCounts = null
         moviesCounts = null
         tvShowsCounts = null
-        withContext(Dispatchers.IO) {
-            val providerRepo = ProviderRepository(context.applicationContext)
-            allProviders = providerRepo.getAllProvidersList()
-            val activeProvider = providerRepo.getActiveProvider()
-            if (activeProvider != null) {
-                providerName = activeProvider.name
-                providerType = activeProvider.type
-                activeProviderId = activeProvider.id
-                val password = providerRepo.getPassword(activeProvider.id) ?: ""
-                val mediaProvider = MediaProviderFactory.create(activeProvider, context.applicationContext, password)
-                supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
-                mediaProviderRef = mediaProvider
-            } else {
-                providerName = appSettings.providerName
+        val resolvedTypes =
+            withContext(Dispatchers.IO) {
+                val providerRepo = ProviderRepository(context.applicationContext)
+                allProviders = providerRepo.getAllProvidersList()
+                val activeProvider = providerRepo.getActiveProvider()
+                if (activeProvider != null) {
+                    providerName = activeProvider.name
+                    providerType = activeProvider.type
+                    activeProviderId = activeProvider.id
+                    val password = providerRepo.getPassword(activeProvider.id) ?: ""
+                    val mediaProvider = MediaProviderFactory.create(activeProvider, context.applicationContext, password)
+                    supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
+                    mediaProviderRef = mediaProvider
+                    mediaProvider.capabilities.supportedContentTypes
+                } else {
+                    providerName = appSettings.providerName
+                    null
+                }
             }
-        }
+        resolvedTypes?.let(onCapabilitiesResolved)
     }
 
     // Pull a recently-watched poster for the ambient backdrop wash — falls back to the plain

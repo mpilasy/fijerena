@@ -39,6 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -65,6 +66,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -193,6 +195,22 @@ fun MobileCategoryListScreen(
     var fullScreen by remember { mutableStateOf(false) }
     var hasSeededDock by remember { mutableStateOf(false) }
     val isWideLayout = LocalConfiguration.current.screenWidthDp >= 600
+
+    // One-time "long-press to favorite" hint — favoriting has no other visible affordance here.
+    // Shown once ever (marked seen as soon as it's shown), auto-dismisses after a few seconds.
+    // Safe to render unconditionally below: the full-screen player path returns early above
+    // (line ~365), so this composition is only ever reached while browsing/docked.
+    val hintContext = LocalContext.current
+    var showFavoriteHint by remember {
+        mutableStateOf(!org.njarasoa.fijerena.core.network.AppSettings(hintContext.applicationContext).hasSeenFavoriteHint)
+    }
+    LaunchedEffect(showFavoriteHint) {
+        if (showFavoriteHint) {
+            org.njarasoa.fijerena.core.network.AppSettings(hintContext.applicationContext).hasSeenFavoriteHint = true
+            delay(4000)
+            showFavoriteHint = false
+        }
+    }
 
     BackHandler(enabled = isLiveTv && fullScreen) { fullScreen = false }
     // Dock auto-seeds on entry (below), so without this, Back from a docked preview would skip
@@ -730,6 +748,35 @@ fun MobileCategoryListScreen(
             }
         }
     }
+
+    if (showFavoriteHint) {
+        FavoriteHintBanner(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = Spacing.xxl),
+        )
+    }
+    }
+}
+
+/**
+ * One-time hint pointing at the long-press-to-favorite gesture, which otherwise has zero
+ * on-screen affordance. See [MobileCategoryListScreen] and `AppSettings.hasSeenFavoriteHint`.
+ */
+@Composable
+private fun FavoriteHintBanner(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = CinemaSurface.copy(alpha = 0.92f),
+        shape = RoundedCornerShape(CinemaCornerRadius.large),
+    ) {
+        Text(
+            text = "Long-press a channel or category to add it to Favorites",
+            style = MaterialTheme.typography.bodyMedium,
+            color = CinemaTextPrimary,
+            modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.sm),
+        )
     }
 }
 

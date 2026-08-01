@@ -39,6 +39,7 @@ class AppSettings(
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val KEY_LANGUAGE = "app_language"
+        private const val KEY_HAS_SEEN_FAVORITE_HINT = "has_seen_favorite_hint"
         private const val MAX_SEARCH_HISTORY = 20
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_WATCH_DELAY_SECONDS = 10
@@ -242,6 +243,15 @@ class AppSettings(
     var hasProviderCache: Boolean
         get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
         set(value) = prefs.edit { putBoolean(KEY_HAS_PROVIDER_CACHE, value) }
+
+    /**
+     * Whether the one-time "hold/long-press to favorite" hint has already been shown.
+     * Favoriting from a browse list has no visible affordance otherwise, so this hint
+     * is shown once on first browse and never again once dismissed or acted on.
+     */
+    var hasSeenFavoriteHint: Boolean
+        get() = prefs.getBoolean(KEY_HAS_SEEN_FAVORITE_HINT, false)
+        set(value) = prefs.edit { putBoolean(KEY_HAS_SEEN_FAVORITE_HINT, value) }
 
     /**
      * Get the search history as an ordered list (most recent first).
