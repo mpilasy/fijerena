@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
  * A text field that displays as read-only text with an edit pencil icon.
@@ -163,7 +164,7 @@ fun ReadOnlyFieldWithEdit(
                     editValue = value
                     isEditing = true
                 },
-                icon = { Icon(Icons.Rounded.Edit, contentDescription = "Edit $label") },
+                icon = { Icon(CinemaIcons.Edit, contentDescription = "Edit $label") },
             )
         }
     }

@@ -71,6 +71,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 // Pre-compiled formatter — locale-aware full date (e.g., "Thursday, February 27, 2026")
 private val EPG_DATE_FORMATTER = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
@@ -275,7 +276,7 @@ private fun EpgHeader(
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
             Button(onClick = onPreviousDay) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
+                    imageVector = CinemaIcons.KeyboardArrowLeft,
                     contentDescription = stringResource(R.string.epg_prev_day),
                     tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )
@@ -285,7 +286,7 @@ private fun EpgHeader(
             }
             Button(onClick = onNextDay) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                    imageVector = CinemaIcons.KeyboardArrowRight,
                     contentDescription = stringResource(R.string.epg_next_day),
                     tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )
@@ -302,7 +303,7 @@ private fun EpgHeader(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Rounded.Refresh,
+                        imageVector = CinemaIcons.Refresh,
                         contentDescription = stringResource(R.string.common_refresh),
                         tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                     )
@@ -310,7 +311,7 @@ private fun EpgHeader(
             }
             Button(onClick = onSearchToggle) {
                 Icon(
-                    imageVector = if (isSearchActive) Icons.Rounded.Close else Icons.Rounded.Search,
+                    imageVector = if (isSearchActive) CinemaIcons.Close else CinemaIcons.Search,
                     contentDescription = if (isSearchActive) stringResource(R.string.epg_search_close) else stringResource(R.string.common_search),
                     tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )

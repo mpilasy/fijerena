@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,7 +124,7 @@ fun MobileEpisodeSelectionScreen(
                         }
                     },
                         icon = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.common_back), tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back), tint = CinemaTextPrimary)
                         }
                     )
                 },
@@ -140,7 +141,7 @@ fun MobileEpisodeSelectionScreen(
                     },
                         icon = {
                             Icon(
-                                imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                 contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
                                 tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                             )
@@ -629,7 +630,7 @@ private fun SeasonHeader(
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
     ) {
         Icon(
-            imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+            imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
             contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
             tint = MaterialTheme.colorScheme.primary,
         )

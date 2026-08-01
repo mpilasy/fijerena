@@ -19,6 +19,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +47,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                 title = { Text("Cellular Buffer Settings") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+                        Icon(CinemaIcons.ArrowBack, "Back")
                     }
                 },
             )
@@ -72,7 +73,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.Top,
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Info,
+                            imageVector = CinemaIcons.Info,
                             contentDescription = "Warning",
                             tint = CinemaWarning,
                             modifier = Modifier.size(20.dp),

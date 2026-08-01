@@ -47,6 +47,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun MobileStatsOverlay(
@@ -301,7 +302,7 @@ fun MobileStatsOverlay(
                         modifier = Modifier.size(MobileDimensions.iconLarge),
                     ) {
                         Icon(
-                            Icons.Rounded.Close,
+                            CinemaIcons.Close,
                             contentDescription = "Close",
                             tint = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                             modifier = Modifier.size(MobileDimensions.iconSmall),

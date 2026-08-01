@@ -37,6 +37,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun TvSearchTextField(
@@ -97,7 +98,7 @@ fun TvSearchTextField(
                 ),
             leadingIcon = {
                 Icon(
-                    imageVector = Icons.Rounded.Search,
+                    imageVector = CinemaIcons.Search,
                     contentDescription = null,
                     modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                     tint = CinemaTextPrimary
@@ -136,7 +137,7 @@ fun TvSearchTextField(
                     },
                 icon = {
                     Icon(
-                        imageVector = Icons.Rounded.Close,
+                        imageVector = CinemaIcons.Close,
                         contentDescription = "Clear",
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                         tint = CinemaTextPrimary
@@ -166,7 +167,7 @@ fun TvSearchTextField(
                 },
             icon = {
                 Icon(
-                    imageVector = Icons.Rounded.Search,
+                    imageVector = CinemaIcons.Search,
                     contentDescription = "Search",
                     modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                     tint = CinemaTextPrimary

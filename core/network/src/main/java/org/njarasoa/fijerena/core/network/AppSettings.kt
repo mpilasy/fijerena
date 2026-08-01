@@ -24,6 +24,7 @@ class AppSettings(
         private const val KEY_CACHE_EXPIRY_HOURS = "cache_expiry_hours"
         private const val KEY_UI_SCALE = "ui_scale"
         private const val KEY_THEME_ID = "theme_id"
+        private const val KEY_UI_STYLE_ID = "ui_style_id"
         private const val KEY_EPG_URL = "epg_url"
         private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
         private const val KEY_EPG_AUTO_REFRESH = "epg_auto_refresh"
@@ -128,6 +129,11 @@ class AppSettings(
     var themeId: String
         get() = prefs.getString(KEY_THEME_ID, "deep_night") ?: "deep_night"
         set(value) = prefs.edit { putString(KEY_THEME_ID, value) }
+
+    /** Platform-inspired look-and-feel preset (shape/type/icon/grid/dialog character), independent of [themeId]'s color. */
+    var uiStyleId: String
+        get() = prefs.getString(KEY_UI_STYLE_ID, "material") ?: "material"
+        set(value) = prefs.edit { putString(KEY_UI_STYLE_ID, value) }
 
     /**
      * Get or set application language (ISO 639-1 code).

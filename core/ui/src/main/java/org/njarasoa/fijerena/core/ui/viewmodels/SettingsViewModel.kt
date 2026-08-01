@@ -23,6 +23,7 @@ data class SettingsUiState(
     val subscriptionMaxCons: String? = null,
     val subscriptionIsTrial: Boolean = false,
     val themeId: String = "deep_night",
+    val uiStyleId: String = "material",
     val isDevMode: Boolean = false,
     val language: String = "en",
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
@@ -41,6 +42,7 @@ class SettingsViewModel(
         MutableStateFlow(
             SettingsUiState(
                 themeId = appSettings.themeId,
+                uiStyleId = appSettings.uiStyleId,
                 isDevMode = appSettings.isDevMode,
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
@@ -101,6 +103,11 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(themeId = themeId)
     }
 
+    fun updateUiStyle(uiStyleId: String) {
+        appSettings.uiStyleId = uiStyleId
+        _uiState.value = _uiState.value.copy(uiStyleId = uiStyleId)
+    }
+
     fun updateDevMode(enabled: Boolean) {
         appSettings.isDevMode = enabled
         _uiState.value = _uiState.value.copy(isDevMode = enabled)
@@ -142,6 +149,7 @@ class SettingsViewModel(
                     _uiState.value =
                         _uiState.value.copy(
                             themeId = appSettings.themeId,
+                            uiStyleId = appSettings.uiStyleId,
                             isDevMode = appSettings.isDevMode,
                             language = appSettings.language,
                             watchDelaySeconds = appSettings.watchDelaySeconds,

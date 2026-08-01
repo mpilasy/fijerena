@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 private val CinemaTextSecondaryHigh = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
 
@@ -148,7 +149,7 @@ internal fun TwoColumnLayout(
                     onClick = onSearchClick,
                     icon = {
                         Icon(
-                            imageVector = Icons.Rounded.Search,
+                            imageVector = CinemaIcons.Search,
                             contentDescription = "Search",
                             tint = CinemaTextPrimary
                         )

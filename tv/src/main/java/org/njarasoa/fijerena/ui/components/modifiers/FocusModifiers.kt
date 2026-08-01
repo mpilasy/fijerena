@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.ui.components.modifiers
 
 import androidx.compose.foundation.focusable
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusEventModifierNode
@@ -36,6 +37,7 @@ import androidx.compose.ui.geometry.CornerRadius as ComposeCornerRadius
  *
  * Implemented as a Modifier.Node to avoid the per-element composition overhead of `composed {}`.
  */
+@Composable
 fun Modifier.tvFocusable(
     focusScale: Float = TvFocusTokens.focusedScale,
     borderWidth: Dp = TvFocusTokens.focusBorderWidth,
@@ -52,6 +54,7 @@ fun Modifier.tvFocusable(
  * - 1.05x animated scale on focus
  * - 2dp border
  */
+@Composable
 fun Modifier.tvFocusableSubtle(
     borderColor: Color = CinemaAccentLight,
     cornerRadius: Dp = CornerRadius.medium,
@@ -71,6 +74,7 @@ fun Modifier.tvFocusableSubtle(
  *
  * Useful for cards in dense grids where scaling would cause overlaps.
  */
+@Composable
 fun Modifier.tvFocusableNoScale(
     borderColor: Color = CinemaAccentLight,
     cornerRadius: Dp = CornerRadius.medium,
@@ -89,6 +93,7 @@ fun Modifier.tvFocusableNoScale(
  * - Subtle border only when focused
  * - No bright border, no 1.1x scale
  */
+@Composable
 fun Modifier.tvFocusableContent(cornerRadius: Dp = CornerRadius.medium): Modifier =
     tvFocusable(
         focusScale = TvFocusTokens.focusedScaleContent,

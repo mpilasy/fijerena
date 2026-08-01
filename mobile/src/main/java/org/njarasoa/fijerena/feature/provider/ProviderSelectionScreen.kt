@@ -25,6 +25,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,12 +54,12 @@ fun MobileProviderSelectionScreen(
                 title = { Text("Providers") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+                        Icon(CinemaIcons.ArrowBack, "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = onAddProvider) {
-                        Icon(Icons.Rounded.Add, contentDescription = "Add Provider")
+                        Icon(CinemaIcons.Add, contentDescription = "Add Provider")
                     }
                 },
             )
@@ -199,7 +200,7 @@ private fun MobileProviderList(
                         if (!provider.isActive) {
                             IconButton(onClick = { onSelect(provider) }) {
                                 Icon(
-                                    Icons.Rounded.CheckCircle,
+                                    CinemaIcons.CheckCircle,
                                     contentDescription = "Select",
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
@@ -207,14 +208,14 @@ private fun MobileProviderList(
                         }
                         IconButton(onClick = { onEdit(provider.id) }) {
                             Icon(
-                                Icons.Rounded.Edit,
+                                CinemaIcons.Edit,
                                 contentDescription = "Edit",
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         IconButton(onClick = { onDelete(provider) }) {
                             Icon(
-                                Icons.Rounded.Delete,
+                                CinemaIcons.Delete,
                                 contentDescription = "Delete",
                                 tint = CinemaError,
                             )

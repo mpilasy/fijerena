@@ -100,6 +100,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.ui.components.TvSearchTextField
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun TvEpgBrowserScreen(
@@ -221,7 +222,7 @@ fun TvEpgBrowserScreen(
                                     )
                                 } else {
                                     Icon(
-                                        imageVector = Icons.Rounded.Refresh,
+                                        imageVector = CinemaIcons.Refresh,
                                         contentDescription = "Refresh stale EPG sources",
                                         tint = if (staleSourceCount > 0) CinemaWarning else CinemaTextPrimary,
                                         modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
@@ -595,7 +596,7 @@ private fun EpgSearchHistorySection(
                 onClick = onClearAll,
                 icon = {
                     Icon(
-                        imageVector = Icons.Rounded.Delete,
+                        imageVector = CinemaIcons.Delete,
                         contentDescription = "Clear all",
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                         tint = CinemaTextPrimary
@@ -640,7 +641,7 @@ private fun EpgSearchHistorySection(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Search,
+                            imageVector = CinemaIcons.Search,
                             contentDescription = null,
                             tint = CinemaTextSecondary,
                             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -997,7 +998,7 @@ private fun AiringRow(
         ) {
             if (isMatched) {
                 Icon(
-                    imageVector = Icons.Rounded.PlayArrow,
+                    imageVector = CinemaIcons.PlayArrow,
                     contentDescription = "Watch",
                     modifier = Modifier.size(Spacing.lg.scaled(scale)),
                     tint = if (isOnAir) CinemaSuccess else CinemaAccentLight,

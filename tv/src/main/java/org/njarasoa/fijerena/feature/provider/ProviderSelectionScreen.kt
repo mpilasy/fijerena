@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun TvProviderSelectionScreen(
@@ -103,7 +104,7 @@ fun TvProviderSelectionScreen(
                 onClick = onAddProvider,
                 icon = {
                     Icon(
-                        Icons.Rounded.Add,
+                        CinemaIcons.Add,
                         contentDescription = stringResource(R.string.provider_add_title),
                         tint = CinemaAccent
                     )
@@ -254,7 +255,7 @@ private fun ProviderList(
                             onClick = { onSelect(provider) },
                             icon = {
                                 Icon(
-                                    Icons.Rounded.CheckCircle,
+                                    CinemaIcons.CheckCircle,
                                     contentDescription = stringResource(R.string.common_select),
                                     tint = CinemaAccent
                                 )
@@ -265,7 +266,7 @@ private fun ProviderList(
                         onClick = { onEdit(provider.id) },
                         icon = {
                             Icon(
-                                Icons.Rounded.Edit,
+                                CinemaIcons.Edit,
                                 contentDescription = stringResource(R.string.provider_edit_button),
                                 tint = CinemaAccent
                             )
@@ -275,7 +276,7 @@ private fun ProviderList(
                         onClick = { onDelete(provider) },
                         icon = {
                             Icon(
-                                Icons.Rounded.Delete,
+                                CinemaIcons.Delete,
                                 contentDescription = stringResource(R.string.provider_delete_button)
                             )
                         },

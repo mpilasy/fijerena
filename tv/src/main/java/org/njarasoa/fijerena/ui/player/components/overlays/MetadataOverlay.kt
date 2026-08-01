@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.ui.player.utils.formatTime
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun MetadataOverlay(
@@ -170,7 +171,7 @@ fun MetadataOverlay(
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Icon(Icons.Rounded.PlayArrow, contentDescription = null)
+                                    Icon(CinemaIcons.PlayArrow, contentDescription = null)
                                     Text(stringResource(R.string.player_resume))
                                 }
                             }
@@ -180,7 +181,7 @@ fun MetadataOverlay(
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Icon(Icons.Rounded.Pause, contentDescription = null)
+                                    Icon(CinemaIcons.Pause, contentDescription = null)
                                     Text(stringResource(R.string.player_pause))
                                 }
                             }
@@ -194,7 +195,7 @@ fun MetadataOverlay(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.AutoMirrored.Rounded.VolumeUp, contentDescription = null)
+                            Icon(CinemaIcons.VolumeUp, contentDescription = null)
                             Text(stringResource(R.string.player_audio))
                         }
                     }
@@ -206,7 +207,7 @@ fun MetadataOverlay(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Rounded.Subtitles, contentDescription = null)
+                            Icon(CinemaIcons.Subtitles, contentDescription = null)
                             Text(stringResource(R.string.player_subtitles))
                         }
                     }
@@ -218,7 +219,7 @@ fun MetadataOverlay(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Rounded.Tune, contentDescription = null)
+                            Icon(CinemaIcons.Tune, contentDescription = null)
                             Text(stringResource(R.string.player_quality))
                         }
                     }
@@ -231,7 +232,7 @@ fun MetadataOverlay(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(Icons.Rounded.BarChart, contentDescription = null)
+                                Icon(CinemaIcons.BarChart, contentDescription = null)
                                 Text(stringResource(R.string.player_stats))
                             }
                         }
@@ -258,7 +259,7 @@ fun MetadataOverlay(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
-                                    imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                    imageVector = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
                                     contentDescription = null,
                                 )
                                 Text(

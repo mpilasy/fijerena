@@ -73,6 +73,7 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
  * Movie details screen for VOD content.
@@ -288,7 +289,7 @@ private fun MovieDetailsContent(
                         },
                         icon = {
                             Icon(
-                                imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                 contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
                                 tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
@@ -305,7 +306,7 @@ private fun MovieDetailsContent(
                         enabled = !isRefreshing,
                         icon = {
                             Icon(
-                                imageVector = Icons.Rounded.Refresh,
+                                imageVector = CinemaIcons.Refresh,
                                 contentDescription = stringResource(R.string.movie_refresh_info),
                                 modifier =
                                     Modifier

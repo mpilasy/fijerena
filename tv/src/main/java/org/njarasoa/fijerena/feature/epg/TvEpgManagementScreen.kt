@@ -37,6 +37,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -324,7 +325,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(
-                                            imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                            imageVector = if (isSelected) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
                                             contentDescription = if (isSelected) "Selected" else "Not selected",
                                             modifier = Modifier.size(24.dp.scaled(scale)),
                                         )
@@ -581,7 +582,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = if (isSelected) Icons.Rounded.RadioButtonChecked else Icons.Rounded.RadioButtonUnchecked,
+                                    imageVector = if (isSelected) CinemaIcons.RadioButtonChecked else CinemaIcons.RadioButtonUnchecked,
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp.scaled(scale)),
                                     tint = if (isSelected) org.njarasoa.fijerena.core.ui.theme.CinemaAccent else org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -880,7 +881,7 @@ private fun TimeSpinnerColumn(
             shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(MaterialTheme.shapes.small),
         ) {
             Icon(
-                imageVector = Icons.Rounded.KeyboardArrowUp,
+                imageVector = CinemaIcons.KeyboardArrowUp,
                 contentDescription = "Increase $label",
                 modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(28.dp.scaled(scale)),
             )
@@ -902,7 +903,7 @@ private fun TimeSpinnerColumn(
             shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(MaterialTheme.shapes.small),
         ) {
             Icon(
-                imageVector = Icons.Rounded.KeyboardArrowDown,
+                imageVector = CinemaIcons.KeyboardArrowDown,
                 contentDescription = "Decrease $label",
                 modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(28.dp.scaled(scale)),
             )

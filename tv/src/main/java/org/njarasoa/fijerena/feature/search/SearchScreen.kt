@@ -93,6 +93,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import java.util.Locale
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
  * Search screen for searching streams across all categories.
@@ -430,7 +431,7 @@ private fun SearchHistorySection(
                 onClick = onClearAll,
                 icon = {
                     Icon(
-                        imageVector = Icons.Rounded.Delete,
+                        imageVector = CinemaIcons.Delete,
                         contentDescription = "Clear all",
                         modifier = Modifier.size(TvDimensions.iconSmall),
                         tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -471,7 +472,7 @@ private fun SearchHistorySection(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Search,
+                            imageVector = CinemaIcons.Search,
                             contentDescription = null,
                             tint = CinemaTextSecondary,
                             modifier = Modifier.size(TvDimensions.iconSmall),
@@ -767,7 +768,7 @@ private fun CollapsibleHeader(
                 fontWeight = FontWeight.Bold,
             )
             Icon(
-                imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
                 contentDescription = if (isExpanded) "Collapse" else "Expand",
                 tint = CinemaAccent,
                 modifier = Modifier.size(TvDimensions.iconSmall),

@@ -81,6 +81,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,7 +174,7 @@ fun MobileEpgBrowserScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+                        Icon(CinemaIcons.ArrowBack, "Back")
                     }
                 },
                 actions = {
@@ -188,7 +189,7 @@ fun MobileEpgBrowserScreen(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Rounded.Refresh,
+                                imageVector = CinemaIcons.Refresh,
                                 contentDescription = "Refresh stale EPG sources",
                                 tint =
                                     if (staleSourceCount > 0) {
@@ -279,7 +280,7 @@ fun MobileEpgBrowserScreen(
                 placeholder = { Text(placeholderText) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Rounded.Search,
+                        imageVector = CinemaIcons.Search,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
                     )
@@ -292,7 +293,7 @@ fun MobileEpgBrowserScreen(
                             viewModel.clearSearch()
                         }) {
                             Icon(
-                                imageVector = Icons.Rounded.Close,
+                                imageVector = CinemaIcons.Close,
                                 contentDescription = "Clear",
                                 modifier = Modifier.size(20.dp),
                             )
@@ -677,7 +678,7 @@ private fun MobileProgramCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                        imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
                         contentDescription = if (expanded) "Show less" else "Show more",
                         modifier = Modifier.size(CinemaSpacing.lg),
                         tint = MaterialTheme.colorScheme.primary,
@@ -733,7 +734,7 @@ private fun MobileAiringRow(
     ) {
         if (isMatched) {
             Icon(
-                imageVector = Icons.Rounded.PlayArrow,
+                imageVector = CinemaIcons.PlayArrow,
                 contentDescription = "Watch",
                 modifier = Modifier.size(CinemaSpacing.lg),
                 tint = if (isOnAir) CinemaSuccess else MaterialTheme.colorScheme.primary,
@@ -822,7 +823,7 @@ private fun MobileEpgSearchHistorySection(
             )
             IconButton(onClick = onClearAll) {
                 Icon(
-                    imageVector = Icons.Rounded.Delete,
+                    imageVector = CinemaIcons.Delete,
                     contentDescription = "Clear all",
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     modifier = Modifier.size(20.dp),
@@ -839,7 +840,7 @@ private fun MobileEpgSearchHistorySection(
                     label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Rounded.Search,
+                            imageVector = CinemaIcons.Search,
                             contentDescription = null,
                             modifier = Modifier.size(AssistChipDefaults.IconSize),
                         )
@@ -850,7 +851,7 @@ private fun MobileEpgSearchHistorySection(
                             modifier = Modifier.size(AssistChipDefaults.IconSize),
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.Close,
+                                imageVector = CinemaIcons.Close,
                                 contentDescription = "Remove",
                                 modifier = Modifier.size(AssistChipDefaults.IconSize),
                             )

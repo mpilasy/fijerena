@@ -105,6 +105,8 @@ import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -372,7 +374,7 @@ fun MobileCategoryListScreen(
                 navigationIcon = {
                     CinemaIconButton(onClick = onBack,
                         icon = {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
                         }
                     )
                 },
@@ -389,7 +391,7 @@ fun MobileCategoryListScreen(
                             if (selectedCatId != null && selectedCatName != null && hasEpgData) {
                                 CinemaIconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) },
                                     icon = {
-                                        Icon(Icons.Rounded.DateRange, stringResource(R.string.common_tv_guide), tint = CinemaTextPrimary)
+                                        Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide), tint = CinemaTextPrimary)
                                     }
                                 )
                             }
@@ -397,7 +399,7 @@ fun MobileCategoryListScreen(
                     }
                     CinemaIconButton(onClick = onSearchClick,
                         icon = {
-                            Icon(Icons.Rounded.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
                         }
                     )
                 },
@@ -656,7 +658,7 @@ fun MobileCategoryListScreen(
                                             modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
                                         ) {
                                             Icon(
-                                                Icons.Rounded.Close,
+                                                CinemaIcons.Close,
                                                 contentDescription = "Close",
                                                 tint = Color.White,
                                             )
@@ -933,7 +935,7 @@ private fun StreamsList(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
             ) {
                 item(contentType = "header") {
                     Text(

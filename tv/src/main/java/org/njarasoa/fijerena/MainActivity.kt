@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
 
         val appSettings = AppSettings(applicationContext)
         var themeId by mutableStateOf(appSettings.themeId)
+        var uiStyleId by mutableStateOf(appSettings.uiStyleId)
         var uiScale by mutableStateOf(appSettings.uiScale)
 
         setContent {
@@ -40,11 +41,15 @@ class MainActivity : ComponentActivity() {
                 LocalUiScale provides uiScale,
                 LocalDensity provides scaledDensity,
             ) {
-                FirstVideoPlayerTheme(themeId = themeId) {
+                FirstVideoPlayerTheme(themeId = themeId, styleId = uiStyleId) {
                     TvNavHost(
                         onThemeChanged = { newThemeId ->
                             appSettings.themeId = newThemeId
                             themeId = newThemeId
+                        },
+                        onUiStyleChanged = { newStyleId ->
+                            appSettings.uiStyleId = newStyleId
+                            uiStyleId = newStyleId
                         },
                         onUiScaleChanged = { newScale ->
                             appSettings.uiScale = newScale

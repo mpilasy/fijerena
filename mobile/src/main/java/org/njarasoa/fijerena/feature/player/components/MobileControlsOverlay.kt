@@ -69,6 +69,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.util.Date
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun MobileControlsOverlay(
@@ -244,7 +245,7 @@ fun MobileControlsOverlay(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Rounded.FastRewind,
+                            imageVector = CinemaIcons.FastRewind,
                             contentDescription = "Rewind 1min",
                             tint = CinemaTextPrimary,
                             modifier = Modifier.size(MobileDimensions.iconLarge),
@@ -260,9 +261,9 @@ fun MobileControlsOverlay(
                 Icon(
                     imageVector =
                         if (playbackState is PlaybackState.Paused) {
-                            Icons.Rounded.PlayArrow
+                            CinemaIcons.PlayArrow
                         } else {
-                            Icons.Rounded.Pause
+                            CinemaIcons.Pause
                         },
                     contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
                     tint = CinemaTextPrimary,
@@ -276,7 +277,7 @@ fun MobileControlsOverlay(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Rounded.FastForward,
+                            imageVector = CinemaIcons.FastForward,
                             contentDescription = "Fast Forward 5min",
                             tint = CinemaTextPrimary,
                             modifier = Modifier.size(MobileDimensions.iconLarge),
@@ -448,7 +449,7 @@ fun MobileControlsOverlay(
                     if (audioTrackCount > 1) {
                         CinemaIconButton(onClick = onAudioTrack,
                             icon = {
-                                Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Audio", tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.VolumeUp, "Audio", tint = CinemaTextPrimary)
                             }
                         )
                     }
@@ -457,7 +458,7 @@ fun MobileControlsOverlay(
                     if (subtitleTrackCount > 0) {
                         CinemaIconButton(onClick = onSubtitle,
                             icon = {
-                                Icon(Icons.Rounded.Subtitles, "Subtitles", tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.Subtitles, "Subtitles", tint = CinemaTextPrimary)
                             }
                         )
                     }
@@ -466,7 +467,7 @@ fun MobileControlsOverlay(
                     if (qualityCount > 1) {
                         CinemaIconButton(onClick = onQuality,
                             icon = {
-                                Icon(Icons.Rounded.Tune, "Quality", tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.Tune, "Quality", tint = CinemaTextPrimary)
                             }
                         )
                     }
@@ -475,7 +476,7 @@ fun MobileControlsOverlay(
                     CinemaIconButton(onClick = onToggleFavorite,
                         icon = {
                             Icon(
-                                imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                imageVector = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
                                 contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
                                 tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                             )
@@ -485,7 +486,7 @@ fun MobileControlsOverlay(
                     // Stats for nerds (always visible)
                     CinemaIconButton(onClick = onStats,
                         icon = {
-                            Icon(Icons.Rounded.BarChart, "Stats", tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.BarChart, "Stats", tint = CinemaTextPrimary)
                         }
                     )
                 }

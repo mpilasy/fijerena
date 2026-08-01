@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun MobileChannelListSheet(
@@ -92,7 +93,7 @@ fun MobileChannelListSheet(
                         color = CinemaTextPrimary,
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Rounded.Close, contentDescription = "Close", tint = CinemaTextPrimary)
+                        Icon(CinemaIcons.Close, contentDescription = "Close", tint = CinemaTextPrimary)
                     }
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))

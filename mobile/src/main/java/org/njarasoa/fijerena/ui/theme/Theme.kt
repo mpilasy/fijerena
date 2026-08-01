@@ -1,26 +1,45 @@
 package org.njarasoa.fijerena.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.theme.UiShapeTokens
+import org.njarasoa.fijerena.core.ui.theme.UiStyleHolder
 import org.njarasoa.fijerena.core.ui.theme.paletteById
+import org.njarasoa.fijerena.core.ui.theme.styleById
+
+private fun cinemaShapes(tokens: UiShapeTokens) =
+    Shapes(
+        extraSmall = RoundedCornerShape(4.dp),
+        small = RoundedCornerShape(tokens.chip),
+        medium = RoundedCornerShape(tokens.card),
+        large = RoundedCornerShape(tokens.card + 4.dp),
+        extraLarge = RoundedCornerShape(tokens.dialog),
+    )
 
 @Composable
 fun FirstVideoPlayerTheme(
     themeId: String = "deep_night",
+    styleId: String = "material",
     content: @Composable () -> Unit,
 ) {
     val palette = remember(themeId) { paletteById(themeId) }
+    val style = remember(styleId) { styleById(styleId) }
 
-    // Set the global holder so non-composable code (re-export vals) can read it
+    // Set the global holders so non-composable code (re-export vals) can read them
     SideEffect {
         CinemaThemeHolder.current = palette
+        UiStyleHolder.current = style
     }
 
     val colorScheme = remember(palette) {
@@ -62,10 +81,11 @@ fun FirstVideoPlayerTheme(
         )
     }
 
-    CompositionLocalProvider(LocalCinemaTheme provides palette) {
+    CompositionLocalProvider(LocalCinemaTheme provides palette, LocalUiStyle provides style) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
+            typography = remember(style) { cinemaTypography(style.type) },
+            shapes = remember(style) { cinemaShapes(style.shapes) },
             content = content,
         )
     }
