@@ -8,9 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,6 +17,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
 
 @Composable
@@ -69,13 +69,13 @@ fun CloudSyncSettingsCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Button(
+                CinemaButton(
                     onClick = { coroutineScope.launch { syncManager.syncNow() } },
                     modifier = Modifier.weight(1f),
                 ) {
                     Text("Sync Now")
                 }
-                OutlinedButton(
+                CinemaOutlinedButton(
                     onClick = { coroutineScope.launch { syncManager.signOut() } },
                     modifier = Modifier.weight(1f),
                 ) {
@@ -84,7 +84,7 @@ fun CloudSyncSettingsCard(
             }
         } else {
             // Not signed in: show sign-in button
-            Button(
+            CinemaButton(
                 onClick = {
                     onSignInErrorChange(null)
                     signInLauncher.launch(syncManager.getSignInIntent())

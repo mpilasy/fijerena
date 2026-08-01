@@ -6,9 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -17,6 +15,8 @@ import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @Composable
 fun ExportImportSettingsCard(
@@ -38,13 +38,13 @@ fun ExportImportSettingsCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(
+            CinemaButton(
                 onClick = { exportLauncher.launch("fijerena_settings.json") },
                 modifier = Modifier.weight(1f),
             ) {
                 Text("Export")
             }
-            OutlinedButton(
+            CinemaOutlinedButton(
                 onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
                 modifier = Modifier.weight(1f),
             ) {
@@ -52,7 +52,7 @@ fun ExportImportSettingsCard(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(
+        CinemaOutlinedButton(
             onClick = {
                 val path = exportManager.getQuickImportPath()
                 if (path != null) {

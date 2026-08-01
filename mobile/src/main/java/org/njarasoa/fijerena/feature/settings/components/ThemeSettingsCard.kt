@@ -6,9 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -18,6 +16,8 @@ import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @Composable
 fun ThemeSettingsCard(
@@ -42,14 +42,14 @@ fun ThemeSettingsCard(
                     rowPalettes.forEach { palette ->
                         val isSelected = uiState.themeId == palette.id
                         if (isSelected) {
-                            Button(
+                            CinemaButton(
                                 onClick = { },
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Text(palette.displayName, maxLines = 1)
                             }
                         } else {
-                            OutlinedButton(
+                            CinemaOutlinedButton(
                                 onClick = {
                                     viewModel.updateTheme(palette.id)
                                     onThemeChanged(palette.id)
@@ -80,14 +80,14 @@ fun ThemeSettingsCard(
                     rowStyles.forEach { style ->
                         val isSelected = uiState.uiStyleId == style.id
                         if (isSelected) {
-                            Button(
+                            CinemaButton(
                                 onClick = { },
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Text(style.displayName, maxLines = 1)
                             }
                         } else {
-                            OutlinedButton(
+                            CinemaOutlinedButton(
                                 onClick = {
                                     viewModel.updateUiStyle(style.id)
                                     onUiStyleChanged(style.id)
