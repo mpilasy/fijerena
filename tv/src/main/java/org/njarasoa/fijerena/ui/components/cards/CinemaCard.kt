@@ -291,6 +291,28 @@ fun CinemaCompactCard(
 }
 
 /**
+ * Generic Card - shape-themed passthrough for raw call sites with custom colors that don't fit
+ * the semantic Content/Selectable/Info/Compact/Standard variants above. TV's default card shape
+ * ignores the app's [org.njarasoa.fijerena.core.ui.theme.UiStyle] shape tokens.
+ */
+@Composable
+fun CinemaCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    colors: androidx.tv.material3.CardColors = CardDefaults.colors(),
+    content: @Composable () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+        colors = colors,
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
+    ) {
+        content()
+    }
+}
+
+/**
  * Standard Card - For content items with accent block (borderless redesign)
  */
 @Composable
