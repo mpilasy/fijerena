@@ -51,6 +51,7 @@ media3 = "1.7.1"
 
 # Image Loading
 coil = "3.1.0"
+palette = "1.0.0"
 
 # Google Play Services
 playServicesCronet = "18.1.1"
@@ -145,6 +146,7 @@ media3-datasource-cronet = { group = "androidx.media3", name = "media3-datasourc
 # Image Loading (Coil)
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+androidx-palette = { group = "androidx.palette", name = "palette", version.ref = "palette" }
 
 # Google Play Services & Drive API
 play-services-cronet = { group = "com.google.android.gms", name = "play-services-cronet", version.ref = "playServicesCronet" }

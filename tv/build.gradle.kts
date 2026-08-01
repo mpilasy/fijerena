@@ -111,6 +111,8 @@ dependencies {
         exclude(group = "org.jetbrains.compose.material")
         exclude(group = "org.jetbrains.compose.components")
     }
+    // Dominant-color extraction for AmbientBackdrop's pre-API-31 fallback (no RenderEffect blur)
+    implementation(libs.androidx.palette)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)

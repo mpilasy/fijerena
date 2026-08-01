@@ -9,15 +9,25 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.palette.graphics.Palette
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.toBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 
@@ -30,7 +40,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
  * content without touching that screen's D-pad/state logic.
  *
  * - API 31+ with a non-blank [imageUrl]: blurred, saturated image wash over the gradient.
- * - API < 31, or no image: gradient wash only.
+ * - API < 31 with a non-blank [imageUrl]: `RenderEffect` blur doesn't exist on this API level
+ *   (e.g. Shield TVs stuck on Android 11), so instead the gradient is tinted with the image's
+ *   dominant color (via [Palette], decoded at 64px so it's cheap on old hardware).
+ * - No image (either API level): gradient wash only.
  */
 @Composable
 fun AmbientBackdrop(
@@ -40,20 +53,49 @@ fun AmbientBackdrop(
     imageAlpha: Float = CinemaAlpha.imageOverlay,
 ) {
     val palette = CinemaThemeHolder.current
+    val supportsBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val context = LocalContext.current
+
+    val extractedTint by
+        produceState<Color?>(initialValue = null, imageUrl, supportsBlur) {
+            value = null
+            if (supportsBlur || imageUrl.isNullOrBlank()) return@produceState
+            value =
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        val request =
+                            ImageRequest.Builder(context)
+                                .data(imageUrl)
+                                .allowHardware(false)
+                                .size(64)
+                                .build()
+                        val result = SingletonImageLoader.get(context).execute(request)
+                        val bitmap = (result as? SuccessResult)?.image?.toBitmap()
+                        bitmap?.let { bmp ->
+                            val swatch =
+                                Palette.from(bmp).generate().let {
+                                    it.dominantSwatch ?: it.vibrantSwatch ?: it.mutedSwatch
+                                }
+                            swatch?.let { Color(it.rgb) }
+                        }
+                    }.getOrNull()
+                }
+        }
+
     val fallbackBrush =
-        remember(palette.background, palette.accentDark) {
+        remember(palette.background, palette.accentDark, extractedTint) {
+            val tint = extractedTint ?: palette.accentDark
             Brush.verticalGradient(
                 colors =
                     listOf(
-                        palette.accentDark.copy(alpha = CinemaAlpha.tint),
+                        tint.copy(alpha = CinemaAlpha.tint),
                         palette.background,
                         palette.background,
                     ),
             )
         }
 
-    val crossfadeTarget =
-        imageUrl.takeIf { !it.isNullOrBlank() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S }
+    val crossfadeTarget = imageUrl.takeIf { !it.isNullOrBlank() && supportsBlur }
 
     Box(modifier = modifier.fillMaxSize().background(fallbackBrush)) {
         Crossfade(
@@ -62,7 +104,6 @@ fun AmbientBackdrop(
             label = "ambient_backdrop",
         ) { url ->
             if (url != null) {
-                val context = LocalContext.current
                 @Suppress("NewApi")
                 AsyncImage(
                     model = remember(context, url) { ImageRequest.Builder(context).data(url).build() },
