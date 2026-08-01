@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -20,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
@@ -65,10 +65,10 @@ fun ErrorScreen(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(onClick = onRetry) {
+                CinemaButton(onClick = onRetry) {
                     Text("Retry")
                 }
-                Button(onClick = onBack) {
+                CinemaButton(onClick = onBack) {
                     Text("Back")
                 }
             }
@@ -104,10 +104,10 @@ fun ErrorOverlay(
             )
             Spacer(modifier = Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(onClick = onRetry) {
+                CinemaButton(onClick = onRetry) {
                     Text("Retry")
                 }
-                Button(onClick = onBack) {
+                CinemaButton(onClick = onBack) {
                     Text("Back")
                 }
             }
