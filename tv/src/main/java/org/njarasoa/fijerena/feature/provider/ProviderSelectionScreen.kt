@@ -17,7 +17,6 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +41,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.*
@@ -157,7 +158,7 @@ fun TvProviderSelectionScreen(
 
     // Delete confirmation dialog
     deleteConfirmProvider?.let { provider ->
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { deleteConfirmProvider = null },
             title = {
                 Text(
@@ -172,7 +173,7 @@ fun TvProviderSelectionScreen(
                 )
             },
             confirmButton = {
-                androidx.tv.material3.Button(
+                CinemaButton(
                     onClick = {
                         viewModel.deleteProvider(provider.id)
                         deleteConfirmProvider = null
@@ -187,7 +188,7 @@ fun TvProviderSelectionScreen(
                 }
             },
             dismissButton = {
-                androidx.tv.material3.Button(
+                CinemaButton(
                     onClick = { deleteConfirmProvider = null },
                     colors =
                         androidx.tv.material3.ButtonDefaults.colors(

@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -453,7 +454,7 @@ fun TvAddProviderScreen(
                                     ""
                                 }
 
-                            androidx.compose.material3.AlertDialog(
+                            CinemaAlertDialog(
                                 onDismissRequest = { viewModel.resetSaveState() },
                                 title = {
                                     Text(
