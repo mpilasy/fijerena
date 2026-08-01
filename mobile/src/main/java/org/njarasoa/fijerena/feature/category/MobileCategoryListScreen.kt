@@ -605,6 +605,14 @@ fun MobileCategoryListScreen(
                                         videoSurface()
                                     }
                                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                                    // Marks this as the docked preview, distinct from the bare
+                                    // list underneath — see docs/UX_FLOW_AUDIT.md, "Live TV
+                                    // back-stopover".
+                                    Text(
+                                        text = "LIVE PREVIEW",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = CinemaAccent,
+                                    )
                                     Text(
                                         text = dockSuccess?.streamName ?: target.name,
                                         style = MaterialTheme.typography.titleLarge,
@@ -695,6 +703,14 @@ fun MobileCategoryListScreen(
                                                     )
                                                     .padding(CinemaSpacing.sm),
                                         ) {
+                                            // Marks this as the docked preview, distinct from the
+                                            // bare list underneath — see docs/UX_FLOW_AUDIT.md,
+                                            // "Live TV back-stopover".
+                                            Text(
+                                                text = "LIVE PREVIEW",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.White.copy(alpha = 0.75f),
+                                            )
                                             Text(
                                                 text = dockSuccess?.streamName ?: target.name,
                                                 style = MaterialTheme.typography.titleLarge,

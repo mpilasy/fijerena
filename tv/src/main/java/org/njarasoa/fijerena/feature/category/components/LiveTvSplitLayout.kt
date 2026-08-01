@@ -408,6 +408,15 @@ internal fun LiveTvSplitLayout(
                     }
                 }
 
+                // Marks this as the nested "preview" layer of Live TV, distinct from the bare
+                // browse screen underneath (TwoColumnLayout, no video) — so backing out one level
+                // (video disappears, this label goes with it) reads as a real state change
+                // instead of "Back did nothing". See docs/UX_FLOW_AUDIT.md, "Live TV back-stopover".
+                Text(
+                    text = "LIVE PREVIEW",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CinemaAccent,
+                )
                 Text(
                     text = success?.streamName ?: target.name,
                     style = MaterialTheme.typography.titleLarge,
