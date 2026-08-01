@@ -1,17 +1,15 @@
 package org.njarasoa.fijerena.feature.category.components
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.theme.CornerRadius
 
 /**
  * Data class representing a pending favorite action from a long-press.
@@ -52,7 +50,7 @@ internal fun FavoriteContextMenuDialog(
 
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -81,6 +79,5 @@ internal fun FavoriteContextMenuDialog(
         containerColor = CinemaSurface,
         titleContentColor = CinemaTextPrimary,
         textContentColor = CinemaTextSecondary,
-        shape = RoundedCornerShape(CornerRadius.large),
     )
 }

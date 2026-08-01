@@ -24,7 +24,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.AlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.tv.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -971,7 +971,7 @@ private fun SearchFavoriteDialog(
         }
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             androidx.tv.material3.Text(
@@ -1000,7 +1000,6 @@ private fun SearchFavoriteDialog(
         containerColor = CinemaSurface,
         titleContentColor = CinemaTextPrimary,
         textContentColor = CinemaTextSecondary,
-        shape = RoundedCornerShape(CornerRadius.large),
     )
 }
 

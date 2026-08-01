@@ -23,7 +23,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.AlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.tv.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -91,6 +91,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -943,7 +944,7 @@ private fun ProgramCard(
             if (pending != null) {
                 val matched = pending.matchedStream!!
                 val airingContext = LocalContext.current
-                AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
                     title = { Text("Watch now?", color = CinemaTextPrimary) },
                     text = {
@@ -957,13 +958,13 @@ private fun ProgramCard(
                         )
                     },
                     confirmButton = {
-                        androidx.tv.material3.Button(onClick = {
+                        CinemaButton(onClick = {
                             pendingConfirmAiring = null
                             onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
                         }) { Text("Watch now") }
                     },
                     dismissButton = {
-                        androidx.tv.material3.Button(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
+                        CinemaButton(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
                     },
                     containerColor = CinemaSurface,
                 )
