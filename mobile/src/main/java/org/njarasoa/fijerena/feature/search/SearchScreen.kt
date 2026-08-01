@@ -2,7 +2,9 @@ package org.njarasoa.fijerena.feature.search
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -556,9 +558,13 @@ private fun MobileSearchHistorySection(
                 )
             }
         }
-        FlowRow(
+        // Horizontally-scrollable single row, not FlowRow — see MatchTypeChipRow note in
+        // tv/ProviderDialogs.kt for why FlowRow is avoided right now. Unlike that fixed-4-item
+        // case, this list is unbounded, so a manual 2-per-row wrap isn't a safe substitute here;
+        // a scrolling row is the standard pattern for an open-ended chip list like this.
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             history.forEach { term ->
                 AssistChip(

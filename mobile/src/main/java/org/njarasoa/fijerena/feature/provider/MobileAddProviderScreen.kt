@@ -2,14 +2,16 @@ package org.njarasoa.fijerena.feature.provider
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -36,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -77,6 +80,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
@@ -717,126 +721,165 @@ fun MobileAddProviderScreen(
                                 )
                             }
 
-                            rules.forEachIndexed { index, rule ->
-                                if (editingIndex == index) {
+                            // Add section first — the thing you open this dialog to do most often.
+                            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                OutlinedTextField(
+                                    value = addRulesText,
+                                    onValueChange = { addRulesText = it },
+                                    label = { Text(stringResource(R.string.provider_filter_add_rules_label)) },
+                                    placeholder = { Text(stringResource(R.string.provider_filter_prefixes_placeholder)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = false,
+                                    minLines = 2,
+                                )
+                                OutlinedButton(
+                                    onClick = {
+                                        val values = addRulesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                                        if (values.isNotEmpty()) {
+                                            pendingAddValues = values
+                                            pendingAddMatchType = MatchType.STARTS_WITH
+                                        }
+                                    },
+                                    enabled = addRulesText.isNotBlank(),
+                                ) { Text(stringResource(R.string.common_add)) }
+
+                                pendingAddValues?.let { values ->
                                     Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                                        OutlinedTextField(
-                                            value = editingValue,
-                                            onValueChange = { editingValue = it },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            singleLine = true,
+                                        Text(
+                                            text = stringResource(R.string.provider_filter_choose_match_type),
+                                            style = MaterialTheme.typography.bodyMedium,
                                         )
-                                        FlowRow(
-                                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-                                            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-                                        ) {
-                                            MatchType.entries.forEach { type ->
-                                                FilterChip(
-                                                    selected = editingMatchType == type,
-                                                    onClick = { editingMatchType = type },
-                                                    label = { Text(matchTypeLabel(type)) },
-                                                )
+                                        // Manual 2-per-row wrap, not FlowRow — see MatchTypeChipRow note in
+                                        // tv/ProviderDialogs.kt for why FlowRow is avoided here right now.
+                                        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                            MatchType.entries.chunked(2).forEach { rowTypes ->
+                                                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                                    rowTypes.forEach { type ->
+                                                        FilterChip(
+                                                            selected = pendingAddMatchType == type,
+                                                            onClick = { pendingAddMatchType = type },
+                                                            label = { Text(matchTypeLabel(type)) },
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                                             Button(onClick = {
-                                                val trimmed = editingValue.trim()
-                                                if (trimmed.isNotEmpty()) {
-                                                    rules =
-                                                        rules.toMutableList().also {
-                                                            it[index] = CategoryMatcher(trimmed, editingMatchType)
-                                                        }
-                                                }
-                                                editingIndex = null
+                                                rules = rules.withAddedRules(values, pendingAddMatchType)
+                                                addRulesText = ""
+                                                pendingAddValues = null
                                             }) { Text(stringResource(R.string.common_ok)) }
-                                            OutlinedButton(onClick = { editingIndex = null }) {
+                                            OutlinedButton(onClick = { pendingAddValues = null }) {
                                                 Text(stringResource(R.string.common_cancel))
                                             }
                                         }
                                     }
-                                } else {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(
-                                            text = matchTypeLabel(rule.matchType),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                            modifier = Modifier.width(64.dp),
-                                        )
-                                        Text(
-                                            text = rule.value,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                        IconButton(onClick = {
-                                            editingIndex = index
-                                            editingValue = rule.value
-                                            editingMatchType = rule.matchType
-                                        }) {
-                                            Icon(CinemaIcons.Edit, contentDescription = stringResource(R.string.provider_filter_edit_rule))
-                                        }
-                                        IconButton(onClick = {
-                                            rules = rules.toMutableList().also { it.removeAt(index) }
-                                        }) {
-                                            Icon(CinemaIcons.Delete, contentDescription = stringResource(R.string.provider_filter_delete_rule))
-                                        }
-                                    }
-                                }
-                                if (index < rules.lastIndex) {
-                                    HorizontalDivider(modifier = Modifier.padding(vertical = CinemaSpacing.xxs))
                                 }
                             }
 
-                            OutlinedTextField(
-                                value = addRulesText,
-                                onValueChange = { addRulesText = it },
-                                label = { Text(stringResource(R.string.provider_filter_add_rules_label)) },
-                                placeholder = { Text(stringResource(R.string.provider_filter_prefixes_placeholder)) },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = false,
-                                minLines = 2,
-                            )
-                            OutlinedButton(
-                                onClick = {
-                                    val values = addRulesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                                    if (values.isNotEmpty()) {
-                                        pendingAddValues = values
-                                        pendingAddMatchType = MatchType.STARTS_WITH
-                                    }
-                                },
-                                enabled = addRulesText.isNotBlank(),
-                            ) { Text(stringResource(R.string.common_add)) }
+                            if (rules.isNotEmpty()) {
+                                HorizontalDivider()
+                            }
 
-                            pendingAddValues?.let { values ->
-                                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                                    Text(
-                                        text = stringResource(R.string.provider_filter_choose_match_type),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    FlowRow(
-                                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-                                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-                                    ) {
-                                        MatchType.entries.forEach { type ->
-                                            FilterChip(
-                                                selected = pendingAddMatchType == type,
-                                                onClick = { pendingAddMatchType = type },
-                                                label = { Text(matchTypeLabel(type)) },
-                                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {
+                                rules.forEachIndexed { index, rule ->
+                                    if (editingIndex == index) {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                            modifier = Modifier.fillMaxWidth(),
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(CinemaSpacing.sm),
+                                                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.provider_filter_edit_rule),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                )
+                                                OutlinedTextField(
+                                                    value = editingValue,
+                                                    onValueChange = { editingValue = it },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    singleLine = true,
+                                                )
+                                                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                                    MatchType.entries.chunked(2).forEach { rowTypes ->
+                                                        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                                            rowTypes.forEach { type ->
+                                                                FilterChip(
+                                                                    selected = editingMatchType == type,
+                                                                    onClick = { editingMatchType = type },
+                                                                    label = { Text(matchTypeLabel(type)) },
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                                                    Button(onClick = {
+                                                        val trimmed = editingValue.trim()
+                                                        if (trimmed.isNotEmpty()) {
+                                                            rules =
+                                                                rules.toMutableList().also {
+                                                                    it[index] = CategoryMatcher(trimmed, editingMatchType)
+                                                                }
+                                                        }
+                                                        editingIndex = null
+                                                    }) { Text(stringResource(R.string.common_ok)) }
+                                                    OutlinedButton(onClick = { editingIndex = null }) {
+                                                        Text(stringResource(R.string.common_cancel))
+                                                    }
+                                                }
+                                            }
                                         }
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                                        Button(onClick = {
-                                            rules = rules.withAddedRules(values, pendingAddMatchType)
-                                            addRulesText = ""
-                                            pendingAddValues = null
-                                        }) { Text(stringResource(R.string.common_ok)) }
-                                        OutlinedButton(onClick = { pendingAddValues = null }) {
-                                            Text(stringResource(R.string.common_cancel))
+                                    } else {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().heightIn(min = 36.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Text(
+                                                text = matchTypeLabel(rule.matchType),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                                modifier = Modifier.width(56.dp),
+                                            )
+                                            Text(
+                                                text = rule.value,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f),
+                                            )
+                                            IconButton(
+                                                onClick = {
+                                                    editingIndex = index
+                                                    editingValue = rule.value
+                                                    editingMatchType = rule.matchType
+                                                },
+                                                modifier = Modifier.size(32.dp),
+                                            ) {
+                                                Icon(
+                                                    CinemaIcons.Edit,
+                                                    contentDescription = stringResource(R.string.provider_filter_edit_rule),
+                                                    modifier = Modifier.size(18.dp),
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(CinemaSpacing.xxs))
+                                            IconButton(
+                                                onClick = {
+                                                    rules = rules.toMutableList().also { it.removeAt(index) }
+                                                },
+                                                modifier = Modifier.size(32.dp),
+                                            ) {
+                                                Icon(
+                                                    CinemaIcons.Delete,
+                                                    contentDescription = stringResource(R.string.provider_filter_delete_rule),
+                                                    modifier = Modifier.size(18.dp),
+                                                )
+                                            }
                                         }
                                     }
                                 }

@@ -504,11 +504,7 @@ private fun EpgSourceCard(
             } else {
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-                ) {
+                run {
                     val lastIngested =
                         if (source.lastIngestedAtMs > 0) {
                             java.text
@@ -527,12 +523,27 @@ private fun EpgSourceCard(
                             "None"
                         }
 
-                    SourceStat("Last Sync", lastIngested)
-                    SourceStat("Download", NumberUtils.formatDuration(source.lastDownloadDurationMs))
-                    SourceStat("Ingest", NumberUtils.formatDuration(source.lastIngestionDurationMs))
-                    SourceStat("Latest Prog", latestProgStr)
-                    SourceStat("Channels", NumberUtils.formatCount(source.lastChannels))
-                    SourceStat("Programmes", NumberUtils.formatCount(source.lastProgrammes))
+                    val stats =
+                        listOf(
+                            "Last Sync" to lastIngested,
+                            "Download" to NumberUtils.formatDuration(source.lastDownloadDurationMs),
+                            "Ingest" to NumberUtils.formatDuration(source.lastIngestionDurationMs),
+                            "Latest Prog" to latestProgStr,
+                            "Channels" to NumberUtils.formatCount(source.lastChannels),
+                            "Programmes" to NumberUtils.formatCount(source.lastProgrammes),
+                        )
+                    // Fixed 6-item stat grid, chunked into rows instead of FlowRow — see
+                    // MatchTypeChipRow note in tv/ProviderDialogs.kt for why.
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+                    ) {
+                        stats.chunked(3).forEach { rowStats ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md)) {
+                                rowStats.forEach { (label, value) -> SourceStat(label, value) }
+                            }
+                        }
+                    }
                 }
             }
 

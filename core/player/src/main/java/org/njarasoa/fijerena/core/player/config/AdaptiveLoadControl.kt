@@ -207,6 +207,7 @@ class AdaptiveLoadControl(
         trackGroups: TrackGroupArray,
         trackSelections: Array<out ExoTrackSelection?>,
     ) {
+        replayIfPending()
         lastTracksSelected = TracksSelectedCall(parameters, trackGroups, trackSelections)
         delegate.onTracksSelected(parameters, trackGroups, trackSelections)
     }
