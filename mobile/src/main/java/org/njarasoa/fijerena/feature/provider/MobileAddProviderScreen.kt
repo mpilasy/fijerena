@@ -21,8 +21,6 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
@@ -30,12 +28,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -81,7 +77,13 @@ import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
@@ -390,7 +392,7 @@ fun MobileAddProviderScreen(
 
             Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-            Button(
+            CinemaButton(
                 onClick = {
                     // Validation based on selected type
                     val validationError =
@@ -484,12 +486,12 @@ fun MobileAddProviderScreen(
                         else -> ""
                     }
 
-                androidx.compose.material3.AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { viewModel.resetSaveState() },
                     title = { Text(stringResource(R.string.provider_connection_failed)) },
                     text = { Text(failedState.errorMessage) },
                     confirmButton = {
-                        Button(
+                        CinemaDialogActionButton(
                             onClick = {
                                 viewModel.forceSave(
                                     id = if (isEditMode) editId else null,
@@ -512,7 +514,7 @@ fun MobileAddProviderScreen(
                         }
                     },
                     dismissButton = {
-                        androidx.compose.material3.TextButton(
+                        CinemaDialogTextButton(
                             onClick = { viewModel.resetSaveState() },
                         ) {
                             Text(stringResource(R.string.provider_go_back))
@@ -523,14 +525,14 @@ fun MobileAddProviderScreen(
 
             // Cache confirmation dialogs
             if (showClearCacheDialog) {
-                AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { showClearCacheDialog = false },
                     title = { Text(stringResource(R.string.provider_clear_cache_all_title)) },
                     text = {
                         Text(stringResource(R.string.provider_clear_cache_all_message))
                     },
                     confirmButton = {
-                        Button(
+                        CinemaDialogActionButton(
                             onClick = {
                                 coroutineScope.launch {
                                     providerRepo.clearAllCacheForProvider(editId)
@@ -542,18 +544,18 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.provider_clear_all_button)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(onClick = { showClearCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
 
             if (showClearLiveTvCacheDialog) {
-                AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { showClearLiveTvCacheDialog = false },
                     title = { Text(stringResource(R.string.provider_clear_cache_live_title)) },
                     text = { Text(stringResource(R.string.provider_clear_cache_live_message)) },
                     confirmButton = {
-                        Button(
+                        CinemaDialogActionButton(
                             onClick = {
                                 coroutineScope.launch {
                                     providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
@@ -565,18 +567,18 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearLiveTvCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(onClick = { showClearLiveTvCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
 
             if (showClearMoviesCacheDialog) {
-                AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { showClearMoviesCacheDialog = false },
                     title = { Text(stringResource(R.string.provider_clear_cache_movies_title)) },
                     text = { Text(stringResource(R.string.provider_clear_cache_movies_message)) },
                     confirmButton = {
-                        Button(
+                        CinemaDialogActionButton(
                             onClick = {
                                 coroutineScope.launch {
                                     providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
@@ -588,18 +590,18 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearMoviesCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(onClick = { showClearMoviesCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
 
             if (showClearTvShowsCacheDialog) {
-                AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { showClearTvShowsCacheDialog = false },
                     title = { Text(stringResource(R.string.provider_clear_cache_tvshows_title)) },
                     text = { Text(stringResource(R.string.provider_clear_cache_tvshows_message)) },
                     confirmButton = {
-                        Button(
+                        CinemaDialogActionButton(
                             onClick = {
                                 coroutineScope.launch {
                                     providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
@@ -611,20 +613,20 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearTvShowsCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(onClick = { showClearTvShowsCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
             // Clear Favorites Confirmation Dialog
             if (showClearFavoritesDialog) {
-                AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { showClearFavoritesDialog = false },
                     title = { Text(stringResource(R.string.provider_clear_favorites_title)) },
                     text = {
                         Text(stringResource(R.string.provider_clear_favorites_message))
                     },
                     confirmButton = {
-                        Button(
+                        CinemaDialogActionButton(
                             onClick = {
                                 repository.clearFavorites()
                                 showClearFavoritesDialog = false
@@ -633,21 +635,21 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.common_ok)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearFavoritesDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(onClick = { showClearFavoritesDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
 
             // Clear Progress Confirmation Dialog
             if (showClearProgressDialog) {
-                AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { showClearProgressDialog = false },
                     title = { Text(stringResource(R.string.provider_clear_progress_title)) },
                     text = {
                         Text(stringResource(R.string.provider_clear_progress_message))
                     },
                     confirmButton = {
-                        Button(
+                        CinemaDialogActionButton(
                             onClick = {
                                 repository.clearWatchHistory()
                                 showClearProgressDialog = false
@@ -656,7 +658,7 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.common_ok)) }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showClearProgressDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(onClick = { showClearProgressDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -682,7 +684,7 @@ fun MobileAddProviderScreen(
                         MatchType.EXACT -> stringResource(R.string.provider_filter_match_exact)
                     }
 
-                AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { showCategoryFilterDialog = false },
                     title = { Text(stringResource(R.string.provider_category_filters_title)) },
                     text = {
@@ -692,12 +694,12 @@ fun MobileAddProviderScreen(
                         ) {
                             Text(text = stringResource(R.string.provider_filter_mode_label), style = MaterialTheme.typography.bodyMedium)
                             Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
-                                FilterChip(
+                                CinemaFilterChip(
                                     selected = filterMode == FilterMode.EXCLUDE,
                                     onClick = { filterMode = FilterMode.EXCLUDE },
                                     label = { Text(stringResource(R.string.provider_filter_exclude)) },
                                 )
-                                FilterChip(
+                                CinemaFilterChip(
                                     selected = filterMode == FilterMode.INCLUDE,
                                     onClick = { filterMode = FilterMode.INCLUDE },
                                     label = { Text(stringResource(R.string.provider_filter_include)) },
@@ -732,7 +734,7 @@ fun MobileAddProviderScreen(
                                     singleLine = false,
                                     minLines = 2,
                                 )
-                                OutlinedButton(
+                                CinemaOutlinedButton(
                                     onClick = {
                                         val values = addRulesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                                         if (values.isNotEmpty()) {
@@ -755,7 +757,7 @@ fun MobileAddProviderScreen(
                                             MatchType.entries.chunked(2).forEach { rowTypes ->
                                                 Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                                                     rowTypes.forEach { type ->
-                                                        FilterChip(
+                                                        CinemaFilterChip(
                                                             selected = pendingAddMatchType == type,
                                                             onClick = { pendingAddMatchType = type },
                                                             label = { Text(matchTypeLabel(type)) },
@@ -765,12 +767,12 @@ fun MobileAddProviderScreen(
                                             }
                                         }
                                         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                                            Button(onClick = {
+                                            CinemaButton(onClick = {
                                                 rules = rules.withAddedRules(values, pendingAddMatchType)
                                                 addRulesText = ""
                                                 pendingAddValues = null
                                             }) { Text(stringResource(R.string.common_ok)) }
-                                            OutlinedButton(onClick = { pendingAddValues = null }) {
+                                            CinemaOutlinedButton(onClick = { pendingAddValues = null }) {
                                                 Text(stringResource(R.string.common_cancel))
                                             }
                                         }
@@ -809,7 +811,7 @@ fun MobileAddProviderScreen(
                                                     MatchType.entries.chunked(2).forEach { rowTypes ->
                                                         Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                                                             rowTypes.forEach { type ->
-                                                                FilterChip(
+                                                                CinemaFilterChip(
                                                                     selected = editingMatchType == type,
                                                                     onClick = { editingMatchType = type },
                                                                     label = { Text(matchTypeLabel(type)) },
@@ -819,7 +821,7 @@ fun MobileAddProviderScreen(
                                                     }
                                                 }
                                                 Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                                                    Button(onClick = {
+                                                    CinemaButton(onClick = {
                                                         val trimmed = editingValue.trim()
                                                         if (trimmed.isNotEmpty()) {
                                                             rules =
@@ -829,7 +831,7 @@ fun MobileAddProviderScreen(
                                                         }
                                                         editingIndex = null
                                                     }) { Text(stringResource(R.string.common_ok)) }
-                                                    OutlinedButton(onClick = { editingIndex = null }) {
+                                                    CinemaOutlinedButton(onClick = { editingIndex = null }) {
                                                         Text(stringResource(R.string.common_cancel))
                                                     }
                                                 }
@@ -906,7 +908,7 @@ fun MobileAddProviderScreen(
                         }
                     },
                     confirmButton = {
-                        Button(
+                        CinemaDialogActionButton(
                             onClick = {
                                 val newFilters = CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)
                                 categoryFilters = newFilters
@@ -921,7 +923,7 @@ fun MobileAddProviderScreen(
                         ) { Text("Save") }
                     },
                     dismissButton = {
-                        OutlinedButton(onClick = { showCategoryFilterDialog = false }) { Text("Cancel") }
+                        CinemaOutlinedButton(onClick = { showCategoryFilterDialog = false }) { Text("Cancel") }
                     },
                 )
             }

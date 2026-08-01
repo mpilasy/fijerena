@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,6 +25,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
 
 @Composable
@@ -65,7 +65,7 @@ fun ColumnScope.DataManagementSection(
                 cacheStats?.let { stats ->
                     // Sync Data Button (Xtream only)
                     if (selectedType == ProviderType.XTREAM) {
-                        Button(
+                        CinemaButton(
                             onClick = { viewModel.syncProvider(editId) },
                             enabled = !isBusy,
                             modifier = Modifier.fillMaxWidth(),
@@ -124,7 +124,7 @@ fun ColumnScope.DataManagementSection(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        Button(
+                        CinemaButton(
                             onClick = { onShowClearCacheDialogChange(true) },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                         ) {
@@ -152,7 +152,7 @@ fun ColumnScope.DataManagementSection(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        OutlinedButton(
+                        CinemaOutlinedButton(
                             onClick = { onShowClearLiveTvCacheDialogChange(true) },
                             enabled = stats.liveTv.itemsCount > 0,
                         ) { Text("Clear") }
@@ -174,7 +174,7 @@ fun ColumnScope.DataManagementSection(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        OutlinedButton(
+                        CinemaOutlinedButton(
                             onClick = { onShowClearMoviesCacheDialogChange(true) },
                             enabled = stats.movies.itemsCount > 0,
                         ) { Text("Clear") }
@@ -196,7 +196,7 @@ fun ColumnScope.DataManagementSection(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        OutlinedButton(
+                        CinemaOutlinedButton(
                             onClick = { onShowClearTvShowsCacheDialogChange(true) },
                             enabled = stats.tvShows.itemsCount > 0,
                         ) { Text("Clear") }

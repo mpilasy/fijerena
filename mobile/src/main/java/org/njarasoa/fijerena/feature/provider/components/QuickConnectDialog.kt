@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,8 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @Composable
 fun QuickConnectDialog(
@@ -85,7 +85,7 @@ fun QuickConnectDialog(
             onQcErrorChange("Timed out waiting for approval. Please try again.")
         }
 
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { onShowQuickConnectDialogChange(false) },
             title = { Text("Quick Connect") },
             text = {
@@ -140,7 +140,7 @@ fun QuickConnectDialog(
             },
             confirmButton = {},
             dismissButton = {
-                OutlinedButton(onClick = { onShowQuickConnectDialogChange(false) }) {
+                CinemaOutlinedButton(onClick = { onShowQuickConnectDialogChange(false) }) {
                     Text("Cancel")
                 }
             },
