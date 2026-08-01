@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
@@ -248,7 +249,7 @@ fun LoginScreen(
             }
 
             // Login button
-            Button(
+            CinemaButton(
                 onClick = {
                     viewModel.login(serverUrl, username, password, rememberMe)
                 },
