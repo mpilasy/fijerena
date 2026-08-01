@@ -72,6 +72,8 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
@@ -397,7 +399,7 @@ fun ContentTypeSelectionScreen(
             // Provider picker dialog
             if (showProviderPicker && allProviders.size > 1) {
                 val coroutineScope = rememberCoroutineScope()
-                androidx.compose.material3.AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { showProviderPicker = false },
                     containerColor = CinemaSurface,
                     titleContentColor = CinemaTextPrimary,
@@ -464,7 +466,7 @@ fun ContentTypeSelectionScreen(
                         }
                     },
                     confirmButton = {
-                        androidx.compose.material3.TextButton(onClick = { showProviderPicker = false }) {
+                        CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
                             androidx.compose.material3.Text("Close", color = CinemaAccent)
                         }
                     },

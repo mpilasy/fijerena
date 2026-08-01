@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.feature.epg
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +23,7 @@ import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
@@ -466,7 +466,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     }
 
     if (showClearConfirm) {
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { showClearConfirm = false },
             confirmButton = {
                 CinemaDangerButton(
@@ -490,7 +490,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     }
 
     deletingSource?.let { source ->
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { deletingSource = null },
             confirmButton = {
                 CinemaDangerButton(
@@ -514,7 +514,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     }
 
     deleteSelectedIds?.let { idsToDelete ->
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { deleteSelectedIds = null },
             confirmButton = {
                 CinemaDangerButton(
@@ -550,7 +550,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     }
 
     if (showIntervalPicker) {
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { showIntervalPicker = false },
             title = { Text("EPG Refresh Interval", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
             text = {
@@ -714,7 +714,7 @@ private fun EpgSourceEditDialog(
     var label by remember { mutableStateOf(initialSource?.label ?: "") }
     var tzOffset by remember { mutableStateOf(initialSource?.timezoneOffsetHours?.toString() ?: "0") }
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initialSource == null) "Add EPG Source" else "Edit EPG Source", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
         confirmButton = {
@@ -803,7 +803,7 @@ private fun TvTimePickerDialog(
     var hour by remember { mutableStateOf(parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 0) }
     var minute by remember { mutableStateOf(parts.getOrNull(1)?.toIntOrNull()?.let { (it / 5) * 5 }?.coerceIn(0, 55) ?: 0) }
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Set Refresh Time", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
         text = {

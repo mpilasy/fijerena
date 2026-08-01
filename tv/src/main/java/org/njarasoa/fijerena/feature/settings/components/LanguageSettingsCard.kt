@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.*
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -56,7 +57,7 @@ fun LanguageSettingsCard(
             "fr" to stringResource(R.string.settings_language_fr)
         )
         
-        androidx.compose.material3.AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { showDialog = false },
             title = { androidx.compose.material3.Text(stringResource(R.string.settings_language)) },
             text = {
