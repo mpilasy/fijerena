@@ -8,10 +8,10 @@ not inferred from docs.
 **Platforms:** TV (D-pad) and Mobile (touch).
 **Source:** `core:navigation/Screen.kt`, `TvNavHost.kt`, `MobileNavHost.kt`, both
 `ContentTypeSelectionScreen.kt` implementations.
-**Status:** 4 of 6 findings fixed (`4beed037`) — dead provider tap, forced picker for
-single-content-type providers, stale EPG icon, and the hidden favorite gesture. Two remain open,
-both IA decisions rather than bug fixes: EPG Guide/Browser naming, and the Live TV back-stopover
-legibility. See §4 for detail per finding.
+**Status:** 5 of 6 findings fixed (`4beed037`, `893c2c4e`) — dead provider tap, forced picker for
+single-content-type providers, stale EPG icon, the hidden favorite gesture, and the Live TV
+back-stopover legibility. One remains open — EPG Guide/Browser naming — and needs a product
+decision, not a patch. See §4 for detail per finding.
 
 ---
 
@@ -164,18 +164,19 @@ first browse (`AppSettings.hasSeenFavoriteHint`), auto-dismissing after 4 second
 reappearing once shown. Suppressed while a full-screen video is up on both platforms so it never
 draws over playback.
 
-### Low (open) — Leaving Live TV can take up to three Back presses, with no indication why
+### Fixed (was Low) — Leaving Live TV could take up to three Back presses, with no indication why
 `NAVIGATION_GUIDE.md` → "Live TV Preview / Dock Back-Stack"
 
 Deliberate, and for a good reason: it guarantees Back always has a real stopover before exiting
-Live TV, so browse position is never lost. But nothing in the UI marks which layer you're in — a
-user who Back-mashes out of habit after full-screen video will bounce through 1–2 states that look
-similar to what they just left, which reads as "Back is broken" rather than "Back is being
+Live TV, so browse position is never lost. But nothing in the UI marked which layer you were in —
+a user who Back-mashed out of habit after full-screen video would bounce through 1–2 states that
+looked similar to what they just left, which read as "Back is broken" rather than "Back is being
 careful."
 
-**Fix:** not a navigation change — a small, unobtrusive state cue (e.g. dimming or a label
-distinguishing "browsing" from "docked") would make the existing, correct behavior legible instead
-of surprising.
+**Fix applied (`893c2c4e`):** a small "LIVE PREVIEW" label now sits over the video in the
+preview/dock pane on both platforms. It exists only in that nested layer — one Back removes it
+along with the video, so the state change reads as real instead of "Back did nothing." Not a
+navigation change; the back-stack behavior itself is unchanged and still correct.
 
 ---
 
@@ -209,11 +210,9 @@ redesign.
 ~~2. Skip the picker when there's no real choice.~~ **Done (`4beed037`).**
 ~~3. Make the EPG icon reactive.~~ **Done (`4beed037`).**
 ~~4. Add a hint for the favorite gesture.~~ **Done (`4beed037`).**
+~~5. Give the Live TV back-stopover a visual tell.~~ **Done (`893c2c4e`).**
 
-Two remain, both real IA calls worth a deliberate decision rather than a quick patch:
+One remains, a real IA call worth a deliberate decision rather than a quick patch:
 
 1. **Reconcile EPG Guide vs. EPG Browser.** Decide which one Home's book icon should point to, and
    make the other explicitly the "deeper" tool — a naming and IA decision, not a bug fix.
-2. **Give the Live TV back-stopover a visual tell.** Not a navigation change — a small,
-   unobtrusive state cue distinguishing "browsing" from "docked" would make the existing, correct
-   Back behavior legible instead of surprising.
