@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -20,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 
 @Composable
@@ -29,7 +29,7 @@ fun AudioTrackSelectorDialog(
 ) {
     val audioTracks = remember { viewModel.getAudioTracks() }
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Select Audio Track") },
         text = {
@@ -86,7 +86,7 @@ fun AudioTrackSelectorDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            CinemaDialogTextButton(onClick = onDismiss) { Text("Close") }
         },
     )
 }
@@ -99,7 +99,7 @@ fun SubtitleSelectorDialog(
     val subtitleTracks = remember { viewModel.getSubtitleTracks() }
     val hasActiveSubtitle = subtitleTracks.any { it.isSelected }
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Select Subtitles") },
         text = {
@@ -190,7 +190,7 @@ fun SubtitleSelectorDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            CinemaDialogTextButton(onClick = onDismiss) { Text("Close") }
         },
     )
 }
@@ -203,7 +203,7 @@ fun QualitySelectorDialog(
     val videoQualities = remember { viewModel.getVideoQualities() }
     val hasManualSelection = videoQualities.any { it.isSelected }
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Select Quality") },
         text = {
@@ -298,7 +298,7 @@ fun QualitySelectorDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            CinemaDialogTextButton(onClick = onDismiss) { Text("Close") }
         },
     )
 }

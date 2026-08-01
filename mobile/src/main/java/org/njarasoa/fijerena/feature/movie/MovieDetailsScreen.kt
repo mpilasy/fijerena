@@ -30,7 +30,9 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
@@ -282,7 +284,7 @@ private fun MovieDetailsContent(
         val hasResume = resumePositionMs > 0L
         if (hasResume) {
             val resumeTimeText = formatMillis(resumePositionMs)
-            Button(
+            CinemaButton(
                 onClick = {
                     onPlayMovie(movieId, movieDetail.name, extension, false)
                 },
@@ -291,7 +293,7 @@ private fun MovieDetailsContent(
                 Text(stringResource(R.string.movie_resume_from_format, resumeTimeText))
             }
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            OutlinedButton(
+            CinemaOutlinedButton(
                 onClick = {
                     onPlayMovie(movieId, movieDetail.name, extension, true)
                 },
@@ -300,7 +302,7 @@ private fun MovieDetailsContent(
                 Text(stringResource(R.string.movie_start_beginning))
             }
         } else {
-            Button(
+            CinemaButton(
                 onClick = {
                     onPlayMovie(movieId, movieDetail.name, extension, false)
                 },
@@ -466,7 +468,7 @@ private fun ErrorScreen(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Button(onClick = onBack) {
+            CinemaButton(onClick = onBack) {
                 Text("Back")
             }
         }

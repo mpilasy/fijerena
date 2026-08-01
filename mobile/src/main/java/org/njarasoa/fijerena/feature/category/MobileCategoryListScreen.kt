@@ -29,13 +29,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,7 +40,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -86,6 +81,9 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
@@ -102,7 +100,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -720,7 +721,7 @@ fun MobileCategoryListScreen(
                                 text = state.message,
                                 style = MaterialTheme.typography.bodyLarge,
                             )
-                            Button(onClick = { viewModel.retry() }) {
+                            CinemaButton(onClick = { viewModel.retry() }) {
                                 Text(stringResource(R.string.common_retry))
                             }
                         }
@@ -790,7 +791,7 @@ private fun CategoryChipRow(
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
                 itemsIndexed(virtualCategories, key = { _, category -> category.id }, contentType = { _, _ -> "category" }) { index, category ->
-                    FilterChip(
+                    CinemaFilterChip(
                         selected = category.id == selectedCategoryId,
                         onClick = { onCategorySelected(category.id) },
                         label = {
@@ -824,7 +825,7 @@ private fun CategoryChipRow(
         ) {
             itemsIndexed(regularCategories, key = { _, category -> category.id }, contentType = { _, _ -> "category" }) { index, category ->
                 val isFavCat = categoryViewModel.isFavoriteCategory(category.id, contentType)
-                FilterChip(
+                CinemaFilterChip(
                     selected = category.id == selectedCategoryId,
                     onClick = { onCategorySelected(category.id) },
                     label = {
@@ -1004,7 +1005,7 @@ private fun MobileFavoriteContextMenuDialog(
 
     val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -1014,7 +1015,7 @@ private fun MobileFavoriteContextMenuDialog(
             )
         },
         confirmButton = {
-            Button(
+            CinemaDialogActionButton(
                 onClick = {
                     onConfirm()
                     onDismiss()
@@ -1024,13 +1025,10 @@ private fun MobileFavoriteContextMenuDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            CinemaDialogTextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.common_cancel))
             }
         },
-        shape =
-            androidx.compose.foundation.shape
-                .RoundedCornerShape(CinemaCornerRadius.large),
     )
 }
 
@@ -1044,7 +1042,7 @@ private fun StreamCard(
     onLongClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    CinemaCard(
         modifier =
             modifier
                 .fillMaxWidth()
@@ -1063,9 +1061,6 @@ private fun StreamCard(
             } else {
                 null
             },
-        shape =
-            androidx.compose.foundation.shape
-                .RoundedCornerShape(CinemaCornerRadius.medium),
     ) {
         Row(
             modifier =
