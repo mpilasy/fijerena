@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -74,6 +75,7 @@ fun MobileNavHost(
 
     // Async initialization: migrate legacy creds, determine start destination
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
+    var hasAutoSkippedSingleContentType by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val providerRepo = ProviderRepository(context.applicationContext)
@@ -160,9 +162,23 @@ fun MobileNavHost(
         ) {
             // Content Type Selection Screen
             composable<Screen.ContentTypeSelection> {
+                val navigateToContentType: (String) -> Unit = { contentType ->
+                    navController.navigate(Screen.CategoryList(contentType))
+                }
                 MobileContentTypeSelectionScreen(
-                    onContentTypeSelected = { contentType ->
-                        navController.navigate(Screen.CategoryList(contentType))
+                    onContentTypeSelected = navigateToContentType,
+                    onCapabilitiesResolved = { supportedTypes ->
+                        // Skip the picker tap entirely when the active provider only supports
+                        // one content type — but only on the very first resolve per NavHost
+                        // lifetime, so Back-navigation into this screen later still lands on a
+                        // real, interactive Home (Settings/Search/EPG/provider-switch all live
+                        // here and nowhere else).
+                        if (!hasAutoSkippedSingleContentType) {
+                            hasAutoSkippedSingleContentType = true
+                            if (supportedTypes.size == 1) {
+                                navigateToContentType(supportedTypes.first())
+                            }
+                        }
                     },
                     onSettings = {
                         navController.navigate(Screen.Settings)

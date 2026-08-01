@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -79,6 +80,7 @@ fun TvNavHost(
     // Use mutable states for asynchronous data loading
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
     var initializationComplete by remember { mutableStateOf(false) }
+    var hasAutoSkippedSingleContentType by rememberSaveable { mutableStateOf(false) }
 
     // Async initialization — use cached provider flag for instant start destination,
     // then verify with Room DB in background
@@ -161,24 +163,40 @@ fun TvNavHost(
                 composable<Screen.ContentTypeSelection> {
                     // Prevent back button from exiting the app on the root screen
                     BackHandler {}
+                    val navigateToContentType: (org.njarasoa.fijerena.core.navigation.ContentType) -> Unit = { contentType ->
+                        if (contentType.name == ContentType.LIVE_TV) {
+                            // Live TV never lands full-screen or bare — silently push the
+                            // classic categories/streams browse screen first (so Back from the
+                            // preview below lands on a real screen, same as Movies/TV Shows),
+                            // then push the preview on top of it.
+                            navController.navigate(
+                                Screen.CategoryList(contentType.name, showPreviewPane = false),
+                            ) {
+                                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                            }
+                            navController.navigate(
+                                Screen.CategoryList(contentType.name, showPreviewPane = true),
+                            )
+                        } else {
+                            navController.navigate(Screen.CategoryList(contentType.name)) {
+                                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                            }
+                        }
+                    }
                     ContentTypeSelectionScreen(
-                        onContentTypeSelected = { contentType ->
-                            if (contentType.name == ContentType.LIVE_TV) {
-                                // Live TV never lands full-screen or bare — silently push the
-                                // classic categories/streams browse screen first (so Back from the
-                                // preview below lands on a real screen, same as Movies/TV Shows),
-                                // then push the preview on top of it.
-                                navController.navigate(
-                                    Screen.CategoryList(contentType.name, showPreviewPane = false),
-                                ) {
-                                    popUpTo(Screen.ContentTypeSelection) { inclusive = false }
-                                }
-                                navController.navigate(
-                                    Screen.CategoryList(contentType.name, showPreviewPane = true),
-                                )
-                            } else {
-                                navController.navigate(Screen.CategoryList(contentType.name)) {
-                                    popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                        onContentTypeSelected = navigateToContentType,
+                        onCapabilitiesResolved = { supportedTypes ->
+                            // Skip the picker tap entirely when the active provider only supports
+                            // one content type — but only on the very first resolve per NavHost
+                            // lifetime, so Back-navigation into this screen later still lands on a
+                            // real, interactive Home (Settings/Search/EPG/provider-switch all live
+                            // here and nowhere else).
+                            if (!hasAutoSkippedSingleContentType) {
+                                hasAutoSkippedSingleContentType = true
+                                if (supportedTypes.size == 1) {
+                                    org.njarasoa.fijerena.core.navigation.ContentType
+                                        .fromString(supportedTypes.first())
+                                        ?.let(navigateToContentType)
                                 }
                             }
                         },

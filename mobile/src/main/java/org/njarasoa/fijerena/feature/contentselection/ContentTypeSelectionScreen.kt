@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,6 +73,7 @@ fun MobileContentTypeSelectionScreen(
     onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {},
     onSearch: () -> Unit = {},
+    onCapabilitiesResolved: (Set<String>) -> Unit = {},
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -95,36 +97,39 @@ fun MobileContentTypeSelectionScreen(
     var mediaProviderRef by remember { mutableStateOf<org.njarasoa.fijerena.core.player.domain.MediaProvider?>(null) }
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
 
-    // Show EPG Browser button when EPG index has data
-    val hasEpgData =
-        remember {
-            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-                .getInstance(context.applicationContext)
-                .state.value is
-                org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
-        }
+    // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
+    // `remember`) so a source that finishes indexing while this screen is on-screen shows the
+    // icon immediately, instead of waiting for the composable to be torn down and rebuilt.
+    val epgIndexState by remember {
+        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer.getInstance(context.applicationContext).state
+    }.collectAsStateWithLifecycle()
+    val hasEpgData = epgIndexState is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
 
     LaunchedEffect(refreshTrigger) {
         // Reset counts so stale values don't linger during provider switch
         liveTvCounts = null
         moviesCounts = null
         tvShowsCounts = null
-        withContext(Dispatchers.IO) {
-            val providerRepo = ProviderRepository(context.applicationContext)
-            allProviders = providerRepo.getAllProvidersList()
-            val activeProvider = providerRepo.getActiveProvider()
-            if (activeProvider != null) {
-                providerName = activeProvider.name
-                providerType = activeProvider.type
-                activeProviderId = activeProvider.id
-                val password = providerRepo.getPassword(activeProvider.id) ?: ""
-                val mediaProvider = MediaProviderFactory.create(activeProvider, context.applicationContext, password)
-                supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
-                mediaProviderRef = mediaProvider
-            } else {
-                providerName = appSettings.providerName
+        val resolvedTypes =
+            withContext(Dispatchers.IO) {
+                val providerRepo = ProviderRepository(context.applicationContext)
+                allProviders = providerRepo.getAllProvidersList()
+                val activeProvider = providerRepo.getActiveProvider()
+                if (activeProvider != null) {
+                    providerName = activeProvider.name
+                    providerType = activeProvider.type
+                    activeProviderId = activeProvider.id
+                    val password = providerRepo.getPassword(activeProvider.id) ?: ""
+                    val mediaProvider = MediaProviderFactory.create(activeProvider, context.applicationContext, password)
+                    supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
+                    mediaProviderRef = mediaProvider
+                    mediaProvider.capabilities.supportedContentTypes
+                } else {
+                    providerName = appSettings.providerName
+                    null
+                }
             }
-        }
+        resolvedTypes?.let(onCapabilitiesResolved)
     }
 
     // Pull a recently-watched poster for the ambient backdrop wash — falls back to the plain
@@ -189,23 +194,33 @@ fun MobileContentTypeSelectionScreen(
                 }
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier =
-                            Modifier
-                                .clickable(role = Role.DropdownList) { showProviderPicker = true }
-                                .semantics {
-                                    contentDescription = "Switch Provider, current provider: $displayName"
-                                }.padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs),
-                    ) {
+                    // Only render as a dropdown when there's actually something to switch to —
+                    // otherwise this is a dead tap: the picker dialog below only ever opens when
+                    // allProviders.size > 1, but the arrow/click target used to show regardless.
+                    if (allProviders.size > 1) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier
+                                    .clickable(role = Role.DropdownList) { showProviderPicker = true }
+                                    .semantics {
+                                        contentDescription = "Switch Provider, current provider: $displayName"
+                                    }.padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs),
+                        ) {
+                            Text(
+                                text = displayName,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Icon(
+                                imageVector = CinemaIcons.ArrowDropDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    } else {
                         Text(
                             text = displayName,
                             color = MaterialTheme.colorScheme.primary,
-                        )
-                        Icon(
-                            imageVector = CinemaIcons.ArrowDropDown,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 },
