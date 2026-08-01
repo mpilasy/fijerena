@@ -289,7 +289,7 @@ class StreamingPlaybackService : MediaSessionService() {
         Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
 
         val renderersFactory = DefaultRenderersFactory(this)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
 
         val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
