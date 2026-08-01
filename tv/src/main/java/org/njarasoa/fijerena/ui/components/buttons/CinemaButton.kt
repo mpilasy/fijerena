@@ -5,6 +5,7 @@ package org.njarasoa.fijerena.ui.components.buttons
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonColors
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
@@ -330,6 +332,30 @@ fun CinemaDangerIconButton(
             }
         }
     }
+}
+
+/**
+ * Generic Button - shape-themed passthrough for raw call sites with custom colors that don't
+ * fit the semantic Primary/Secondary/Tertiary/Danger variants above. M3's default TV button
+ * shape ignores the app's [org.njarasoa.fijerena.core.ui.theme.UiStyle] shape tokens.
+ */
+@Composable
+fun CinemaButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: ButtonColors = ButtonDefaults.colors(),
+    content: @Composable RowScope.() -> Unit,
+) {
+    val scale = LocalUiScale.current
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = colors,
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
+        content = content,
+    )
 }
 
 /**
