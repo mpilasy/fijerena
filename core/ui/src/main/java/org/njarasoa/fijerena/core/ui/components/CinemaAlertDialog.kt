@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,8 +23,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -60,13 +66,30 @@ fun CinemaAlertDialog(
     val tokens = LocalUiStyle.current.dialog
     val shape = RoundedCornerShape(tokens.cornerRadius)
 
+    // A new Dialog window doesn't inherit Compose's focus state from the screen behind it, so
+    // without an explicit initial-focus request TV's D-pad has nothing to move onto — key
+    // events fall through to the (now invisible) triggering button. Land focus on the safer
+    // default action (dismiss, if present) once per dialog appearance.
+    val initialFocusRequester = remember { FocusRequester() }
+    val focusedDismissButton: (@Composable () -> Unit)? =
+        dismissButton?.let { real -> { Box(Modifier.focusRequester(initialFocusRequester).focusGroup()) { real() } } }
+    val focusedConfirmButton: @Composable () -> Unit =
+        if (dismissButton != null) {
+            confirmButton
+        } else {
+            { Box(Modifier.focusRequester(initialFocusRequester).focusGroup()) { confirmButton() } }
+        }
+    LaunchedEffect(Unit) {
+        initialFocusRequester.requestFocus()
+    }
+
     when (tokens.position) {
         DialogPosition.CENTERED -> {
             AlertDialog(
                 onDismissRequest = onDismissRequest,
-                confirmButton = confirmButton,
+                confirmButton = focusedConfirmButton,
                 modifier = modifier,
-                dismissButton = dismissButton,
+                dismissButton = focusedDismissButton,
                 icon = icon,
                 title = title,
                 text = text,
@@ -120,9 +143,9 @@ fun CinemaAlertDialog(
                             }
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            dismissButton?.invoke()
+                            focusedDismissButton?.invoke()
                             if (dismissButton != null) Spacer(Modifier.width(8.dp))
-                            confirmButton()
+                            focusedConfirmButton()
                         }
                     }
                 }
@@ -156,9 +179,9 @@ fun CinemaAlertDialog(
                         Spacer(Modifier.height(16.dp))
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        dismissButton?.invoke()
+                        focusedDismissButton?.invoke()
                         if (dismissButton != null) Spacer(Modifier.width(8.dp))
-                        confirmButton()
+                        focusedConfirmButton()
                     }
                     Spacer(Modifier.height(16.dp))
                 }
