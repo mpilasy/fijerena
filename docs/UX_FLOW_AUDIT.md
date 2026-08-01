@@ -216,3 +216,34 @@ One remains, a real IA call worth a deliberate decision rather than a quick patc
 
 1. **Reconcile EPG Guide vs. EPG Browser.** Decide which one Home's book icon should point to, and
    make the other explicitly the "deeper" tool — a naming and IA decision, not a bug fix.
+
+---
+
+## 7. Verification
+
+Fixes 1–5 (`4beed037`, `893c2c4e`) were exercised live, not just built.
+
+**Mobile (`emulator-5556`), driven via `adb` + `uiautomator`:**
+- Added a single-content-type provider (SMB, Movies only), force-stopped, relaunched — landed
+  directly on the Movies category screen, no picker tap. Favorite hint banner showed on that same
+  first browse.
+- Confirmed Back from that category screen returns to a real, interactive Home (not re-skipped) —
+  the provider-name text is plain (no dropdown), matching the single-provider fix.
+- Added a second, multi-type provider (Xtream) and made it active: relaunching now shows all three
+  content-type cards (no auto-skip, correct) and the dropdown arrow appears next to the provider
+  name (2 providers, correct).
+- Switched active provider to the single-type SMB provider *mid-session* (not a cold start): stayed
+  on the picker instead of yanking the user away — confirms the auto-skip is genuinely one-shot per
+  launch, not per composition, so it can never strand a mid-session switch.
+
+**TV (`emulator-5554`):** app installs and launches cleanly with no provider configured (lands on
+Settings, no crash). Full end-to-end capability verification (add-provider → auto-skip) wasn't
+completed on the TV emulator — its Add Provider screen has a pre-existing D-pad/touch focus quirk
+(unrelated to this change; `TvAddProviderScreen.kt` wasn't touched) that made scripted input
+unreliable. Confidence there instead rests on code parity: `TvNavHost.kt`'s new
+`onCapabilitiesResolved` wiring reuses the exact same capability-resolution `LaunchedEffect` and
+lambda pattern already proven correct on mobile, and TV's dropdown-guard (fix 1) was pre-existing
+and untouched this session.
+
+**Deployed:** latest code (`893c2c4e`, includes fix 6) installed on both Shields
+(`192.168.68.20:5555` mdarcy, `192.168.68.21:5555` darcy).
