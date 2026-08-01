@@ -307,15 +307,34 @@ private fun EpisodeListContent(
         }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
+    // Season containing the Continue Watching resume episode, if any — takes priority over
+    // both the "first season" and "next unwatched" defaults below, so backing out of its
+    // detail panel lands on that season expanded, everything else collapsed.
+    val resumeSeasonNumber =
+        remember(seriesDetail, initialEpisodeId) {
+            initialEpisodeId?.let { epId ->
+                seriesDetail.episodes.entries
+                    .firstOrNull { (_, eps) -> eps.any { it.id == epId } }
+                    ?.key
+                    ?.toIntOrNull()
+            }
+        }
+
     // Accordion: only one season expanded at a time (first season by default)
     var expandedSeasons by remember(seriesDetail) {
         mutableStateOf(
-            if (hasMultipleSeasons && sortedSeasons.isNotEmpty()) setOf(sortedSeasons.first().seasonNumber) else emptySet(),
+            when {
+                resumeSeasonNumber != null -> setOf(resumeSeasonNumber)
+                hasMultipleSeasons && sortedSeasons.isNotEmpty() -> setOf(sortedSeasons.first().seasonNumber)
+                else -> emptySet()
+            },
         )
     }
     // Set by the manual season-header toggle below, so the auto-expand effect doesn't
     // clobber a choice the user already made while the playback-position lookup was in flight.
-    var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(false) }
+    // Also seeded true when a resume season is already known, so the "next unwatched" guess
+    // below never overrides the season the user actually asked to resume.
+    var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(resumeSeasonNumber != null) }
 
     // Auto-expand season with next unwatched/in-progress episode
     LaunchedEffect(seriesDetail) {

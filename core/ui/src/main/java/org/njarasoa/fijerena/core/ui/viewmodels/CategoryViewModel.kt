@@ -206,8 +206,12 @@ class CategoryViewModel(
                     categories.any { it.id == initialCategoryId }
                 ) {
                     initialCategoryId
+                } else if (contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS) {
+                    // Movies/TV Shows: default to Continue Watching so the landing page shows
+                    // what's in progress, not just the single most-recently-touched item.
+                    CONTINUE_WATCHING_CATEGORY_ID
                 } else {
-                    // Default to "Last Watched" on startup so focus lands on the last played stream
+                    // Live TV: default to "Last Watched" so focus lands on the last played stream
                     LAST_WATCHED_CATEGORY_ID
                 }
             loadStreams(categoryToLoad)
