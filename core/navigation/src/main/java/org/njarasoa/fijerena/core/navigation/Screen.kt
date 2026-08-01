@@ -94,12 +94,15 @@ sealed interface Screen {
      * @param seriesId The Xtream series ID
      * @param seriesName The display name of the series
      * @param categoryId The category ID this series belongs to
+     * @param initialEpisodeId When set (e.g. arriving from Continue Watching), open straight to
+     * this episode's detail/resume panel instead of the season/episode list.
      */
     @Serializable
     data class EpisodeSelection(
         val seriesId: String,
         val seriesName: String,
         val categoryId: String,
+        val initialEpisodeId: String? = null,
     ) : Screen
 
     /**

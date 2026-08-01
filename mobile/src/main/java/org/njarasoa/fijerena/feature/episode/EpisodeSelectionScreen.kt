@@ -53,6 +53,7 @@ fun MobileEpisodeSelectionScreen(
     seriesId: String,
     seriesName: String,
     categoryId: String,
+    initialEpisodeId: String? = null,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -66,6 +67,15 @@ fun MobileEpisodeSelectionScreen(
     var refreshTrigger by remember { mutableStateOf(0) }
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
     var isFavorite by remember { mutableStateOf(false) }
+
+    // Continue Watching arrives here already knowing which episode to resume — open straight to
+    // its detail/resume panel instead of making the user find it in the season list again.
+    LaunchedEffect(seriesDetail, initialEpisodeId) {
+        val detail = seriesDetail
+        if (initialEpisodeId != null && detail != null) {
+            selectedEpisode = detail.episodes.values.flatten().firstOrNull { it.id == initialEpisodeId }
+        }
+    }
 
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {

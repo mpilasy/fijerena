@@ -114,6 +114,7 @@ fun EpisodeSelectionScreen(
     seriesId: String,
     seriesName: String,
     categoryId: String,
+    initialEpisodeId: String? = null,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -189,6 +190,7 @@ fun EpisodeSelectionScreen(
                     seriesName = seriesName,
                     categoryId = categoryId,
                     mediaRepository = mediaRepository!!,
+                    initialEpisodeId = initialEpisodeId,
                     isFavorite = isFavorite,
                     onToggleFavorite = {
                         val repo = mediaRepository ?: return@EpisodeListContent
@@ -214,6 +216,7 @@ private fun EpisodeListContent(
     seriesName: String,
     categoryId: String,
     mediaRepository: MediaRepository,
+    initialEpisodeId: String? = null,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
@@ -239,6 +242,14 @@ private fun EpisodeListContent(
 
     // Selected episode for detail panel
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
+
+    // Continue Watching arrives here already knowing which episode to resume — open straight to
+    // its detail/resume panel instead of making the user find it in the season list again.
+    LaunchedEffect(seriesDetail, initialEpisodeId) {
+        if (initialEpisodeId != null) {
+            selectedEpisode = seriesDetail.episodes.values.flatten().firstOrNull { it.id == initialEpisodeId }
+        }
+    }
 
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {

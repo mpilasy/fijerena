@@ -822,21 +822,35 @@ class MediaRepository(
 
     fun getInProgressItems(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
-        return getWatchHistory()
-            .asSequence()
-            .filter { item ->
-                item.contentType == contentType &&
-                    !item.isCompleted &&
-                    item.playbackPosition > 0 &&
-                    item.duration > 0 &&
-                    run {
-                        val progress = (item.playbackPosition.toFloat() / item.duration.toFloat()) * 100f
-                        progress in 2.0..95.0
-                    }
-            }.map { watched ->
+        val inProgress =
+            getWatchHistory()
+                .asSequence()
+                .filter { item ->
+                    item.contentType == contentType &&
+                        !item.isCompleted &&
+                        item.playbackPosition > 0 &&
+                        item.duration > 0 &&
+                        run {
+                            val progress = (item.playbackPosition.toFloat() / item.duration.toFloat()) * 100f
+                            progress in 2.0..95.0
+                        }
+                }
+        // TV Shows: collapse to one card per series instead of one per in-progress episode —
+        // watch history is already newest-first, so keeping the first entry per seriesId keeps
+        // the most recently watched one. Selecting the card resumes that exact episode via
+        // providerData["resumeSeries"]; see TvNavHost/MobileNavHost's TV_SHOWS routing.
+        val collapsed =
+            if (contentType == ContentType.TV_SHOWS) {
+                inProgress.distinctBy { it.seriesId ?: it.itemId }
+            } else {
+                inProgress
+            }
+        return collapsed
+            .map { watched ->
+                val isSeriesResume = contentType == ContentType.TV_SHOWS && watched.seriesId != null
                 MediaItem(
-                    id = watched.itemId,
-                    name = watched.itemName,
+                    id = if (isSeriesResume) watched.seriesId!! else watched.itemId,
+                    name = if (isSeriesResume) (watched.seriesName ?: watched.itemName) else watched.itemName,
                     mediaType = mediaType,
                     categoryId = watched.categoryId,
                     providerData =
@@ -844,6 +858,13 @@ class MediaRepository(
                             put("playbackPosition", watched.playbackPosition.toString())
                             put("duration", watched.duration.toString())
                             put("isCompleted", watched.isCompleted.toString())
+                            if (isSeriesResume) {
+                                put("resumeSeries", "true")
+                                put("episodeId", watched.episodeId ?: watched.itemId)
+                                watched.episodeExtension?.let { put("episodeExtension", it) }
+                                put("seriesId", watched.seriesId!!)
+                                put("seriesName", watched.seriesName ?: watched.itemName)
+                            }
                         },
                 )
             }.toList()

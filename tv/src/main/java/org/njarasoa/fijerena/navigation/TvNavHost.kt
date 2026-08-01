@@ -256,7 +256,19 @@ fun TvNavHost(
                             when (categoryListScreen.contentType) {
                                 ContentType.TV_SHOWS -> {
                                     val episodeId = providerData["episodeId"]
-                                    if (episodeId != null) {
+                                    if (providerData["resumeSeries"] == "true") {
+                                        // Continue Watching: this card represents the show, not
+                                        // the episode — open episode selection with the
+                                        // last-watched episode's detail/resume panel already up.
+                                        navController.navigate(
+                                            Screen.EpisodeSelection(
+                                                seriesId = itemId,
+                                                seriesName = streamName,
+                                                categoryId = categoryId,
+                                                initialEpisodeId = episodeId,
+                                            ),
+                                        )
+                                    } else if (episodeId != null) {
                                         // Last-watched episode: go directly to player
                                         navController.navigate(
                                             Screen.Player(
@@ -409,6 +421,7 @@ fun TvNavHost(
                         seriesId = episodeSelectionScreen.seriesId,
                         seriesName = episodeSelectionScreen.seriesName,
                         categoryId = episodeSelectionScreen.categoryId,
+                        initialEpisodeId = episodeSelectionScreen.initialEpisodeId,
                         onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning ->
                             navController.navigate(
                                 Screen.Player(
