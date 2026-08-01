@@ -2,10 +2,9 @@ package org.njarasoa.fijerena.feature.provider.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -33,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -129,28 +129,34 @@ fun CategoryFilterDialog(
             MatchType.EXACT -> "Exact"
         }
 
-    @OptIn(ExperimentalLayoutApi::class)
     @Composable
     fun MatchTypeChipRow(selected: MatchType, onSelect: (MatchType) -> Unit) {
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-        ) {
-            MatchType.entries.forEach { type ->
-                androidx.tv.material3.Button(
-                    onClick = { onSelect(type) },
-                    modifier = Modifier.tvFocusableNoScale(),
-                    colors =
-                        androidx.tv.material3.ButtonDefaults.colors(
-                            containerColor = if (selected == type) CinemaAccent else CinemaSurfaceVariant,
-                        ),
-                ) { Text(matchTypeLabel(type)) }
+        // MatchType.entries is a fixed 4-item enum — a manual 2-per-row wrap avoids FlowRow,
+        // whose default-param overload resolution is currently broken by a Compose Foundation
+        // version skew in this project (compiled call site targets an older FlowRow ABI than
+        // the resolved runtime jar exposes), causing a NoSuchMethodError crash at runtime.
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+            MatchType.entries.chunked(2).forEach { rowTypes ->
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                    rowTypes.forEach { type ->
+                        androidx.tv.material3.Button(
+                            onClick = { onSelect(type) },
+                            modifier = Modifier.tvFocusableNoScale(),
+                            colors =
+                                androidx.tv.material3.ButtonDefaults.colors(
+                                    containerColor = if (selected == type) CinemaAccent else CinemaSurfaceVariant,
+                                ),
+                        ) { Text(matchTypeLabel(type)) }
+                    }
+                }
             }
         }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth(0.85f).fillMaxHeight(0.85f),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = { Text("Category Filters", color = CinemaTextPrimary) },
         text = {
             Column(

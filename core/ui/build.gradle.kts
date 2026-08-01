@@ -46,7 +46,20 @@ dependencies {
     implementation(libs.room.runtime)
 
     // Image Loading
-    implementation(libs.coil.compose)
+    // coil-compose pulls in org.jetbrains.compose.* (Compose Multiplatform) transitively, which
+    // ships its own copy of androidx.compose.foundation.layout classes (e.g. FlowRow) under an
+    // older Compose version than this app's real androidx BOM. The duplicate class wins at dex
+    // time in some builds, causing NoSuchMethodError at runtime — exclude it, this app is
+    // Android-only and already gets the real foundation-layout from the androidx BOM directly.
+    implementation(libs.coil.compose) {
+        exclude(group = "org.jetbrains.compose.foundation")
+        exclude(group = "org.jetbrains.compose.animation")
+        exclude(group = "org.jetbrains.compose.ui")
+        exclude(group = "org.jetbrains.compose.runtime")
+        exclude(group = "org.jetbrains.compose.material3")
+        exclude(group = "org.jetbrains.compose.material")
+        exclude(group = "org.jetbrains.compose.components")
+    }
     implementation(libs.coil.network.okhttp)
 
     // Coroutines

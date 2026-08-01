@@ -3,7 +3,6 @@ package org.njarasoa.fijerena.core.player.api
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
@@ -55,11 +54,11 @@ class XtreamApiService(
                 json(json)
             }
 
-            install(ContentEncoding) {
-                gzip()
-                deflate()
-            }
-
+            // No ContentEncoding plugin here deliberately: advertising gzip/deflate via Ktor's
+            // Accept-Encoding causes some Cloudflare-fronted panels to respond with zstd instead
+            // (a codec this plugin doesn't decode), leaving the body empty downstream. The
+            // underlying OkHttp engine already transparently handles gzip on its own as long as
+            // we don't set Accept-Encoding ourselves.
             defaultRequest {
                 url(normalizeBaseUrl(baseUrl))
             }
@@ -80,12 +79,16 @@ class XtreamApiService(
      * @return Authentication response containing user and server info
      * @throws Exception if authentication fails or the request fails
      */
-    suspend fun authenticate(): XtreamAuthResponse =
-        client
-            .get("player_api.php") {
+    suspend fun authenticate(): XtreamAuthResponse {
+        val response =
+            client.get("player_api.php") {
                 parameter("username", username)
                 parameter("password", password)
-            }.body()
+            }
+        // .body() (Ktor ContentNegotiation) fails to resolve a serializer for bare (non-List)
+        // response types in this build — see getSeriesInfo/getVodInfo for the same workaround.
+        return json.decodeFromString(response.bodyAsText())
+    }
 
     /**
      * Fetches all live TV categories from the Xtream API.
@@ -384,14 +387,16 @@ class XtreamApiService(
      * @return EPG response containing program listings
      * @throws Exception if the request fails
      */
-    suspend fun getEpgForStream(streamId: Int): EpgResponse =
-        client
-            .get("player_api.php") {
+    suspend fun getEpgForStream(streamId: Int): EpgResponse {
+        val response =
+            client.get("player_api.php") {
                 parameter("username", username)
                 parameter("password", password)
                 parameter("action", "get_simple_data_table")
                 parameter("stream_id", streamId)
-            }.body()
+            }
+        return json.decodeFromString(response.bodyAsText())
+    }
 
     /**
      * Fallback: Short EPG (next X programs) for a specific stream.
@@ -405,15 +410,17 @@ class XtreamApiService(
     suspend fun getShortEpg(
         streamId: Int,
         limit: Int = 10,
-    ): EpgResponse =
-        client
-            .get("player_api.php") {
+    ): EpgResponse {
+        val response =
+            client.get("player_api.php") {
                 parameter("username", username)
                 parameter("password", password)
                 parameter("action", "get_short_epg")
                 parameter("stream_id", streamId)
                 parameter("limit", limit)
-            }.body()
+            }
+        return json.decodeFromString(response.bodyAsText())
+    }
 
     /**
      * Normalizes the base URL to ensure consistent formatting.
