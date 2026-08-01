@@ -331,8 +331,13 @@ private fun EpisodeListContent(
     // below never overrides the season the user actually asked to resume.
     var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(resumeSeasonNumber != null) }
 
+    // D-pad focus target for the resume episode card — requested below once it's on screen, so
+    // OK is immediately playable without the user having to navigate to it first.
+    val resumeCardFocusRequester = remember { FocusRequester() }
+
     // Scroll the resume episode into view once its season is expanded, so "highlighted" also
-    // means visible without the user having to scroll to find it.
+    // means visible without the user having to scroll to find it — then move D-pad focus onto
+    // it directly.
     LaunchedEffect(resumeSeasonNumber, expandedSeasons) {
         val targetId = initialEpisodeId ?: return@LaunchedEffect
         var index = 0
@@ -345,6 +350,12 @@ private fun EpisodeListContent(
                 val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
                 if (episodeIndex >= 0) {
                     listState.animateScrollToItem(index + episodeIndex)
+                    try {
+                        resumeCardFocusRequester.requestFocus()
+                    } catch (_: IllegalStateException) {
+                        // Card not yet composed this frame — falls back to default D-pad
+                        // focus, which still lands on the season containing it.
+                    }
                     return@LaunchedEffect
                 }
                 index += seasonEpisodes.size
@@ -563,9 +574,11 @@ private fun EpisodeListContent(
 
                         if (isExpanded) {
                             items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
+                                val isContinueWatching = episode.id == initialEpisodeId
                                 EpisodeCard(
                                     episode = episode,
-                                    isContinueWatching = episode.id == initialEpisodeId,
+                                    isContinueWatching = isContinueWatching,
+                                    focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
                                     onClick = {
                                         selectedEpisode = episode
                                     },
@@ -960,6 +973,7 @@ private fun SeasonHeader(
 private fun EpisodeCard(
     episode: DomainEpisodeItem,
     isContinueWatching: Boolean = false,
+    focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
 ) {
     val scale = LocalUiScale.current
@@ -978,7 +992,8 @@ private fun EpisodeCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(TvDimensions.cardHeight.scaled(scale)),
+                .height(TvDimensions.cardHeight.scaled(scale))
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
         colors =
             CardDefaults.colors(
                 containerColor = CinemaSurface,
