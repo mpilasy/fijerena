@@ -741,6 +741,7 @@ private fun CollapsibleHeader(
                 containerColor = androidx.compose.ui.graphics.Color.Transparent,
                 focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.focusedTint),
             ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium)),
         border =
             CardDefaults.border(
                 focusedBorder =

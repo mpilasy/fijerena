@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -173,6 +174,7 @@ fun SubtitleSelectorDialog(
                                 }
                             },
                     colors = if (isOffSelected) selectedColors else defaultColors,
+                    shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small)),
                     border = if (isOffSelected) selectedBorder else focusedBorder,
                 ) {
                     Row(
@@ -225,6 +227,7 @@ fun SubtitleSelectorDialog(
                                         }
                                     },
                             colors = if (isSelected) selectedColors else defaultColors,
+                            shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small)),
                             border = if (isSelected) selectedBorder else focusedBorder,
                         ) {
                             Column(
@@ -265,7 +268,7 @@ fun SubtitleSelectorDialog(
                 Spacer(modifier = Modifier.height(Spacing.xs))
 
                 // Close button
-                Button(
+                CinemaButton(
                     onClick = onDismiss,
                     modifier =
                         Modifier

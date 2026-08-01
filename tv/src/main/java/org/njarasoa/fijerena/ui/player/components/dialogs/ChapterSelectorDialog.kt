@@ -57,6 +57,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.player.utils.formatTime
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -123,7 +124,7 @@ fun ChapterSelectorDialog(
                         color = CinemaTextSecondary,
                         modifier = Modifier.padding(vertical = Spacing.md),
                     )
-                    Button(
+                    CinemaButton(
                         onClick = onDismiss,
                         modifier = Modifier.align(CenterHorizontally),
                     ) {
@@ -159,6 +160,7 @@ fun ChapterSelectorDialog(
                                     focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
                                     focusedContentColor = CinemaTextPrimary,
                                 ),
+                            shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small)),
                             border =
                                 ButtonDefaults.border(
                                     border =
@@ -216,7 +218,7 @@ fun ChapterSelectorDialog(
 
                     Spacer(modifier = Modifier.height(Spacing.xs))
 
-                    Button(
+                    CinemaButton(
                         onClick = onDismiss,
                         modifier =
                             Modifier

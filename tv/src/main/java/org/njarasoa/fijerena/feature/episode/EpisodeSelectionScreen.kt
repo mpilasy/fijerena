@@ -928,6 +928,7 @@ private fun EpisodeCard(
                 containerColor = CinemaSurface,
                 focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
             ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium)),
         scale =
             CardDefaults.scale(
                 scale = TvFocusTokens.defaultScale,
