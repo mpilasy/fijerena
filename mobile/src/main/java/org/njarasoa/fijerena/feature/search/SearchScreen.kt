@@ -31,6 +31,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -42,6 +45,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
@@ -567,7 +572,7 @@ private fun MobileSearchHistorySection(
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             history.forEach { term ->
-                AssistChip(
+                CinemaAssistChip(
                     onClick = { onItemClick(term) },
                     label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     leadingIcon = {
@@ -649,7 +654,7 @@ private fun CategoryResultCard(
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
 ) {
-    Card(
+    CinemaCard(
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -692,7 +697,7 @@ private fun SearchResultCard(
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
 ) {
-    Card(
+    CinemaCard(
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -773,7 +778,7 @@ private fun MobileSearchFavoriteDialog(
         }
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -783,7 +788,7 @@ private fun MobileSearchFavoriteDialog(
             )
         },
         confirmButton = {
-            Button(
+            CinemaDialogActionButton(
                 onClick = {
                     onConfirm()
                     onDismiss()
@@ -793,10 +798,9 @@ private fun MobileSearchFavoriteDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            CinemaDialogTextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
         },
-        shape = RoundedCornerShape(CinemaCornerRadius.large),
     )
 }

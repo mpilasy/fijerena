@@ -18,8 +18,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.*
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -107,7 +113,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                                 ) {
-                                    Button(
+                                    CinemaButton(
                                         onClick = {
                                             viewModel.refreshSelected(selectedIds)
                                             viewModel.clearSelection()
@@ -119,7 +125,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         Text(stringResource(R.string.epg_refresh_selected_btn, selectedIds.size))
                                     }
 
-                                    Button(
+                                    CinemaButton(
                                         onClick = { deleteSelectedIds = selectedIds },
                                         modifier = Modifier.weight(1f),
                                         colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
@@ -136,7 +142,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                             ) {
                                 if (staleSourceCount > 0) {
-                                    Button(
+                                    CinemaButton(
                                         onClick = { viewModel.refreshStale() },
                                         modifier = Modifier.weight(1f),
                                     ) {
@@ -144,7 +150,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     }
                                 }
                                 if (failedSourceCount > 0) {
-                                    Button(
+                                    CinemaButton(
                                         onClick = { viewModel.refreshFailed() },
                                         modifier = Modifier.weight(1f),
                                     ) {
@@ -180,13 +186,13 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                                 ) {
-                                    OutlinedButton(
+                                    CinemaOutlinedButton(
                                         onClick = { viewModel.cleanupFiles() },
                                         modifier = Modifier.weight(1f),
                                     ) {
                                         Text(stringResource(R.string.epg_cleanup_btn))
                                     }
-                                    OutlinedButton(
+                                    CinemaOutlinedButton(
                                         onClick = { viewModel.purgeOldProgrammes() },
                                         modifier = Modifier.weight(1f),
                                     ) {
@@ -196,7 +202,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
 
                                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-                                Button(
+                                CinemaButton(
                                     onClick = { showClearConfirm = true },
                                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                                     modifier = Modifier.fillMaxWidth(),
@@ -241,7 +247,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                     modifier = Modifier.padding(top = CinemaSpacing.sm),
                                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                                 ) {
-                                    OutlinedButton(onClick = { showIntervalPicker = true }) {
+                                    CinemaOutlinedButton(onClick = { showIntervalPicker = true }) {
                                         Text(when (val interval = epgSettings.epgRefreshInterval) {
                                             -1 -> "Frequency: Never"
                                             24 -> "Frequency: Daily"
@@ -249,7 +255,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                                         })
                                     }
                                     if (epgSettings.epgRefreshInterval != -1) {
-                                        OutlinedButton(onClick = { showTimePicker = true }) {
+                                        CinemaOutlinedButton(onClick = { showTimePicker = true }) {
                                             Text("Start: ${epgSettings.epgRefreshTime}")
                                         }
                                     }
@@ -317,10 +323,10 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     }
 
     if (showClearConfirm) {
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { showClearConfirm = false },
             confirmButton = {
-                Button(
+                CinemaDialogActionButton(
                     onClick = {
                         viewModel.clearDatabase()
                         showClearConfirm = false
@@ -329,7 +335,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                 ) { Text("Clear Everything") }
             },
             dismissButton = {
-                TextButton(onClick = { showClearConfirm = false }) { Text("Cancel") }
+                CinemaDialogTextButton(onClick = { showClearConfirm = false }) { Text("Cancel") }
             },
             title = { Text("Clear EPG Data?") },
             text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.") },
@@ -337,10 +343,10 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     }
 
     deleteSelectedIds?.let { idsToDelete ->
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { deleteSelectedIds = null },
             confirmButton = {
-                Button(
+                CinemaDialogActionButton(
                     onClick = {
                         viewModel.deleteSelected(idsToDelete)
                         deleteSelectedIds = null
@@ -349,7 +355,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                 ) { Text("Delete ${idsToDelete.size} Source(s)") }
             },
             dismissButton = {
-                TextButton(onClick = { deleteSelectedIds = null }) { Text("Cancel") }
+                CinemaDialogTextButton(onClick = { deleteSelectedIds = null }) { Text("Cancel") }
             },
             title = { Text("Delete Selected Sources?") },
             text = { Text("This will permanently remove ${idsToDelete.size} source(s) and all their indexed data.") },
@@ -363,12 +369,12 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
             initialMinute = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 0,
             is24Hour = true,
         )
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { showTimePicker = false },
             title = { Text("Set Refresh Time") },
             text = { TimePicker(state = timePickerState) },
             confirmButton = {
-                Button(
+                CinemaDialogActionButton(
                     onClick = {
                         viewModel.setEpgRefreshTime("%02d:%02d".format(timePickerState.hour, timePickerState.minute))
                         showTimePicker = false
@@ -376,13 +382,13 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                 ) { Text("Save") }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+                CinemaDialogTextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
             },
         )
     }
 
     if (showIntervalPicker) {
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { showIntervalPicker = false },
             title = { Text("EPG Refresh Interval") },
             text = {
@@ -415,7 +421,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showIntervalPicker = false }) { Text("Close") }
+                CinemaDialogTextButton(onClick = { showIntervalPicker = false }) { Text("Close") }
             }
         )
     }
@@ -563,10 +569,10 @@ private fun EpgSourceCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = onEdit) {
+                CinemaTextButton(onClick = onEdit) {
                     Text("Edit")
                 }
-                TextButton(
+                CinemaTextButton(
                     onClick = { showDeleteConfirm = true },
                     colors = ButtonDefaults.textButtonColors(contentColor = CinemaError),
                 ) {
@@ -577,10 +583,10 @@ private fun EpgSourceCard(
     }
 
     if (showDeleteConfirm) {
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             confirmButton = {
-                Button(
+                CinemaDialogActionButton(
                     onClick = {
                         onDelete()
                         showDeleteConfirm = false
@@ -589,7 +595,7 @@ private fun EpgSourceCard(
                 ) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                CinemaDialogTextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             },
             title = { Text("Delete Source?") },
             text = { Text("Are you sure you want to remove '${source.label}'? All associated EPG data will be deleted.") },
@@ -704,11 +710,11 @@ private fun EpgSourceEditDialog(
     var label by remember { mutableStateOf(initialSource?.label ?: "") }
     var tzOffset by remember { mutableStateOf(initialSource?.timezoneOffsetHours?.toString() ?: "0") }
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initialSource == null) "Add EPG Source" else "Edit EPG Source") },
         confirmButton = {
-            Button(
+            CinemaDialogActionButton(
                 onClick = {
                     onConfirm(
                         url,
@@ -722,7 +728,7 @@ private fun EpgSourceEditDialog(
             ) { Text("Save") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            CinemaDialogTextButton(onClick = onDismiss) { Text("Cancel") }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {

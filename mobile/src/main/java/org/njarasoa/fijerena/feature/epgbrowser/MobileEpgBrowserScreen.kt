@@ -29,10 +29,7 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,7 +41,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,12 +66,16 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
+import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
@@ -571,7 +571,7 @@ private fun MobileProgramCard(
     val showExpander = program.airings.size > 3
     var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
 
-    Card(
+    CinemaCard(
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -642,7 +642,7 @@ private fun MobileProgramCard(
             if (pending != null) {
                 val matched = pending.matchedStream!!
                 val airingContext = LocalContext.current
-                AlertDialog(
+                CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
                     title = { Text("Watch now?") },
                     text = {
@@ -655,13 +655,13 @@ private fun MobileProgramCard(
                         )
                     },
                     confirmButton = {
-                        TextButton(onClick = {
+                        CinemaDialogTextButton(onClick = {
                             pendingConfirmAiring = null
                             onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
                         }) { Text("Watch now") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
+                        CinemaDialogTextButton(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
                     },
                 )
             }
@@ -836,7 +836,7 @@ private fun MobileEpgSearchHistorySection(
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             history.forEach { term ->
-                AssistChip(
+                CinemaAssistChip(
                     onClick = { onItemClick(term) },
                     label = { Text(term, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     leadingIcon = {

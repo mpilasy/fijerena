@@ -44,6 +44,8 @@ import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -295,7 +297,7 @@ fun MobileContentTypeSelectionScreen(
 
     // Provider picker dialog
     if (showProviderPicker && allProviders.size > 1) {
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { showProviderPicker = false },
             title = { Text("Switch Provider") },
             text = {
@@ -359,7 +361,7 @@ fun MobileContentTypeSelectionScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showProviderPicker = false }) {
+                CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
                     Text("Close")
                 }
             },
