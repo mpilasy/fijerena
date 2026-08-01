@@ -10,11 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -33,6 +30,9 @@ import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.CinemaError
 
 private const val CATEGORY_FILTER_PREVIEW_COUNT = 6
@@ -134,7 +134,7 @@ fun ColumnScope.ProviderSettingsSection(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(text = watchHistorySize, style = MaterialTheme.typography.titleLarge)
-                        OutlinedButton(onClick = {
+                        CinemaOutlinedButton(onClick = {
                             onIsEditingQueueSizeChange(true)
                             onNewWatchHistorySizeChange(watchHistorySize)
                         }) { Text("Edit") }
@@ -153,11 +153,11 @@ fun ColumnScope.ProviderSettingsSection(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End),
                     ) {
-                        OutlinedButton(onClick = {
+                        CinemaOutlinedButton(onClick = {
                             onIsEditingQueueSizeChange(false)
                             onNewWatchHistorySizeChange("")
                         }) { Text("Cancel") }
-                        Button(
+                        CinemaButton(
                             onClick = {
                                 val size = newWatchHistorySize.toIntOrNull()
                                 if (size != null && size in 1..100) {
@@ -195,7 +195,7 @@ fun ColumnScope.ProviderSettingsSection(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(text = favoritesMaxSize, style = MaterialTheme.typography.titleLarge)
-                        OutlinedButton(onClick = {
+                        CinemaOutlinedButton(onClick = {
                             onIsEditingFavoritesSizeChange(true)
                             onNewFavoritesMaxSizeChange(favoritesMaxSize)
                         }) { Text("Edit") }
@@ -214,11 +214,11 @@ fun ColumnScope.ProviderSettingsSection(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End),
                     ) {
-                        OutlinedButton(onClick = {
+                        CinemaOutlinedButton(onClick = {
                             onIsEditingFavoritesSizeChange(false)
                             onNewFavoritesMaxSizeChange("")
                         }) { Text("Cancel") }
-                        Button(
+                        CinemaButton(
                             onClick = {
                                 val size = newFavoritesMaxSize.toIntOrNull()
                                 if (size != null && size in 10..500) {
@@ -248,7 +248,7 @@ fun ColumnScope.ProviderSettingsSection(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                Button(
+                CinemaButton(
                     onClick = { onShowClearFavoritesDialogChange(true) },
                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                     modifier = Modifier.fillMaxWidth(),
@@ -264,7 +264,7 @@ fun ColumnScope.ProviderSettingsSection(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                Button(
+                CinemaButton(
                     onClick = { onShowClearProgressDialogChange(true) },
                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                     modifier = Modifier.fillMaxWidth(),
@@ -286,7 +286,7 @@ fun ColumnScope.ProviderSettingsSection(
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                     ) {
                         listOf("m3u8", "ts").forEach { format ->
-                            FilterChip(
+                            CinemaFilterChip(
                                 selected = streamOutputFormat == format,
                                 onClick = {
                                     onStreamOutputFormatChange(format)
@@ -316,7 +316,7 @@ fun ColumnScope.ProviderSettingsSection(
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                     ) {
                         listOf("m3u_plus", "simple").forEach { type ->
-                            FilterChip(
+                            CinemaFilterChip(
                                 selected = playlistType == type,
                                 onClick = {
                                     onPlaylistTypeChange(type)
@@ -381,7 +381,7 @@ fun ColumnScope.ProviderSettingsSection(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        OutlinedButton(onClick = { onShowCategoryFilterDialogChange(true) }) { Text("Edit") }
+                        CinemaOutlinedButton(onClick = { onShowCategoryFilterDialogChange(true) }) { Text("Edit") }
                     }
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))

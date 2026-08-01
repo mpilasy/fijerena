@@ -11,7 +11,6 @@ import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +25,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @Composable
 fun ColumnScope.ProviderFormSection(
@@ -183,7 +183,7 @@ fun ColumnScope.ProviderFormSection(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                OutlinedButton(
+                CinemaOutlinedButton(
                     onClick = {
                         if (url.isBlank()) {
                             onErrorChange(context.getString(R.string.provider_enter_jellyfin_url_first))

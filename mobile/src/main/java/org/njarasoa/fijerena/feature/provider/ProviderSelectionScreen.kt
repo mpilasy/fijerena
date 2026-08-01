@@ -18,12 +18,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
@@ -122,14 +125,14 @@ fun MobileProviderSelectionScreen(
 
     // Delete confirmation
     deleteConfirmProvider?.let { provider ->
-        AlertDialog(
+        CinemaAlertDialog(
             onDismissRequest = { deleteConfirmProvider = null },
             title = { Text("Delete Provider?") },
             text = {
                 Text("Delete \"${provider.name}\"? All cached data for this provider will be removed.")
             },
             confirmButton = {
-                Button(
+                CinemaDialogActionButton(
                     onClick = {
                         viewModel.deleteProvider(provider.id)
                         deleteConfirmProvider = null
@@ -140,7 +143,7 @@ fun MobileProviderSelectionScreen(
                 }
             },
             dismissButton = {
-                OutlinedButton(onClick = { deleteConfirmProvider = null }) {
+                CinemaOutlinedButton(onClick = { deleteConfirmProvider = null }) {
                     Text("Cancel")
                 }
             },
