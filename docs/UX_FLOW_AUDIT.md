@@ -8,6 +8,10 @@ not inferred from docs.
 **Platforms:** TV (D-pad) and Mobile (touch).
 **Source:** `core:navigation/Screen.kt`, `TvNavHost.kt`, `MobileNavHost.kt`, both
 `ContentTypeSelectionScreen.kt` implementations.
+**Status:** 4 of 6 findings fixed (`4beed037`) — dead provider tap, forced picker for
+single-content-type providers, stale EPG icon, and the hidden favorite gesture. Two remain open,
+both IA decisions rather than bug fixes: EPG Guide/Browser naming, and the Live TV back-stopover
+legibility. See §4 for detail per finding.
 
 ---
 
@@ -99,42 +103,44 @@ back-stack entry.
 Six things that cost a tap, a moment of confusion, or a discoverable feature — ordered roughly by
 how many users hit them.
 
-### High — Mobile's provider name is a dead tap for most users
+### Fixed (was High) — Mobile's provider name is a dead tap for most users
 `mobile/…/ContentTypeSelectionScreen.kt:196` (tap target) vs. `:299` (dialog guard)
 
-The top-bar title is always rendered as a clickable row with a dropdown arrow — on every build,
+The top-bar title was always rendered as a clickable row with a dropdown arrow — on every build,
 regardless of provider count. But the picker dialog it's supposed to open only renders
-`if (allProviders.size > 1)`. Anyone running a single provider (very plausibly most users) taps a
-control that visually promises a menu, and gets silence — no toast, no disabled state, nothing.
+`if (allProviders.size > 1)`. Anyone running a single provider (very plausibly most users) tapped a
+control that visually promised a menu, and got silence — no toast, no disabled state, nothing.
 
-**Fix:** mirror what TV already does — it only composes the clickable pill at all when
-`allProviders.size > 1` (line 259). On mobile, render the title as plain static text in the
-single-provider case.
+**Fix applied (`4beed037`):** the title row now mirrors what TV already did — it only renders as a
+clickable dropdown when `allProviders.size > 1`; otherwise it's plain static text.
 
-### High — Single-content-type providers still get the picker screen
+### Fixed (was High) — Single-content-type providers still got the picker screen
 Both `ContentTypeSelectionScreen.kt` — card visibility gated on `supportedContentTypes`
 
 Jellyfin, SMB, Local, and Remote M3U providers each expose at most two of the three content types,
-and several realistic setups expose only one. Those users still land on "Select Content Type", see
-one giant card standing alone with two-thirds of the screen doing nothing, and have to tap it —
+and several realistic setups expose only one. Those users landed on "Select Content Type", saw
+one giant card standing alone with two-thirds of the screen doing nothing, and had to tap it —
 every app open, every content-type switch — for a decision that was never actually theirs to make.
 
-**Fix:** when `supportedContentTypes.size == 1`, navigate straight to that `CategoryList` and skip
-the picker. Keep the screen only when there's a real choice.
+**Fix applied (`4beed037`):** on cold start, if the active provider resolves to exactly one
+supported content type, the app auto-navigates past the picker straight into that `CategoryList`
+(reusing the same push logic as a manual tap, so Live TV still gets its normal bare+preview
+double-push). This only fires once per NavHost lifetime — Back-navigation into Home afterward
+renders normally, so Settings/Search/EPG/provider-switch are never stranded.
 
-### Medium — The EPG Browser icon can go stale mid-session
+### Fixed (was Medium) — The EPG Browser icon could go stale mid-session
 Both files, ~line 99–105 (mobile) / 138–144 (TV) — `remember { EpgIndexer…state.value }`
 
-`hasEpgData` is captured once at first composition, not collected as a live state. If indexing
-finishes while the user is sitting on Home — or they pop back to it after starting a source
-refresh — the book icon won't appear until the composable is torn down and rebuilt from scratch.
-The only way to reach EPG Browser is that icon, so a just-finished source is effectively invisible
-until an app restart or provider switch.
+`hasEpgData` was captured once at first composition, not collected as a live state. If indexing
+finished while the user was sitting on Home — or they popped back to it after starting a source
+refresh — the book icon wouldn't appear until the composable was torn down and rebuilt from
+scratch. The only way to reach EPG Browser is that icon, so a just-finished source was effectively
+invisible until an app restart or provider switch.
 
-**Fix:** collect `EpgIndexer.state` with `collectAsStateWithLifecycle()` instead of a one-shot
-`remember`.
+**Fix applied (`4beed037`):** now collects `EpgIndexer.state` with
+`collectAsStateWithLifecycle()` instead of a one-shot `remember`.
 
-### Medium — "TV Guide" and "EPG Browser" point at different things, from the wrong place
+### Medium (open) — "TV Guide" and "EPG Browser" point at different things, from the wrong place
 Home → book icon → EpgBrowser; CategoryList(LIVE_TV) → guide icon → EpgGuide
 
 The book icon on Home — the icon most likely to get read as "TV Guide" — actually opens a
@@ -145,7 +151,7 @@ it exists at all.
 **Fix:** either relabel/re-icon EpgBrowser to read clearly as "search", or add a direct Home-level
 entry into EpgGuide for the default channel, and keep EpgBrowser as the deeper power-user tool.
 
-### Medium — Favoriting is a hidden gesture with zero on-screen hint
+### Fixed (was Medium) — Favoriting was a hidden gesture with zero on-screen hint
 Mobile: `onItemLongPress`/`onCategoryLongPress` → `toggleFavorite*`; TV: `tvLongPress` → same
 
 Long-press (mobile) and D-pad-hold (TV) are the *only* way to favorite a stream or category from
@@ -153,11 +159,12 @@ any browse list — no "…" button, no visible affordance, no first-run coach m
 of just four virtual categories the whole app has, and its only other entry point is buried inside
 the player.
 
-**Fix:** a one-time hint on first browse, or a persistent (if subtle) affordance — even a small
-star glyph that appears on focus/press-start — would make this discoverable without adding a
-permanent extra button.
+**Fix applied (`4beed037`):** a one-time "long-press/hold to favorite" hint banner now shows on
+first browse (`AppSettings.hasSeenFavoriteHint`), auto-dismissing after 4 seconds and never
+reappearing once shown. Suppressed while a full-screen video is up on both platforms so it never
+draws over playback.
 
-### Low — Leaving Live TV can take up to three Back presses, with no indication why
+### Low (open) — Leaving Live TV can take up to three Back presses, with no indication why
 `NAVIGATION_GUIDE.md` → "Live TV Preview / Dock Back-Stack"
 
 Deliberate, and for a good reason: it guarantees Back always has a real stopover before exiting
@@ -196,18 +203,17 @@ redesign.
 
 ---
 
-## 6. Recommendations, in order
+## 6. Recommendations
 
-Ordered by effort-to-impact — the first three are one-line guard fixes; the last two are real IA
-calls worth a deliberate decision, not a quick patch.
+~~1. Guard the mobile provider tap.~~ **Done (`4beed037`).**
+~~2. Skip the picker when there's no real choice.~~ **Done (`4beed037`).**
+~~3. Make the EPG icon reactive.~~ **Done (`4beed037`).**
+~~4. Add a hint for the favorite gesture.~~ **Done (`4beed037`).**
 
-1. **Guard the mobile provider tap.** Hide the dropdown affordance when there's only one provider,
-   matching TV's existing behavior.
-2. **Skip the picker when there's no real choice.** Auto-navigate to the single supported
-   CategoryList for single-content-type providers.
-3. **Make the EPG icon reactive.** Swap the one-shot `remember` for
-   `collectAsStateWithLifecycle()` so it appears the moment indexing finishes.
-4. **Add a hint for the favorite gesture.** A first-run coach mark or a subtle on-focus
-   affordance — the feature shouldn't depend on tribal knowledge.
-5. **Reconcile EPG Guide vs. EPG Browser.** Decide which one Home's book icon should point to, and
+Two remain, both real IA calls worth a deliberate decision rather than a quick patch:
+
+1. **Reconcile EPG Guide vs. EPG Browser.** Decide which one Home's book icon should point to, and
    make the other explicitly the "deeper" tool — a naming and IA decision, not a bug fix.
+2. **Give the Live TV back-stopover a visual tell.** Not a navigation change — a small,
+   unobtrusive state cue distinguishing "browsing" from "docked" would make the existing, correct
+   Back behavior legible instead of surprising.
