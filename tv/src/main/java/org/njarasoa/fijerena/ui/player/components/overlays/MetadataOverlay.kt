@@ -28,12 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyRow
-import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -166,7 +166,7 @@ fun MetadataOverlay(
                 if (!metadata.isLive) {
                     item {
                         if (isPaused) {
-                            Button(onClick = { onResume?.invoke() }) {
+                            CinemaButton(onClick = { onResume?.invoke() }) {
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -176,7 +176,7 @@ fun MetadataOverlay(
                                 }
                             }
                         } else {
-                            Button(onClick = { onPause?.invoke() }) {
+                            CinemaButton(onClick = { onPause?.invoke() }) {
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -190,7 +190,7 @@ fun MetadataOverlay(
                 }
 
                 item {
-                    Button(onClick = { onAudioTrack?.invoke() }) {
+                    CinemaButton(onClick = { onAudioTrack?.invoke() }) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
@@ -202,7 +202,7 @@ fun MetadataOverlay(
                 }
 
                 item {
-                    Button(onClick = { onSubtitle?.invoke() }) {
+                    CinemaButton(onClick = { onSubtitle?.invoke() }) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
@@ -214,7 +214,7 @@ fun MetadataOverlay(
                 }
 
                 item {
-                    Button(onClick = { onQuality?.invoke() }) {
+                    CinemaButton(onClick = { onQuality?.invoke() }) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
@@ -227,7 +227,7 @@ fun MetadataOverlay(
 
                 if (onStats != null) {
                     item {
-                        Button(onClick = { onStats.invoke() }) {
+                        CinemaButton(onClick = { onStats.invoke() }) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -242,7 +242,7 @@ fun MetadataOverlay(
                 // Favorite toggle button
                 if (onToggleFavorite != null) {
                     item {
-                        Button(
+                        CinemaButton(
                             onClick = { onToggleFavorite() },
                             colors =
                                 ButtonDefaults.colors(

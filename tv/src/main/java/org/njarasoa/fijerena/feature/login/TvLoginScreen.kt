@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,8 +42,11 @@ import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModelFactory
+import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
+import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * TV-optimized login screen for Xtream IPTV authentication.
@@ -70,6 +74,7 @@ fun TvLoginScreen(
     onLoginSuccess: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val scale = LocalUiScale.current
 
     var serverUrl by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
@@ -273,6 +278,7 @@ fun TvLoginScreen(
                     ButtonDefaults.scale(
                         focusedScale = TvFocusTokens.focusedScaleSubtle, // Slightly enlarge when focused
                     ),
+                shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
             ) {
                 if (uiState is LoginViewModel.UiState.Loading) {
                     CircularProgressIndicator(
