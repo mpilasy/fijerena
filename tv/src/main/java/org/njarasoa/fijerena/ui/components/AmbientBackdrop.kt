@@ -36,7 +36,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 fun AmbientBackdrop(
     modifier: Modifier = Modifier,
     imageUrl: String? = null,
-    blurRadius: Float = 80f,
+    blurRadius: Float = 140f,
     imageAlpha: Float = CinemaAlpha.imageOverlay,
 ) {
     val palette = CinemaThemeHolder.current
