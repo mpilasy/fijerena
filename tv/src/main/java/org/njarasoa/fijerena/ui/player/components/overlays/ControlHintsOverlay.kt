@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -28,6 +27,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -89,13 +89,13 @@ fun ControlHintsOverlay(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Button(
+                    CinemaButton(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f),
                     ) {
                         Text(stringResource(R.string.common_got_it))
                     }
-                    Button(
+                    CinemaButton(
                         onClick = onDontShowAgain,
                         modifier = Modifier.weight(1f),
                         colors =

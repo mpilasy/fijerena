@@ -58,7 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.C
-import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -75,6 +74,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.player.utils.formatEpochTime
 import org.njarasoa.fijerena.ui.player.utils.formatTime
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -253,7 +253,7 @@ fun TvPlayerControlsOverlay(
 
         // Center: Play/Pause (VOD only, hidden for live)
         if (showFullControls && !isLive) {
-            Button(
+            CinemaButton(
                 onClick = {
                     if (isPaused) viewModel.resume() else viewModel.pause()
                 },
@@ -521,7 +521,7 @@ fun TvPlayerControlsOverlay(
                         // Chapter selector
                         val chapters = remember(metadata) { viewModel.getChapters() }
                         if (chapters.isNotEmpty()) {
-                            Button(
+                            CinemaButton(
                                 onClick = onShowChapterSelector,
                                 colors =
                                     ButtonDefaults.colors(
@@ -537,7 +537,7 @@ fun TvPlayerControlsOverlay(
 
                         // Audio track selector
                         if (audioTrackCount > 1) {
-                            Button(
+                            CinemaButton(
                                 onClick = onShowAudioTrackSelector,
                                 colors =
                                     ButtonDefaults.colors(
@@ -553,7 +553,7 @@ fun TvPlayerControlsOverlay(
 
                         // Subtitle selector
                         if (subtitleTrackCount > 0) {
-                            Button(
+                            CinemaButton(
                                 onClick = onShowSubtitleSelector,
                                 colors =
                                     ButtonDefaults.colors(
@@ -569,7 +569,7 @@ fun TvPlayerControlsOverlay(
 
                         // Quality selector
                         if (qualityCount > 1) {
-                            Button(
+                            CinemaButton(
                                 onClick = onShowQualitySelector,
                                 colors =
                                     ButtonDefaults.colors(
@@ -585,7 +585,7 @@ fun TvPlayerControlsOverlay(
 
                         // Favorite toggle
                         if (onToggleFavorite != null) {
-                            Button(
+                            CinemaButton(
                                 onClick = { onToggleFavorite() },
                                 colors =
                                     ButtonDefaults.colors(
@@ -616,7 +616,7 @@ fun TvPlayerControlsOverlay(
                         }
 
                         // Stats for nerds (always visible)
-                        Button(
+                        CinemaButton(
                             onClick = onShowStats,
                             colors =
                                 ButtonDefaults.colors(
