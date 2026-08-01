@@ -13,8 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,12 +42,15 @@ import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.MatchType
 import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
@@ -67,12 +68,12 @@ fun ConfirmActionDialog(
     onDismiss: () -> Unit,
     isDanger: Boolean = true,
 ) {
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title, color = CinemaTextPrimary) },
         text = { Text(text, color = CinemaTextSecondary) },
         confirmButton = {
-            Button(
+            CinemaDialogActionButton(
                 onClick = onConfirm,
                 colors =
                     androidx.compose.material3.ButtonDefaults.buttonColors(
@@ -82,7 +83,7 @@ fun ConfirmActionDialog(
             ) { Text(confirmText) }
         },
         dismissButton = {
-            Button(
+            CinemaDialogActionButton(
                 onClick = onDismiss,
                 colors =
                     androidx.compose.material3.ButtonDefaults.buttonColors(
@@ -139,7 +140,7 @@ fun CategoryFilterDialog(
             MatchType.entries.chunked(2).forEach { rowTypes ->
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                     rowTypes.forEach { type ->
-                        androidx.tv.material3.Button(
+                        CinemaButton(
                             onClick = { onSelect(type) },
                             modifier = Modifier.tvFocusableNoScale(),
                             colors =
@@ -153,7 +154,7 @@ fun CategoryFilterDialog(
         }
     }
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.fillMaxWidth(0.85f).fillMaxHeight(0.85f),
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -168,14 +169,14 @@ fun CategoryFilterDialog(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    androidx.tv.material3.Button(
+                    CinemaButton(
                         onClick = { filterMode = FilterMode.EXCLUDE },
                         colors =
                             androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (filterMode == FilterMode.EXCLUDE) CinemaAccent else CinemaSurfaceVariant,
                             ),
                     ) { Text("Exclude") }
-                    androidx.tv.material3.Button(
+                    CinemaButton(
                         onClick = { filterMode = FilterMode.INCLUDE },
                         colors =
                             androidx.tv.material3.ButtonDefaults.colors(
@@ -222,7 +223,7 @@ fun CategoryFilterDialog(
                             )
                             MatchTypeChipRow(selected = editingMatchType, onSelect = { editingMatchType = it })
                             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                                androidx.tv.material3.Button(
+                                CinemaButton(
                                     onClick = {
                                         val trimmed = editingValue.trim()
                                         if (trimmed.isNotEmpty()) {
@@ -235,7 +236,7 @@ fun CategoryFilterDialog(
                                     },
                                     colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaAccent),
                                 ) { Text("Save") }
-                                androidx.tv.material3.Button(
+                                CinemaButton(
                                     onClick = { editingIndex = null },
                                     colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
                                 ) { Text("Cancel") }
@@ -302,7 +303,7 @@ fun CategoryFilterDialog(
                             cursorColor = CinemaAccent,
                         ),
                 )
-                androidx.tv.material3.Button(
+                CinemaButton(
                     onClick = {
                         val values = addRulesText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                         if (values.isNotEmpty()) {
@@ -319,7 +320,7 @@ fun CategoryFilterDialog(
                         Text("Choose match type:", style = scaledStyles.bodyMedium, color = CinemaTextPrimary)
                         MatchTypeChipRow(selected = pendingAddMatchType, onSelect = { pendingAddMatchType = it })
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                            androidx.tv.material3.Button(
+                            CinemaButton(
                                 onClick = {
                                     rules = rules.withAddedRules(values, pendingAddMatchType)
                                     addRulesText = ""
@@ -327,7 +328,7 @@ fun CategoryFilterDialog(
                                 },
                                 colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaAccent),
                             ) { Text("OK") }
-                            androidx.tv.material3.Button(
+                            CinemaButton(
                                 onClick = { pendingAddValues = null },
                                 colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
                             ) { Text("Cancel") }
@@ -368,7 +369,7 @@ fun CategoryFilterDialog(
             }
         },
         confirmButton = {
-            Button(
+            CinemaDialogActionButton(
                 onClick = {
                     val newFilters = CategoryFilters(mode = filterMode, rules = rules, allowedScripts = selectedScripts)
                     onSave(newFilters)
@@ -381,7 +382,7 @@ fun CategoryFilterDialog(
             ) { Text("Save") }
         },
         dismissButton = {
-            Button(
+            CinemaDialogActionButton(
                 onClick = onDismiss,
                 colors =
                     androidx.compose.material3.ButtonDefaults.buttonColors(
@@ -446,7 +447,7 @@ fun QuickConnectDialog(
         qcError = "Timed out waiting for approval. Please try again."
     }
 
-    AlertDialog(
+    CinemaAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Quick Connect", color = CinemaTextPrimary) },
         text = {
@@ -508,7 +509,7 @@ fun QuickConnectDialog(
         },
         confirmButton = {},
         dismissButton = {
-            Button(
+            CinemaDialogActionButton(
                 onClick = onDismiss,
                 colors =
                     androidx.compose.material3.ButtonDefaults.buttonColors(
