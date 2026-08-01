@@ -20,11 +20,9 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +51,9 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -217,7 +218,7 @@ fun MobileEpgGuideScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(CinemaSpacing.md))
-                            androidx.compose.material3.Button(
+                            CinemaButton(
                                 onClick = { viewModel.loadEpgData() },
                             ) {
                                 Text(stringResource(R.string.common_retry))
@@ -254,7 +255,7 @@ private fun DateNavigationRow(
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.weight(1f),
         )
-        FilterChip(
+        CinemaFilterChip(
             selected = false,
             onClick = onJumpToNow,
             label = { Text(stringResource(R.string.epg_jump_to_now)) },
@@ -324,7 +325,7 @@ private fun MobileSearchResultCard(
     result: EpgViewModel.EpgSearchResult,
     onClick: () -> Unit,
 ) {
-    Card(
+    CinemaCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors =
