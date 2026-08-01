@@ -253,6 +253,25 @@ class StreamingPlaybackService : MediaSessionService() {
             }
         }
         startHealthMonitorLoop(scope)
+        startPositionSaveLoop(scope)
+    }
+
+    // Wall-clock-driven, unlike PlayerListener's save-on-state-change: a long stretch of
+    // smooth, uninterrupted playback fires none of onPlaybackStateChanged/onIsPlayingChanged/
+    // onPlayWhenReadyChanged, so without this loop nothing gets saved for as long as that
+    // stretch lasts — resume position can end up stale by however long since the last real
+    // event (pause/seek/rebuffer/track-change). This guarantees a save at least every
+    // POSITION_SAVE_INTERVAL_MS regardless of whether any such event ever fires.
+    private fun startPositionSaveLoop(scope: CoroutineScope) {
+        scope.launch {
+            while (isActive) {
+                delay(POSITION_SAVE_INTERVAL_MS)
+                val player = getPlayer() ?: continue
+                if (player.isPlaying && player.playbackState == Player.STATE_READY) {
+                    onPositionSaveListener?.invoke(player.currentPosition, player.duration, false, null, null)
+                }
+            }
+        }
     }
 
     private fun startHealthMonitorLoop(scope: CoroutineScope) {
@@ -871,7 +890,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {},
     ) : Player.Listener {
         private var isInErrorState = false
-        private val saveIntervalMs = 10_000L
+        private val saveIntervalMs = POSITION_SAVE_INTERVAL_MS
         private var lastSavedPosition = -saveIntervalMs
 
         fun resetErrorState() {
@@ -1197,6 +1216,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private const val VOD_RETRY_BASE_DELAY_MS = 3000L
         private const val SEEK_HEALTH_GRACE_MS = 6000L
         private const val SEAMLESS_RECYCLE_GRACE_MS = 7000L
+        private const val POSITION_SAVE_INTERVAL_MS = 10_000L
 
         @Volatile
         private var instance: StreamingPlaybackService? = null
