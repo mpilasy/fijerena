@@ -41,13 +41,13 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -84,7 +84,7 @@ fun ImportOptionsDialog(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+                    .background(CinemaBackground.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
             contentAlignment = Alignment.Center,
         ) {
             Surface(
@@ -94,7 +94,7 @@ fun ImportOptionsDialog(
                         .height(600.dp)
                         .padding(Spacing.xxl),
                 color = CinemaSurface,
-                shape = RoundedCornerShape(CornerRadius.medium),
+                shape = RoundedCornerShape(CornerRadius.large),
             ) {
                 Column(
                     modifier = Modifier.padding(Spacing.xxl),
@@ -259,7 +259,7 @@ fun ConflictResolutionDialog(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+                    .background(CinemaBackground.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
             contentAlignment = Alignment.Center,
         ) {
             Surface(
@@ -269,7 +269,7 @@ fun ConflictResolutionDialog(
                         .height(600.dp)
                         .padding(Spacing.xxl),
                 color = CinemaSurface,
-                shape = RoundedCornerShape(CornerRadius.medium),
+                shape = RoundedCornerShape(CornerRadius.large),
             ) {
                 Column(
                     modifier =

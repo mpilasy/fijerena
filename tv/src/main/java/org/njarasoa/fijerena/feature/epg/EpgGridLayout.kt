@@ -46,9 +46,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
-import androidx.tv.material3.Button
+
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -57,6 +58,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -64,6 +66,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
+import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -274,24 +277,24 @@ private fun EpgHeader(
 
         // Date navigation + refresh
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-            Button(onClick = onPreviousDay) {
+            CinemaButton(onClick = onPreviousDay) {
                 Icon(
                     imageVector = CinemaIcons.KeyboardArrowLeft,
                     contentDescription = stringResource(R.string.epg_prev_day),
                     tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )
             }
-            Button(onClick = onJumpToNow) {
+            CinemaButton(onClick = onJumpToNow) {
                 Text(stringResource(R.string.epg_jump_to_now))
             }
-            Button(onClick = onNextDay) {
+            CinemaButton(onClick = onNextDay) {
                 Icon(
                     imageVector = CinemaIcons.KeyboardArrowRight,
                     contentDescription = stringResource(R.string.epg_next_day),
                     tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                 )
             }
-            Button(
+            CinemaButton(
                 onClick = onRefresh,
                 enabled = !isRefreshing,
             ) {
@@ -309,7 +312,7 @@ private fun EpgHeader(
                     )
                 }
             }
-            Button(onClick = onSearchToggle) {
+            CinemaButton(onClick = onSearchToggle) {
                 Icon(
                     imageVector = if (isSearchActive) CinemaIcons.Close else CinemaIcons.Search,
                     contentDescription = if (isSearchActive) stringResource(R.string.epg_search_close) else stringResource(R.string.common_search),
@@ -387,6 +390,7 @@ private fun ChannelItem(
                         elevation = TvFocusTokens.focusShadowElevation,
                     ),
             ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
     ) {
         Box(
             modifier =
@@ -543,6 +547,7 @@ private fun ProgramCell(
                         elevation = TvFocusTokens.focusShadowElevation,
                     ),
             ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
     ) {
         Column(
             modifier =
@@ -677,6 +682,7 @@ private fun SearchResultItem(
                         elevation = TvFocusTokens.focusShadowElevation,
                     ),
             ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
     ) {
         Row(
             modifier =
