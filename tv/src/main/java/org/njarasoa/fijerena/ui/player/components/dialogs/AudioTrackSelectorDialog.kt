@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -113,7 +114,7 @@ fun AudioTrackSelectorDialog(
                         color = CinemaTextSecondary,
                         modifier = Modifier.padding(vertical = Spacing.md),
                     )
-                    Button(
+                    CinemaButton(
                         onClick = onDismiss,
                         modifier = Modifier.align(CenterHorizontally),
                     ) {
@@ -166,6 +167,7 @@ fun AudioTrackSelectorDialog(
                                         }
                                     },
                             colors = if (isSelected) selectedColors else defaultColors,
+                            shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small)),
                             border =
                                 if (isSelected) {
                                     ButtonDefaults.border(
@@ -229,7 +231,7 @@ fun AudioTrackSelectorDialog(
                     Spacer(modifier = Modifier.height(Spacing.xs))
 
                     // Close button
-                    Button(
+                    CinemaButton(
                         onClick = onDismiss,
                         modifier =
                             Modifier
