@@ -1,11 +1,13 @@
 package org.njarasoa.fijerena.feature.episode
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -65,17 +67,10 @@ fun MobileEpisodeSelectionScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
+    // Selected episode for detail panel — only set by an explicit tap (including on the
+    // Continue Watching resume episode below); arriving here never auto-opens it.
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
     var isFavorite by remember { mutableStateOf(false) }
-
-    // Continue Watching arrives here already knowing which episode to resume — open straight to
-    // its detail/resume panel instead of making the user find it in the season list again.
-    LaunchedEffect(seriesDetail, initialEpisodeId) {
-        val detail = seriesDetail
-        if (initialEpisodeId != null && detail != null) {
-            selectedEpisode = detail.episodes.values.flatten().firstOrNull { it.id == initialEpisodeId }
-        }
-    }
 
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {
@@ -302,6 +297,29 @@ private fun EpisodeListContent(
     // below never overrides the season the user actually asked to resume.
     var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(resumeSeasonNumber != null) }
 
+    val listState = rememberLazyListState()
+
+    // Scroll the resume episode into view once its season is expanded, so "highlighted" also
+    // means visible without the user having to scroll to find it.
+    LaunchedEffect(resumeSeasonNumber, expandedSeasons) {
+        val targetId = initialEpisodeId ?: return@LaunchedEffect
+        var index = 0
+        for (season in sortedSeasons) {
+            val seasonKey = season.seasonNumber.toString()
+            val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
+            val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
+            if (hasMultipleSeasons) index++ // season header row
+            if (isExpanded) {
+                val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
+                if (episodeIndex >= 0) {
+                    listState.animateScrollToItem(index + episodeIndex)
+                    return@LaunchedEffect
+                }
+                index += seasonEpisodes.size
+            }
+        }
+    }
+
     // Auto-expand season with next unwatched/in-progress episode
     LaunchedEffect(seriesDetail) {
         if (!hasMultipleSeasons) return@LaunchedEffect
@@ -384,6 +402,7 @@ private fun EpisodeListContent(
 
         // Season-grouped episodes list
         LazyColumn(
+            state = listState,
             contentPadding = PaddingValues(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             modifier = Modifier.fillMaxSize(),
@@ -417,6 +436,7 @@ private fun EpisodeListContent(
                     items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
                         EpisodeCard(
                             episode = episode,
+                            isContinueWatching = episode.id == initialEpisodeId,
                             onClick = {
                                 onEpisodeSelected(episode)
                             },
@@ -690,11 +710,18 @@ private fun SeasonHeader(
 @Composable
 private fun EpisodeCard(
     episode: DomainEpisodeItem,
+    isContinueWatching: Boolean = false,
     onClick: () -> Unit,
 ) {
     CinemaCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
+        border =
+            if (isContinueWatching) {
+                BorderStroke(MobileDimensions.strokeWidth, MaterialTheme.colorScheme.primary)
+            } else {
+                null
+            },
     ) {
         Row(
             modifier =
@@ -718,6 +745,13 @@ private fun EpisodeCard(
             Spacer(modifier = Modifier.width(CinemaSpacing.sm))
 
             Column(modifier = Modifier.weight(1f)) {
+                if (isContinueWatching) {
+                    Text(
+                        text = stringResource(R.string.series_continue_watching_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 // Episode number
                 Text(
                     text = stringResource(R.string.series_episode_number_short, episode.episodeNumber),

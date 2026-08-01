@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,6 +61,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -240,16 +242,9 @@ private fun EpisodeListContent(
             }
         }
 
-    // Selected episode for detail panel
+    // Selected episode for detail panel — only set by an explicit tap (including on the
+    // Continue Watching resume episode below); arriving here never auto-opens it.
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
-
-    // Continue Watching arrives here already knowing which episode to resume — open straight to
-    // its detail/resume panel instead of making the user find it in the season list again.
-    LaunchedEffect(seriesDetail, initialEpisodeId) {
-        if (initialEpisodeId != null) {
-            selectedEpisode = seriesDetail.episodes.values.flatten().firstOrNull { it.id == initialEpisodeId }
-        }
-    }
 
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {
@@ -335,6 +330,27 @@ private fun EpisodeListContent(
     // Also seeded true when a resume season is already known, so the "next unwatched" guess
     // below never overrides the season the user actually asked to resume.
     var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(resumeSeasonNumber != null) }
+
+    // Scroll the resume episode into view once its season is expanded, so "highlighted" also
+    // means visible without the user having to scroll to find it.
+    LaunchedEffect(resumeSeasonNumber, expandedSeasons) {
+        val targetId = initialEpisodeId ?: return@LaunchedEffect
+        var index = 0
+        for (season in sortedSeasons) {
+            val seasonKey = season.seasonNumber.toString()
+            val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
+            val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
+            if (hasMultipleSeasons) index++ // season header row
+            if (isExpanded) {
+                val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
+                if (episodeIndex >= 0) {
+                    listState.animateScrollToItem(index + episodeIndex)
+                    return@LaunchedEffect
+                }
+                index += seasonEpisodes.size
+            }
+        }
+    }
 
     // Auto-expand season with next unwatched/in-progress episode
     LaunchedEffect(seriesDetail) {
@@ -549,6 +565,7 @@ private fun EpisodeListContent(
                             items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
                                 EpisodeCard(
                                     episode = episode,
+                                    isContinueWatching = episode.id == initialEpisodeId,
                                     onClick = {
                                         selectedEpisode = episode
                                     },
@@ -942,6 +959,7 @@ private fun SeasonHeader(
 @Composable
 private fun EpisodeCard(
     episode: DomainEpisodeItem,
+    isContinueWatching: Boolean = false,
     onClick: () -> Unit,
 ) {
     val scale = LocalUiScale.current
@@ -952,6 +970,7 @@ private fun EpisodeCard(
                 val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
                 val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
                 val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+                val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
             }
         }
     Card(
@@ -972,6 +991,18 @@ private fun EpisodeCard(
                 focusedScale = TvFocusTokens.focusedScaleContent,
                 pressedScale = TvFocusTokens.pressedScaleSubtle,
             ),
+        border =
+            if (isContinueWatching) {
+                CardDefaults.border(
+                    border =
+                        Border(
+                            border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccent),
+                            shape = RoundedCornerShape(CornerRadius.medium),
+                        ),
+                )
+            } else {
+                CardDefaults.border()
+            },
         glow =
             CardDefaults.glow(
                 focusedGlow =
@@ -1015,6 +1046,13 @@ private fun EpisodeCard(
             Column(
                 modifier = Modifier.weight(1f),
             ) {
+                if (isContinueWatching) {
+                    Text(
+                        text = stringResource(R.string.series_continue_watching_badge),
+                        style = cardScaledStyles.labelSmall,
+                        color = CinemaAccent,
+                    )
+                }
                 Text(
                     text = episode.title,
                     style = cardScaledStyles.titleMedium,
